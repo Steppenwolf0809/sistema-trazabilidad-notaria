@@ -1,0 +1,148 @@
+/**
+ * Modelo para la tabla de Documentos Notariales
+ * Define la estructura y validaciones de los documentos en el sistema
+ */
+
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/database');
+
+const Documento = sequelize.define('Documento', {
+  // ID único del documento
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+    allowNull: false
+  },
+  
+  // Código de barras único para identificar el documento
+  codigoBarras: {
+    type: DataTypes.STRING,
+    unique: true,
+    allowNull: false,
+    validate: {
+      notEmpty: true,
+      // Asegurar que el código comienza con el prefijo requerido
+      isValidBarcode(value) {
+        if (!value.startsWith('20251701018')) {
+          throw new Error('El código de barras debe comenzar con el prefijo 20251701018');
+        }
+      }
+    }
+  },
+  
+  // Tipo de documento (escritura, poder, testamento, etc.)
+  tipoDocumento: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    validate: {
+      notEmpty: true
+    }
+  },
+  
+  // Número de protocolo asignado al documento
+  numeroProtocolo: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  
+  // Fecha de creación del documento
+  fechaCreacion: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    defaultValue: DataTypes.NOW
+  },
+  
+  // Nombre del cliente o solicitante
+  nombreCliente: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  
+  // Número de identificación del cliente (DNI, NIE, etc.)
+  identificacionCliente: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  
+  // Correo electrónico del cliente
+  emailCliente: {
+    type: DataTypes.STRING,
+    validate: {
+      isEmail: true
+    }
+  },
+  
+  // Teléfono del cliente (para notificaciones WhatsApp)
+  telefonoCliente: {
+    type: DataTypes.STRING
+  },
+  
+  // Estado actual del documento (en_proceso, listo, entregado, etc.)
+  estado: {
+    type: DataTypes.ENUM('en_proceso', 'listo_para_entrega', 'entregado', 'cancelado'),
+    defaultValue: 'en_proceso'
+  },
+  
+  // Código de verificación para la entrega (4 dígitos enviado por WhatsApp/email)
+  codigoVerificacion: {
+    type: DataTypes.STRING(4),
+    validate: {
+      isNumeric: true,
+      len: [4, 4]
+    }
+  },
+  
+  // Fecha de entrega del documento (si ya fue entregado)
+  fechaEntrega: {
+    type: DataTypes.DATE
+  },
+  
+  // Notas o comentarios adicionales
+  notas: {
+    type: DataTypes.TEXT
+  },
+  
+  // Lista de comparecientes (personas que intervienen)
+  comparecientes: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    defaultValue: []
+  },
+  
+  // Nombre de quien recibe el documento
+  nombreReceptor: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  
+  // Número de identificación del receptor
+  identificacionReceptor: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  
+  // Relación del receptor con el compareciente
+  relacionReceptor: {
+    type: DataTypes.ENUM('titular', 'familiar', 'mandatario', 'otro'),
+    allowNull: true
+  },
+  
+  // ID del matrizador que creó el documento
+  idMatrizador: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      // Esto crea una referencia (futura) a un modelo Matrizador
+      model: 'matrizadores',
+      key: 'id'
+    }
+  }
+}, {
+  // Opciones del modelo
+  tableName: 'documentos',
+  timestamps: true, // Crea automáticamente createdAt y updatedAt
+  underscored: true // Usa snake_case para los nombres de columnas
+});
+
+module.exports = Documento; 

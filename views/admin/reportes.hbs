@@ -1,0 +1,479 @@
+<div class="row">
+  <div class="col-md-12 mb-4">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-chart-bar me-2"></i> Reportes y Estadísticas</span>
+        <div>
+          <button class="btn btn-sm btn-outline-primary me-2" id="btnImprimir">
+            <i class="fas fa-print me-1"></i> Imprimir
+          </button>
+          <button class="btn btn-sm btn-outline-success" id="btnExportar">
+            <i class="fas fa-file-excel me-1"></i> Exportar Excel
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <!-- Filtros de reportes -->
+  <div class="col-md-3">
+    <div class="card mb-4">
+      <div class="card-header">
+        Filtros
+      </div>
+      <div class="card-body">
+        <form id="reportForm" action="/admin/reportes" method="GET">
+          <div class="mb-3">
+            <label for="tipoReporte" class="form-label">Tipo de Reporte</label>
+            <select class="form-select" id="tipoReporte" name="tipo" required>
+              <option value="estado" {{#if (eq filtros.tipo "estado")}}selected{{/if}}>Por Estado</option>
+              <option value="fecha" {{#if (eq filtros.tipo "fecha")}}selected{{/if}}>Por Fecha</option>
+              <option value="matrizador" {{#if (eq filtros.tipo "matrizador")}}selected{{/if}}>Por Matrizador</option>
+              <option value="tipoDocumento" {{#if (eq filtros.tipo "tipoDocumento")}}selected{{/if}}>Por Tipo de Documento</option>
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label for="fechaInicio" class="form-label">Fecha Inicial</label>
+            <input type="date" class="form-control" id="fechaInicio" name="fechaInicio" value="{{filtros.fechaInicio}}">
+          </div>
+          
+          <div class="mb-3">
+            <label for="fechaFin" class="form-label">Fecha Final</label>
+            <input type="date" class="form-control" id="fechaFin" name="fechaFin" value="{{filtros.fechaFin}}">
+          </div>
+          
+          <div class="mb-3" id="filtroMatrizadorDiv">
+            <label for="idMatrizador" class="form-label">Matrizador</label>
+            <select class="form-select" id="idMatrizador" name="idMatrizador">
+              <option value="">Todos</option>
+              {{#each matrizadores}}
+              <option value="{{this.id}}" {{#if (eq ../filtros.idMatrizador this.id)}}selected{{/if}}>{{this.nombre}}</option>
+              {{/each}}
+            </select>
+          </div>
+          
+          <div class="mb-3" id="filtroEstadoDiv">
+            <label for="estado" class="form-label">Estado</label>
+            <select class="form-select" id="estado" name="estado">
+              <option value="">Todos</option>
+              <option value="en_proceso" {{#if (eq filtros.estado "en_proceso")}}selected{{/if}}>En Proceso</option>
+              <option value="listo_para_entrega" {{#if (eq filtros.estado "listo_para_entrega")}}selected{{/if}}>Listos para Entrega</option>
+              <option value="entregado" {{#if (eq filtros.estado "entregado")}}selected{{/if}}>Entregados</option>
+              <option value="cancelado" {{#if (eq filtros.estado "cancelado")}}selected{{/if}}>Cancelados</option>
+            </select>
+          </div>
+          
+          <div class="d-grid">
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-search me-1"></i> Generar Reporte
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Resultados del reporte -->
+  <div class="col-md-9">
+    <div class="card mb-4">
+      <div class="card-header">
+        <span id="reporteTitulo">{{reporteTitulo}}</span>
+      </div>
+      <div class="card-body">
+        {{#if tipoReporte}}
+          {{#if (eq tipoReporte "estado")}}
+            <!-- Reporte por Estado -->
+            <div class="row">
+              <div class="col-md-5">
+                <canvas id="estadoChart" height="250"></canvas>
+              </div>
+              <div class="col-md-7">
+                <div class="table-responsive">
+                  <table class="table table-bordered">
+                    <thead class="table-light">
+                      <tr>
+                        <th>Estado</th>
+                        <th>Cantidad</th>
+                        <th>Porcentaje</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {{#each resultados}}
+                      <tr>
+                        <td>
+                          {{#if (eq this._id "en_proceso")}}
+                          <span class="badge bg-warning">En Proceso</span>
+                          {{else if (eq this._id "listo_para_entrega")}}
+                          <span class="badge bg-success">Listo para Entrega</span>
+                          {{else if (eq this._id "entregado")}}
+                          <span class="badge bg-info">Entregado</span>
+                          {{else}}
+                          <span class="badge bg-secondary">{{this._id}}</span>
+                          {{/if}}
+                        </td>
+                        <td class="text-center">{{this.count}}</td>
+                        <td class="text-center">{{this.porcentaje}}%</td>
+                      </tr>
+                      {{/each}}
+                    </tbody>
+                    <tfoot class="table-light">
+                      <tr>
+                        <th>Total</th>
+                        <th class="text-center">{{totales.count}}</th>
+                        <th class="text-center">100%</th>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            </div>
+          {{else if (eq tipoReporte "matrizador")}}
+            <!-- Reporte por Matrizador -->
+            <div class="row">
+              <div class="col-md-6">
+                <canvas id="matrizadorChart" height="250"></canvas>
+              </div>
+              <div class="col-md-6">
+                <div class="table-responsive">
+                  <table class="table table-bordered">
+                    <thead class="table-light">
+                      <tr>
+                        <th>Matrizador</th>
+                        <th>Documentos</th>
+                        <th>Porcentaje</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {{#each resultados}}
+                      <tr>
+                        <td>{{this.nombre}}</td>
+                        <td class="text-center">{{this.count}}</td>
+                        <td class="text-center">{{this.porcentaje}}%</td>
+                      </tr>
+                      {{/each}}
+                    </tbody>
+                    <tfoot class="table-light">
+                      <tr>
+                        <th>Total</th>
+                        <th class="text-center">{{totales.count}}</th>
+                        <th class="text-center">100%</th>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            </div>
+          {{else if (eq tipoReporte "fecha")}}
+            <!-- Reporte por Fecha -->
+            <div class="row">
+              <div class="col-md-12 mb-4">
+                <canvas id="fechaChart" height="100"></canvas>
+              </div>
+              <div class="col-md-12">
+                <div class="table-responsive">
+                  <table class="table table-bordered">
+                    <thead class="table-light">
+                      <tr>
+                        <th>Fecha</th>
+                        <th>Registrados</th>
+                        <th>Listos</th>
+                        <th>Entregados</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {{#each resultados}}
+                      <tr>
+                        <td>{{formatDate this._id}}</td>
+                        <td class="text-center">{{this.registrados}}</td>
+                        <td class="text-center">{{this.listos}}</td>
+                        <td class="text-center">{{this.entregados}}</td>
+                      </tr>
+                      {{/each}}
+                    </tbody>
+                    <tfoot class="table-light">
+                      <tr>
+                        <th>Total</th>
+                        <th class="text-center">{{totales.registrados}}</th>
+                        <th class="text-center">{{totales.listos}}</th>
+                        <th class="text-center">{{totales.entregados}}</th>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            </div>
+          {{else if (eq tipoReporte "tipoDocumento")}}
+            <!-- Reporte por Tipo de Documento -->
+            <div class="row">
+              <div class="col-md-5">
+                <canvas id="tipoDocumentoChart" height="250"></canvas>
+              </div>
+              <div class="col-md-7">
+                <div class="table-responsive">
+                  <table class="table table-bordered">
+                    <thead class="table-light">
+                      <tr>
+                        <th>Tipo de Documento</th>
+                        <th>Cantidad</th>
+                        <th>Porcentaje</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {{#each resultados}}
+                      <tr>
+                        <td>{{this._id}}</td>
+                        <td class="text-center">{{this.count}}</td>
+                        <td class="text-center">{{this.porcentaje}}%</td>
+                      </tr>
+                      {{/each}}
+                    </tbody>
+                    <tfoot class="table-light">
+                      <tr>
+                        <th>Total</th>
+                        <th class="text-center">{{totales.count}}</th>
+                        <th class="text-center">100%</th>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            </div>
+          {{/if}}
+        {{else}}
+          <div class="text-center py-5">
+            <i class="fas fa-chart-bar fa-4x text-muted mb-3"></i>
+            <h5>Seleccione un tipo de reporte</h5>
+            <p class="text-muted">Utilice los filtros de la izquierda para generar un reporte.</p>
+          </div>
+        {{/if}}
+      </div>
+    </div>
+    
+    <!-- Lista de documentos en el reporte -->
+    {{#if documentos}}
+    <div class="card">
+      <div class="card-header">
+        Listado de Documentos
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-striped table-sm">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Tipo</th>
+                <th>Cliente</th>
+                <th>Fecha</th>
+                <th>Estado</th>
+                <th>Matrizador</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each documentos}}
+              <tr>
+                <td><small>{{this.codigoBarras}}</small></td>
+                <td>{{this.tipoDocumento}}</td>
+                <td>{{this.nombreCliente}}</td>
+                <td>{{formatDate this.fechaCreacion}}</td>
+                <td>
+                  {{#if (eq this.estado "en_proceso")}}
+                  <span class="badge bg-warning">En Proceso</span>
+                  {{else if (eq this.estado "listo_para_entrega")}}
+                  <span class="badge bg-success">Listo</span>
+                  {{else if (eq this.estado "entregado")}}
+                  <span class="badge bg-info">Entregado</span>
+                  {{else}}
+                  <span class="badge bg-secondary">{{this.estado}}</span>
+                  {{/if}}
+                </td>
+                <td>{{this.matrizador.nombre}}</td>
+              </tr>
+              {{/each}}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {{/if}}
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Mostrar/ocultar filtros según el tipo de reporte
+    const tipoReporte = document.getElementById('tipoReporte');
+    const filtroMatrizadorDiv = document.getElementById('filtroMatrizadorDiv');
+    const filtroEstadoDiv = document.getElementById('filtroEstadoDiv');
+    
+    function actualizarFiltrosVisibles() {
+      switch(tipoReporte.value) {
+        case 'matrizador':
+          filtroMatrizadorDiv.style.display = 'none';
+          filtroEstadoDiv.style.display = 'block';
+          break;
+        case 'estado':
+          filtroMatrizadorDiv.style.display = 'block';
+          filtroEstadoDiv.style.display = 'none';
+          break;
+        default:
+          filtroMatrizadorDiv.style.display = 'block';
+          filtroEstadoDiv.style.display = 'block';
+      }
+    }
+    
+    if (tipoReporte) {
+      actualizarFiltrosVisibles();
+      tipoReporte.addEventListener('change', actualizarFiltrosVisibles);
+    }
+    
+    // Botón de imprimir
+    const btnImprimir = document.getElementById('btnImprimir');
+    if (btnImprimir) {
+      btnImprimir.addEventListener('click', function() {
+        window.print();
+      });
+    }
+    
+    // Botón de exportar
+    const btnExportar = document.getElementById('btnExportar');
+    if (btnExportar) {
+      btnExportar.addEventListener('click', function() {
+        window.location.href = window.location.href + '&formato=excel';
+      });
+    }
+    
+    // Inicializar gráficos si hay datos
+    {{#if tipoReporte}}
+      {{#if (eq tipoReporte "estado")}}
+        const estadoCtx = document.getElementById('estadoChart').getContext('2d');
+        new Chart(estadoCtx, {
+          type: 'pie',
+          data: {
+            labels: [{{#each resultados}}'{{translateEstado this._id}}',{{/each}}],
+            datasets: [{
+              data: [{{#each resultados}}{{this.count}},{{/each}}],
+              backgroundColor: [
+                '#ffc107', // En Proceso
+                '#28a745', // Listo para Entrega
+                '#17a2b8', // Entregado
+                '#6c757d'  // Cancelado
+              ]
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: {
+                position: 'bottom'
+              }
+            }
+          }
+        });
+      {{/if}}
+      
+      {{#if (eq tipoReporte "matrizador")}}
+        const matrizadorCtx = document.getElementById('matrizadorChart').getContext('2d');
+        new Chart(matrizadorCtx, {
+          type: 'bar',
+          data: {
+            labels: [{{#each resultados}}'{{this.nombre}}',{{/each}}],
+            datasets: [{
+              label: 'Documentos por matrizador',
+              data: [{{#each resultados}}{{this.count}},{{/each}}],
+              backgroundColor: '#3498db'
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: {
+                display: false
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true
+              }
+            }
+          }
+        });
+      {{/if}}
+      
+      {{#if (eq tipoReporte "fecha")}}
+        const fechaCtx = document.getElementById('fechaChart').getContext('2d');
+        new Chart(fechaCtx, {
+          type: 'line',
+          data: {
+            labels: [{{#each resultados}}'{{formatDate this._id}}',{{/each}}],
+            datasets: [
+              {
+                label: 'Registrados',
+                data: [{{#each resultados}}{{this.registrados}},{{/each}}],
+                borderColor: '#ffc107',
+                backgroundColor: '#ffc10720'
+              },
+              {
+                label: 'Listos',
+                data: [{{#each resultados}}{{this.listos}},{{/each}}],
+                borderColor: '#28a745',
+                backgroundColor: '#28a74520'
+              },
+              {
+                label: 'Entregados',
+                data: [{{#each resultados}}{{this.entregados}},{{/each}}],
+                borderColor: '#17a2b8',
+                backgroundColor: '#17a2b820'
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: {
+                position: 'top'
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true
+              }
+            }
+          }
+        });
+      {{/if}}
+      
+      {{#if (eq tipoReporte "tipoDocumento")}}
+        const tipoDocumentoCtx = document.getElementById('tipoDocumentoChart').getContext('2d');
+        new Chart(tipoDocumentoCtx, {
+          type: 'doughnut',
+          data: {
+            labels: [{{#each resultados}}'{{this._id}}',{{/each}}],
+            datasets: [{
+              data: [{{#each resultados}}{{this.count}},{{/each}}],
+              backgroundColor: [
+                '#3498db',
+                '#9b59b6',
+                '#e74c3c',
+                '#f39c12',
+                '#1abc9c',
+                '#34495e'
+              ]
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: {
+                position: 'bottom'
+              }
+            }
+          }
+        });
+      {{/if}}
+    {{/if}}
+  });
+</script> 

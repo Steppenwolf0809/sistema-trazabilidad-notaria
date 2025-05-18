@@ -1,0 +1,242 @@
+<!-- Dashboard principal -->
+<div class="row">
+  <!-- Tarjetas de estadísticas -->
+  <div class="col-md-3">
+    <div class="card text-white bg-primary">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-white">Documentos Totales</h6>
+            <h2 class="mb-0">{{stats.total}}</h2>
+          </div>
+          <i class="fas fa-file-alt fa-3x opacity-50"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3">
+    <div class="card text-white bg-warning">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-white">En Proceso</h6>
+            <h2 class="mb-0">{{stats.enProceso}}</h2>
+          </div>
+          <i class="fas fa-clock fa-3x opacity-50"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3">
+    <div class="card text-white bg-success">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-white">Listos para Entrega</h6>
+            <h2 class="mb-0">{{stats.listoParaEntrega}}</h2>
+          </div>
+          <i class="fas fa-check-circle fa-3x opacity-50"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3">
+    <div class="card text-white bg-info">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-white">Entregados Hoy</h6>
+            <h2 class="mb-0">{{stats.entregadosHoy}}</h2>
+          </div>
+          <i class="fas fa-hand-holding fa-3x opacity-50"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Documentos recientes -->
+<div class="row mt-4">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Documentos Pendientes de Entrega</span>
+        <a href="/admin/documentos/listado?estado=listo_para_entrega" class="btn btn-sm btn-outline-primary">Ver Todos</a>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Tipo</th>
+                <th>Cliente</th>
+                <th>Fecha</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each documentosPendientes}}
+              <tr>
+                <td>{{this.codigoBarras}}</td>
+                <td>{{this.tipoDocumento}}</td>
+                <td>{{this.nombreCliente}}</td>
+                <td>{{formatDate this.updatedAt}}</td>
+                <td>
+                  <a href="/admin/documentos/entrega/{{this.id}}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-hand-holding"></i> Entregar
+                  </a>
+                </td>
+              </tr>
+              {{else}}
+              <tr>
+                <td colspan="5" class="text-center py-3">No hay documentos pendientes de entrega</td>
+              </tr>
+              {{/each}}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Últimos Documentos Registrados</span>
+        <a href="/admin/documentos/listado" class="btn btn-sm btn-outline-primary">Ver Todos</a>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Tipo</th>
+                <th>Cliente</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each documentosRecientes}}
+              <tr>
+                <td>{{this.codigoBarras}}</td>
+                <td>{{this.tipoDocumento}}</td>
+                <td>{{this.nombreCliente}}</td>
+                <td>
+                  {{#if (eq this.estado "en_proceso")}}
+                  <span class="badge bg-warning">En Proceso</span>
+                  {{else if (eq this.estado "listo_para_entrega")}}
+                  <span class="badge bg-success">Listo</span>
+                  {{else if (eq this.estado "entregado")}}
+                  <span class="badge bg-info">Entregado</span>
+                  {{else}}
+                  <span class="badge bg-secondary">{{this.estado}}</span>
+                  {{/if}}
+                </td>
+                <td>
+                  <a href="/admin/documentos/detalle/{{this.id}}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-eye"></i>
+                  </a>
+                </td>
+              </tr>
+              {{else}}
+              <tr>
+                <td colspan="5" class="text-center py-3">No hay documentos registrados recientemente</td>
+              </tr>
+              {{/each}}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Gráfico y actividad reciente -->
+<div class="row mt-4">
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header">
+        Documentos por Estado
+      </div>
+      <div class="card-body">
+        <canvas id="documentosChart" height="300"></canvas>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header">
+        Actividad Reciente
+      </div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+          {{#each actividades}}
+          <li class="list-group-item">
+            <div class="d-flex w-100 justify-content-between">
+              <h6 class="mb-1">{{this.titulo}}</h6>
+              <small>{{formatTimeAgo this.fecha}}</small>
+            </div>
+            <p class="mb-1">{{this.descripcion}}</p>
+            <small>
+              {{#if this.usuario}}
+              <i class="fas fa-user me-1"></i> {{this.usuario}}
+              {{/if}}
+            </small>
+          </li>
+          {{else}}
+          <li class="list-group-item text-center py-4">
+            <i class="fas fa-info-circle me-2"></i> No hay actividad reciente registrada
+          </li>
+          {{/each}}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts para gráficos -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Datos para el gráfico
+  const ctx = document.getElementById('documentosChart').getContext('2d');
+  
+  new Chart(ctx, {
+    type: 'pie',
+    data: {
+      labels: ['En Proceso', 'Listos para Entrega', 'Entregados', 'Cancelados'],
+      datasets: [{
+        data: [
+          {{stats.enProceso}}, 
+          {{stats.listoParaEntrega}}, 
+          {{stats.entregados}}, 
+          {{stats.cancelados}}
+        ],
+        backgroundColor: [
+          '#ffc107',  // Amarillo - En Proceso
+          '#28a745',  // Verde - Listos
+          '#17a2b8',  // Azul - Entregados
+          '#6c757d'   // Gris - Cancelados
+        ],
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom'
+        }
+      }
+    }
+  });
+});
+</script> 

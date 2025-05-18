@@ -1,0 +1,41 @@
+# Dependencias
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Entorno
+.env
+.env.test
+
+# Directorios de caché
+.npm/
+.eslintcache
+.node_repl_history
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Directorios de logs
+logs/
+*.log
+
+# Directorios de build
+dist/
+build/
+out/
+
+# Archivos temporales
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Archivos del IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo 

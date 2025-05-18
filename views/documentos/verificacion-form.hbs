@@ -1,0 +1,111 @@
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header bg-primary text-white">
+        <h4 class="mb-0">Verificación de Código para Entrega</h4>
+      </div>
+      <div class="card-body">
+        <div class="text-center mb-4">
+          <i class="fas fa-key fa-3x text-primary"></i>
+          <h5 class="mt-3">Introduzca el código de verificación</h5>
+          <p class="text-muted">El código fue enviado por WhatsApp o correo electrónico al titular del documento</p>
+        </div>
+
+        <form id="codigo-verificacion-form" action="/api/documentos/codigo/{{codigoBarras}}/verificar" method="POST">
+          <div class="mb-3">
+            <label for="codigo" class="form-label">Código de Verificación</label>
+            <input type="text" class="form-control form-control-lg text-center" id="codigo" name="codigo" pattern="[0-9]{4}" maxlength="4" placeholder="0000" required>
+            <div class="form-text">Introduzca el código numérico de 4 dígitos</div>
+          </div>
+          
+          <div class="mb-3">
+            <label for="nombreReceptor" class="form-label">Nombre del Receptor</label>
+            <input type="text" class="form-control" id="nombreReceptor" name="nombreReceptor" required>
+          </div>
+          
+          <div class="mb-3">
+            <label for="identificacionReceptor" class="form-label">Identificación del Receptor</label>
+            <input type="text" class="form-control" id="identificacionReceptor" name="identificacionReceptor" required>
+          </div>
+          
+          <div class="mb-3">
+            <label for="relacionReceptor" class="form-label">Relación con el Titular</label>
+            <select class="form-select" id="relacionReceptor" name="relacionReceptor" required>
+              <option value="">Seleccione...</option>
+              <option value="titular">Titular</option>
+              <option value="familiar">Familiar</option>
+              <option value="mandatario">Mandatario</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+          
+          <div class="text-center mt-4">
+            <button type="submit" class="btn btn-primary btn-lg px-5">Verificar</button>
+          </div>
+        </form>
+      </div>
+      <div class="card-footer">
+        <div class="text-center">
+          <small class="text-muted">Si no tiene el código de verificación, solicite al titular que lo comparta con usted</small>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const form = document.getElementById('codigo-verificacion-form');
+  const relacionSelect = document.getElementById('relacionReceptor');
+  const codigoInput = document.getElementById('codigo');
+  
+  // Manejo de la relación del receptor
+  relacionSelect.addEventListener('change', function() {
+    // Si es el titular, no se requiere código
+    if (this.value === 'titular') {
+      codigoInput.removeAttribute('required');
+      codigoInput.parentElement.classList.add('d-none');
+    } else {
+      codigoInput.setAttribute('required', '');
+      codigoInput.parentElement.classList.remove('d-none');
+    }
+  });
+  
+  // Solo permitir números en el código
+  codigoInput.addEventListener('input', function() {
+    this.value = this.value.replace(/[^0-9]/g, '');
+  });
+  
+  // Procesar el formulario
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(form);
+    const data = {};
+    formData.forEach((value, key) => data[key] = value);
+    
+    // Enviar la solicitud
+    fetch(form.action, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.exito && data.valido) {
+        // Redirigir a la página de éxito o mostrar mensaje
+        window.location.href = `/documentos/entrega/${codigoInput.dataset.documentoId}?success=true`;
+      } else {
+        // Mostrar mensaje de error
+        alert('El código de verificación no es válido');
+      }
+    })
+    .catch(error => {
+      console.error('Error al verificar código:', error);
+      alert('Error al procesar la verificación');
+    });
+  });
+});
+</script> 

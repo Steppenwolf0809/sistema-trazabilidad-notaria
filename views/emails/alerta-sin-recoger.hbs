@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alerta: Documento Pendiente por Recoger</title>
+  <style>
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .header {
+      background-color: #dc3545;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+    .content {
+      padding: 20px;
+      background-color: #f9f9f9;
+      border: 1px solid #ddd;
+    }
+    .footer {
+      margin-top: 20px;
+      text-align: center;
+      font-size: 12px;
+      color: #777;
+    }
+    .btn {
+      display: inline-block;
+      background-color: #dc3545;
+      color: white;
+      padding: 10px 20px;
+      text-decoration: none;
+      border-radius: 5px;
+      margin-top: 20px;
+    }
+    .alert-box {
+      background-color: #fff3cd;
+      border-left: 4px solid #dc3545;
+      padding: 15px;
+      margin: 20px 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    table, th, td {
+      border: 1px solid #ddd;
+    }
+    th, td {
+      padding: 10px;
+      text-align: left;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    .warning-icon {
+      text-align: center;
+      font-size: 48px;
+      color: #dc3545;
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Documento Pendiente por Recoger</h1>
+    </div>
+    
+    <div class="content">
+      <div class="warning-icon">⚠️</div>
+      
+      <p>Estimado(a) <strong>{{cliente.nombreCliente}}</strong>,</p>
+      
+      <p><strong>IMPORTANTE:</strong> Su documento <strong>{{documento.tipoDocumento}}</strong> lleva <strong>{{diasPendiente}} días</strong> pendiente por recoger en nuestra notaría.</p>
+      
+      <div class="alert-box">
+        <h3>Información del Documento:</h3>
+        <table>
+          <tr>
+            <th>Tipo de Documento</th>
+            <td>{{documento.tipoDocumento}}</td>
+          </tr>
+          <tr>
+            <th>Número de Protocolo</th>
+            <td>{{documento.numeroProtocolo}}</td>
+          </tr>
+          <tr>
+            <th>Disponible desde</th>
+            <td>{{fechaDisponible}}</td>
+          </tr>
+          <tr>
+            <th>Código de Barras</th>
+            <td>{{documento.codigoBarras}}</td>
+          </tr>
+        </table>
+      </div>
+      
+      <p>Le recordamos que es importante retirar su documento a la brevedad posible. Le sugerimos pasar por nuestras oficinas en horario de atención:</p>
+      
+      <p style="text-align: center;">
+        <strong>Lunes a Viernes de 8:00 a 17:00 hrs</strong>
+      </p>
+      
+      <p>Para retirar su documento, deberá presentar su identificación oficial vigente.</p>
+      
+      <p>Si desea verificar el estado de su documento, puede hacerlo a través del siguiente enlace:</p>
+      
+      <p style="text-align: center;">
+        <a href="{{urlVerificacion}}" class="btn">Verificar Documento</a>
+      </p>
+      
+      <p><strong>Importante:</strong> Si no puede acudir personalmente a recoger su documento, puede autorizar a un tercero presentando:</p>
+      <ul>
+        <li>Identificación oficial vigente del tercero</li>
+        <li>Una autorización firmada por usted</li>
+        <li>Copia de su identificación</li>
+      </ul>
+      
+      <p>Si ya recogió su documento o tiene alguna circunstancia especial que le impide recogerlo, por favor comuníquese con nosotros.</p>
+      
+      <p>Atentamente,</p>
+      <p><strong>Notaría Décima Octava</strong></p>
+    </div>
+    
+    <div class="footer">
+      <p>Este correo es generado automáticamente. Por favor no responda a este mensaje.</p>
+      <p>Si tiene alguna pregunta, comuníquese al teléfono: (593) 99-659-1682</p>
+      <p>&copy; {{currentYear}} Notaría Décima Octava. Todos los derechos reservados.</p>
+    </div>
+  </div>
+</body>
+</html> 

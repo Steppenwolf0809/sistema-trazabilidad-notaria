@@ -1,0 +1,268 @@
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="fas fa-list me-2"></i> Listado de Documentos</span>
+    <a href="/admin/documentos/registro" class="btn btn-sm btn-primary">
+      <i class="fas fa-plus me-1"></i> Nuevo Documento
+    </a>
+  </div>
+  <div class="card-body">
+    <!-- Filtros -->
+    <div class="row mb-4">
+      <div class="col-md-12">
+        <div class="card bg-light">
+          <div class="card-body p-3">
+            <form id="filtrosForm" method="GET" action="/admin/documentos/listado">
+              <div class="row">
+                <div class="col-md-3 mb-2">
+                  <label for="filtroEstado" class="form-label small">Estado</label>
+                  <select class="form-select form-select-sm" id="filtroEstado" name="estado">
+                    <option value="">Todos</option>
+                    <option value="en_proceso" {{#if filtros.estado.en_proceso}}selected{{/if}}>En Proceso</option>
+                    <option value="listo_para_entrega" {{#if filtros.estado.listo_para_entrega}}selected{{/if}}>Listos para Entrega</option>
+                    <option value="entregado" {{#if filtros.estado.entregado}}selected{{/if}}>Entregados</option>
+                    <option value="cancelado" {{#if filtros.estado.cancelado}}selected{{/if}}>Cancelados</option>
+                  </select>
+                </div>
+                
+                <div class="col-md-3 mb-2">
+                  <label for="filtroTipo" class="form-label small">Tipo de Documento</label>
+                  <select class="form-select form-select-sm" id="filtroTipo" name="tipoDocumento">
+                    <option value="">Todos</option>
+                    {{#each tiposDocumento}}
+                    <option value="{{this}}" {{#if (eq ../filtros.tipoDocumento this)}}selected{{/if}}>{{this}}</option>
+                    {{/each}}
+                  </select>
+                </div>
+                
+                <div class="col-md-3 mb-2">
+                  <label for="filtroMatrizador" class="form-label small">Matrizador</label>
+                  <select class="form-select form-select-sm" id="filtroMatrizador" name="idMatrizador">
+                    <option value="">Todos</option>
+                    {{#each matrizadores}}
+                    <option value="{{this.id}}" {{#if (eq ../filtros.idMatrizador this.id)}}selected{{/if}}>{{this.nombre}}</option>
+                    {{/each}}
+                  </select>
+                </div>
+                
+                <div class="col-md-3 mb-2">
+                  <label for="filtroBusqueda" class="form-label small">Búsqueda</label>
+                  <input type="text" class="form-control form-control-sm" id="filtroBusqueda" name="busqueda" placeholder="Código, cliente o protocolo" value="{{filtros.busqueda}}">
+                </div>
+                
+                <div class="col-md-12 text-end">
+                  <button type="submit" class="btn btn-sm btn-primary">
+                    <i class="fas fa-filter me-1"></i> Filtrar
+                  </button>
+                  <a href="/admin/documentos/listado" class="btn btn-sm btn-outline-secondary ms-1">
+                    <i class="fas fa-times me-1"></i> Limpiar
+                  </a>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Tabla de documentos -->
+    <div class="table-responsive">
+      <table class="table table-hover table-striped">
+        <thead class="table-light">
+          <tr>
+            <th>Código</th>
+            <th>Tipo</th>
+            <th>Cliente</th>
+            <th>Matrizador</th>
+            <th>Fecha</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each documentos}}
+          <tr>
+            <td><span class="small">{{this.codigoBarras}}</span></td>
+            <td>{{this.tipoDocumento}}</td>
+            <td>
+              {{this.nombreCliente}}
+              <div class="small text-muted">{{this.identificacionCliente}}</div>
+            </td>
+            <td>{{this.matrizador.nombre}}</td>
+            <td>{{formatDate this.fechaCreacion}}</td>
+            <td>
+              {{#if (eq this.estado "en_proceso")}}
+              <span class="badge bg-warning">En Proceso</span>
+              {{else if (eq this.estado "listo_para_entrega")}}
+              <span class="badge bg-success">Listo</span>
+              {{else if (eq this.estado "entregado")}}
+              <span class="badge bg-info">Entregado</span>
+              {{else}}
+              <span class="badge bg-secondary">{{this.estado}}</span>
+              {{/if}}
+            </td>
+            <td>
+              <div class="btn-group">
+                <a href="/admin/documentos/detalle/{{this.id}}" class="btn btn-sm btn-outline-primary">
+                  <i class="fas fa-eye"></i>
+                </a>
+                
+                {{#if (eq this.estado "en_proceso")}}
+                <button type="button" class="btn btn-sm btn-outline-success" onclick="marcarListo({{this.id}})">
+                  <i class="fas fa-check"></i>
+                </button>
+                {{/if}}
+                
+                {{#if (eq this.estado "listo_para_entrega")}}
+                <a href="/admin/documentos/entrega/{{this.id}}" class="btn btn-sm btn-outline-info">
+                  <i class="fas fa-hand-holding"></i>
+                </a>
+                {{/if}}
+                
+                <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                  <span class="visually-hidden">Más opciones</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                  <li><a class="dropdown-item" href="/admin/documentos/editar/{{this.id}}">Editar</a></li>
+                  {{#if (eq this.estado "en_proceso")}}
+                  <li><a class="dropdown-item text-success" href="#" onclick="marcarListo({{this.id}})">Marcar como listo</a></li>
+                  {{/if}}
+                  {{#unless (eq this.estado "entregado")}}
+                  <li><hr class="dropdown-divider"></li>
+                  <li><a class="dropdown-item text-danger" href="#" onclick="cancelarDocumento({{this.id}})">Cancelar documento</a></li>
+                  {{/unless}}
+                </ul>
+              </div>
+            </td>
+          </tr>
+          {{else}}
+          <tr>
+            <td colspan="7" class="text-center py-4">
+              <i class="fas fa-search me-2"></i> No se encontraron documentos con los filtros actuales
+            </td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+    
+    <!-- Paginación -->
+    {{#if pagination}}
+    <nav aria-label="Paginación de documentos">
+      <ul class="pagination justify-content-center">
+        {{#if pagination.prev}}
+        <li class="page-item">
+          <a class="page-link" href="{{pagination.prev}}">Anterior</a>
+        </li>
+        {{else}}
+        <li class="page-item disabled">
+          <a class="page-link">Anterior</a>
+        </li>
+        {{/if}}
+        
+        {{#each pagination.pages}}
+        <li class="page-item {{#if this.active}}active{{/if}}">
+          <a class="page-link" href="{{this.url}}">{{this.num}}</a>
+        </li>
+        {{/each}}
+        
+        {{#if pagination.next}}
+        <li class="page-item">
+          <a class="page-link" href="{{pagination.next}}">Siguiente</a>
+        </li>
+        {{else}}
+        <li class="page-item disabled">
+          <a class="page-link">Siguiente</a>
+        </li>
+        {{/if}}
+      </ul>
+    </nav>
+    {{/if}}
+  </div>
+</div>
+
+<!-- Modal de confirmación para marcar como listo -->
+<div class="modal fade" id="marcarListoModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Marcar documento como listo</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Al marcar este documento como listo para entrega, se generará un código de verificación de 4 dígitos que será enviado al cliente.</p>
+        <p>¿Está seguro de que el documento está listo para ser entregado?</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <form id="marcarListoForm" action="/admin/documentos/marcar-listo" method="POST">
+          <input type="hidden" id="documentoId" name="documentoId">
+          <button type="submit" class="btn btn-success">Confirmar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de confirmación para cancelar documento -->
+<div class="modal fade" id="cancelarDocumentoModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Cancelar documento</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>¿Está seguro de que desea cancelar este documento?</p>
+        <p class="text-danger">Esta acción no se puede deshacer.</p>
+        
+        <div class="mb-3">
+          <label for="motivoCancelacion" class="form-label">Motivo de cancelación</label>
+          <textarea class="form-control" id="motivoCancelacion" name="motivoCancelacion" rows="2" required></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        <form id="cancelarDocumentoForm" action="/admin/documentos/cancelar" method="POST">
+          <input type="hidden" id="cancelarDocumentoId" name="documentoId">
+          <input type="hidden" id="motivoCancelacionHidden" name="motivo">
+          <button type="submit" class="btn btn-danger">Confirmar Cancelación</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Funciones para los modales
+  function marcarListo(id) {
+    document.getElementById('documentoId').value = id;
+    const modal = new bootstrap.Modal(document.getElementById('marcarListoModal'));
+    modal.show();
+  }
+  
+  function cancelarDocumento(id) {
+    document.getElementById('cancelarDocumentoId').value = id;
+    const modal = new bootstrap.Modal(document.getElementById('cancelarDocumentoModal'));
+    modal.show();
+  }
+  
+  document.addEventListener('DOMContentLoaded', function() {
+    // Transferir motivo al campo oculto antes de enviar
+    const cancelarForm = document.getElementById('cancelarDocumentoForm');
+    const motivoCancelacion = document.getElementById('motivoCancelacion');
+    const motivoCancelacionHidden = document.getElementById('motivoCancelacionHidden');
+    
+    if (cancelarForm) {
+      cancelarForm.addEventListener('submit', function(event) {
+        if (!motivoCancelacion.value.trim()) {
+          event.preventDefault();
+          alert('Por favor, indique el motivo de la cancelación');
+          motivoCancelacion.focus();
+          return false;
+        }
+        
+        motivoCancelacionHidden.value = motivoCancelacion.value;
+      });
+    }
+  });
+</script> 
