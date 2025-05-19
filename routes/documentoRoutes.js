@@ -6,6 +6,19 @@
 const express = require('express');
 const router = express.Router();
 const { verificarToken, esMatrizador, esRecepcion, esConsulta } = require('../middlewares/auth');
+const RegistroAuditoria = require('../models/RegistroAuditoria');
+
+// Middleware para verificar roles específicos (admin y matrizador)
+const esAdminOMatrizador = (req, res, next) => {
+  if (req.matrizador && (req.matrizador.rol === 'admin' || req.matrizador.rol === 'matrizador')) {
+    next();
+  } else {
+    return res.status(403).json({
+      exito: false,
+      mensaje: 'Acceso denegado. Se requieren permisos de administrador o matrizador.'
+    });
+  }
+};
 
 // Simulación de controlador para demo
 const documentoController = {
@@ -149,6 +162,62 @@ const documentoController = {
         ]
       }
     });
+  },
+  
+  obtenerCodigoVerificacion: async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Buscar documento en la BD 
+      const Documento = require('../models/Documento');
+      const documento = await Documento.findByPk(id);
+      
+      if (!documento) {
+        // Registrar intento fallido en auditoría
+        await RegistroAuditoria.create({
+          idDocumento: parseInt(id),
+          idMatrizador: req.matrizador.id,
+          accion: 'consulta_codigo',
+          resultado: 'fallido',
+          ip: req.ip,
+          userAgent: req.get('User-Agent'),
+          detalles: `Documento no encontrado: ID ${id}`
+        });
+        
+        return res.status(404).json({
+          exito: false,
+          mensaje: 'Documento no encontrado'
+        });
+      }
+      
+      // Registrar consulta exitosa en auditoría
+      await RegistroAuditoria.create({
+        idDocumento: documento.id,
+        idMatrizador: req.matrizador.id,
+        accion: 'consulta_codigo',
+        resultado: 'exitoso',
+        ip: req.ip,
+        userAgent: req.get('User-Agent'),
+        detalles: `Consulta de código de verificación para documento ${documento.tipoDocumento}`
+      });
+      
+      // Devolver el código
+      res.status(200).json({
+        exito: true,
+        mensaje: 'Código de verificación obtenido',
+        datos: {
+          id: documento.id,
+          codigoVerificacion: documento.codigoVerificacion
+        }
+      });
+    } catch (error) {
+      console.error('Error al obtener código de verificación:', error);
+      res.status(500).json({
+        exito: false,
+        mensaje: 'Error al obtener código de verificación',
+        error: error.message
+      });
+    }
   }
 };
 
@@ -168,5 +237,8 @@ router.delete('/:id', verificarToken, esMatrizador, documentoController.eliminar
 
 // Rutas para entrega - Requieren permisos de recepción
 router.post('/entrega/:codigoBarras', verificarToken, esRecepcion, documentoController.registrarEntrega);
+
+// Rutas para matrizadores y administradores exclusivamente
+router.get('/:id/codigo-verificacion', verificarToken, esAdminOMatrizador, documentoController.obtenerCodigoVerificacion);
 
 module.exports = router; 

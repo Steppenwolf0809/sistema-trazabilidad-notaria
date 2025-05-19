@@ -14,12 +14,12 @@ router.get('/verificar/:codigo', matrizadorController.verificarQR);
 
 // Rutas protegidas (requieren autenticación)
 router.get('/', verificarToken, esAdmin, matrizadorController.obtenerTodos);
+router.get('/logout', verificarToken, matrizadorController.logout);
 router.get('/:id', verificarToken, matrizadorController.obtenerPorId);
 router.post('/', verificarToken, esAdmin, matrizadorController.crear);
 router.put('/:id', verificarToken, esAdmin, matrizadorController.actualizar);
 router.delete('/:id', verificarToken, esAdmin, matrizadorController.eliminar);
 router.get('/:id/qr', verificarToken, matrizadorController.generarQR);
-router.get('/logout', verificarToken, matrizadorController.logout);
 
 // Rutas de vistas
 router.get('/admin', verificarToken, esAdmin, matrizadorController.adminMatrizadores);

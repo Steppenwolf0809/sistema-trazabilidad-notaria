@@ -5,6 +5,8 @@
 const Documento = require('./Documento');
 const Matrizador = require('./Matrizador');
 const EventoDocumento = require('./EventoDocumento');
+const RegistroAuditoria = require('./RegistroAuditoria');
+const DocumentoRelacion = require('./DocumentoRelacion');
 
 // Relaciones entre modelos
 
@@ -28,8 +30,48 @@ EventoDocumento.belongsTo(Documento, {
   as: 'documento'
 });
 
+// Relación Documento - RegistroAuditoria
+Documento.hasMany(RegistroAuditoria, {
+  foreignKey: 'idDocumento',
+  as: 'registrosAuditoria'
+});
+RegistroAuditoria.belongsTo(Documento, {
+  foreignKey: 'idDocumento',
+  as: 'documento'
+});
+
+// Relación Matrizador - RegistroAuditoria
+Matrizador.hasMany(RegistroAuditoria, {
+  foreignKey: 'idMatrizador',
+  as: 'registrosAuditoria'
+});
+RegistroAuditoria.belongsTo(Matrizador, {
+  foreignKey: 'idMatrizador',
+  as: 'matrizador'
+});
+
+// Relaciones entre documentos
+Documento.belongsToMany(Documento, {
+  through: DocumentoRelacion,
+  foreignKey: 'idDocumentoPrincipal',
+  otherKey: 'idDocumentoRelacionado',
+  as: 'documentosRelacionados'
+});
+
+// Relaciones de Matrizador con DocumentoRelacion (Creador)
+Matrizador.hasMany(DocumentoRelacion, {
+  foreignKey: 'creadoPor',
+  as: 'relacionesCreadas'
+});
+DocumentoRelacion.belongsTo(Matrizador, {
+  foreignKey: 'creadoPor',
+  as: 'creador'
+});
+
 module.exports = {
   Documento,
   Matrizador,
-  EventoDocumento
+  EventoDocumento,
+  RegistroAuditoria,
+  DocumentoRelacion
 }; 

@@ -18,6 +18,7 @@ const Documento = sequelize.define('Documento', {
   // Código de barras único para identificar el documento
   codigoBarras: {
     type: DataTypes.STRING,
+    field: 'codigo_barras',
     unique: true,
     allowNull: false,
     validate: {
@@ -34,6 +35,7 @@ const Documento = sequelize.define('Documento', {
   // Tipo de documento (escritura, poder, testamento, etc.)
   tipoDocumento: {
     type: DataTypes.STRING,
+    field: 'tipo_documento',
     allowNull: false,
     validate: {
       notEmpty: true
@@ -43,6 +45,7 @@ const Documento = sequelize.define('Documento', {
   // Fecha de creación del documento
   fechaCreacion: {
     type: DataTypes.DATE,
+    field: 'fecha_creacion',
     allowNull: false,
     defaultValue: DataTypes.NOW
   },
@@ -50,18 +53,21 @@ const Documento = sequelize.define('Documento', {
   // Nombre del cliente o solicitante
   nombreCliente: {
     type: DataTypes.STRING,
+    field: 'nombre_cliente',
     allowNull: false
   },
   
   // Número de identificación del cliente (DNI, NIE, etc.)
   identificacionCliente: {
     type: DataTypes.STRING,
+    field: 'identificacion_cliente',
     allowNull: false
   },
   
   // Correo electrónico del cliente
   emailCliente: {
     type: DataTypes.STRING,
+    field: 'email_cliente',
     validate: {
       isEmail: true
     }
@@ -69,7 +75,8 @@ const Documento = sequelize.define('Documento', {
   
   // Teléfono del cliente (para notificaciones WhatsApp)
   telefonoCliente: {
-    type: DataTypes.STRING
+    type: DataTypes.STRING,
+    field: 'telefono_cliente'
   },
   
   // Estado actual del documento (en_proceso, listo, entregado, etc.)
@@ -81,6 +88,7 @@ const Documento = sequelize.define('Documento', {
   // Código de verificación para la entrega (4 dígitos enviado por WhatsApp/email)
   codigoVerificacion: {
     type: DataTypes.STRING(4),
+    field: 'codigo_verificacion',
     validate: {
       isNumeric: true,
       len: [4, 4]
@@ -89,7 +97,8 @@ const Documento = sequelize.define('Documento', {
   
   // Fecha de entrega del documento (si ya fue entregado)
   fechaEntrega: {
-    type: DataTypes.DATE
+    type: DataTypes.DATE,
+    field: 'fecha_entrega'
   },
   
   // Notas o comentarios adicionales
@@ -107,24 +116,28 @@ const Documento = sequelize.define('Documento', {
   // Nombre de quien recibe el documento
   nombreReceptor: {
     type: DataTypes.STRING,
+    field: 'nombre_receptor',
     allowNull: true
   },
   
   // Número de identificación del receptor
   identificacionReceptor: {
     type: DataTypes.STRING,
+    field: 'identificacion_receptor',
     allowNull: true
   },
   
   // Relación del receptor con el compareciente
   relacionReceptor: {
     type: DataTypes.ENUM('titular', 'familiar', 'mandatario', 'otro'),
+    field: 'relacion_receptor',
     allowNull: true
   },
   
   // ID del matrizador que creó el documento
   idMatrizador: {
     type: DataTypes.INTEGER,
+    field: 'id_matrizador',
     allowNull: true,
     references: {
       // Esto crea una referencia (futura) a un modelo Matrizador
@@ -136,7 +149,9 @@ const Documento = sequelize.define('Documento', {
   // Opciones del modelo
   tableName: 'documentos',
   timestamps: true, // Crea automáticamente createdAt y updatedAt
-  underscored: true // Usa snake_case para los nombres de columnas
+  underscored: true, // Usa snake_case para los nombres de columnas
+  createdAt: 'created_at',
+  updatedAt: 'updated_at'
 });
 
 module.exports = Documento; 

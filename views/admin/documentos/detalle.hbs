@@ -1,0 +1,517 @@
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="fas fa-file-alt me-2"></i> Detalle de Documento</span>
+    <div>
+      <a href="/admin/documentos/listado" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i> Volver al Listado
+      </a>
+      
+      {{#if (eq documento.estado "en_proceso")}}
+      <button type="button" class="btn btn-sm btn-success" onclick="marcarListo({{documento.id}})">
+        <i class="fas fa-check me-1"></i> Marcar Listo
+      </button>
+      {{/if}}
+      
+      {{#if (eq documento.estado "listo_para_entrega")}}
+      <a href="/admin/documentos/entrega/{{documento.id}}" class="btn btn-sm btn-primary">
+        <i class="fas fa-hand-holding me-1"></i> Entregar
+      </a>
+      {{/if}}
+    </div>
+  </div>
+  
+  <div class="card-body">
+    <!-- Información general del documento -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <h5 class="border-bottom pb-2">Información General</h5>
+      </div>
+      
+      <div class="col-md-6">
+        <div class="mb-3">
+          <label class="fw-bold">Código de Barras:</label>
+          <div>{{documento.codigoBarras}}</div>
+        </div>
+        
+        <div class="mb-3">
+          <label class="fw-bold">Tipo de Documento:</label>
+          <div>{{documento.tipoDocumento}}</div>
+        </div>
+        
+        <div class="mb-3">
+          <label class="fw-bold">Estado:</label>
+          <div>
+            {{#if (eq documento.estado "en_proceso")}}
+            <span class="badge bg-warning">En Proceso</span>
+            {{else if (eq documento.estado "listo_para_entrega")}}
+            <span class="badge bg-success">Listo para Entrega</span>
+            {{else if (eq documento.estado "entregado")}}
+            <span class="badge bg-info">Entregado</span>
+            {{else}}
+            <span class="badge bg-secondary">{{translateEstado documento.estado}}</span>
+            {{/if}}
+          </div>
+        </div>
+        
+        <div class="mb-3">
+          <label class="fw-bold">Notas:</label>
+          <div>{{documento.notas}}</div>
+        </div>
+      </div>
+      
+      <div class="col-md-6">
+        <div class="mb-3">
+          <label class="fw-bold">Fecha de Creación:</label>
+          <div>{{formatDate documento.fechaCreacion}}</div>
+        </div>
+        
+        <div class="mb-3">
+          <label class="fw-bold">Matrizador:</label>
+          <div>{{documento.matrizador.nombre}}</div>
+        </div>
+        
+        {{#if (eq documento.estado "listo_para_entrega")}}
+        <div class="mb-3">
+          <label class="fw-bold">Código de Verificación:</label>
+          {{#if (hasRole userRole "admin,matrizador")}}
+          <div class="badge bg-warning">{{documento.codigoVerificacion}}</div>
+          {{else}}
+          <div class="badge bg-secondary">**** (Acceso restringido)</div>
+          {{/if}}
+        </div>
+        {{/if}}
+        
+        {{#if documento.fechaEntrega}}
+        <div class="mb-3">
+          <label class="fw-bold">Fecha de Entrega:</label>
+          <div>{{formatDate documento.fechaEntrega}}</div>
+        </div>
+        {{/if}}
+      </div>
+    </div>
+    
+    <!-- Información del cliente -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <h5 class="border-bottom pb-2">Información del Cliente</h5>
+      </div>
+      
+      <div class="col-md-6">
+        <div class="mb-3">
+          <label class="fw-bold">Nombre:</label>
+          <div>{{documento.nombreCliente}}</div>
+        </div>
+        
+        <div class="mb-3">
+          <label class="fw-bold">Identificación:</label>
+          <div>{{documento.identificacionCliente}}</div>
+        </div>
+      </div>
+      
+      <div class="col-md-6">
+        <div class="mb-3">
+          <label class="fw-bold">Email:</label>
+          <div>{{documento.emailCliente}}</div>
+        </div>
+        
+        <div class="mb-3">
+          <label class="fw-bold">Teléfono:</label>
+          <div>{{documento.telefonoCliente}}</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Información de comparecientes -->
+    {{#if documento.comparecientes.length}}
+    <div class="row mb-4">
+      <div class="col-12">
+        <h5 class="border-bottom pb-2">Comparecientes</h5>
+      </div>
+      
+      {{#each documento.comparecientes}}
+      <div class="col-md-4 mb-3">
+        <div class="card">
+          <div class="card-body p-3">
+            <h6 class="mb-2">{{this.nombre}}</h6>
+            <div class="small mb-1"><strong>Identificación:</strong> {{this.identificacion}}</div>
+            {{#if this.rol}}
+            <div class="small"><strong>Rol:</strong> {{this.rol}}</div>
+            {{/if}}
+          </div>
+        </div>
+      </div>
+      {{/each}}
+    </div>
+    {{/if}}
+    
+    <!-- Información de entrega -->
+    {{#if (eq documento.estado "entregado")}}
+    <div class="row mb-4">
+      <div class="col-12">
+        <h5 class="border-bottom pb-2">Datos de Entrega</h5>
+      </div>
+      
+      <div class="col-md-6">
+        <div class="mb-3">
+          <label class="fw-bold">Receptor:</label>
+          <div>{{documento.nombreReceptor}}</div>
+        </div>
+        
+        <div class="mb-3">
+          <label class="fw-bold">Identificación:</label>
+          <div>{{documento.identificacionReceptor}}</div>
+        </div>
+      </div>
+      
+      <div class="col-md-6">
+        <div class="mb-3">
+          <label class="fw-bold">Relación:</label>
+          <div>
+            {{#if (eq documento.relacionReceptor "titular")}}
+            Titular
+            {{else if (eq documento.relacionReceptor "familiar")}}
+            Familiar
+            {{else if (eq documento.relacionReceptor "mandatario")}}
+            Mandatario
+            {{else}}
+            {{documento.relacionReceptor}}
+            {{/if}}
+          </div>
+        </div>
+        
+        <div class="mb-3">
+          <label class="fw-bold">Fecha de Entrega:</label>
+          <div>{{formatDate documento.fechaEntrega}}</div>
+        </div>
+      </div>
+    </div>
+    {{/if}}
+    
+    <!-- Documentos relacionados -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <h5 class="border-bottom pb-2 d-flex justify-content-between align-items-center">
+          <span>Documentos Relacionados</span>
+          {{#if (hasRole userRole "admin,matrizador")}}
+          <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#relacionarDocumentoModal">
+            <i class="fas fa-link me-1"></i> Relacionar
+          </button>
+          {{/if}}
+        </h5>
+      </div>
+      
+      <div class="col-12">
+        {{#if documentosRelacionados.length}}
+          <div class="table-responsive">
+            <table class="table table-sm table-hover">
+              <thead class="table-light">
+                <tr>
+                  <th>Código</th>
+                  <th>Tipo</th>
+                  <th>Relación</th>
+                  <th>Estado</th>
+                  <th>Creado por</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {{#each documentosRelacionados}}
+                <tr>
+                  <td>
+                    <a href="/admin/documentos/detalle/{{this.id}}">{{this.codigoBarras}}</a>
+                  </td>
+                  <td>{{this.tipoDocumento}}</td>
+                  <td>
+                    <span class="badge bg-info">{{this.DocumentoRelacion.tipoRelacion}}</span>
+                    {{#if this.DocumentoRelacion.descripcion}}
+                    <i class="fas fa-info-circle text-muted" data-bs-toggle="tooltip" title="{{this.DocumentoRelacion.descripcion}}"></i>
+                    {{/if}}
+                  </td>
+                  <td>
+                    <span class="badge bg-{{#if (eq this.estado 'en_proceso')}}warning{{else if (eq this.estado 'listo_para_entrega')}}success{{else if (eq this.estado 'entregado')}}info{{else}}secondary{{/if}}">
+                      {{translateEstado this.estado}}
+                    </span>
+                  </td>
+                  <td>{{this.DocumentoRelacion.creador.nombre}}</td>
+                  <td>
+                    {{#if (hasRole ../userRole "admin,matrizador")}}
+                    <form action="/admin/documentos/eliminar-relacion" method="POST" class="d-inline" onsubmit="return confirm('¿Está seguro de eliminar esta relación?');">
+                      <input type="hidden" name="idRelacion" value="{{this.DocumentoRelacion.id}}">
+                      <input type="hidden" name="idDocumento" value="{{../documento.id}}">
+                      <button type="submit" class="btn btn-sm btn-outline-danger">
+                        <i class="fas fa-unlink"></i>
+                      </button>
+                    </form>
+                    {{/if}}
+                    <a href="/admin/documentos/detalle/{{this.id}}" class="btn btn-sm btn-outline-primary">
+                      <i class="fas fa-eye"></i>
+                    </a>
+                  </td>
+                </tr>
+                {{/each}}
+              </tbody>
+            </table>
+          </div>
+        {{else}}
+          <div class="alert alert-light text-center">
+            <i class="fas fa-info-circle me-2"></i> No hay documentos relacionados
+          </div>
+        {{/if}}
+      </div>
+    </div>
+    
+    <!-- Historial de eventos -->
+    {{#if eventos.length}}
+    <div class="row">
+      <div class="col-12">
+        <h5 class="border-bottom pb-2">Historial de Eventos</h5>
+      </div>
+      
+      <div class="col-12">
+        <div class="table-responsive">
+          <table class="table table-sm table-hover">
+            <thead class="table-light">
+              <tr>
+                <th>Fecha</th>
+                <th>Tipo</th>
+                <th>Detalles</th>
+                <th>Usuario</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each eventos}}
+              <tr>
+                <td>{{formatDate this.createdAt}}</td>
+                <td>
+                  {{#if (eq this.tipo "creacion")}}
+                  <span class="badge bg-primary">Creación</span>
+                  {{else if (eq this.tipo "cambio_estado")}}
+                  <span class="badge bg-info">Cambio Estado</span>
+                  {{else if (eq this.tipo "entrega")}}
+                  <span class="badge bg-success">Entrega</span>
+                  {{else if (eq this.tipo "cancelacion")}}
+                  <span class="badge bg-danger">Cancelación</span>
+                  {{else}}
+                  <span class="badge bg-secondary">{{this.tipo}}</span>
+                  {{/if}}
+                </td>
+                <td>{{this.detalles}}</td>
+                <td>{{this.usuario}}</td>
+              </tr>
+              {{/each}}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {{/if}}
+  </div>
+</div>
+
+<!-- Modal de confirmación para marcar como listo -->
+<div class="modal fade" id="marcarListoModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Marcar documento como listo</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Al marcar este documento como listo para entrega, se generará un código de verificación de 4 dígitos que será enviado al cliente.</p>
+        <p>¿Está seguro de que el documento está listo para ser entregado?</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <form id="marcarListoForm" action="/admin/documentos/marcar-listo" method="POST">
+          <input type="hidden" id="documentoId" name="documentoId" value="{{documento.id}}">
+          <button type="submit" class="btn btn-success">Confirmar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para relacionar documentos -->
+<div class="modal fade" id="relacionarDocumentoModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Relacionar Documentos</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-4">
+          <h6>Documentos del mismo cliente</h6>
+          {{#if documentosCliente.length}}
+            <div class="list-group">
+              {{#each documentosCliente}}
+                <button type="button" 
+                        class="list-group-item list-group-item-action seleccionar-documento" 
+                        data-id="{{this.id}}" 
+                        data-codigo="{{this.codigoBarras}}" 
+                        data-tipo="{{this.tipoDocumento}}">
+                  <div class="d-flex w-100 justify-content-between">
+                    <h6 class="mb-1">{{this.tipoDocumento}}</h6>
+                    <small>{{formatDate this.createdAt}}</small>
+                  </div>
+                  <p class="mb-1">Código: {{this.codigoBarras}}</p>
+                </button>
+              {{/each}}
+            </div>
+          {{else}}
+            <div class="alert alert-light">
+              No hay más documentos para este cliente
+            </div>
+          {{/if}}
+        </div>
+        
+        <form id="formRelacionarDocumento" action="/admin/documentos/relacionar" method="POST">
+          <input type="hidden" name="idDocumentoPrincipal" value="{{documento.id}}">
+          
+          <div class="mb-3">
+            <label class="form-label">Documento Principal:</label>
+            <div class="form-control bg-light">
+              {{documento.tipoDocumento}} - {{documento.codigoBarras}}
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label for="idDocumentoRelacionado" class="form-label">Documento Relacionado:</label>
+            <div class="input-group">
+              <input type="hidden" id="idDocumentoRelacionado" name="idDocumentoRelacionado" required>
+              <input type="text" id="documentoRelacionadoSeleccionado" class="form-control" placeholder="Seleccione un documento" readonly required>
+              <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSearch">
+                <i class="fas fa-search"></i> Buscar
+              </button>
+            </div>
+          </div>
+          
+          <div class="collapse mb-3" id="collapseSearch">
+            <div class="card card-body">
+              <h6>Buscar otro documento</h6>
+              <div class="input-group mb-3">
+                <input type="text" id="codigoDocumentoBusqueda" class="form-control" placeholder="Código de barras">
+                <button class="btn btn-primary" type="button" id="btnBuscarPorCodigo">
+                  <i class="fas fa-search"></i> Buscar
+                </button>
+              </div>
+              <div id="resultadosBusqueda"></div>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label for="tipoRelacion" class="form-label">Tipo de Relación:</label>
+            <select class="form-select" id="tipoRelacion" name="tipoRelacion" required>
+              <option value="" selected disabled>Seleccionar tipo de relación...</option>
+              <option value="relacionado">Documento Relacionado</option>
+              <option value="deriva_de">Deriva De</option>
+              <option value="complementa">Complementa</option>
+              <option value="reemplaza">Reemplaza</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label for="descripcion" class="form-label">Descripción de la Relación:</label>
+            <textarea class="form-control" id="descripcion" name="descripcion" rows="2"></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btnGuardarRelacion">Guardar Relación</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Función para mostrar el modal de marcar como listo
+  function marcarListo(id) {
+    document.getElementById('documentoId').value = id;
+    const modal = new bootstrap.Modal(document.getElementById('marcarListoModal'));
+    modal.show();
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar tooltips para información adicional
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+    
+    // Manejo de selección de documento relacionado
+    document.querySelectorAll('.seleccionar-documento').forEach(button => {
+      button.addEventListener('click', function() {
+        const id = this.getAttribute('data-id');
+        const codigo = this.getAttribute('data-codigo');
+        const tipo = this.getAttribute('data-tipo');
+        
+        document.getElementById('idDocumentoRelacionado').value = id;
+        document.getElementById('documentoRelacionadoSeleccionado').value = `${tipo} - ${codigo}`;
+        
+        // Cerrar el colapso si está abierto
+        const collapseSearch = document.getElementById('collapseSearch');
+        const bsCollapse = bootstrap.Collapse.getInstance(collapseSearch);
+        if (bsCollapse) bsCollapse.hide();
+      });
+    });
+    
+    // Buscar documentos por código
+    document.getElementById('btnBuscarPorCodigo').addEventListener('click', function() {
+      const codigo = document.getElementById('codigoDocumentoBusqueda').value.trim();
+      
+      if (!codigo) return;
+      
+      // Realizar la búsqueda mediante AJAX
+      fetch(`/api/documentos/buscar/codigo/${encodeURIComponent(codigo)}`)
+        .then(response => response.json())
+        .then(data => {
+          const resultadosDiv = document.getElementById('resultadosBusqueda');
+          
+          if (data.exito && data.datos) {
+            // Mostrar el resultado encontrado
+            resultadosDiv.innerHTML = `
+              <div class="list-group">
+                <button type="button" class="list-group-item list-group-item-action seleccionar-documento-busqueda"
+                  data-id="${data.datos.id}" data-codigo="${data.datos.codigoBarras}" data-tipo="${data.datos.tipoDocumento}">
+                  <div class="d-flex w-100 justify-content-between">
+                    <h6 class="mb-1">${data.datos.tipoDocumento}</h6>
+                  </div>
+                  <p class="mb-1">Código: ${data.datos.codigoBarras}</p>
+                </button>
+              </div>
+            `;
+            
+            // Agregar evento al resultado encontrado
+            document.querySelector('.seleccionar-documento-busqueda').addEventListener('click', function() {
+              const id = this.getAttribute('data-id');
+              const codigo = this.getAttribute('data-codigo');
+              const tipo = this.getAttribute('data-tipo');
+              
+              document.getElementById('idDocumentoRelacionado').value = id;
+              document.getElementById('documentoRelacionadoSeleccionado').value = `${tipo} - ${codigo}`;
+            });
+          } else {
+            resultadosDiv.innerHTML = `<div class="alert alert-warning">No se encontró ningún documento con ese código</div>`;
+          }
+        })
+        .catch(error => {
+          document.getElementById('resultadosBusqueda').innerHTML = `<div class="alert alert-danger">Error al buscar: ${error.message}</div>`;
+        });
+    });
+    
+    // Enviar formulario de relación
+    document.getElementById('btnGuardarRelacion').addEventListener('click', function() {
+      const form = document.getElementById('formRelacionarDocumento');
+      const idDocumentoRelacionado = document.getElementById('idDocumentoRelacionado').value;
+      
+      if (!idDocumentoRelacionado) {
+        alert('Debe seleccionar un documento para relacionar');
+        return;
+      }
+      
+      form.submit();
+    });
+  });
+</script> 

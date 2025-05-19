@@ -70,6 +70,30 @@ const verificarToken = async (req, res, next) => {
       rol: matrizador.rol
     };
     
+    // Renovar el token si está a punto de expirar (menos de 2 días)
+    const ahora = Math.floor(Date.now() / 1000);
+    const dosDisEnSegundos = 2 * 24 * 60 * 60;
+    
+    if (decoded.exp && (decoded.exp - ahora < dosDisEnSegundos)) {
+      console.log('Renovando token próximo a expirar');
+      
+      // Crear nuevo token
+      const nuevoToken = jwt.sign(
+        { id: matrizador.id, rol: matrizador.rol },
+        process.env.JWT_SECRET || 'clave_secreta_notaria_2024',
+        { expiresIn: '7d' }
+      );
+      
+      // Establecer el nuevo token en la cookie
+      res.cookie('token', nuevoToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 días
+        path: '/',
+        sameSite: 'lax'
+      });
+    }
+    
     // Agregar rol a locals para acceso en las vistas
     res.locals.userRole = matrizador.rol;
     res.locals.userName = matrizador.nombre;
@@ -85,6 +109,9 @@ const verificarToken = async (req, res, next) => {
         error: error.message
       });
     }
+    
+    // Limpiar cookie de sesión ante error de JWT
+    res.clearCookie('token');
     
     return res.redirect('/login?error=sesion_expirada&redirect=' + encodeURIComponent(req.originalUrl));
   }

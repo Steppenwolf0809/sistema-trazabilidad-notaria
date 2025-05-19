@@ -6,6 +6,8 @@
 const Documento = require('../models/Documento');
 const Matrizador = require('../models/Matrizador');
 const EventoDocumento = require('../models/EventoDocumento');
+const RegistroAuditoria = require('../models/RegistroAuditoria');
+const DocumentoRelacion = require('../models/DocumentoRelacion');
 const { sequelize } = require('../config/database');
 const { Op } = require('sequelize');
 
@@ -19,11 +21,19 @@ exports.mostrarFormularioRegistro = async (req, res) => {
       order: [['nombre', 'ASC']]
     });
     
+    // Obtener posibles clientes para mostrar documentos existentes
+    const clientes = await Documento.findAll({
+      attributes: ['nombreCliente', 'identificacionCliente'],
+      group: ['nombreCliente', 'identificacionCliente'],
+      raw: true
+    });
+    
     res.render('admin/documentos/registro', {
       layout: 'admin',
       title: 'Registro de Documento',
       activeRegistro: true,
-      matrizadores
+      matrizadores,
+      clientes
     });
   } catch (error) {
     console.error('Error al mostrar formulario de registro:', error);
@@ -134,7 +144,7 @@ exports.listarDocumentos = async (req, res) => {
     }
     
     if (tipoDocumento) {
-      where.tipoDocumento = tipoDocumento;
+      where.tipo_documento = tipoDocumento;
     }
     
     if (idMatrizador) {
@@ -157,7 +167,7 @@ exports.listarDocumentos = async (req, res) => {
           as: 'matrizador'
         }
       ],
-      order: [['updatedAt', 'DESC']],
+      order: [['updated_at', 'DESC']],
       limit,
       offset
     });
@@ -204,7 +214,7 @@ exports.listarDocumentos = async (req, res) => {
     
     // Obtener tipos de documento para filtros
     const tiposDocumentoQuery = await Documento.findAll({
-      attributes: [[sequelize.fn('DISTINCT', sequelize.col('tipoDocumento')), 'tipo']],
+      attributes: [[sequelize.fn('DISTINCT', sequelize.col('tipo_documento')), 'tipo']],
       raw: true
     });
     
@@ -351,7 +361,7 @@ exports.mostrarEntrega = async (req, res) => {
       where: {
         estado: 'listo_para_entrega'
       },
-      order: [['updatedAt', 'DESC']],
+      order: [['updated_at', 'DESC']],
       limit: 10
     });
     
@@ -385,7 +395,9 @@ exports.completarEntrega = async (req, res) => {
       codigoVerificacion,
       nombreReceptor,
       identificacionReceptor,
-      relacionReceptor
+      relacionReceptor,
+      tipoVerificacion,
+      observaciones
     } = req.body;
     
     // Buscar el documento
@@ -399,8 +411,23 @@ exports.completarEntrega = async (req, res) => {
       throw new Error('Este documento no está listo para entrega');
     }
     
-    // Verificar código
-    if (documento.codigoVerificacion !== codigoVerificacion) {
+    // Determinar el tipo de verificación
+    const verificacionPorLlamada = tipoVerificacion === 'llamada';
+    let verificacionExitosa = verificacionPorLlamada || (documento.codigoVerificacion === codigoVerificacion);
+    
+    // Verificación del código (a menos que sea por llamada)
+    if (!verificacionPorLlamada && !verificacionExitosa) {
+      // Registrar intento fallido en auditoría
+      await RegistroAuditoria.create({
+        idDocumento: documento.id,
+        idMatrizador: req.matrizador.id,
+        accion: 'verificacion_codigo',
+        resultado: 'fallido',
+        ip: req.ip,
+        userAgent: req.get('User-Agent'),
+        detalles: `Intento fallido: código ingresado ${codigoVerificacion}, código correcto ${documento.codigoVerificacion}`
+      }, { transaction });
+      
       // No hacer commit de la transacción en caso de error
       await transaction.rollback();
       req.flash('error', 'El código de verificación no es válido');
@@ -416,12 +443,38 @@ exports.completarEntrega = async (req, res) => {
     
     await documento.save({ transaction });
     
-    // Registrar evento
+    // Registrar evento de entrega
     await EventoDocumento.create({
       idDocumento: documento.id,
       tipo: 'entrega',
       detalles: `Entregado a ${nombreReceptor} (${relacionReceptor})`,
-      usuario: 'Sistema' // Aquí se podría usar el usuario autenticado
+      usuario: req.matrizador?.nombre || 'Sistema'
+    }, { transaction });
+    
+    // Registrar evento de verificación con el método utilizado
+    const tipoEvento = verificacionPorLlamada ? 'verificacion_llamada' : 'verificacion_codigo';
+    const detallesVerificacion = verificacionPorLlamada 
+      ? `Verificación por llamada: ${observaciones || 'Sin observaciones'}`
+      : `Verificación con código: ${codigoVerificacion}`;
+    
+    await EventoDocumento.create({
+      idDocumento: documento.id,
+      tipo: tipoEvento,
+      detalles: detallesVerificacion,
+      usuario: req.matrizador?.nombre || 'Sistema'
+    }, { transaction });
+    
+    // Registrar en auditoría
+    await RegistroAuditoria.create({
+      idDocumento: documento.id,
+      idMatrizador: req.matrizador.id,
+      accion: verificacionPorLlamada ? 'verificacion_llamada' : 'verificacion_codigo',
+      resultado: 'exitoso',
+      ip: req.ip,
+      userAgent: req.get('User-Agent'),
+      detalles: verificacionPorLlamada 
+        ? `Verificación por llamada exitosa: ${observaciones || 'Sin observaciones'}` 
+        : `Verificación con código exitosa: ${codigoVerificacion}`
     }, { transaction });
     
     await transaction.commit();
@@ -503,14 +556,40 @@ exports.mostrarDetalle = async (req, res) => {
     // Buscar eventos del documento
     const eventos = await EventoDocumento.findAll({
       where: { idDocumento: id },
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
+    });
+    
+    // Buscar documentos relacionados
+    const documentosRelacionados = await documento.getDocumentosRelacionados({
+      include: [{
+        model: DocumentoRelacion,
+        as: 'DocumentoRelacion',
+        include: [{
+          model: Matrizador,
+          as: 'creador'
+        }]
+      }]
+    });
+    
+    // Buscar otros documentos del mismo cliente que podrían relacionarse
+    const documentosCliente = await Documento.findAll({
+      where: {
+        id: { [Op.ne]: id },
+        [Op.or]: [
+          { nombreCliente: documento.nombreCliente },
+          { identificacionCliente: documento.identificacionCliente }
+        ]
+      },
+      limit: 10
     });
     
     res.render('admin/documentos/detalle', {
       layout: 'admin',
       title: 'Detalle de Documento',
       documento,
-      eventos
+      eventos,
+      documentosRelacionados,
+      documentosCliente
     });
   } catch (error) {
     console.error('Error al mostrar detalle del documento:', error);
@@ -520,5 +599,129 @@ exports.mostrarDetalle = async (req, res) => {
       message: 'Ha ocurrido un error al cargar los detalles del documento',
       error
     });
+  }
+};
+
+/**
+ * Busca documentos del mismo cliente
+ */
+exports.buscarDocumentosCliente = async (req, res) => {
+  try {
+    const { cliente, identificacion } = req.query;
+    
+    const where = {};
+    
+    if (cliente) {
+      where.nombreCliente = cliente;
+    }
+    
+    if (identificacion) {
+      where.identificacionCliente = identificacion;
+    }
+    
+    // Si no hay filtros, devolver array vacío
+    if (!cliente && !identificacion) {
+      return res.json([]);
+    }
+    
+    const documentos = await Documento.findAll({
+      where,
+      attributes: ['id', 'codigoBarras', 'tipo_documento', 'estado', 'nombreCliente'],
+      limit: 10,
+      order: [['created_at', 'DESC']]
+    });
+    
+    res.json(documentos);
+  } catch (error) {
+    console.error('Error al buscar documentos del cliente:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Relaciona documentos entre sí
+ */
+exports.relacionarDocumentos = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  
+  try {
+    const { idDocumentoPrincipal, idDocumentoRelacionado, tipoRelacion, descripcion } = req.body;
+    
+    // Validar que ambos documentos existan
+    const documentoPrincipal = await Documento.findByPk(idDocumentoPrincipal, { transaction });
+    const documentoRelacionado = await Documento.findByPk(idDocumentoRelacionado, { transaction });
+    
+    if (!documentoPrincipal || !documentoRelacionado) {
+      await transaction.rollback();
+      req.flash('error', 'Uno o ambos documentos no existen');
+      return res.redirect(`/admin/documentos/detalle/${idDocumentoPrincipal}`);
+    }
+    
+    // Crear la relación
+    await DocumentoRelacion.create({
+      idDocumentoPrincipal,
+      idDocumentoRelacionado,
+      tipoRelacion,
+      descripcion,
+      creadoPor: req.matrizador.id
+    }, { transaction });
+    
+    // Registrar evento
+    await EventoDocumento.create({
+      idDocumento: idDocumentoPrincipal,
+      tipo: 'otro',
+      detalles: `Documento relacionado: ${documentoRelacionado.codigoBarras} (${tipoRelacion})`,
+      usuario: req.matrizador?.nombre || 'Sistema'
+    }, { transaction });
+    
+    await transaction.commit();
+    
+    req.flash('success', 'Documentos relacionados correctamente');
+    res.redirect(`/admin/documentos/detalle/${idDocumentoPrincipal}`);
+  } catch (error) {
+    await transaction.rollback();
+    console.error('Error al relacionar documentos:', error);
+    req.flash('error', error.message);
+    res.redirect(`/admin/documentos/detalle/${req.body.idDocumentoPrincipal}`);
+  }
+};
+
+/**
+ * Elimina la relación entre documentos
+ */
+exports.eliminarRelacion = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  
+  try {
+    const { idRelacion, idDocumento } = req.body;
+    
+    // Buscar y eliminar la relación
+    const relacion = await DocumentoRelacion.findByPk(idRelacion, { transaction });
+    
+    if (!relacion) {
+      await transaction.rollback();
+      req.flash('error', 'Relación no encontrada');
+      return res.redirect(`/admin/documentos/detalle/${idDocumento}`);
+    }
+    
+    await relacion.destroy({ transaction });
+    
+    // Registrar evento
+    await EventoDocumento.create({
+      idDocumento,
+      tipo: 'otro',
+      detalles: `Relación eliminada con documento ID ${relacion.idDocumentoRelacionado}`,
+      usuario: req.matrizador?.nombre || 'Sistema'
+    }, { transaction });
+    
+    await transaction.commit();
+    
+    req.flash('success', 'Relación eliminada correctamente');
+    res.redirect(`/admin/documentos/detalle/${idDocumento}`);
+  } catch (error) {
+    await transaction.rollback();
+    console.error('Error al eliminar relación:', error);
+    req.flash('error', error.message);
+    res.redirect(`/admin/documentos/detalle/${req.body.idDocumento}`);
   }
 }; 

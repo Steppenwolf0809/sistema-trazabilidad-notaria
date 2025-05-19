@@ -25,6 +25,7 @@ router.get('/', adminController.dashboard);
 
 // Reportes - Solo para administradores
 router.get('/reportes', esAdmin, adminController.reportes);
+router.get('/auditoria', esAdmin, adminController.verRegistrosAuditoria);
 
 // Rutas de gestión de documentos - Para admin y matrizadores
 router.get('/documentos/registro', esMatrizador, documentoController.mostrarFormularioRegistro);
@@ -33,6 +34,11 @@ router.get('/documentos/listado', documentoController.listarDocumentos); // Todo
 router.post('/documentos/marcar-listo', esMatrizador, documentoController.marcarComoListo);
 router.post('/documentos/cancelar', esMatrizador, documentoController.cancelarDocumento);
 router.get('/documentos/detalle/:id', documentoController.mostrarDetalle); // Todos pueden ver detalles
+
+// Rutas para relaciones entre documentos
+router.get('/documentos/cliente', esMatrizador, documentoController.buscarDocumentosCliente);
+router.post('/documentos/relacionar', esMatrizador, documentoController.relacionarDocumentos);
+router.post('/documentos/eliminar-relacion', esMatrizador, documentoController.eliminarRelacion);
 
 // Rutas para el proceso de entrega - Para admin, matrizadores y recepción
 router.get('/documentos/entrega', esRecepcion, documentoController.mostrarEntrega);

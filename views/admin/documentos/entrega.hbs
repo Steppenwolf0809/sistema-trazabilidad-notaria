@@ -63,6 +63,12 @@
                   </div>
                   {{/if}}
                 </div>
+                
+                <div class="text-center mt-2">
+                  <button type="button" class="btn btn-link" data-bs-toggle="modal" data-bs-target="#verificacionLlamadaModal">
+                    <i class="fas fa-phone me-1"></i> El cliente no recuerda el código
+                  </button>
+                </div>
               </div>
             </div>
             
@@ -148,6 +154,51 @@
   </div>
 </div>
 
+<!-- Modal de verificación por llamada -->
+<div class="modal fade" id="verificacionLlamadaModal" tabindex="-1" aria-labelledby="verificacionLlamadaModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="verificacionLlamadaModalLabel">Verificación Alternativa por Llamada</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-warning">
+          <i class="fas fa-exclamation-triangle me-2"></i> Este método solo debe usarse cuando el cliente no recuerda el código y es necesario verificar su identidad por teléfono.
+        </div>
+        
+        <div class="mb-3">
+          <label class="form-label">Cliente:</label>
+          <div class="form-control bg-light">{{documento.nombreCliente}} ({{documento.identificacionCliente}})</div>
+        </div>
+        
+        <div class="mb-3">
+          <label class="form-label">Teléfono de contacto:</label>
+          <div class="form-control bg-light">{{documento.telefonoCliente}}</div>
+        </div>
+        
+        <div class="form-check mb-3">
+          <input class="form-check-input" type="checkbox" id="confirmacionLlamada">
+          <label class="form-check-label" for="confirmacionLlamada">
+            Confirmo que he verificado la identidad del cliente por teléfono.
+          </label>
+        </div>
+        
+        <div class="mb-3">
+          <label class="form-label">Observaciones:</label>
+          <textarea class="form-control" id="observacionesLlamada" rows="3" placeholder="Detalles de la verificación realizada..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="confirmarVerificacionLlamada" disabled>
+          <i class="fas fa-check me-1"></i> Confirmar Verificación
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     // Auto-focus en el campo de código
@@ -170,5 +221,43 @@
         }
       });
     }
+    
+    // Verificación por llamada
+    const checkboxConfirmacion = document.getElementById('confirmacionLlamada');
+    const btnConfirmarLlamada = document.getElementById('confirmarVerificacionLlamada');
+    
+    checkboxConfirmacion.addEventListener('change', function() {
+      btnConfirmarLlamada.disabled = !this.checked;
+    });
+    
+    btnConfirmarLlamada.addEventListener('click', function() {
+      const observaciones = document.getElementById('observacionesLlamada').value;
+      
+      // Preparar formulario para envío
+      const form = document.getElementById('formVerificacion');
+      
+      // Agregar campo oculto para indicar verificación por llamada
+      const inputTipoVerificacion = document.createElement('input');
+      inputTipoVerificacion.type = 'hidden';
+      inputTipoVerificacion.name = 'tipoVerificacion';
+      inputTipoVerificacion.value = 'llamada';
+      form.appendChild(inputTipoVerificacion);
+      
+      // Agregar observaciones
+      const inputObservaciones = document.createElement('input');
+      inputObservaciones.type = 'hidden';
+      inputObservaciones.name = 'observaciones';
+      inputObservaciones.value = observaciones;
+      form.appendChild(inputObservaciones);
+      
+      // No necesitamos el código de verificación en este caso
+      document.getElementById('codigoVerificacion').removeAttribute('required');
+      
+      // Cerrar modal y enviar formulario
+      const modal = bootstrap.Modal.getInstance(document.getElementById('verificacionLlamadaModal'));
+      modal.hide();
+      
+      form.submit();
+    });
   });
 </script> 

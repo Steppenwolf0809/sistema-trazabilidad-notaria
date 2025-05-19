@@ -6,6 +6,7 @@
 const Documento = require('../models/Documento');
 const Matrizador = require('../models/Matrizador');
 const EventoDocumento = require('../models/EventoDocumento');
+const RegistroAuditoria = require('../models/RegistroAuditoria');
 const { sequelize } = require('../config/database');
 const { Op } = require('sequelize');
 
@@ -42,7 +43,7 @@ exports.dashboard = async (req, res) => {
       where: { 
         estado: 'listo_para_entrega' 
       },
-      order: [['updatedAt', 'DESC']],
+      order: [['updated_at', 'DESC']],
       limit: 5,
       include: [{
         model: Matrizador,
@@ -52,7 +53,7 @@ exports.dashboard = async (req, res) => {
     
     // Obtener últimos documentos registrados
     const documentosRecientes = await Documento.findAll({
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: 5,
       include: [{
         model: Matrizador,
@@ -62,7 +63,7 @@ exports.dashboard = async (req, res) => {
     
     // Obtener actividades recientes
     const actividades = await EventoDocumento.findAll({
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: 5,
       include: [{
         model: Documento,
@@ -96,7 +97,7 @@ exports.dashboard = async (req, res) => {
       return {
         titulo,
         descripcion,
-        fecha: actividad.createdAt,
+        fecha: actividad.created_at,
         usuario: actividad.usuario
       };
     });
@@ -143,7 +144,7 @@ exports.reportes = async (req, res) => {
     
     // Condiciones base para consultas
     const condiciones = {
-      createdAt: {
+      created_at: {
         [Op.between]: [fechaInicio, fechaFin]
       }
     };
@@ -233,14 +234,14 @@ exports.reportes = async (req, res) => {
         const documentosPorFecha = await Documento.findAll({
           where: condiciones,
           attributes: [
-            [sequelize.fn('date', sequelize.col('createdAt')), 'fecha'],
+            [sequelize.fn('date', sequelize.col('created_at')), 'fecha'],
             [sequelize.fn('COUNT', sequelize.literal('CASE WHEN estado = \'en_proceso\' THEN 1 ELSE NULL END')), 'en_proceso'],
             [sequelize.fn('COUNT', sequelize.literal('CASE WHEN estado = \'listo_para_entrega\' THEN 1 ELSE NULL END')), 'listo_para_entrega'],
             [sequelize.fn('COUNT', sequelize.literal('CASE WHEN estado = \'entregado\' THEN 1 ELSE NULL END')), 'entregado'],
             [sequelize.fn('COUNT', sequelize.col('id')), 'total']
           ],
-          group: [sequelize.fn('date', sequelize.col('createdAt'))],
-          order: [[sequelize.fn('date', sequelize.col('createdAt')), 'ASC']],
+          group: [sequelize.fn('date', sequelize.col('created_at'))],
+          order: [[sequelize.fn('date', sequelize.col('created_at')), 'ASC']],
           raw: true
         });
         
@@ -265,10 +266,10 @@ exports.reportes = async (req, res) => {
         const estadisticasTipo = await Documento.findAll({
           where: condiciones,
           attributes: [
-            'tipoDocumento',
+            'tipo_documento',
             [sequelize.fn('COUNT', sequelize.col('id')), 'count']
           ],
-          group: ['tipoDocumento'],
+          group: ['tipo_documento'],
           raw: true
         });
         
@@ -276,7 +277,7 @@ exports.reportes = async (req, res) => {
         const totalDocumentosTipo = estadisticasTipo.reduce((sum, item) => sum + parseInt(item.count), 0);
         
         resultados = estadisticasTipo.map(item => ({
-          _id: item.tipoDocumento,
+          _id: item.tipo_documento,
           count: parseInt(item.count),
           porcentaje: Math.round((parseInt(item.count) / totalDocumentosTipo) * 100)
         }));
@@ -288,7 +289,7 @@ exports.reportes = async (req, res) => {
     // Obtener documentos para el listado detallado
     documentos = await Documento.findAll({
       where: condiciones,
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: 100,
       include: [{
         model: Matrizador,
@@ -334,6 +335,115 @@ exports.reportes = async (req, res) => {
       layout: 'admin',
       title: 'Error',
       message: 'Ha ocurrido un error al generar los reportes',
+      error
+    });
+  }
+};
+
+/**
+ * Muestra los registros de auditoría de seguridad
+ */
+exports.verRegistrosAuditoria = async (req, res) => {
+  try {
+    // Parámetros de filtrado
+    const fechaInicio = req.query.fechaInicio ? new Date(req.query.fechaInicio) : new Date(new Date().setDate(new Date().getDate() - 7));
+    const fechaFin = req.query.fechaFin ? new Date(req.query.fechaFin + 'T23:59:59') : new Date();
+    const accion = req.query.accion || '';
+    const resultado = req.query.resultado || '';
+    const idMatrizador = req.query.idMatrizador || '';
+    
+    // Condiciones de filtrado
+    const where = {
+      created_at: {
+        [Op.between]: [fechaInicio, fechaFin]
+      }
+    };
+    
+    if (accion) {
+      where.accion = accion;
+    }
+    
+    if (resultado) {
+      where.resultado = resultado;
+    }
+    
+    if (idMatrizador) {
+      where.idMatrizador = idMatrizador;
+    }
+    
+    // Obtener registros con paginación
+    const page = parseInt(req.query.page) || 1;
+    const limit = 50;
+    const offset = (page - 1) * limit;
+    
+    const { count, rows: registros } = await RegistroAuditoria.findAndCountAll({
+      where,
+      include: [
+        {
+          model: Documento,
+          as: 'documento',
+          attributes: ['id', 'tipo_documento', 'codigo_barras', 'nombre_cliente']
+        },
+        {
+          model: Matrizador,
+          as: 'matrizador',
+          attributes: ['id', 'nombre', 'rol']
+        }
+      ],
+      order: [['created_at', 'DESC']],
+      limit,
+      offset
+    });
+    
+    // Preparar datos para la paginación
+    const totalPages = Math.ceil(count / limit);
+    const pagination = {
+      pages: []
+    };
+    
+    // Generar enlaces de paginación
+    for (let i = 1; i <= totalPages; i++) {
+      pagination.pages.push({
+        num: i,
+        active: i === page
+      });
+    }
+    
+    // Obtener matrizadores para filtros
+    const matrizadores = await Matrizador.findAll({
+      order: [['nombre', 'ASC']]
+    });
+    
+    // Tipos de acciones para filtros
+    const tiposAccion = [
+      { id: 'consulta_codigo', nombre: 'Consulta de código' },
+      { id: 'verificacion_codigo', nombre: 'Verificación con código' },
+      { id: 'verificacion_llamada', nombre: 'Verificación por llamada' },
+      { id: 'edicion_codigo', nombre: 'Edición de código' }
+    ];
+    
+    res.render('admin/auditoria', {
+      layout: 'admin',
+      title: 'Registros de Auditoría',
+      activeAuditoria: true,
+      registros,
+      pagination,
+      matrizadores,
+      tiposAccion,
+      filtros: {
+        fechaInicio: fechaInicio.toISOString().slice(0, 10),
+        fechaFin: fechaFin.toISOString().slice(0, 10),
+        accion,
+        resultado,
+        idMatrizador
+      }
+    });
+  } catch (error) {
+    console.error('Error al mostrar registros de auditoría:', error);
+    res.status(500).render('error', {
+      layout: 'admin',
+      title: 'Error',
+      message: 'Ha ocurrido un error al cargar los registros de auditoría',
       error
     });
   }

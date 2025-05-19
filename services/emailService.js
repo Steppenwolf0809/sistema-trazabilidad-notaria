@@ -309,7 +309,7 @@ const enviarAlertaDocumentoSinRecoger = async (documento, cliente, diasPendiente
       documento,
       cliente,
       diasPendiente,
-      fechaDisponible: new Date(documento.updatedAt).toLocaleDateString('es-ES'),
+      fechaDisponible: new Date(documento.updated_at).toLocaleDateString('es-ES'),
       urlVerificacion: `${process.env.BASE_URL || 'https://servidor-local.notaria:3000'}/verificar?codigo=${documento.codigoBarras}`
     });
     

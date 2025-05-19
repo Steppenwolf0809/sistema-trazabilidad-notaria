@@ -29,10 +29,17 @@ app.use(cookieParser()); // Parse cookies
 
 // Configuración de sesión
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'notaria-secret-key',
+  secret: process.env.SESSION_SECRET || 'clave-secreta-notaria',
   resave: false,
-  saveUninitialized: true,
-  cookie: { maxAge: 24 * 60 * 60 * 1000 } // 24 horas
+  saveUninitialized: false,
+  cookie: { 
+    maxAge: 7 * 24 * 60 * 60 * 1000, // Extender a 7 días
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
+    sameSite: 'lax' // Valor más seguro que permite funcionalidad de redirecciones mientras mantiene protección CSRF
+  },
+  rolling: true // Renueva el tiempo de expiración de la cookie en cada request
 }));
 
 // Configuración de flash messages
@@ -63,6 +70,10 @@ const hbs = engine({
     hasRole: (userRole, roles) => {
       if (!userRole) return false;
       if (typeof roles === 'string') {
+        if (roles.includes(',')) {
+          const roleArray = roles.split(',').map(r => r.trim());
+          return roleArray.includes(userRole);
+        }
         return userRole === roles;
       }
       return roles.includes(userRole);
