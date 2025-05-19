@@ -28,8 +28,9 @@ exports.mostrarFormularioRegistro = async (req, res) => {
       raw: true
     });
     
-    res.render('admin/documentos/registro', {
-      layout: 'admin',
+    const { layout, viewBase } = getLayoutAndViewBase(req);
+    res.render(`${viewBase}/registro`, {
+      layout,
       title: 'Registro de Documento',
       activeRegistro: true,
       matrizadores,
@@ -99,7 +100,7 @@ exports.registrarDocumento = async (req, res) => {
     await transaction.commit();
     
     req.flash('success', `Documento ${tipoDocumento} registrado exitosamente con código ${codigoBarras}`);
-    res.redirect('/admin/documentos/listado');
+    res.redirect(getBasePath(req) + '/listado');
   } catch (error) {
     await transaction.rollback();
     console.error('Error al registrar documento:', error);
@@ -109,8 +110,9 @@ exports.registrarDocumento = async (req, res) => {
       order: [['nombre', 'ASC']]
     });
     
-    res.status(400).render('admin/documentos/registro', {
-      layout: 'admin',
+    const { layout, viewBase } = getLayoutAndViewBase(req);
+    res.status(400).render(`${viewBase}/registro`, {
+      layout,
       title: 'Registro de Documento',
       activeRegistro: true,
       matrizadores,
@@ -179,7 +181,7 @@ exports.listarDocumentos = async (req, res) => {
     };
     
     // Generar URLs para la paginación
-    const baseUrl = '/admin/documentos/listado?';
+    const baseUrl = getBasePath(req) + '/listado?';
     const queryParams = new URLSearchParams();
     
     if (estado) queryParams.append('estado', estado);
@@ -225,8 +227,9 @@ exports.listarDocumentos = async (req, res) => {
       order: [['nombre', 'ASC']]
     });
     
-    res.render('admin/documentos/listado', {
-      layout: 'admin',
+    const { layout, viewBase } = getLayoutAndViewBase(req);
+    res.render(`${viewBase}/listado`, {
+      layout,
       title: 'Listado de Documentos',
       activeListado: true,
       documentos,
@@ -295,12 +298,12 @@ exports.marcarComoListo = async (req, res) => {
     console.log(`NOTIFICACIÓN: Se ha enviado el código ${codigoVerificacion} al cliente ${documento.nombreCliente} (${documento.emailCliente || documento.telefonoCliente})`);
     
     req.flash('success', `El documento ha sido marcado como listo para entrega y se ha enviado el código de verificación al cliente.`);
-    res.redirect('/admin/documentos/listado');
+    res.redirect(getBasePath(req) + '/listado');
   } catch (error) {
     await transaction.rollback();
     console.error('Error al marcar documento como listo:', error);
     req.flash('error', error.message);
-    res.redirect('/admin/documentos/listado');
+    res.redirect(getBasePath(req) + '/listado');
   }
 };
 
@@ -323,16 +326,17 @@ exports.mostrarEntrega = async (req, res) => {
       
       if (!documento) {
         req.flash('error', 'Documento no encontrado');
-        return res.redirect('/admin/documentos/entrega');
+        return res.redirect(getBasePath(req) + '/entrega');
       }
       
       if (documento.estado !== 'listo_para_entrega') {
         req.flash('error', 'Este documento no está listo para entrega');
-        return res.redirect('/admin/documentos/entrega');
+        return res.redirect(getBasePath(req) + '/entrega');
       }
       
-      return res.render('admin/documentos/entrega', {
-        layout: 'admin',
+      const { layout, viewBase } = getLayoutAndViewBase(req);
+      return res.render(`${viewBase}/entrega`, {
+        layout,
         title: 'Entrega de Documento',
         activeEntrega: true,
         documento,
@@ -350,7 +354,7 @@ exports.mostrarEntrega = async (req, res) => {
       });
       
       if (documento) {
-        return res.redirect(`/admin/documentos/entrega/${documento.id}`);
+        return res.redirect(getBasePath(req) + '/entrega/' + documento.id);
       }
       
       req.flash('error', 'No se encontró un documento listo para entrega con ese código');
@@ -365,8 +369,9 @@ exports.mostrarEntrega = async (req, res) => {
       limit: 10
     });
     
-    res.render('admin/documentos/entrega', {
-      layout: 'admin',
+    const { layout, viewBase } = getLayoutAndViewBase(req);
+    res.render(`${viewBase}/entrega`, {
+      layout,
       title: 'Entrega de Documentos',
       activeEntrega: true,
       documentosListos,
@@ -431,7 +436,7 @@ exports.completarEntrega = async (req, res) => {
       // No hacer commit de la transacción en caso de error
       await transaction.rollback();
       req.flash('error', 'El código de verificación no es válido');
-      return res.redirect(`/admin/documentos/entrega/${id}`);
+      return res.redirect(getBasePath(req) + '/entrega/' + id);
     }
     
     // Actualizar datos de entrega
@@ -480,12 +485,12 @@ exports.completarEntrega = async (req, res) => {
     await transaction.commit();
     
     req.flash('success', `El documento ha sido entregado exitosamente a ${nombreReceptor}`);
-    res.redirect('/admin/documentos/listado');
+    res.redirect(getBasePath(req) + '/listado');
   } catch (error) {
     await transaction.rollback();
     console.error('Error al completar entrega:', error);
     req.flash('error', error.message);
-    res.redirect(`/admin/documentos/entrega/${req.params.id}`);
+    res.redirect(getBasePath(req) + '/entrega/' + req.params.id);
   }
 };
 
@@ -524,12 +529,12 @@ exports.cancelarDocumento = async (req, res) => {
     await transaction.commit();
     
     req.flash('success', 'El documento ha sido cancelado');
-    res.redirect('/admin/documentos/listado');
+    res.redirect(getBasePath(req) + '/listado');
   } catch (error) {
     await transaction.rollback();
     console.error('Error al cancelar documento:', error);
     req.flash('error', error.message);
-    res.redirect('/admin/documentos/listado');
+    res.redirect(getBasePath(req) + '/listado');
   }
 };
 
@@ -550,7 +555,7 @@ exports.mostrarDetalle = async (req, res) => {
     
     if (!documento) {
       req.flash('error', 'Documento no encontrado');
-      return res.redirect('/admin/documentos/listado');
+      return res.redirect(getBasePath(req) + '/listado');
     }
     
     // Buscar eventos del documento
@@ -559,17 +564,29 @@ exports.mostrarDetalle = async (req, res) => {
       order: [['created_at', 'DESC']]
     });
     
-    // Buscar documentos relacionados
-    const documentosRelacionados = await documento.getDocumentosRelacionados({
-      include: [{
-        model: DocumentoRelacion,
-        as: 'DocumentoRelacion',
+    // Buscar documentos relacionados usando los nuevos alias
+    const [componentes, documentosPrincipales] = await Promise.all([
+      documento.getComponentes({
         include: [{
-          model: Matrizador,
-          as: 'creador'
+          model: DocumentoRelacion,
+          as: 'DocumentoRelacion',
+          include: [{
+            model: Matrizador,
+            as: 'creador'
+          }]
         }]
-      }]
-    });
+      }),
+      documento.getDocumentosPrincipales({
+        include: [{
+          model: DocumentoRelacion,
+          as: 'DocumentoRelacion',
+          include: [{
+            model: Matrizador,
+            as: 'creador'
+          }]
+        }]
+      })
+    ]);
     
     // Buscar otros documentos del mismo cliente que podrían relacionarse
     const documentosCliente = await Documento.findAll({
@@ -583,12 +600,14 @@ exports.mostrarDetalle = async (req, res) => {
       limit: 10
     });
     
-    res.render('admin/documentos/detalle', {
-      layout: 'admin',
+    const { layout, viewBase } = getLayoutAndViewBase(req);
+    res.render(`${viewBase}/detalle`, {
+      layout,
       title: 'Detalle de Documento',
       documento,
       eventos,
-      documentosRelacionados,
+      componentes,
+      documentosPrincipales,
       documentosCliente
     });
   } catch (error) {
@@ -639,50 +658,120 @@ exports.buscarDocumentosCliente = async (req, res) => {
 };
 
 /**
+ * Busca documentos
+ */
+exports.buscarDocumentos = async (req, res) => {
+  try {
+    const { query, tipoDocumento, estado } = req.query;
+    const where = {};
+
+    // Construir condiciones de búsqueda
+    if (query) {
+      where[Op.or] = [
+        { codigoBarras: { [Op.iLike]: `%${query}%` } },
+        { nombreCliente: { [Op.iLike]: `%${query}%` } },
+        { tipoDocumento: { [Op.iLike]: `%${query}%` } }
+      ];
+    }
+
+    if (tipoDocumento) {
+      where.tipoDocumento = tipoDocumento;
+    }
+
+    if (estado) {
+      where.estado = estado;
+    }
+
+    // Buscar documentos
+    const documentos = await Documento.findAll({
+      where,
+      limit: 10,
+      order: [['createdAt', 'DESC']],
+      attributes: ['id', 'codigoBarras', 'tipoDocumento', 'estado', 'nombreCliente', 'createdAt']
+    });
+
+    res.json({
+      exito: true,
+      mensaje: 'Documentos encontrados',
+      datos: documentos
+    });
+  } catch (error) {
+    console.error('Error al buscar documentos:', error);
+    res.status(500).json({
+      exito: false,
+      mensaje: 'Error al buscar documentos',
+      error: error.message
+    });
+  }
+};
+
+/**
  * Relaciona documentos entre sí
  */
 exports.relacionarDocumentos = async (req, res) => {
-  const transaction = await sequelize.transaction();
-  
   try {
     const { idDocumentoPrincipal, idDocumentoRelacionado, tipoRelacion, descripcion } = req.body;
-    
-    // Validar que ambos documentos existan
-    const documentoPrincipal = await Documento.findByPk(idDocumentoPrincipal, { transaction });
-    const documentoRelacionado = await Documento.findByPk(idDocumentoRelacionado, { transaction });
-    
+
+    // Verificar que ambos documentos existan
+    const [documentoPrincipal, documentoRelacionado] = await Promise.all([
+      Documento.findByPk(idDocumentoPrincipal),
+      Documento.findByPk(idDocumentoRelacionado)
+    ]);
+
     if (!documentoPrincipal || !documentoRelacionado) {
-      await transaction.rollback();
-      req.flash('error', 'Uno o ambos documentos no existen');
-      return res.redirect(`/admin/documentos/detalle/${idDocumentoPrincipal}`);
+      return res.status(404).json({
+        exito: false,
+        mensaje: 'Uno o ambos documentos no existen'
+      });
     }
-    
+
+    // Verificar que no exista ya la relación
+    const relacionExistente = await DocumentoRelacion.findOne({
+      where: {
+        idDocumentoPrincipal,
+        idDocumentoRelacionado
+      }
+    });
+
+    if (relacionExistente) {
+      return res.status(400).json({
+        exito: false,
+        mensaje: 'Ya existe una relación entre estos documentos'
+      });
+    }
+
     // Crear la relación
-    await DocumentoRelacion.create({
+    const relacion = await DocumentoRelacion.create({
       idDocumentoPrincipal,
       idDocumentoRelacionado,
       tipoRelacion,
       descripcion,
       creadoPor: req.matrizador.id
-    }, { transaction });
-    
-    // Registrar evento
-    await EventoDocumento.create({
+    });
+
+    // Registrar en auditoría
+    await RegistroAuditoria.create({
       idDocumento: idDocumentoPrincipal,
-      tipo: 'otro',
-      detalles: `Documento relacionado: ${documentoRelacionado.codigoBarras} (${tipoRelacion})`,
-      usuario: req.matrizador?.nombre || 'Sistema'
-    }, { transaction });
-    
-    await transaction.commit();
-    
-    req.flash('success', 'Documentos relacionados correctamente');
-    res.redirect(`/admin/documentos/detalle/${idDocumentoPrincipal}`);
+      idMatrizador: req.matrizador.id,
+      accion: 'crear_relacion',
+      resultado: 'exitoso',
+      ip: req.ip,
+      userAgent: req.get('User-Agent'),
+      detalles: `Relación creada con documento ${documentoRelacionado.codigoBarras}`
+    });
+
+    res.status(201).json({
+      exito: true,
+      mensaje: 'Relación creada exitosamente',
+      datos: relacion
+    });
   } catch (error) {
-    await transaction.rollback();
     console.error('Error al relacionar documentos:', error);
-    req.flash('error', error.message);
-    res.redirect(`/admin/documentos/detalle/${req.body.idDocumentoPrincipal}`);
+    res.status(500).json({
+      exito: false,
+      mensaje: 'Error al relacionar documentos',
+      error: error.message
+    });
   }
 };
 
@@ -690,38 +779,442 @@ exports.relacionarDocumentos = async (req, res) => {
  * Elimina la relación entre documentos
  */
 exports.eliminarRelacion = async (req, res) => {
+  try {
+    const { idDocumentoPrincipal, idDocumentoRelacionado } = req.query;
+
+    // Buscar la relación
+    const relacion = await DocumentoRelacion.findOne({
+      where: {
+        idDocumentoPrincipal,
+        idDocumentoRelacionado
+      }
+    });
+
+    if (!relacion) {
+      return res.status(404).json({
+        exito: false,
+        mensaje: 'No se encontró la relación especificada'
+      });
+    }
+
+    // Eliminar la relación
+    await relacion.destroy();
+
+    // Registrar en auditoría
+    await RegistroAuditoria.create({
+      idDocumento: idDocumentoPrincipal,
+      idMatrizador: req.matrizador.id,
+      accion: 'eliminar_relacion',
+      resultado: 'exitoso',
+      ip: req.ip,
+      userAgent: req.get('User-Agent'),
+      detalles: `Relación eliminada con documento ${idDocumentoRelacionado}`
+    });
+
+    res.json({
+      exito: true,
+      mensaje: 'Relación eliminada exitosamente'
+    });
+  } catch (error) {
+    console.error('Error al eliminar relación:', error);
+    res.status(500).json({
+      exito: false,
+      mensaje: 'Error al eliminar relación',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Obtiene un documento con sus relaciones
+ */
+exports.obtenerDocumentoConRelaciones = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const documento = await Documento.findByPk(id, {
+      include: [
+        {
+          model: Matrizador,
+          as: 'matrizador'
+        },
+        {
+          model: Documento,
+          as: 'documentosPrincipales',
+          through: {
+            model: DocumentoRelacion,
+            as: 'relacionPrincipal',
+            where: {
+              tipoRelacion: 'componente'
+            }
+          },
+          include: [
+            {
+              model: Matrizador,
+              as: 'matrizador'
+            }
+          ]
+        },
+        {
+          model: Documento,
+          as: 'componentes',
+          through: {
+            model: DocumentoRelacion,
+            as: 'relacionComponente',
+            where: {
+              tipoRelacion: 'componente'
+            }
+          },
+          include: [
+            {
+              model: Matrizador,
+              as: 'matrizador'
+            }
+          ]
+        }
+      ]
+    });
+
+    if (!documento) {
+      return res.status(404).json({
+        exito: false,
+        mensaje: 'Documento no encontrado'
+      });
+    }
+
+    // Obtener eventos del documento
+    const eventos = await EventoDocumento.findAll({
+      where: { idDocumento: id },
+      order: [['createdAt', 'DESC']]
+    });
+
+    const { layout, viewBase } = getLayoutAndViewBase(req);
+    res.render(`${viewBase}/detalle`, {
+      layout,
+      title: 'Detalle de Documento',
+      documento,
+      eventos,
+      documentosPrincipales: documento.documentosPrincipales,
+      componentes: documento.componentes,
+      userRole: req.matrizador.rol
+    });
+  } catch (error) {
+    console.error('Error al obtener documento con relaciones:', error);
+    res.status(500).json({
+      exito: false,
+      mensaje: 'Error al obtener el documento',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Actualiza el estado de un documento y propaga el cambio a sus relaciones
+ */
+exports.actualizarEstadoConPropagacion = async (req, res) => {
   const transaction = await sequelize.transaction();
   
   try {
-    const { idRelacion, idDocumento } = req.body;
-    
-    // Buscar y eliminar la relación
-    const relacion = await DocumentoRelacion.findByPk(idRelacion, { transaction });
-    
-    if (!relacion) {
+    const { id } = req.params;
+    const { nuevoEstado, propagarAComponentes } = req.body;
+
+    // Obtener el documento y sus relaciones
+    const documento = await Documento.findByPk(id, {
+      include: [
+        {
+          model: Documento,
+          as: 'componentes',
+          through: { attributes: ['tipoRelacion'] }
+        }
+      ],
+      transaction
+    });
+
+    if (!documento) {
       await transaction.rollback();
-      req.flash('error', 'Relación no encontrada');
-      return res.redirect(`/admin/documentos/detalle/${idDocumento}`);
+      return res.status(404).json({
+        exito: false,
+        mensaje: 'Documento no encontrado'
+      });
     }
-    
-    await relacion.destroy({ transaction });
-    
-    // Registrar evento
-    await EventoDocumento.create({
-      idDocumento,
-      tipo: 'otro',
-      detalles: `Relación eliminada con documento ID ${relacion.idDocumentoRelacionado}`,
-      usuario: req.matrizador?.nombre || 'Sistema'
+
+    // Actualizar estado del documento principal
+    await documento.update({ estado: nuevoEstado }, { transaction });
+
+    // Registrar cambio de estado en auditoría
+    await RegistroAuditoria.create({
+      idDocumento: documento.id,
+      idMatrizador: req.matrizador.id,
+      accion: 'cambio_estado',
+      resultado: 'exitoso',
+      ip: req.ip,
+      userAgent: req.get('User-Agent'),
+      detalles: `Estado actualizado a ${nuevoEstado}`
     }, { transaction });
-    
+
+    // Si se debe propagar a componentes
+    if (propagarAComponentes && documento.componentes.length > 0) {
+      // Actualizar estado de todos los componentes
+      await Promise.all(documento.componentes.map(async (componente) => {
+        await componente.update({ estado: nuevoEstado }, { transaction });
+
+        // Registrar cambio de estado en auditoría para cada componente
+        await RegistroAuditoria.create({
+          idDocumento: componente.id,
+          idMatrizador: req.matrizador.id,
+          accion: 'cambio_estado_propagado',
+          resultado: 'exitoso',
+          ip: req.ip,
+          userAgent: req.get('User-Agent'),
+          detalles: `Estado actualizado a ${nuevoEstado} por propagación desde documento ${documento.codigoBarras}`
+        }, { transaction });
+      }));
+    }
+
     await transaction.commit();
-    
-    req.flash('success', 'Relación eliminada correctamente');
-    res.redirect(`/admin/documentos/detalle/${idDocumento}`);
+
+    res.json({
+      exito: true,
+      mensaje: 'Estado actualizado correctamente',
+      datos: {
+        documento: {
+          id: documento.id,
+          codigoBarras: documento.codigoBarras,
+          estado: nuevoEstado
+        },
+        componentesActualizados: propagarAComponentes ? documento.componentes.length : 0
+      }
+    });
   } catch (error) {
     await transaction.rollback();
-    console.error('Error al eliminar relación:', error);
-    req.flash('error', error.message);
-    res.redirect(`/admin/documentos/detalle/${req.body.idDocumento}`);
+    console.error('Error al actualizar estado:', error);
+    res.status(500).json({
+      exito: false,
+      mensaje: 'Error al actualizar estado',
+      error: error.message
+    });
   }
-}; 
+};
+
+/**
+ * Registra la entrega de un documento y sus componentes
+ */
+exports.registrarEntregaConComponentes = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  
+  try {
+    const { codigoBarras } = req.params;
+    const { nombreReceptor, identificacionReceptor, relacionReceptor } = req.body;
+
+    // Obtener el documento principal
+    const documento = await Documento.findOne({
+      where: { codigoBarras },
+      include: [{
+        model: DocumentoRelacion,
+        as: 'relacionesPrincipales',
+        where: { esPrincipal: true },
+        required: false
+      }]
+    });
+
+    if (!documento) {
+      await transaction.rollback();
+      return res.status(404).json({
+        exito: false,
+        mensaje: 'Documento no encontrado'
+      });
+    }
+
+    // Verificar código de verificación
+    if (documento.codigoVerificacion !== req.body.codigoVerificacion) {
+      await transaction.rollback();
+      return res.status(400).json({
+        exito: false,
+        mensaje: 'Código de verificación inválido'
+      });
+    }
+
+    // Actualizar el documento principal
+    await documento.update({
+      estado: 'entregado',
+      fechaEntrega: new Date(),
+      nombreReceptor,
+      identificacionReceptor,
+      relacionReceptor
+    }, { transaction });
+
+    // Si el documento es principal, actualizar sus componentes
+    if (documento.relacionesPrincipales.length > 0) {
+      const grupoEntrega = documento.relacionesPrincipales[0].grupoEntrega;
+
+      // Obtener y actualizar todos los documentos del grupo
+      const documentosGrupo = await Documento.findAll({
+        include: [{
+          model: DocumentoRelacion,
+          where: { grupoEntrega }
+        }]
+      });
+
+      await Promise.all(
+        documentosGrupo.map(doc => 
+          doc.update({
+            estado: 'entregado',
+            fechaEntrega: new Date(),
+            nombreReceptor,
+            identificacionReceptor,
+            relacionReceptor
+          }, { transaction })
+        )
+      );
+
+      // Registrar en auditoría
+      await RegistroAuditoria.create({
+        idDocumento: documento.id,
+        idMatrizador: req.matrizador.id,
+        accion: 'entrega_grupo',
+        resultado: 'exitoso',
+        ip: req.ip,
+        userAgent: req.get('User-Agent'),
+        detalles: `Entrega registrada para grupo ${grupoEntrega}`
+      }, { transaction });
+    }
+
+    await transaction.commit();
+
+    res.status(200).json({
+      exito: true,
+      mensaje: 'Entrega registrada correctamente',
+      datos: {
+        documento,
+        componentesEntregados: documento.relacionesPrincipales.length > 0
+      }
+    });
+  } catch (error) {
+    await transaction.rollback();
+    console.error('Error al registrar entrega:', error);
+    res.status(500).json({
+      exito: false,
+      mensaje: 'Error al registrar la entrega',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Obtiene los documentos pendientes (en_proceso o listo_para_entrega) del matrizador autenticado
+ */
+exports.obtenerPendientesPorMatrizador = async (req, res) => {
+  try {
+    console.log('ID matrizador autenticado:', req.matrizador?.id, '| req.matrizador:', req.matrizador);
+    const idMatrizador = req.matrizador.id;
+    const documentos = await Documento.findAll({
+      where: {
+        idMatrizador,
+        estado: { [Op.in]: ['en_proceso', 'listo_para_entrega'] }
+      },
+      order: [['created_at', 'DESC']],
+      attributes: ['id', 'codigoBarras', 'tipoDocumento', 'estado', 'nombreCliente', 'created_at']
+    });
+    res.json({
+      exito: true,
+      datos: documentos
+    });
+  } catch (error) {
+    console.error('Error al obtener documentos pendientes por matrizador:', error);
+    res.status(500).json({
+      exito: false,
+      mensaje: 'Error al obtener documentos pendientes',
+      error: error.message
+    });
+  }
+};
+
+// Funciones proxy para compatibilidad de rutas antiguas
+exports.obtenerTodos = async (req, res) => {
+  res.status(501).json({ exito: false, mensaje: 'No implementado' });
+};
+
+exports.obtenerPorId = async (req, res) => {
+  res.status(501).json({ exito: false, mensaje: 'No implementado' });
+};
+
+exports.buscarPorCodigoBarras = async (req, res) => {
+  res.status(501).json({ exito: false, mensaje: 'No implementado' });
+};
+
+exports.verificarCodigo = async (req, res) => {
+  res.status(501).json({ exito: false, mensaje: 'No implementado' });
+};
+
+exports.crear = async (req, res) => {
+  res.status(501).json({ exito: false, mensaje: 'No implementado' });
+};
+
+exports.actualizar = async (req, res) => {
+  res.status(501).json({ exito: false, mensaje: 'No implementado' });
+};
+
+exports.eliminar = async (req, res) => {
+  res.status(501).json({ exito: false, mensaje: 'No implementado' });
+};
+
+exports.registrarEntrega = async (req, res) => {
+  res.status(501).json({ exito: false, mensaje: 'No implementado' });
+};
+
+exports.obtenerHistorial = async (req, res) => {
+  res.status(501).json({ exito: false, mensaje: 'No implementado' });
+};
+
+// Proxies para todas las funciones usadas en las rutas (si no existen)
+if (!exports.obtenerDocumentoConRelaciones) {
+  exports.obtenerDocumentoConRelaciones = async (req, res) => {
+    res.status(501).json({ exito: false, mensaje: 'No implementado' });
+  };
+}
+if (!exports.actualizarEstadoConPropagacion) {
+  exports.actualizarEstadoConPropagacion = async (req, res) => {
+    res.status(501).json({ exito: false, mensaje: 'No implementado' });
+  };
+}
+if (!exports.registrarEntregaConComponentes) {
+  exports.registrarEntregaConComponentes = async (req, res) => {
+    res.status(501).json({ exito: false, mensaje: 'No implementado' });
+  };
+}
+if (!exports.buscarDocumentos) {
+  exports.buscarDocumentos = async (req, res) => {
+    res.status(501).json({ exito: false, mensaje: 'No implementado' });
+  };
+}
+if (!exports.relacionarDocumentos) {
+  exports.relacionarDocumentos = async (req, res) => {
+    res.status(501).json({ exito: false, mensaje: 'No implementado' });
+  };
+}
+if (!exports.eliminarRelacion) {
+  exports.eliminarRelacion = async (req, res) => {
+    res.status(501).json({ exito: false, mensaje: 'No implementado' });
+  };
+}
+if (!exports.obtenerCodigoVerificacion) {
+  exports.obtenerCodigoVerificacion = async (req, res) => {
+    res.status(501).json({ exito: false, mensaje: 'No implementado' });
+  };
+}
+
+// Utilidad para obtener el layout y base de vista según el rol
+function getLayoutAndViewBase(req) {
+  if (req.matrizador && req.matrizador.rol === 'matrizador') {
+    return { layout: 'matrizador', viewBase: 'matrizadores/documentos' };
+  }
+  return { layout: 'admin', viewBase: 'admin/documentos' };
+}
+
+// Utilidad para obtener la ruta base según el rol
+function getBasePath(req) {
+  if (req.matrizador && req.matrizador.rol === 'matrizador') {
+    return '/matrizador/documentos';
+  }
+  return '/admin/documentos';
+} 

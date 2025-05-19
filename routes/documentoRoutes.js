@@ -7,6 +7,7 @@ const express = require('express');
 const router = express.Router();
 const { verificarToken, esMatrizador, esRecepcion, esConsulta } = require('../middlewares/auth');
 const RegistroAuditoria = require('../models/RegistroAuditoria');
+const documentoController = require('../controllers/documentoController');
 
 // Middleware para verificar roles específicos (admin y matrizador)
 const esAdminOMatrizador = (req, res, next) => {
@@ -21,7 +22,7 @@ const esAdminOMatrizador = (req, res, next) => {
 };
 
 // Simulación de controlador para demo
-const documentoController = {
+/* const documentoController = {
   obtenerTodos: (req, res) => {
     res.status(200).json({
       exito: true,
@@ -218,8 +219,64 @@ const documentoController = {
         error: error.message
       });
     }
+  },
+  
+  obtenerDocumentoConRelaciones: (req, res) => {
+    // Implementación de la nueva ruta
+    res.status(501).json({
+      exito: false,
+      mensaje: 'Esta ruta no está implementada'
+    });
+  },
+  
+  actualizarEstadoConPropagacion: (req, res) => {
+    // Implementación de la nueva ruta
+    res.status(501).json({
+      exito: false,
+      mensaje: 'Esta ruta no está implementada'
+    });
+  },
+  
+  registrarEntregaConComponentes: (req, res) => {
+    // Implementación de la nueva ruta
+    res.status(501).json({
+      exito: false,
+      mensaje: 'Esta ruta no está implementada'
+    });
+  },
+  
+  buscarDocumentos: (req, res) => {
+    // Implementación de la nueva ruta
+    res.status(501).json({
+      exito: false,
+      mensaje: 'Esta ruta no está implementada'
+    });
+  },
+  
+  relacionarDocumentos: (req, res) => {
+    // Implementación de la nueva ruta
+    res.status(501).json({
+      exito: false,
+      mensaje: 'Esta ruta no está implementada'
+    });
+  },
+  
+  eliminarRelacion: (req, res) => {
+    // Implementación de la nueva ruta
+    res.status(501).json({
+      exito: false,
+      mensaje: 'Esta ruta no está implementada'
+    });
+  },
+  
+  obtenerPendientesPorMatrizador: (req, res) => {
+    // Implementación de la nueva ruta
+    res.status(501).json({
+      exito: false,
+      mensaje: 'Esta ruta no está implementada'
+    });
   }
-};
+}; */
 
 // Rutas públicas (sin verificación de token)
 router.post('/codigo/:codigoBarras/verificar', documentoController.verificarCodigo);
@@ -240,5 +297,18 @@ router.post('/entrega/:codigoBarras', verificarToken, esRecepcion, documentoCont
 
 // Rutas para matrizadores y administradores exclusivamente
 router.get('/:id/codigo-verificacion', verificarToken, esAdminOMatrizador, documentoController.obtenerCodigoVerificacion);
+
+// Rutas para relaciones entre documentos
+router.get('/:id/relaciones', verificarToken, esConsulta, documentoController.obtenerDocumentoConRelaciones);
+router.put('/:id/estado-grupo', verificarToken, esMatrizador, documentoController.actualizarEstadoConPropagacion);
+router.post('/entrega-grupo/:codigoBarras', verificarToken, esRecepcion, documentoController.registrarEntregaConComponentes);
+
+// Rutas para búsqueda y relaciones de documentos
+router.get('/buscar', verificarToken, esConsulta, documentoController.buscarDocumentos);
+router.post('/relacionar', verificarToken, esMatrizador, documentoController.relacionarDocumentos);
+router.delete('/relacionar', verificarToken, esMatrizador, documentoController.eliminarRelacion);
+
+// Ruta para obtener documentos pendientes del matrizador autenticado
+router.get('/pendientes/mios', verificarToken, esMatrizador, documentoController.obtenerPendientesPorMatrizador);
 
 module.exports = router; 

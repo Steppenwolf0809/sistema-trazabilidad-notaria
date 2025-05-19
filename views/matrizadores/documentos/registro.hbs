@@ -1,0 +1,182 @@
+{{! Registro de Documento - Matrizadores }}
+{{! layout: 'matrizador' }}
+<div class="container mt-4">
+  <h2>Registrar Documento (Matrizadores)</h2>
+  <div class="alert alert-info">Aquí se mostrará el formulario para registrar un documento como matrizador.</div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <i class="fas fa-file-alt me-2"></i> Registro de Nuevo Documento
+  </div>
+  <div class="card-body">
+    <form id="registroDocumentoForm" action="/matrizador/documentos/registro" method="POST">
+      
+      <!-- Sección de información del documento -->
+      <div class="row">
+        <div class="col-12 mb-3">
+          <h5 class="border-bottom pb-2">Información del Documento</h5>
+        </div>
+        
+        <div class="col-md-4 mb-3">
+          <label for="codigoBarras" class="form-label">Código de Barras</label>
+          <div class="input-group">
+            <span class="input-group-text bg-light">20251701018</span>
+            <input type="text" class="form-control" id="codigoBarrasSufijo" name="codigoBarrasSufijo" placeholder="Escanear o ingresar" required>
+            <input type="hidden" id="codigoBarras" name="codigoBarras">
+          </div>
+          <div class="form-text">El código debe comenzar con el prefijo 20251701018</div>
+        </div>
+        
+        <div class="col-md-4 mb-3">
+          <label for="tipoDocumento" class="form-label">Tipo de Documento</label>
+          <select class="form-select" id="tipoDocumento" name="tipoDocumento" required>
+            <option value="" selected disabled>Seleccionar tipo...</option>
+            <option value="Escritura Pública">Escritura Pública</option>
+            <option value="Reconocimiento de Firma">Reconocimiento de Firma</option>
+            <option value="Arrendamiento">Arrendamiento</option>
+            <option value="Certificación">Certificación</option>
+            <option value="Copia de Archivo">Copia de Archivo</option>
+            <option value="Marginación">Marginación</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+        
+        <div class="col-md-12 mb-3">
+          <label for="notas" class="form-label">Notas o Descripción</label>
+          <textarea class="form-control" id="notas" name="notas" rows="2"></textarea>
+        </div>
+      </div>
+      
+      <!-- Sección de información del cliente -->
+      <div class="row mt-4">
+        <div class="col-12 mb-3">
+          <h5 class="border-bottom pb-2">Información del Cliente</h5>
+        </div>
+        
+        <div class="col-md-6 mb-3">
+          <label for="nombreCliente" class="form-label">Nombre Completo</label>
+          <input type="text" class="form-control" id="nombreCliente" name="nombreCliente" required>
+        </div>
+        
+        <div class="col-md-6 mb-3">
+          <label for="identificacionCliente" class="form-label">Identificación</label>
+          <input type="text" class="form-control" id="identificacionCliente" name="identificacionCliente" required>
+        </div>
+        
+        <div class="col-md-6 mb-3">
+          <label for="emailCliente" class="form-label">Correo Electrónico</label>
+          <input type="email" class="form-control" id="emailCliente" name="emailCliente">
+        </div>
+        
+        <div class="col-md-6 mb-3">
+          <label for="telefonoCliente" class="form-label">Teléfono</label>
+          <input type="tel" class="form-control" id="telefonoCliente" name="telefonoCliente">
+          <div class="form-text">Para notificaciones de entrega</div>
+        </div>
+      </div>
+      
+      <!-- Sección de comparecientes adicionales -->
+      <div class="row mt-4">
+        <div class="col-12 mb-3">
+          <h5 class="border-bottom pb-2">
+            Comparecientes Adicionales
+            <button type="button" id="agregarCompareciente" class="btn btn-sm btn-outline-primary float-end">
+              <i class="fas fa-plus"></i> Agregar
+            </button>
+          </h5>
+        </div>
+        
+        <div id="comparecientesContainer" class="col-12">
+          <!-- Aquí se agregarán dinámicamente los comparecientes -->
+        </div>
+      </div>
+      
+      <!-- El matrizador actual se asigna automáticamente -->
+      <input type="hidden" name="idMatrizador" value="{{usuario.id}}">
+      
+      <div class="d-flex justify-content-end mt-4">
+        <button type="button" class="btn btn-outline-secondary me-2" onclick="window.location.href='/matrizador/documentos'">
+          Cancelar
+        </button>
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-save me-1"></i> Registrar Documento
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Template para nuevos comparecientes -->
+<template id="comparecienteTemplate">
+  <div class="compareciente-item border rounded p-3 mb-3">
+    <div class="d-flex justify-content-between mb-2">
+      <h6 class="mb-0">Compareciente #<span class="numero-compareciente"></span></h6>
+      <button type="button" class="btn btn-sm btn-outline-danger eliminar-compareciente">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="row">
+      <div class="col-md-6 mb-3">
+        <label class="form-label">Nombre Completo</label>
+        <input type="text" class="form-control" name="comparecientes[__index__][nombre]" required>
+      </div>
+      <div class="col-md-6 mb-3">
+        <label class="form-label">Identificación</label>
+        <input type="text" class="form-control" name="comparecientes[__index__][identificacion]" required>
+      </div>
+      <div class="col-md-12 mb-0">
+        <label class="form-label">Rol o participación</label>
+        <input type="text" class="form-control" name="comparecientes[__index__][rol]">
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Auto-completar código de barras con prefijo fijo
+    const codigoBarrasSufijo = document.getElementById('codigoBarrasSufijo');
+    const codigoBarrasCompleto = document.getElementById('codigoBarras');
+    
+    codigoBarrasSufijo.addEventListener('input', function() {
+      codigoBarrasCompleto.value = '20251701018' + this.value;
+    });
+    
+    // Manejo de comparecientes
+    const comparecientesContainer = document.getElementById('comparecientesContainer');
+    const agregarComparecienteBtn = document.getElementById('agregarCompareciente');
+    const comparecienteTemplate = document.getElementById('comparecienteTemplate');
+    let contadorComparecientes = 0;
+    
+    agregarComparecienteBtn.addEventListener('click', function() {
+      // Clonar el template
+      const nuevoCompareciente = document.importNode(comparecienteTemplate.content, true);
+      
+      // Actualizar índice y número
+      contadorComparecientes++;
+      nuevoCompareciente.querySelector('.numero-compareciente').textContent = contadorComparecientes;
+      
+      // Actualizar nombres de campos reemplazando __index__ con el contador actual
+      const inputs = nuevoCompareciente.querySelectorAll('input');
+      inputs.forEach(input => {
+        input.name = input.name.replace('__index__', contadorComparecientes - 1);
+      });
+      
+      // Agregar evento para eliminar
+      const btnEliminar = nuevoCompareciente.querySelector('.eliminar-compareciente');
+      btnEliminar.addEventListener('click', function() {
+        this.closest('.compareciente-item').remove();
+      });
+      
+      // Agregar al contenedor
+      comparecientesContainer.appendChild(nuevoCompareciente);
+    });
+    
+    // Validación del formulario
+    const form = document.getElementById('registroDocumentoForm');
+    form.addEventListener('submit', function(event) {
+      // Validación personalizada aquí si es necesario
+    });
+  });
+</script> 

@@ -1,0 +1,29 @@
+{
+  "development": {
+    "username": "postgres",
+    "password": "Tcdpsm.0809$",
+    "database": "trazabilidad_notarial",
+    "host": "localhost",
+    "port": 5433,
+    "dialect": "postgres",
+    "logging": false
+  },
+  "test": {
+    "username": "postgres",
+    "password": "Tcdpsm.0809$",
+    "database": "trazabilidad_notarial",
+    "host": "localhost",
+    "port": 5433,
+    "dialect": "postgres",
+    "logging": false
+  },
+  "production": {
+    "username": "postgres",
+    "password": "Tcdpsm.0809$",
+    "database": "trazabilidad_notarial",
+    "host": "localhost",
+    "port": 5433,
+    "dialect": "postgres",
+    "logging": false
+  }
+} 

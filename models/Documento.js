@@ -5,6 +5,7 @@
 
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
+const DocumentoRelacion = require('./DocumentoRelacion');
 
 const Documento = sequelize.define('Documento', {
   // ID único del documento
@@ -152,6 +153,33 @@ const Documento = sequelize.define('Documento', {
   underscored: true, // Usa snake_case para los nombres de columnas
   createdAt: 'created_at',
   updatedAt: 'updated_at'
+});
+
+// Definir relaciones con alias más descriptivos
+Documento.hasMany(DocumentoRelacion, {
+  foreignKey: 'idDocumentoPrincipal',
+  as: 'relacionesComoPrincipal'
+});
+
+Documento.hasMany(DocumentoRelacion, {
+  foreignKey: 'idDocumentoRelacionado',
+  as: 'relacionesComoComponente'
+});
+
+// Relación para documentos que son componentes del actual
+Documento.belongsToMany(Documento, {
+  through: DocumentoRelacion,
+  foreignKey: 'idDocumentoPrincipal',
+  otherKey: 'idDocumentoRelacionado',
+  as: 'componentes'
+});
+
+// Relación para documentos principales de los que el actual es componente
+Documento.belongsToMany(Documento, {
+  through: DocumentoRelacion,
+  foreignKey: 'idDocumentoRelacionado',
+  otherKey: 'idDocumentoPrincipal',
+  as: 'documentosPrincipales'
 });
 
 module.exports = Documento; 

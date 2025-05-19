@@ -187,76 +187,84 @@
     </div>
     {{/if}}
     
-    <!-- Documentos relacionados -->
-    <div class="row mb-4">
+    <!-- Panel de Documentos Relacionados -->
+    <div class="row mt-4">
       <div class="col-12">
-        <h5 class="border-bottom pb-2 d-flex justify-content-between align-items-center">
-          <span>Documentos Relacionados</span>
-          {{#if (hasRole userRole "admin,matrizador")}}
-          <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#relacionarDocumentoModal">
-            <i class="fas fa-link me-1"></i> Relacionar
-          </button>
-          {{/if}}
-        </h5>
-      </div>
-      
-      <div class="col-12">
-        {{#if documentosRelacionados.length}}
-          <div class="table-responsive">
-            <table class="table table-sm table-hover">
-              <thead class="table-light">
-                <tr>
-                  <th>Código</th>
-                  <th>Tipo</th>
-                  <th>Relación</th>
-                  <th>Estado</th>
-                  <th>Creado por</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {{#each documentosRelacionados}}
-                <tr>
-                  <td>
-                    <a href="/admin/documentos/detalle/{{this.id}}">{{this.codigoBarras}}</a>
-                  </td>
-                  <td>{{this.tipoDocumento}}</td>
-                  <td>
-                    <span class="badge bg-info">{{this.DocumentoRelacion.tipoRelacion}}</span>
-                    {{#if this.DocumentoRelacion.descripcion}}
-                    <i class="fas fa-info-circle text-muted" data-bs-toggle="tooltip" title="{{this.DocumentoRelacion.descripcion}}"></i>
-                    {{/if}}
-                  </td>
-                  <td>
-                    <span class="badge bg-{{#if (eq this.estado 'en_proceso')}}warning{{else if (eq this.estado 'listo_para_entrega')}}success{{else if (eq this.estado 'entregado')}}info{{else}}secondary{{/if}}">
-                      {{translateEstado this.estado}}
-                    </span>
-                  </td>
-                  <td>{{this.DocumentoRelacion.creador.nombre}}</td>
-                  <td>
-                    {{#if (hasRole ../userRole "admin,matrizador")}}
-                    <form action="/admin/documentos/eliminar-relacion" method="POST" class="d-inline" onsubmit="return confirm('¿Está seguro de eliminar esta relación?');">
-                      <input type="hidden" name="idRelacion" value="{{this.DocumentoRelacion.id}}">
-                      <input type="hidden" name="idDocumento" value="{{../documento.id}}">
-                      <button type="submit" class="btn btn-sm btn-outline-danger">
-                        <i class="fas fa-unlink"></i>
-                      </button>
-                    </form>
-                    {{/if}}
-                    <a href="/admin/documentos/detalle/{{this.id}}" class="btn btn-sm btn-outline-primary">
-                      <i class="fas fa-eye"></i>
-                    </a>
-                  </td>
-                </tr>
-                {{/each}}
-              </tbody>
-            </table>
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Documentos Relacionados</h5>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalRelacionar">
+              <i class="fas fa-link"></i> Relacionar Documento
+            </button>
           </div>
-        {{else}}
-          <div class="alert alert-light text-center">
-            <i class="fas fa-info-circle me-2"></i> No hay documentos relacionados
+          <div class="card-body">
+            <div class="row">
+              {{!-- Documentos Principales --}}
+              <div class="col-md-6">
+                <h6 class="mb-3">Documentos Principales</h6>
+                {{#if documentosPrincipales.length}}
+                  <div class="list-group">
+                    {{#each documentosPrincipales}}
+                      <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                          <div>
+                            <h6 class="mb-1">{{this.codigoBarras}}</h6>
+                            <p class="mb-1">{{this.tipoDocumento}} - {{this.nombreCliente}}</p>
+                            <small class="text-muted">
+                              {{this.tipoRelacion}} - {{this.descripcion}}
+                            </small>
+                          </div>
+                          <div class="btn-group">
+                            <a href="/admin/documentos/detalle/{{this.id}}" class="btn btn-sm btn-info">
+                              <i class="fas fa-eye"></i>
+                            </a>
+                            <button class="btn btn-sm btn-danger" onclick="eliminarRelacion('{{../documento.id}}', '{{this.id}}')">
+                              <i class="fas fa-unlink"></i>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    {{/each}}
+                  </div>
+                {{else}}
+                  <p class="text-muted">No hay documentos principales relacionados</p>
+                {{/if}}
+              </div>
+
+              {{!-- Componentes --}}
+              <div class="col-md-6">
+                <h6 class="mb-3">Componentes</h6>
+                {{#if componentes.length}}
+                  <div class="list-group">
+                    {{#each componentes}}
+                      <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                          <div>
+                            <h6 class="mb-1">{{this.codigoBarras}}</h6>
+                            <p class="mb-1">{{this.tipoDocumento}} - {{this.nombreCliente}}</p>
+                            <small class="text-muted">
+                              {{this.tipoRelacion}} - {{this.descripcion}}
+                            </small>
+                          </div>
+                          <div class="btn-group">
+                            <a href="/admin/documentos/detalle/{{this.id}}" class="btn btn-sm btn-info">
+                              <i class="fas fa-eye"></i>
+                            </a>
+                            <button class="btn btn-sm btn-danger" onclick="eliminarRelacion('{{../documento.id}}', '{{this.id}}')">
+                              <i class="fas fa-unlink"></i>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    {{/each}}
+                  </div>
+                {{else}}
+                  <p class="text-muted">No hay componentes relacionados</p>
+                {{/if}}
+              </div>
+            </div>
           </div>
-        {{/if}}
+        </div>
       </div>
     </div>
     
@@ -331,95 +339,72 @@
   </div>
 </div>
 
-<!-- Modal para relacionar documentos -->
-<div class="modal fade" id="relacionarDocumentoModal" tabindex="-1" aria-hidden="true">
+<!-- Modal para Relacionar Documentos -->
+<div class="modal fade" id="modalRelacionar" tabindex="-1">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Relacionar Documentos</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <h5 class="modal-title">Relacionar Documento</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <div class="mb-4">
-          <h6>Documentos del mismo cliente</h6>
-          {{#if documentosCliente.length}}
-            <div class="list-group">
-              {{#each documentosCliente}}
-                <button type="button" 
-                        class="list-group-item list-group-item-action seleccionar-documento" 
-                        data-id="{{this.id}}" 
-                        data-codigo="{{this.codigoBarras}}" 
-                        data-tipo="{{this.tipoDocumento}}">
-                  <div class="d-flex w-100 justify-content-between">
-                    <h6 class="mb-1">{{this.tipoDocumento}}</h6>
-                    <small>{{formatDate this.createdAt}}</small>
-                  </div>
-                  <p class="mb-1">Código: {{this.codigoBarras}}</p>
-                </button>
-              {{/each}}
+        <ul class="nav nav-tabs mb-3" id="tabRelacionar" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="tab-pendientes-tab" data-bs-toggle="tab" data-bs-target="#tab-pendientes" type="button" role="tab">Pendientes</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-busqueda-tab" data-bs-toggle="tab" data-bs-target="#tab-busqueda" type="button" role="tab">Buscar</button>
+          </li>
+        </ul>
+        <div class="tab-content" id="tabRelacionarContent">
+          <!-- Tab de pendientes -->
+          <div class="tab-pane fade show active" id="tab-pendientes" role="tabpanel">
+            <div id="pendientesMiosCargando" class="text-center my-3">
+              <div class="spinner-border" role="status"><span class="visually-hidden">Cargando...</span></div>
             </div>
-          {{else}}
-            <div class="alert alert-light">
-              No hay más documentos para este cliente
-            </div>
-          {{/if}}
-        </div>
-        
-        <form id="formRelacionarDocumento" action="/admin/documentos/relacionar" method="POST">
-          <input type="hidden" name="idDocumentoPrincipal" value="{{documento.id}}">
-          
-          <div class="mb-3">
-            <label class="form-label">Documento Principal:</label>
-            <div class="form-control bg-light">
-              {{documento.tipoDocumento}} - {{documento.codigoBarras}}
-            </div>
+            <div id="pendientesMiosLista" style="display:none;"></div>
           </div>
-          
-          <div class="mb-3">
-            <label for="idDocumentoRelacionado" class="form-label">Documento Relacionado:</label>
-            <div class="input-group">
-              <input type="hidden" id="idDocumentoRelacionado" name="idDocumentoRelacionado" required>
-              <input type="text" id="documentoRelacionadoSeleccionado" class="form-control" placeholder="Seleccione un documento" readonly required>
-              <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSearch">
-                <i class="fas fa-search"></i> Buscar
-              </button>
-            </div>
-          </div>
-          
-          <div class="collapse mb-3" id="collapseSearch">
-            <div class="card card-body">
-              <h6>Buscar otro documento</h6>
-              <div class="input-group mb-3">
-                <input type="text" id="codigoDocumentoBusqueda" class="form-control" placeholder="Código de barras">
-                <button class="btn btn-primary" type="button" id="btnBuscarPorCodigo">
+          <!-- Tab de búsqueda -->
+          <div class="tab-pane fade" id="tab-busqueda" role="tabpanel">
+            <div class="mb-3">
+              <label class="form-label">Buscar Documento</label>
+              <div class="input-group">
+                <input type="text" class="form-control" id="busquedaDocumento" placeholder="Código, cliente o tipo de documento" oninput="buscarDocumentos()">
+                <button class="btn btn-outline-secondary" type="button" onclick="buscarDocumentos()">
                   <i class="fas fa-search"></i> Buscar
                 </button>
               </div>
-              <div id="resultadosBusqueda"></div>
+            </div>
+            <div id="resultadosBusqueda" class="mb-3" style="display: none;">
+              <h6>Resultados de la búsqueda</h6>
+              <div class="list-group" id="listaResultados">
+                <!-- Los resultados se cargarán aquí dinámicamente -->
+              </div>
             </div>
           </div>
-          
+        </div>
+        <form id="formRelacionar" style="display: none;">
+          <input type="hidden" id="idDocumentoRelacionado">
           <div class="mb-3">
-            <label for="tipoRelacion" class="form-label">Tipo de Relación:</label>
-            <select class="form-select" id="tipoRelacion" name="tipoRelacion" required>
-              <option value="" selected disabled>Seleccionar tipo de relación...</option>
-              <option value="relacionado">Documento Relacionado</option>
-              <option value="deriva_de">Deriva De</option>
-              <option value="complementa">Complementa</option>
-              <option value="reemplaza">Reemplaza</option>
-              <option value="otro">Otro</option>
+            <label class="form-label">Tipo de Relación</label>
+            <select class="form-select" id="tipoRelacion" required>
+              <option value="">Seleccione un tipo</option>
+              <option value="componente">Componente</option>
+              <option value="relacionado">Relacionado</option>
+              <option value="anexo">Anexo</option>
             </select>
           </div>
-          
           <div class="mb-3">
-            <label for="descripcion" class="form-label">Descripción de la Relación:</label>
-            <textarea class="form-control" id="descripcion" name="descripcion" rows="2"></textarea>
+            <label class="form-label">Descripción</label>
+            <textarea class="form-control" id="descripcionRelacion" rows="3" required></textarea>
           </div>
         </form>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button type="button" class="btn btn-primary" id="btnGuardarRelacion">Guardar Relación</button>
+        <button type="button" class="btn btn-primary" onclick="guardarRelacion()" id="btnGuardarRelacion" style="display: none;">
+          Guardar Relación
+        </button>
       </div>
     </div>
   </div>
@@ -513,5 +498,149 @@
       
       form.submit();
     });
+
+    // Al abrir el modal, cargar los pendientes
+    $('#modalRelacionar').on('shown.bs.modal', function () {
+      cargarPendientesMios();
+    });
+
+    async function cargarPendientesMios() {
+      const cargando = document.getElementById('pendientesMiosCargando');
+      const listaDiv = document.getElementById('pendientesMiosLista');
+      cargando.style.display = 'block';
+      listaDiv.style.display = 'none';
+      try {
+        const response = await fetch('/api/documentos/pendientes/mios');
+        const data = await response.json();
+        console.log('Respuesta de pendientes:', data);
+        if (data.exito && data.datos.length > 0) {
+          listaDiv.innerHTML = data.datos.map(doc => `
+            <a href="#" class="list-group-item list-group-item-action" onclick='seleccionarDocumento(${JSON.stringify(doc).replace(/"/g, "&quot;")})'>
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 class="mb-1">${doc.codigoBarras}</h6>
+                  <p class="mb-1">${doc.tipoDocumento} - ${doc.nombreCliente}</p>
+                  <small class="text-muted">Estado: ${doc.estado}</small>
+                </div>
+              </div>
+            </a>
+          `).join('');
+        } else {
+          listaDiv.innerHTML = '<div class="alert alert-info">No tienes documentos pendientes</div>';
+        }
+        cargando.style.display = 'none';
+        listaDiv.style.display = 'block';
+      } catch (error) {
+        console.error('Error al cargar pendientes:', error);
+        listaDiv.innerHTML = '<div class="alert alert-danger">Error al cargar documentos pendientes</div>';
+        cargando.style.display = 'none';
+        listaDiv.style.display = 'block';
+      }
+    }
   });
+
+  let documentoSeleccionado = null;
+
+  async function buscarDocumentos() {
+    const query = document.getElementById('busquedaDocumento').value;
+    if (!query) return;
+
+    try {
+      const response = await fetch(`/api/documentos/buscar?query=${encodeURIComponent(query)}`);
+      const data = await response.json();
+
+      const resultadosDiv = document.getElementById('resultadosBusqueda');
+      const listaResultados = document.getElementById('listaResultados');
+      
+      if (data.exito && data.datos.length > 0) {
+        listaResultados.innerHTML = data.datos.map(doc => `
+          <a href="#" class="list-group-item list-group-item-action" onclick="seleccionarDocumento(${JSON.stringify(doc).replace(/"/g, '&quot;')})">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <h6 class="mb-1">${doc.codigoBarras}</h6>
+                <p class="mb-1">${doc.tipoDocumento} - ${doc.nombreCliente}</p>
+                <small class="text-muted">Estado: ${doc.estado}</small>
+              </div>
+            </div>
+          </a>
+        `).join('');
+        
+        resultadosDiv.style.display = 'block';
+      } else {
+        listaResultados.innerHTML = '<div class="alert alert-info">No se encontraron documentos</div>';
+        resultadosDiv.style.display = 'block';
+      }
+    } catch (error) {
+      console.error('Error al buscar documentos:', error);
+      alert('Error al buscar documentos');
+    }
+  }
+
+  function seleccionarDocumento(documento) {
+    documentoSeleccionado = documento;
+    document.getElementById('idDocumentoRelacionado').value = documento.id;
+    document.getElementById('formRelacionar').style.display = 'block';
+    document.getElementById('btnGuardarRelacion').style.display = 'block';
+  }
+
+  async function guardarRelacion() {
+    if (!documentoSeleccionado) return;
+
+    const tipoRelacion = document.getElementById('tipoRelacion').value;
+    const descripcion = document.getElementById('descripcionRelacion').value;
+
+    if (!tipoRelacion || !descripcion) {
+      alert('Por favor complete todos los campos');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/documentos/relacionar', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          idDocumentoPrincipal: '{{documento.id}}',
+          idDocumentoRelacionado: documentoSeleccionado.id,
+          tipoRelacion,
+          descripcion
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.exito) {
+        alert('Relación creada exitosamente');
+        location.reload();
+      } else {
+        alert(data.mensaje || 'Error al crear la relación');
+      }
+    } catch (error) {
+      console.error('Error al guardar relación:', error);
+      alert('Error al guardar la relación');
+    }
+  }
+
+  async function eliminarRelacion(idPrincipal, idRelacionado) {
+    if (!confirm('¿Está seguro de eliminar esta relación?')) return;
+
+    try {
+      const response = await fetch(`/api/documentos/relacionar?idDocumentoPrincipal=${idPrincipal}&idDocumentoRelacionado=${idRelacionado}`, {
+        method: 'DELETE'
+      });
+
+      const data = await response.json();
+
+      if (data.exito) {
+        alert('Relación eliminada exitosamente');
+        location.reload();
+      } else {
+        alert(data.mensaje || 'Error al eliminar la relación');
+      }
+    } catch (error) {
+      console.error('Error al eliminar relación:', error);
+      alert('Error al eliminar la relación');
+    }
+  }
 </script> 

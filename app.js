@@ -13,6 +13,7 @@ const bodyParser = require('body-parser');
 const session = require('express-session');
 const flash = require('connect-flash');
 const cookieParser = require('cookie-parser');
+const jwt = require('jsonwebtoken');
 
 // Importación de configuración de base de datos
 const { testConnection, syncModels } = require('./config/database');
@@ -117,6 +118,9 @@ const hbs = engine({
         'cancelado': 'Cancelado'
       };
       return traducciones[estado] || estado;
+    },
+    stringifyNumber: (num) => {
+      return num ? num.toString() : '';
     }
   }
 });
@@ -132,8 +136,13 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Rutas de la API
 const documentoRoutes = require('./routes/documentoRoutes');
 const matrizadorRoutes = require('./routes/matrizadorRoutes');
+const documentoRelacionRoutes = require('./routes/documentoRelacionRoutes');
+const recepcionRoutes = require('./routes/recepcionRoutes');
 app.use('/api/documentos', documentoRoutes);
 app.use('/api/matrizadores', matrizadorRoutes);
+app.use('/api/documento-relaciones', documentoRelacionRoutes);
+app.use('/matrizador', matrizadorRoutes);
+app.use('/recepcion', recepcionRoutes);
 
 // Rutas administrativas
 const adminRoutes = require('./routes/adminRoutes');
@@ -147,9 +156,34 @@ app.get('/login', (req, res) => {
   });
 });
 
-// Ruta principal (redirección al panel administrativo)
+// Ruta principal (redirección según rol)
 app.get('/', (req, res) => {
-  res.redirect('/admin');
+  // Si no hay token, redirigir al login
+  if (!req.cookies?.token) {
+    return res.redirect('/login');
+  }
+  
+  // Intentar decodificar el token para obtener el rol
+  try {
+    const token = req.cookies.token;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'clave_secreta_notaria_2024');
+    
+    // Redirigir según el rol
+    switch (decoded.rol) {
+      case 'admin':
+        return res.redirect('/admin');
+      case 'matrizador':
+        return res.redirect('/matrizador');
+      case 'recepcion':
+        return res.redirect('/recepcion');
+      default:
+        return res.redirect('/login');
+    }
+  } catch (error) {
+    // Si hay error al decodificar el token, redirigir al login
+    console.error('Error al decodificar token en ruta principal:', error);
+    return res.redirect('/login');
+  }
 });
 
 // Manejo de rutas no encontradas

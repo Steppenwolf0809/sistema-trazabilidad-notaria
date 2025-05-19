@@ -1,0 +1,41 @@
+{{!-- Página de acceso denegado --}}
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card shadow">
+        <div class="card-body text-center">
+          <div class="mb-4">
+            <i class="fas fa-exclamation-triangle text-warning" style="font-size: 5rem;"></i>
+          </div>
+          <h1 class="card-title h2">Acceso denegado</h1>
+          <p class="card-text lead">
+            No tiene permisos para acceder a esta página.
+          </p>
+          <p class="text-muted">
+            Se requieren privilegios específicos para acceder a esta sección del sistema.
+          </p>
+          <hr>
+          <div class="d-flex justify-content-center mt-4">
+            {{#if (eq userRole 'admin')}}
+              <a href="/admin" class="btn btn-primary">
+                <i class="fas fa-home me-2"></i>Volver al Dashboard Admin
+              </a>
+            {{else if (eq userRole 'matrizador')}}
+              <a href="/matrizador" class="btn btn-primary">
+                <i class="fas fa-home me-2"></i>Volver al Dashboard Matrizador
+              </a>
+            {{else if (eq userRole 'recepcion')}}
+              <a href="/recepcion" class="btn btn-primary">
+                <i class="fas fa-home me-2"></i>Volver al Dashboard Recepción
+              </a>
+            {{else}}
+              <a href="/" class="btn btn-primary">
+                <i class="fas fa-home me-2"></i>Volver al Inicio
+              </a>
+            {{/if}}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div> 

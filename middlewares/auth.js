@@ -21,6 +21,8 @@ const verificarToken = async (req, res, next) => {
       req.query?.token;
     
     console.log("Verificando token:", token ? "Token presente" : "Sin token");
+    console.log("Ruta actual:", req.originalUrl);
+    console.log("Método:", req.method);
     
     if (!token) {
       // Si es una solicitud de API, devolver error JSON
@@ -32,11 +34,13 @@ const verificarToken = async (req, res, next) => {
       }
       
       // Si es una solicitud de vista, redirigir al login
+      console.log("Redirigiendo a login por falta de token");
       return res.redirect('/login?error=no_autorizado&redirect=' + encodeURIComponent(req.originalUrl));
     }
     
     // Verificar token
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'clave_secreta_notaria_2024');
+    console.log("Token decodificado:", { id: decoded.id, rol: decoded.rol });
     
     // Verificar que el ID del matrizador existe en el token
     if (!decoded.id) {
@@ -60,6 +64,7 @@ const verificarToken = async (req, res, next) => {
     }
     
     console.log(`Autenticación exitosa: ${matrizador.nombre} (${matrizador.rol})`);
+    console.log("Ruta solicitada:", req.originalUrl);
     
     // Agregar información del matrizador a la solicitud
     req.matrizador = {
@@ -232,10 +237,28 @@ const esConsulta = (req, res, next) => {
   next();
 };
 
+// Modificación: función para redirigir según rol después del login
+function redirigirSegunRol(req, res) {
+  if (!req.matrizador) {
+    return res.redirect('/login');
+  }
+  switch (req.matrizador.rol) {
+    case 'admin':
+      return res.redirect('/admin');
+    case 'matrizador':
+      return res.redirect('/matrizador');
+    case 'recepcion':
+      return res.redirect('/recepcion');
+    default:
+      return res.redirect('/login');
+  }
+}
+
 module.exports = {
   verificarToken,
   esAdmin,
   esMatrizador,
   esRecepcion,
-  esConsulta
+  esConsulta,
+  redirigirSegunRol
 }; 

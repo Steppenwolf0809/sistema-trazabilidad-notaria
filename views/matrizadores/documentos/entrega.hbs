@@ -1,0 +1,268 @@
+{{! Entrega de Documento - Matrizadores }}
+{{! layout: 'matrizador' }}
+<div class="container mt-4">
+  <h2>Entrega de Documento (Matrizadores)</h2>
+  <div class="alert alert-info">Aquí se mostrará la interfaz para entregar un documento como matrizador.</div>
+</div>
+
+<div class="row">
+  <div class="col-md-6 mx-auto">
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-hand-holding me-2"></i> Entrega de Documentos
+      </div>
+      <div class="card-body">
+        {{#if documento}}
+          <!-- Modo: Verificación de documento específico -->
+          <h5 class="mb-4">Verificación para Entrega</h5>
+          
+          <div class="alert alert-info">
+            <div class="d-flex align-items-center">
+              <i class="fas fa-info-circle fa-2x me-3"></i>
+              <div>
+                <p class="mb-0">El cliente debe proporcionar el código de verificación de 4 dígitos que recibió por teléfono o correo electrónico.</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="row mb-4">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Documento:</label>
+                <div class="form-control bg-light">{{documento.tipoDocumento}}</div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Código de Barras:</label>
+                <div class="form-control bg-light">{{documento.codigoBarras}}</div>
+              </div>
+            </div>
+            <div class="col-md-12">
+              <div class="mb-0">
+                <label class="form-label">Cliente:</label>
+                <div class="form-control bg-light">
+                  {{documento.nombreCliente}} ({{documento.identificacionCliente}})
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <form id="formVerificacion" action="/matrizador/documentos/completar-entrega/{{documento.id}}" method="POST">
+            <!-- Sección de verificación -->
+            <div class="card bg-light mb-4">
+              <div class="card-body">
+                <h6 class="card-title">Verificación de Código</h6>
+                
+                <div class="form-group mb-3">
+                  <label for="codigoVerificacion" class="form-label">Código de 4 dígitos:</label>
+                  <div class="input-group">
+                    <input type="text" class="form-control form-control-lg text-center" id="codigoVerificacion" name="codigoVerificacion" 
+                           maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="0000" required
+                           style="letter-spacing: 0.5em; font-weight: bold;">
+                    <button class="btn btn-primary" type="submit">
+                      <i class="fas fa-check-circle me-1"></i> Verificar
+                    </button>
+                  </div>
+                  {{#if error}}
+                  <div class="text-danger mt-2">
+                    <i class="fas fa-exclamation-circle me-1"></i> {{error}}
+                  </div>
+                  {{/if}}
+                </div>
+                
+                <div class="text-center mt-2">
+                  <button type="button" class="btn btn-link" data-bs-toggle="modal" data-bs-target="#verificacionLlamadaModal">
+                    <i class="fas fa-phone me-1"></i> El cliente no recuerda el código
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Sección de datos del receptor -->
+            <div class="card mb-4">
+              <div class="card-body">
+                <h6 class="card-title">Datos de quien recibe</h6>
+                
+                <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <label for="nombreReceptor" class="form-label">Nombre completo:</label>
+                    <input type="text" class="form-control" id="nombreReceptor" name="nombreReceptor" required>
+                  </div>
+                  
+                  <div class="col-md-6 mb-3">
+                    <label for="identificacionReceptor" class="form-label">Identificación:</label>
+                    <input type="text" class="form-control" id="identificacionReceptor" name="identificacionReceptor" required>
+                  </div>
+                  
+                  <div class="col-md-12 mb-0">
+                    <label for="relacionReceptor" class="form-label">Relación con el cliente:</label>
+                    <select class="form-select" id="relacionReceptor" name="relacionReceptor" required>
+                      <option value="" selected disabled>Seleccionar...</option>
+                      <option value="titular">Titular del documento</option>
+                      <option value="familiar">Familiar</option>
+                      <option value="mandatario">Mandatario</option>
+                      <option value="otro">Otro</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="d-grid">
+              <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-paper-plane me-1"></i> Completar Entrega
+              </button>
+            </div>
+          </form>
+        {{else}}
+          <!-- Modo: Búsqueda de documento para entrega -->
+          <h5 class="mb-4">Buscar Documento para Entrega</h5>
+          
+          <div class="alert alert-info mb-4">
+            <div class="d-flex align-items-center">
+              <i class="fas fa-info-circle fa-2x me-3"></i>
+              <div>
+                <p class="mb-0">Ingrese el código de barras o busque un documento listo para entrega.</p>
+              </div>
+            </div>
+          </div>
+          
+          <form action="/matrizador/documentos/entrega" method="GET">
+            <div class="input-group mb-4">
+              <input type="text" class="form-control" name="codigo" placeholder="Escanear o ingresar código de barras">
+              <button class="btn btn-primary" type="submit">
+                <i class="fas fa-search me-1"></i> Buscar
+              </button>
+            </div>
+          </form>
+          
+          <h6 class="mb-3 border-bottom pb-2">Mis Documentos Listos para Entrega</h6>
+          
+          <div class="list-group">
+            {{#each documentosListos}}
+            <a href="/matrizador/documentos/entrega/{{this.id}}" class="list-group-item list-group-item-action">
+              <div class="d-flex w-100 justify-content-between">
+                <h6 class="mb-1">{{this.tipoDocumento}}</h6>
+                <small>{{formatDate this.updatedAt}}</small>
+              </div>
+              <p class="mb-1">{{this.nombreCliente}}</p>
+              <small>Código: {{this.codigoBarras}}</small>
+            </a>
+            {{else}}
+            <div class="text-center py-4">
+              <i class="fas fa-info-circle me-2"></i> No hay documentos listos para entrega
+            </div>
+            {{/each}}
+          </div>
+        {{/if}}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de verificación por llamada -->
+<div class="modal fade" id="verificacionLlamadaModal" tabindex="-1" aria-labelledby="verificacionLlamadaModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="verificacionLlamadaModalLabel">Verificación Alternativa por Llamada</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-warning">
+          <i class="fas fa-exclamation-triangle me-2"></i> Este método solo debe usarse cuando el cliente no recuerda el código y es necesario verificar su identidad por teléfono.
+        </div>
+        
+        <div class="mb-3">
+          <label class="form-label">Cliente:</label>
+          <div class="form-control bg-light">{{documento.nombreCliente}} ({{documento.identificacionCliente}})</div>
+        </div>
+        
+        <div class="mb-3">
+          <label class="form-label">Teléfono de contacto:</label>
+          <div class="form-control bg-light">{{documento.telefonoCliente}}</div>
+        </div>
+        
+        <div class="form-check mb-3">
+          <input class="form-check-input" type="checkbox" id="confirmacionLlamada">
+          <label class="form-check-label" for="confirmacionLlamada">
+            Confirmo que he verificado la identidad del cliente por teléfono.
+          </label>
+        </div>
+        
+        <div class="mb-3">
+          <label class="form-label">Observaciones:</label>
+          <textarea class="form-control" id="observacionesLlamada" rows="3" placeholder="Detalles de la verificación realizada..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="confirmarVerificacionLlamada" disabled>
+          <i class="fas fa-check me-1"></i> Confirmar Verificación
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Auto-focus en el campo de código
+    const codigoInput = document.getElementById('codigoVerificacion');
+    if (codigoInput) {
+      codigoInput.focus();
+      
+      // Solo permitir dígitos
+      codigoInput.addEventListener('input', function(e) {
+        this.value = this.value.replace(/[^0-9]/g, '');
+      });
+      
+      // Submit del formulario cuando se complete el código
+      codigoInput.addEventListener('input', function() {
+        if (this.value.length === 4) {
+          // Dar tiempo para verificar visualmente
+          setTimeout(function() {
+            document.getElementById('nombreReceptor').focus();
+          }, 300);
+        }
+      });
+    }
+    
+    // Verificación por llamada
+    const checkboxConfirmacion = document.getElementById('confirmacionLlamada');
+    const btnConfirmarLlamada = document.getElementById('confirmarVerificacionLlamada');
+    
+    if (checkboxConfirmacion && btnConfirmarLlamada) {
+      checkboxConfirmacion.addEventListener('change', function() {
+        btnConfirmarLlamada.disabled = !this.checked;
+      });
+      
+      btnConfirmarLlamada.addEventListener('click', function() {
+        const observaciones = document.getElementById('observacionesLlamada').value;
+        
+        // Preparar formulario para envío
+        const form = document.getElementById('formVerificacion');
+        
+        // Agregar campo oculto para indicar verificación por llamada
+        const inputTipoVerificacion = document.createElement('input');
+        inputTipoVerificacion.type = 'hidden';
+        inputTipoVerificacion.name = 'tipoVerificacion';
+        inputTipoVerificacion.value = 'llamada';
+        form.appendChild(inputTipoVerificacion);
+        
+        // Agregar observaciones
+        const inputObservaciones = document.createElement('input');
+        inputObservaciones.type = 'hidden';
+        inputObservaciones.name = 'observaciones';
+        inputObservaciones.value = observaciones;
+        form.appendChild(inputObservaciones);
+        
+        // Cerrar modal y enviar formulario
+        const modal = bootstrap.Modal.getInstance(document.getElementById('verificacionLlamadaModal'));
+        modal.hide();
+        form.submit();
+      });
+    }
+  });
+</script> 
