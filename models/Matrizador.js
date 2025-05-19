@@ -44,11 +44,24 @@ const Matrizador = sequelize.define('Matrizador', {
     allowNull: false
   },
   
+  // Rol del usuario en el sistema
+  rol: {
+    type: DataTypes.ENUM('admin', 'matrizador', 'recepcion', 'consulta'),
+    allowNull: false,
+    defaultValue: 'matrizador'
+  },
+  
   // Estado: activo o inactivo
   activo: {
     type: DataTypes.BOOLEAN,
     allowNull: false,
     defaultValue: true
+  },
+  
+  // Contraseña (hasheada)
+  password: {
+    type: DataTypes.STRING,
+    allowNull: true
   }
 }, {
   // Opciones del modelo

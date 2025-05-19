@@ -20,6 +20,8 @@ const verificarToken = async (req, res, next) => {
       req.cookies?.token || 
       req.query?.token;
     
+    console.log("Verificando token:", token ? "Token presente" : "Sin token");
+    
     if (!token) {
       // Si es una solicitud de API, devolver error JSON
       if (req.path.startsWith('/api/')) {
@@ -36,10 +38,17 @@ const verificarToken = async (req, res, next) => {
     // Verificar token
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'clave_secreta_notaria_2024');
     
+    // Verificar que el ID del matrizador existe en el token
+    if (!decoded.id) {
+      console.error('Token válido pero sin ID de matrizador');
+      return res.redirect('/login?error=token_invalido&redirect=' + encodeURIComponent(req.originalUrl));
+    }
+    
     // Buscar matrizador en la base de datos
     const matrizador = await Matrizador.findByPk(decoded.id);
     
-    if (!matrizador || matrizador.estado !== 'activo') {
+    if (!matrizador || !matrizador.activo) {
+      console.error(`Matrizador no encontrado o inactivo. ID: ${decoded.id}`);
       if (req.path.startsWith('/api/')) {
         return res.status(401).json({
           exito: false,
@@ -50,13 +59,20 @@ const verificarToken = async (req, res, next) => {
       return res.redirect('/login?error=usuario_inactivo&redirect=' + encodeURIComponent(req.originalUrl));
     }
     
+    console.log(`Autenticación exitosa: ${matrizador.nombre} (${matrizador.rol})`);
+    
     // Agregar información del matrizador a la solicitud
     req.matrizador = {
       id: matrizador.id,
-      usuario: matrizador.usuario,
       nombre: matrizador.nombre,
+      email: matrizador.email,
+      cargo: matrizador.cargo,
       rol: matrizador.rol
     };
+    
+    // Agregar rol a locals para acceso en las vistas
+    res.locals.userRole = matrizador.rol;
+    res.locals.userName = matrizador.nombre;
     
     next();
   } catch (error) {
@@ -103,6 +119,7 @@ const esAdmin = (req, res, next) => {
     }
     
     return res.render('error', {
+      layout: 'admin',
       title: 'Acceso denegado',
       message: 'No tiene permisos para acceder a esta página. Se requieren privilegios de administrador.'
     });
@@ -112,13 +129,9 @@ const esAdmin = (req, res, next) => {
 };
 
 /**
- * Middleware para verificar que el usuario es supervisor o administrador
- * @param {Object} req - Objeto de solicitud Express
- * @param {Object} res - Objeto de respuesta Express
- * @param {Function} next - Función para continuar al siguiente middleware
+ * Middleware para verificar que el usuario es matrizador o admin
  */
-const esSupervisor = (req, res, next) => {
-  // Verificar que req.matrizador existe
+const esMatrizador = (req, res, next) => {
   if (!req.matrizador) {
     if (req.path.startsWith('/api/')) {
       return res.status(401).json({
@@ -130,26 +143,72 @@ const esSupervisor = (req, res, next) => {
     return res.redirect('/login?error=no_autorizado&redirect=' + encodeURIComponent(req.originalUrl));
   }
   
-  // Verificar que el rol sea 'admin' o 'supervisor'
-  if (req.matrizador.rol !== 'admin' && req.matrizador.rol !== 'supervisor') {
+  // Verificar que el rol sea 'admin' o 'matrizador'
+  if (req.matrizador.rol !== 'admin' && req.matrizador.rol !== 'matrizador') {
     if (req.path.startsWith('/api/')) {
       return res.status(403).json({
         exito: false,
-        mensaje: 'Prohibido - No tiene permisos de supervisor'
+        mensaje: 'Prohibido - No tiene permisos de matrizador'
       });
     }
     
     return res.render('error', {
+      layout: 'admin',
       title: 'Acceso denegado',
-      message: 'No tiene permisos para acceder a esta página. Se requieren privilegios de supervisor o administrador.'
+      message: 'No tiene permisos para acceder a esta página. Se requieren privilegios de matrizador o administrador.'
     });
   }
   
   next();
 };
 
+/**
+ * Middleware para verificar que el usuario es de recepción, matrizador o admin
+ */
+const esRecepcion = (req, res, next) => {
+  if (!req.matrizador) {
+    if (req.path.startsWith('/api/')) {
+      return res.status(401).json({
+        exito: false,
+        mensaje: 'No autorizado - Token no verificado'
+      });
+    }
+    
+    return res.redirect('/login?error=no_autorizado&redirect=' + encodeURIComponent(req.originalUrl));
+  }
+  
+  // Verificar que el rol sea válido para esta función
+  const rolesPermitidos = ['admin', 'matrizador', 'recepcion'];
+  if (!rolesPermitidos.includes(req.matrizador.rol)) {
+    if (req.path.startsWith('/api/')) {
+      return res.status(403).json({
+        exito: false,
+        mensaje: 'Prohibido - No tiene permisos de recepción'
+      });
+    }
+    
+    return res.render('error', {
+      layout: 'admin',
+      title: 'Acceso denegado',
+      message: 'No tiene permisos para acceder a esta página. Se requieren privilegios de recepción, matrizador o administrador.'
+    });
+  }
+  
+  next();
+};
+
+/**
+ * Middleware para verificar que el usuario tiene al menos permisos de consulta
+ */
+const esConsulta = (req, res, next) => {
+  // Todos los roles tienen al menos permisos de consulta
+  next();
+};
+
 module.exports = {
   verificarToken,
   esAdmin,
-  esSupervisor
+  esMatrizador,
+  esRecepcion,
+  esConsulta
 }; 

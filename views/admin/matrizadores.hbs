@@ -1,0 +1,308 @@
+<!-- Gestión de Matrizadores -->
+<div class="row">
+  <div class="col-md-12 mb-4">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Listado de Matrizadores</span>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevoMatrizador">
+          <i class="fas fa-plus me-1"></i> Nuevo Matrizador
+        </button>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Email</th>
+                <th>Cargo</th>
+                <th>Rol</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each matrizadores}}
+              <tr>
+                <td>{{this.id}}</td>
+                <td>{{this.nombre}}</td>
+                <td>{{this.email}}</td>
+                <td>{{this.cargo}}</td>
+                <td>
+                  {{#if (eq this.rol "admin")}}
+                  <span class="badge bg-danger">Administrador</span>
+                  {{else if (eq this.rol "matrizador")}}
+                  <span class="badge bg-primary">Matrizador</span>
+                  {{else if (eq this.rol "recepcion")}}
+                  <span class="badge bg-success">Recepción</span>
+                  {{else}}
+                  <span class="badge bg-secondary">Consulta</span>
+                  {{/if}}
+                </td>
+                <td>
+                  {{#if this.activo}}
+                  <span class="badge bg-success">Activo</span>
+                  {{else}}
+                  <span class="badge bg-danger">Inactivo</span>
+                  {{/if}}
+                </td>
+                <td>
+                  <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-primary editar-matrizador" 
+                            data-id="{{this.id}}"
+                            data-nombre="{{this.nombre}}"
+                            data-email="{{this.email}}"
+                            data-identificacion="{{this.identificacion}}"
+                            data-cargo="{{this.cargo}}"
+                            data-rol="{{this.rol}}"
+                            data-activo="{{this.activo}}"
+                            data-bs-toggle="modal" 
+                            data-bs-target="#modalEditarMatrizador">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-outline-danger eliminar-matrizador" 
+                            data-id="{{this.id}}" 
+                            data-nombre="{{this.nombre}}">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              {{else}}
+              <tr>
+                <td colspan="7" class="text-center py-3">No hay matrizadores registrados</td>
+              </tr>
+              {{/each}}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Nuevo Matrizador -->
+<div class="modal fade" id="modalNuevoMatrizador" tabindex="-1" aria-labelledby="modalNuevoMatrizadorLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalNuevoMatrizadorLabel">Registrar Nuevo Matrizador</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <form action="/admin/matrizadores/registro" method="POST">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="nombre" class="form-label">Nombre Completo</label>
+            <input type="text" class="form-control" id="nombre" name="nombre" required>
+          </div>
+          <div class="mb-3">
+            <label for="email" class="form-label">Email</label>
+            <input type="email" class="form-control" id="email" name="email" required>
+          </div>
+          <div class="mb-3">
+            <label for="identificacion" class="form-label">Identificación</label>
+            <input type="text" class="form-control" id="identificacion" name="identificacion" required>
+          </div>
+          <div class="mb-3">
+            <label for="cargo" class="form-label">Cargo</label>
+            <input type="text" class="form-control" id="cargo" name="cargo" required>
+          </div>
+          <div class="mb-3">
+            <label for="rol" class="form-label">Rol en el Sistema</label>
+            <select class="form-select" id="rol" name="rol" required>
+              <option value="matrizador">Matrizador</option>
+              <option value="admin">Administrador</option>
+              <option value="recepcion">Recepción</option>
+              <option value="consulta">Consulta</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="password" class="form-label">Contraseña</label>
+            <input type="password" class="form-control" id="password" name="password">
+            <div class="form-text">Ingrese una contraseña si el matrizador tendrá acceso al sistema.</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Editar Matrizador -->
+<div class="modal fade" id="modalEditarMatrizador" tabindex="-1" aria-labelledby="modalEditarMatrizadorLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalEditarMatrizadorLabel">Editar Matrizador</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <form action="/admin/matrizadores/actualizar" method="POST">
+        <div class="modal-body">
+          <input type="hidden" id="editar-id" name="id" required>
+          <div class="mb-3">
+            <label for="editar-nombre" class="form-label">Nombre Completo</label>
+            <input type="text" class="form-control" id="editar-nombre" name="nombre" required>
+          </div>
+          <div class="mb-3">
+            <label for="editar-email" class="form-label">Email</label>
+            <input type="email" class="form-control" id="editar-email" name="email" required>
+          </div>
+          <div class="mb-3">
+            <label for="editar-identificacion" class="form-label">Identificación</label>
+            <input type="text" class="form-control" id="editar-identificacion" name="identificacion" required>
+          </div>
+          <div class="mb-3">
+            <label for="editar-cargo" class="form-label">Cargo</label>
+            <input type="text" class="form-control" id="editar-cargo" name="cargo" required>
+          </div>
+          <div class="mb-3">
+            <label for="editar-rol" class="form-label">Rol en el Sistema</label>
+            <select class="form-select" id="editar-rol" name="rol" required>
+              <option value="matrizador">Matrizador</option>
+              <option value="admin">Administrador</option>
+              <option value="recepcion">Recepción</option>
+              <option value="consulta">Consulta</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="editar-password" class="form-label">Contraseña</label>
+            <input type="password" class="form-control" id="editar-password" name="password">
+            <div class="form-text">Deje en blanco para mantener la contraseña actual.</div>
+          </div>
+          <div class="mb-3 form-check">
+            <input type="checkbox" class="form-check-input" id="editar-activo" name="activo" value="1">
+            <label class="form-check-label" for="editar-activo">Activo</label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Actualizar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Confirmar Eliminación -->
+<div class="modal fade" id="modalConfirmarEliminar" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirmar Eliminación</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <p>¿Está seguro que desea eliminar al matrizador <strong id="nombre-matrizador-eliminar"></strong>?</p>
+        <p class="text-danger">Esta acción no se puede deshacer.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <form action="/admin/matrizadores/eliminar" method="POST">
+          <input type="hidden" id="id-matrizador-eliminar" name="id" required>
+          <button type="submit" class="btn btn-danger">Eliminar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts específicos para matrizadores -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Manejar eventos para editar matrizador
+    const botonesEditar = document.querySelectorAll('.editar-matrizador');
+    botonesEditar.forEach(btn => {
+      btn.addEventListener('click', function() {
+        // Obtener datos del botón
+        const id = this.getAttribute('data-id');
+        const nombre = this.getAttribute('data-nombre');
+        const email = this.getAttribute('data-email');
+        const identificacion = this.getAttribute('data-identificacion');
+        const cargo = this.getAttribute('data-cargo');
+        const rol = this.getAttribute('data-rol');
+        const activo = this.getAttribute('data-activo') === 'true';
+        
+        console.log('Editando matrizador:', { id, nombre, email, identificacion, cargo, rol, activo });
+        
+        // Verificar que el ID existe
+        if (!id) {
+          console.error('Error: No se pudo obtener el ID del matrizador para editar');
+          alert('Error: No se pudo obtener el ID del matrizador');
+          return;
+        }
+        
+        // Asignar valores al formulario
+        document.getElementById('editar-id').value = id;
+        document.getElementById('editar-nombre').value = nombre || '';
+        document.getElementById('editar-email').value = email || '';
+        document.getElementById('editar-identificacion').value = identificacion || '';
+        document.getElementById('editar-cargo').value = cargo || '';
+        
+        // Asignar rol si existe
+        const selectRol = document.getElementById('editar-rol');
+        if (rol && selectRol) {
+          selectRol.value = rol;
+        }
+        
+        document.getElementById('editar-activo').checked = activo;
+      });
+    });
+    
+    // Manejar eventos para eliminar matrizador
+    const botonesEliminar = document.querySelectorAll('.eliminar-matrizador');
+    botonesEliminar.forEach(btn => {
+      btn.addEventListener('click', function() {
+        const id = this.getAttribute('data-id');
+        const nombre = this.getAttribute('data-nombre');
+        
+        console.log('Eliminando matrizador:', { id, nombre });
+        
+        // Verificar que el ID existe
+        if (!id) {
+          console.error('Error: No se pudo obtener el ID del matrizador para eliminar');
+          alert('Error: No se pudo obtener el ID del matrizador');
+          return;
+        }
+        
+        document.getElementById('id-matrizador-eliminar').value = id;
+        document.getElementById('nombre-matrizador-eliminar').textContent = nombre || 'Seleccionado';
+        
+        // Mostrar modal de confirmación
+        const modalConfirmacion = new bootstrap.Modal(document.getElementById('modalConfirmarEliminar'));
+        modalConfirmacion.show();
+      });
+    });
+    
+    // Validación del formulario de edición
+    const formEditar = document.querySelector('#modalEditarMatrizador form');
+    if (formEditar) {
+      formEditar.addEventListener('submit', function(event) {
+        const id = document.getElementById('editar-id').value;
+        if (!id) {
+          event.preventDefault();
+          alert('Error: ID de matrizador no válido');
+          console.error('Error de validación: ID no proporcionado');
+          return false;
+        }
+      });
+    }
+    
+    // Validación del formulario de eliminación
+    const formEliminar = document.querySelector('#modalConfirmarEliminar form');
+    if (formEliminar) {
+      formEliminar.addEventListener('submit', function(event) {
+        const id = document.getElementById('id-matrizador-eliminar').value;
+        if (!id) {
+          event.preventDefault();
+          alert('Error: ID de matrizador no válido');
+          console.error('Error de validación: ID no proporcionado para eliminar');
+          return false;
+        }
+      });
+    }
+  });
+</script> 

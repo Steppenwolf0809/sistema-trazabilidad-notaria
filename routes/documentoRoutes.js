@@ -5,6 +5,7 @@
 
 const express = require('express');
 const router = express.Router();
+const { verificarToken, esMatrizador, esRecepcion, esConsulta } = require('../middlewares/auth');
 
 // Simulación de controlador para demo
 const documentoController = {
@@ -151,19 +152,21 @@ const documentoController = {
   }
 };
 
-// Rutas básicas CRUD
-router.get('/', documentoController.obtenerTodos);
-router.get('/:id', documentoController.obtenerPorId);
-router.post('/', documentoController.crear);
-router.put('/:id', documentoController.actualizar);
-router.delete('/:id', documentoController.eliminar);
-
-// Rutas de búsqueda
+// Rutas públicas (sin verificación de token)
+router.post('/codigo/:codigoBarras/verificar', documentoController.verificarCodigo);
 router.get('/buscar/codigo/:codigo', documentoController.buscarPorCodigoBarras);
 
-// Rutas para trazabilidad
-router.get('/:id/historial', documentoController.obtenerHistorial);
-router.post('/codigo/:codigoBarras/verificar', documentoController.verificarCodigo);
-router.post('/entrega/:codigoBarras', documentoController.registrarEntrega);
+// Rutas protegidas - Requieren al menos permisos de consulta
+router.get('/', verificarToken, esConsulta, documentoController.obtenerTodos);
+router.get('/:id', verificarToken, esConsulta, documentoController.obtenerPorId);
+router.get('/:id/historial', verificarToken, esConsulta, documentoController.obtenerHistorial);
+
+// Rutas para modificación - Requieren permisos de matrizador
+router.post('/', verificarToken, esMatrizador, documentoController.crear);
+router.put('/:id', verificarToken, esMatrizador, documentoController.actualizar);
+router.delete('/:id', verificarToken, esMatrizador, documentoController.eliminar);
+
+// Rutas para entrega - Requieren permisos de recepción
+router.post('/entrega/:codigoBarras', verificarToken, esRecepcion, documentoController.registrarEntrega);
 
 module.exports = router; 

@@ -14,7 +14,17 @@ const sequelize = new Sequelize({
   username: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD || 'postgres',
   database: process.env.DB_NAME || 'notaria',
-  logging: false
+  logging: false,
+  // Opciones globales para todos los modelos
+  define: {
+    underscored: true, // Usar snake_case para nombres de columnas en la BD
+    timestamps: true,  // Incluir createdAt y updatedAt automáticamente
+    freezeTableName: false, // Permite pluralización de nombres de tablas
+    charset: 'utf8',
+    dialectOptions: {
+      collate: 'utf8_general_ci'
+    }
+  }
 });
 
 // Función para comprobar la conexión a la base de datos
@@ -29,7 +39,27 @@ const testConnection = async () => {
   }
 };
 
+// Función para sincronizar los modelos con la base de datos
+const syncModels = async () => {
+  try {
+    // Aseguramos que todos los modelos estén cargados antes de sincronizar
+    // No es necesario almacenar el resultado, solo queremos que se carguen
+    require('../models');
+    
+    // Sincronizamos todos los modelos con la base de datos
+    await sequelize.sync({ force: false });
+    console.log('✅ Tablas sincronizadas correctamente');
+    return true;
+  } catch (error) {
+    console.error('❌ Error al sincronizar tablas:', error);
+    console.error(error.stack);
+    return false;
+  }
+};
+
 module.exports = {
   sequelize,
-  testConnection
+  Sequelize,
+  testConnection,
+  syncModels
 }; 

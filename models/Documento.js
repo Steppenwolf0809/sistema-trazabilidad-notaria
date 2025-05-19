@@ -40,12 +40,6 @@ const Documento = sequelize.define('Documento', {
     }
   },
   
-  // Número de protocolo asignado al documento
-  numeroProtocolo: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  
   // Fecha de creación del documento
   fechaCreacion: {
     type: DataTypes.DATE,

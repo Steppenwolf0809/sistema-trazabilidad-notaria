@@ -46,7 +46,6 @@ exports.registrarDocumento = async (req, res) => {
     const {
       codigoBarras,
       tipoDocumento,
-      numeroProtocolo,
       nombreCliente,
       identificacionCliente,
       emailCliente,
@@ -56,18 +55,26 @@ exports.registrarDocumento = async (req, res) => {
       comparecientes
     } = req.body;
     
+    // Asegurar que idMatrizador sea un entero válido
+    let idMatrizadorNum = null;
+    if (idMatrizador) {
+      idMatrizadorNum = parseInt(idMatrizador, 10);
+      if (isNaN(idMatrizadorNum)) {
+        throw new Error('El ID del matrizador debe ser un número entero válido');
+      }
+    }
+    
     // Crear el nuevo documento
     const nuevoDocumento = await Documento.create({
       codigoBarras,
       tipoDocumento,
-      numeroProtocolo,
       nombreCliente,
       identificacionCliente,
       emailCliente,
       telefonoCliente,
       notas,
       estado: 'en_proceso',
-      idMatrizador,
+      idMatrizador: idMatrizadorNum,
       comparecientes: comparecientes || []
     }, { transaction });
     
@@ -137,8 +144,7 @@ exports.listarDocumentos = async (req, res) => {
     if (busqueda) {
       where[Op.or] = [
         { codigoBarras: { [Op.iLike]: `%${busqueda}%` } },
-        { nombreCliente: { [Op.iLike]: `%${busqueda}%` } },
-        { numeroProtocolo: { [Op.iLike]: `%${busqueda}%` } }
+        { nombreCliente: { [Op.iLike]: `%${busqueda}%` } }
       ];
     }
     

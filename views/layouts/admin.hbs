@@ -155,16 +155,20 @@
       
       <div class="sidebar-heading">Documentos</div>
       
+      <!-- Opción visible para todos (temporalmente) -->
       <li class="nav-item">
         <a class="nav-link {{#if activeRegistro}}active{{/if}}" href="/admin/documentos/registro">
           <i class="fas fa-file-alt"></i> Registrar Documento
         </a>
       </li>
+      
       <li class="nav-item">
         <a class="nav-link {{#if activeListado}}active{{/if}}" href="/admin/documentos/listado">
           <i class="fas fa-list"></i> Listado de Documentos
         </a>
       </li>
+      
+      <!-- Opción visible para todos (temporalmente) -->
       <li class="nav-item">
         <a class="nav-link {{#if activeEntrega}}active{{/if}}" href="/admin/documentos/entrega">
           <i class="fas fa-hand-holding"></i> Entrega de Documentos
@@ -173,6 +177,7 @@
       
       <div class="sidebar-heading">Matrizadores</div>
       
+      <!-- Opción visible para todos (temporalmente) -->
       <li class="nav-item">
         <a class="nav-link {{#if activeMatrizadores}}active{{/if}}" href="/admin/matrizadores">
           <i class="fas fa-users"></i> Gestionar Matrizadores
@@ -181,11 +186,65 @@
       
       <div class="sidebar-heading">Reportes</div>
       
+      <!-- Opción visible para todos (temporalmente) -->
       <li class="nav-item">
         <a class="nav-link {{#if activeReportes}}active{{/if}}" href="/admin/reportes">
           <i class="fas fa-chart-bar"></i> Reportes y Estadísticas
         </a>
       </li>
+      
+      <!-- Aquí se encuentran las opciones con restricciones por rol que temporalmente están comentadas -->
+      {{!-- 
+      {{#unless (eq userRole "consulta")}}
+        {{#if (eq userRole "admin")}}
+          <li class="nav-item">
+            <a class="nav-link {{#if activeRegistro}}active{{/if}}" href="/admin/documentos/registro">
+              <i class="fas fa-file-alt"></i> Registrar Documento
+            </a>
+          </li>
+        {{else if (eq userRole "matrizador")}}
+          <li class="nav-item">
+            <a class="nav-link {{#if activeRegistro}}active{{/if}}" href="/admin/documentos/registro">
+              <i class="fas fa-file-alt"></i> Registrar Documento
+            </a>
+          </li>
+        {{/if}}
+      {{/unless}}
+      
+      {{#unless (eq userRole "consulta")}}
+        {{#if (eq userRole "admin")}}
+          <li class="nav-item">
+            <a class="nav-link {{#if activeEntrega}}active{{/if}}" href="/admin/documentos/entrega">
+              <i class="fas fa-hand-holding"></i> Entrega de Documentos
+            </a>
+          </li>
+        {{else if (eq userRole "recepcion")}}
+          <li class="nav-item">
+            <a class="nav-link {{#if activeEntrega}}active{{/if}}" href="/admin/documentos/entrega">
+              <i class="fas fa-hand-holding"></i> Entrega de Documentos
+            </a>
+          </li>
+        {{/if}}
+      {{/unless}}
+      
+      {{#if (eq userRole "admin")}}
+        <div class="sidebar-heading">Matrizadores</div>
+        
+        <li class="nav-item">
+          <a class="nav-link {{#if activeMatrizadores}}active{{/if}}" href="/admin/matrizadores">
+            <i class="fas fa-users"></i> Gestionar Matrizadores
+          </a>
+        </li>
+        
+        <div class="sidebar-heading">Reportes</div>
+        
+        <li class="nav-item">
+          <a class="nav-link {{#if activeReportes}}active{{/if}}" href="/admin/reportes">
+            <i class="fas fa-chart-bar"></i> Reportes y Estadísticas
+          </a>
+        </li>
+      {{/if}}
+      --}}
     </ul>
   </div>
 
@@ -197,27 +256,65 @@
       </div>
       <h4 class="mb-0">{{title}}</h4>
       <div>
-        <span class="me-3">Administrador</span>
-        <a href="/logout" class="btn btn-sm btn-outline-secondary">
-          <i class="fas fa-sign-out-alt"></i> Salir
-        </a>
+        <!-- Si hay usuario autenticado mostramos su nombre y rol -->
+        {{#if userName}}
+          <span class="me-3">{{userName}} ({{userRole}})</span>
+          <a href="/api/matrizadores/logout" class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-sign-out-alt"></i> Salir
+          </a>
+        {{else}}
+          <!-- Si no hay usuario autenticado mostramos enlace de login -->
+          <a href="/login" class="btn btn-sm btn-primary">
+            <i class="fas fa-sign-in-alt"></i> Iniciar sesión
+          </a>
+        {{/if}}
       </div>
     </div>
     
+    {{#if error}}
+    <div class="alert alert-danger mb-4">
+      <i class="fas fa-exclamation-triangle me-2"></i> {{error}}
+    </div>
+    {{/if}}
+    
+    {{#if success}}
+    <div class="alert alert-success mb-4">
+      <i class="fas fa-check-circle me-2"></i> {{success}}
+    </div>
+    {{/if}}
+    
     {{{body}}}
-  </div>
 
-  <!-- Bootstrap JS y jQuery -->
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {{#unless userName}}
+      <!-- Mensaje para usuarios no autenticados -->
+      <div class="alert alert-warning mt-4">
+        <h5><i class="fas fa-exclamation-triangle me-2"></i> Acceso de prueba (sin autenticación)</h5>
+        <p>Estás navegando sin autenticación. Para probar la funcionalidad completa, por favor inicia sesión. Usuarios disponibles:</p>
+        <ul>
+          <li><strong>Admin:</strong> admin@notaria.com / password</li>
+          <li><strong>Matrizador:</strong> matrizador@notaria.com / password</li>
+          <li><strong>Recepción:</strong> recepcion@notaria.com / password</li>
+          <li><strong>Consulta:</strong> consulta@notaria.com / password</li>
+        </ul>
+        <p>Ejecuta antes el script <code>node crear-usuarios.js</code> para crear estos usuarios si no existen.</p>
+      </div>
+    {{/unless}}
+  </div>
   
-  <!-- Script para controlar la barra lateral -->
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
   <script>
-    $(document).ready(function() {
-      $('.sidebar-toggle').click(function() {
-        $('.sidebar').toggleClass('active');
-        $('.main-content').toggleClass('sidebar-active');
-      });
+    document.addEventListener('DOMContentLoaded', function() {
+      // Manejar barra lateral móvil
+      const sidebarToggle = document.querySelector('.sidebar-toggle');
+      if (sidebarToggle) {
+        sidebarToggle.addEventListener('click', function() {
+          document.querySelector('.sidebar').classList.toggle('active');
+          document.querySelector('.main-content').classList.toggle('sidebar-active');
+        });
+      }
     });
   </script>
 </body>
