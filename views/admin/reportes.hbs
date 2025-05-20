@@ -30,7 +30,6 @@
             <select class="form-select" id="tipoReporte" name="tipo" required>
               <option value="estado" {{#if (eq filtros.tipo "estado")}}selected{{/if}}>Por Estado</option>
               <option value="fecha" {{#if (eq filtros.tipo "fecha")}}selected{{/if}}>Por Fecha</option>
-              <option value="matrizador" {{#if (eq filtros.tipo "matrizador")}}selected{{/if}}>Por Matrizador</option>
               <option value="tipoDocumento" {{#if (eq filtros.tipo "tipoDocumento")}}selected{{/if}}>Por Tipo de Documento</option>
             </select>
           </div>
@@ -130,42 +129,7 @@
                 </div>
               </div>
             </div>
-          {{else if (eq tipoReporte "matrizador")}}
-            <!-- Reporte por Matrizador -->
-            <div class="row">
-              <div class="col-md-6">
-                <canvas id="matrizadorChart" height="250"></canvas>
-              </div>
-              <div class="col-md-6">
-                <div class="table-responsive">
-                  <table class="table table-bordered">
-                    <thead class="table-light">
-                      <tr>
-                        <th>Matrizador</th>
-                        <th>Documentos</th>
-                        <th>Porcentaje</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {{#each resultados}}
-                      <tr>
-                        <td>{{this.nombre}}</td>
-                        <td class="text-center">{{this.count}}</td>
-                        <td class="text-center">{{this.porcentaje}}%</td>
-                      </tr>
-                      {{/each}}
-                    </tbody>
-                    <tfoot class="table-light">
-                      <tr>
-                        <th>Total</th>
-                        <th class="text-center">{{totales.count}}</th>
-                        <th class="text-center">100%</th>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
-              </div>
-            </div>
+          
           {{else if (eq tipoReporte "fecha")}}
             <!-- Reporte por Fecha -->
             <div class="row">
@@ -311,10 +275,6 @@
     
     function actualizarFiltrosVisibles() {
       switch(tipoReporte.value) {
-        case 'matrizador':
-          filtroMatrizadorDiv.style.display = 'none';
-          filtroEstadoDiv.style.display = 'block';
-          break;
         case 'estado':
           filtroMatrizadorDiv.style.display = 'block';
           filtroEstadoDiv.style.display = 'none';
@@ -375,33 +335,7 @@
         });
       {{/if}}
       
-      {{#if (eq tipoReporte "matrizador")}}
-        const matrizadorCtx = document.getElementById('matrizadorChart').getContext('2d');
-        new Chart(matrizadorCtx, {
-          type: 'bar',
-          data: {
-            labels: [{{#each resultados}}'{{this.nombre}}',{{/each}}],
-            datasets: [{
-              label: 'Documentos por matrizador',
-              data: [{{#each resultados}}{{this.count}},{{/each}}],
-              backgroundColor: '#3498db'
-            }]
-          },
-          options: {
-            responsive: true,
-            plugins: {
-              legend: {
-                display: false
-              }
-            },
-            scales: {
-              y: {
-                beginAtZero: true
-              }
-            }
-          }
-        });
-      {{/if}}
+      
       
       {{#if (eq tipoReporte "fecha")}}
         const fechaCtx = document.getElementById('fechaChart').getContext('2d');

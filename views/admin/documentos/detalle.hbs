@@ -193,9 +193,6 @@
         <div class="card">
           <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0">Documentos Relacionados</h5>
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalRelacionar">
-              <i class="fas fa-link"></i> Relacionar Documento
-            </button>
           </div>
           <div class="card-body">
             <div class="row">
@@ -218,9 +215,6 @@
                             <a href="/admin/documentos/detalle/{{this.id}}" class="btn btn-sm btn-info">
                               <i class="fas fa-eye"></i>
                             </a>
-                            <button class="btn btn-sm btn-danger" onclick="eliminarRelacion('{{../documento.id}}', '{{this.id}}')">
-                              <i class="fas fa-unlink"></i>
-                            </button>
                           </div>
                         </div>
                       </div>
@@ -250,9 +244,6 @@
                             <a href="/admin/documentos/detalle/{{this.id}}" class="btn btn-sm btn-info">
                               <i class="fas fa-eye"></i>
                             </a>
-                            <button class="btn btn-sm btn-danger" onclick="eliminarRelacion('{{../documento.id}}', '{{this.id}}')">
-                              <i class="fas fa-unlink"></i>
-                            </button>
                           </div>
                         </div>
                       </div>
@@ -280,10 +271,11 @@
           <table class="table table-sm table-hover">
             <thead class="table-light">
               <tr>
-                <th>Fecha</th>
+                <th>Fecha y Hora</th>
                 <th>Tipo</th>
                 <th>Detalles</th>
                 <th>Usuario</th>
+                <th>Tiempo Transcurrido</th>
               </tr>
             </thead>
             <tbody>
@@ -305,6 +297,15 @@
                 </td>
                 <td>{{this.detalles}}</td>
                 <td>{{this.usuario}}</td>
+                <td>
+                  {{#if @index}}
+                    {{#with (lookup ../eventos (add @index 1))}}
+                      {{tiempoTranscurrido this.createdAt ../createdAt}}
+                    {{/with}}
+                  {{else}}
+                    -
+                  {{/if}}
+                </td>
               </tr>
               {{/each}}
             </tbody>
@@ -339,77 +340,6 @@
   </div>
 </div>
 
-<!-- Modal para Relacionar Documentos -->
-<div class="modal fade" id="modalRelacionar" tabindex="-1">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Relacionar Documento</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <ul class="nav nav-tabs mb-3" id="tabRelacionar" role="tablist">
-          <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="tab-pendientes-tab" data-bs-toggle="tab" data-bs-target="#tab-pendientes" type="button" role="tab">Pendientes</button>
-          </li>
-          <li class="nav-item" role="presentation">
-            <button class="nav-link" id="tab-busqueda-tab" data-bs-toggle="tab" data-bs-target="#tab-busqueda" type="button" role="tab">Buscar</button>
-          </li>
-        </ul>
-        <div class="tab-content" id="tabRelacionarContent">
-          <!-- Tab de pendientes -->
-          <div class="tab-pane fade show active" id="tab-pendientes" role="tabpanel">
-            <div id="pendientesMiosCargando" class="text-center my-3">
-              <div class="spinner-border" role="status"><span class="visually-hidden">Cargando...</span></div>
-            </div>
-            <div id="pendientesMiosLista" style="display:none;"></div>
-          </div>
-          <!-- Tab de búsqueda -->
-          <div class="tab-pane fade" id="tab-busqueda" role="tabpanel">
-            <div class="mb-3">
-              <label class="form-label">Buscar Documento</label>
-              <div class="input-group">
-                <input type="text" class="form-control" id="busquedaDocumento" placeholder="Código, cliente o tipo de documento" oninput="buscarDocumentos()">
-                <button class="btn btn-outline-secondary" type="button" onclick="buscarDocumentos()">
-                  <i class="fas fa-search"></i> Buscar
-                </button>
-              </div>
-            </div>
-            <div id="resultadosBusqueda" class="mb-3" style="display: none;">
-              <h6>Resultados de la búsqueda</h6>
-              <div class="list-group" id="listaResultados">
-                <!-- Los resultados se cargarán aquí dinámicamente -->
-              </div>
-            </div>
-          </div>
-        </div>
-        <form id="formRelacionar" style="display: none;">
-          <input type="hidden" id="idDocumentoRelacionado">
-          <div class="mb-3">
-            <label class="form-label">Tipo de Relación</label>
-            <select class="form-select" id="tipoRelacion" required>
-              <option value="">Seleccione un tipo</option>
-              <option value="componente">Componente</option>
-              <option value="relacionado">Relacionado</option>
-              <option value="anexo">Anexo</option>
-            </select>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Descripción</label>
-            <textarea class="form-control" id="descripcionRelacion" rows="3" required></textarea>
-          </div>
-        </form>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button type="button" class="btn btn-primary" onclick="guardarRelacion()" id="btnGuardarRelacion" style="display: none;">
-          Guardar Relación
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <script>
   // Función para mostrar el modal de marcar como listo
   function marcarListo(id) {
@@ -424,223 +354,5 @@
     tooltipTriggerList.map(function (tooltipTriggerEl) {
       return new bootstrap.Tooltip(tooltipTriggerEl);
     });
-    
-    // Manejo de selección de documento relacionado
-    document.querySelectorAll('.seleccionar-documento').forEach(button => {
-      button.addEventListener('click', function() {
-        const id = this.getAttribute('data-id');
-        const codigo = this.getAttribute('data-codigo');
-        const tipo = this.getAttribute('data-tipo');
-        
-        document.getElementById('idDocumentoRelacionado').value = id;
-        document.getElementById('documentoRelacionadoSeleccionado').value = `${tipo} - ${codigo}`;
-        
-        // Cerrar el colapso si está abierto
-        const collapseSearch = document.getElementById('collapseSearch');
-        const bsCollapse = bootstrap.Collapse.getInstance(collapseSearch);
-        if (bsCollapse) bsCollapse.hide();
-      });
-    });
-    
-    // Buscar documentos por código
-    document.getElementById('btnBuscarPorCodigo').addEventListener('click', function() {
-      const codigo = document.getElementById('codigoDocumentoBusqueda').value.trim();
-      
-      if (!codigo) return;
-      
-      // Realizar la búsqueda mediante AJAX
-      fetch(`/api/documentos/buscar/codigo/${encodeURIComponent(codigo)}`)
-        .then(response => response.json())
-        .then(data => {
-          const resultadosDiv = document.getElementById('resultadosBusqueda');
-          
-          if (data.exito && data.datos) {
-            // Mostrar el resultado encontrado
-            resultadosDiv.innerHTML = `
-              <div class="list-group">
-                <button type="button" class="list-group-item list-group-item-action seleccionar-documento-busqueda"
-                  data-id="${data.datos.id}" data-codigo="${data.datos.codigoBarras}" data-tipo="${data.datos.tipoDocumento}">
-                  <div class="d-flex w-100 justify-content-between">
-                    <h6 class="mb-1">${data.datos.tipoDocumento}</h6>
-                  </div>
-                  <p class="mb-1">Código: ${data.datos.codigoBarras}</p>
-                </button>
-              </div>
-            `;
-            
-            // Agregar evento al resultado encontrado
-            document.querySelector('.seleccionar-documento-busqueda').addEventListener('click', function() {
-              const id = this.getAttribute('data-id');
-              const codigo = this.getAttribute('data-codigo');
-              const tipo = this.getAttribute('data-tipo');
-              
-              document.getElementById('idDocumentoRelacionado').value = id;
-              document.getElementById('documentoRelacionadoSeleccionado').value = `${tipo} - ${codigo}`;
-            });
-          } else {
-            resultadosDiv.innerHTML = `<div class="alert alert-warning">No se encontró ningún documento con ese código</div>`;
-          }
-        })
-        .catch(error => {
-          document.getElementById('resultadosBusqueda').innerHTML = `<div class="alert alert-danger">Error al buscar: ${error.message}</div>`;
-        });
-    });
-    
-    // Enviar formulario de relación
-    document.getElementById('btnGuardarRelacion').addEventListener('click', function() {
-      const form = document.getElementById('formRelacionarDocumento');
-      const idDocumentoRelacionado = document.getElementById('idDocumentoRelacionado').value;
-      
-      if (!idDocumentoRelacionado) {
-        alert('Debe seleccionar un documento para relacionar');
-        return;
-      }
-      
-      form.submit();
-    });
-
-    // Al abrir el modal, cargar los pendientes
-    $('#modalRelacionar').on('shown.bs.modal', function () {
-      cargarPendientesMios();
-    });
-
-    async function cargarPendientesMios() {
-      const cargando = document.getElementById('pendientesMiosCargando');
-      const listaDiv = document.getElementById('pendientesMiosLista');
-      cargando.style.display = 'block';
-      listaDiv.style.display = 'none';
-      try {
-        const response = await fetch('/api/documentos/pendientes/mios');
-        const data = await response.json();
-        console.log('Respuesta de pendientes:', data);
-        if (data.exito && data.datos.length > 0) {
-          listaDiv.innerHTML = data.datos.map(doc => `
-            <a href="#" class="list-group-item list-group-item-action" onclick='seleccionarDocumento(${JSON.stringify(doc).replace(/"/g, "&quot;")})'>
-              <div class="d-flex justify-content-between align-items-center">
-                <div>
-                  <h6 class="mb-1">${doc.codigoBarras}</h6>
-                  <p class="mb-1">${doc.tipoDocumento} - ${doc.nombreCliente}</p>
-                  <small class="text-muted">Estado: ${doc.estado}</small>
-                </div>
-              </div>
-            </a>
-          `).join('');
-        } else {
-          listaDiv.innerHTML = '<div class="alert alert-info">No tienes documentos pendientes</div>';
-        }
-        cargando.style.display = 'none';
-        listaDiv.style.display = 'block';
-      } catch (error) {
-        console.error('Error al cargar pendientes:', error);
-        listaDiv.innerHTML = '<div class="alert alert-danger">Error al cargar documentos pendientes</div>';
-        cargando.style.display = 'none';
-        listaDiv.style.display = 'block';
-      }
-    }
   });
-
-  let documentoSeleccionado = null;
-
-  async function buscarDocumentos() {
-    const query = document.getElementById('busquedaDocumento').value;
-    if (!query) return;
-
-    try {
-      const response = await fetch(`/api/documentos/buscar?query=${encodeURIComponent(query)}`);
-      const data = await response.json();
-
-      const resultadosDiv = document.getElementById('resultadosBusqueda');
-      const listaResultados = document.getElementById('listaResultados');
-      
-      if (data.exito && data.datos.length > 0) {
-        listaResultados.innerHTML = data.datos.map(doc => `
-          <a href="#" class="list-group-item list-group-item-action" onclick="seleccionarDocumento(${JSON.stringify(doc).replace(/"/g, '&quot;')})">
-            <div class="d-flex justify-content-between align-items-center">
-              <div>
-                <h6 class="mb-1">${doc.codigoBarras}</h6>
-                <p class="mb-1">${doc.tipoDocumento} - ${doc.nombreCliente}</p>
-                <small class="text-muted">Estado: ${doc.estado}</small>
-              </div>
-            </div>
-          </a>
-        `).join('');
-        
-        resultadosDiv.style.display = 'block';
-      } else {
-        listaResultados.innerHTML = '<div class="alert alert-info">No se encontraron documentos</div>';
-        resultadosDiv.style.display = 'block';
-      }
-    } catch (error) {
-      console.error('Error al buscar documentos:', error);
-      alert('Error al buscar documentos');
-    }
-  }
-
-  function seleccionarDocumento(documento) {
-    documentoSeleccionado = documento;
-    document.getElementById('idDocumentoRelacionado').value = documento.id;
-    document.getElementById('formRelacionar').style.display = 'block';
-    document.getElementById('btnGuardarRelacion').style.display = 'block';
-  }
-
-  async function guardarRelacion() {
-    if (!documentoSeleccionado) return;
-
-    const tipoRelacion = document.getElementById('tipoRelacion').value;
-    const descripcion = document.getElementById('descripcionRelacion').value;
-
-    if (!tipoRelacion || !descripcion) {
-      alert('Por favor complete todos los campos');
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/documentos/relacionar', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          idDocumentoPrincipal: '{{documento.id}}',
-          idDocumentoRelacionado: documentoSeleccionado.id,
-          tipoRelacion,
-          descripcion
-        })
-      });
-
-      const data = await response.json();
-
-      if (data.exito) {
-        alert('Relación creada exitosamente');
-        location.reload();
-      } else {
-        alert(data.mensaje || 'Error al crear la relación');
-      }
-    } catch (error) {
-      console.error('Error al guardar relación:', error);
-      alert('Error al guardar la relación');
-    }
-  }
-
-  async function eliminarRelacion(idPrincipal, idRelacionado) {
-    if (!confirm('¿Está seguro de eliminar esta relación?')) return;
-
-    try {
-      const response = await fetch(`/api/documentos/relacionar?idDocumentoPrincipal=${idPrincipal}&idDocumentoRelacionado=${idRelacionado}`, {
-        method: 'DELETE'
-      });
-
-      const data = await response.json();
-
-      if (data.exito) {
-        alert('Relación eliminada exitosamente');
-        location.reload();
-      } else {
-        alert(data.mensaje || 'Error al eliminar la relación');
-      }
-    } catch (error) {
-      console.error('Error al eliminar relación:', error);
-      alert('Error al eliminar la relación');
-    }
-  }
 </script> 

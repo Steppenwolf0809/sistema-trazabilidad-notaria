@@ -215,7 +215,7 @@
 
 <!-- Gráficos estadísticos -->
 <div class="row mt-4">
-  <div class="col-md-12">
+  <div class="col-md-8 offset-md-2">
     <div class="card">
       <div class="card-header d-flex justify-content-between align-items-center">
         <span>Estadísticas Personales</span>
@@ -226,14 +226,14 @@
         </div>
       </div>
       <div class="card-body">
-        <div id="graficoProductividad">
-          <canvas id="productividadChart" height="300"></canvas>
+        <div id="graficoProductividad" style="max-height: 350px;">
+          <canvas id="productividadChart" height="200"></canvas>
         </div>
-        <div id="graficoTiempos" style="display: none;">
-          <canvas id="tiemposChart" height="300"></canvas>
+        <div id="graficoTiempos" style="display: none; max-height: 350px;">
+          <canvas id="tiemposChart" height="200"></canvas>
         </div>
-        <div id="graficoTipos" style="display: none;">
-          <canvas id="tiposChart" height="300"></canvas>
+        <div id="graficoTipos" style="display: none; max-height: 350px;">
+          <canvas id="tiposChart" height="200"></canvas>
         </div>
       </div>
     </div>
@@ -521,9 +521,16 @@
           },
           options: {
             responsive: true,
+            maintainAspectRatio: true,
             plugins: {
               legend: {
-                position: 'right',
+                position: 'bottom',
+                labels: {
+                  boxWidth: 12,
+                  font: {
+                    size: 11
+                  }
+                }
               }
             }
           }

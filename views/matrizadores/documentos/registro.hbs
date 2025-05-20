@@ -157,9 +157,10 @@
   // Función de validación de teléfono (reutilizable)
   function validarTelefonoFrontend(telefono) {
     if (!telefono) return { valido: true };
-    const regex = /^\\d{10}$/;
-    if (!regex.test(telefono)) {
-      return { valido: false, mensaje: "El número telefónico debe tener 10 dígitos numéricos." };
+    // Eliminar todos los caracteres no numéricos
+    const telefonoLimpio = telefono.replace(/\D/g, '');
+    if (telefonoLimpio.length !== 10) {
+      return { valido: false, mensaje: "El número telefónico debe contener exactamente 10 dígitos. Se ignorarán espacios, guiones y otros caracteres no numéricos." };
     }
     return { valido: true };
   }
@@ -216,7 +217,18 @@
     // Validación del formulario
     const form = document.getElementById('registroDocumentoForm');
     form.addEventListener('submit', function(event) {
-      // Validación personalizada aquí si es necesario
+      const telefono = telefonoInput.value.trim();
+      if (telefono) {
+        // Actualizar el valor del input para eliminar caracteres no numéricos
+        telefonoInput.value = telefono.replace(/\D/g, '');
+        const validacion = validarTelefonoFrontend(telefonoInput.value);
+        if (!validacion.valido) {
+          event.preventDefault();
+          telefonoInput.classList.add('is-invalid');
+          if (errorContainer) errorContainer.textContent = validacion.mensaje;
+          telefonoInput.focus();
+        }
+      }
     });
 
     {{#if errorCodeDuplicado}}
@@ -240,11 +252,13 @@
     const emailInput = document.getElementById('emailCliente');
     const errorContainer = telefonoInput ? telefonoInput.parentElement.querySelector('.invalid-feedback') : null;
 
-    if (form && telefonoInput) {
+    if (telefonoInput) {
       telefonoInput.addEventListener('input', function() {
         const telefono = telefonoInput.value.trim();
-        const validacion = validarTelefonoFrontend(telefono);
         if (telefono) {
+          // Solo eliminar caracteres no numéricos al validar, no al escribir
+          const telefonoLimpio = telefono.replace(/\D/g, '');
+          const validacion = validarTelefonoFrontend(telefonoLimpio);
           if (!validacion.valido) {
             telefonoInput.classList.add('is-invalid');
             if (errorContainer) errorContainer.textContent = validacion.mensaje;
@@ -255,19 +269,6 @@
         } else {
           telefonoInput.classList.remove('is-invalid');
           if (errorContainer) errorContainer.textContent = '';
-        }
-      });
-
-      form.addEventListener('submit', function(event) {
-        const telefono = telefonoInput.value.trim();
-        if (telefono) {
-          const validacion = validarTelefonoFrontend(telefono);
-          if (!validacion.valido) {
-            event.preventDefault();
-            telefonoInput.classList.add('is-invalid');
-            if (errorContainer) errorContainer.textContent = validacion.mensaje;
-            telefonoInput.focus();
-          }
         }
       });
     }

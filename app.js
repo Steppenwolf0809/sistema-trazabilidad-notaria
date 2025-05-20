@@ -95,7 +95,10 @@ const hbs = engine({
       return new Date(date).toLocaleDateString('es-ES', {
         day: '2-digit',
         month: '2-digit',
-        year: 'numeric'
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
       });
     },
     formatTimeAgo: (date) => {
@@ -127,9 +130,47 @@ const hbs = engine({
     stringifyNumber: (num) => {
       return num ? num.toString() : '';
     },
+    // Helper para buscar elementos en un array por índice
+    lookup: function(obj, index) {
+      return obj[index];
+    },
+    // Helper para sumar números
+    add: function(a, b) {
+      return parseInt(a) + parseInt(b);
+    },
     // Helper para convertir objeto a JSON string
     json: (context) => {
       return JSON.stringify(context);
+    },
+    // Helper para calcular el tiempo transcurrido entre dos fechas
+    tiempoTranscurrido: (fechaInicio, fechaFin) => {
+      if (!fechaInicio || !fechaFin) return 'N/A';
+      
+      const inicio = new Date(fechaInicio);
+      const fin = new Date(fechaFin);
+      
+      // Calcular diferencia en milisegundos
+      const diffMs = fin - inicio;
+      
+      // Si hay error o fechas inversas
+      if (isNaN(diffMs) || diffMs < 0) return 'N/A';
+      
+      // Convertir a unidades de tiempo
+      const segundos = Math.floor(diffMs / 1000);
+      const minutos = Math.floor(segundos / 60);
+      const horas = Math.floor(minutos / 60);
+      const dias = Math.floor(horas / 24);
+      
+      // Formatear para mostrar
+      if (dias > 0) {
+        return `${dias} día(s), ${horas % 24} hora(s), ${minutos % 60} minuto(s)`;
+      } else if (horas > 0) {
+        return `${horas} hora(s), ${minutos % 60} minuto(s), ${segundos % 60} segundo(s)`;
+      } else if (minutos > 0) {
+        return `${minutos} minuto(s), ${segundos % 60} segundo(s)`;
+      } else {
+        return `${segundos} segundo(s)`;
+      }
     },
     // Helper para determinar si un usuario puede editar un documento
     puedeEditarDocumento: (usuario, documento) => {
@@ -234,6 +275,15 @@ app.get('/', (req, res) => {
     console.error('Error al decodificar token en ruta principal:', error);
     return res.redirect('/login');
   }
+});
+
+// Ruta de logout global
+app.get('/logout', (req, res) => {
+  // Eliminar la cookie del token
+  res.clearCookie('token');
+  
+  // Redirigir a la página de login
+  return res.redirect('/login');
 });
 
 // Manejo de rutas no encontradas

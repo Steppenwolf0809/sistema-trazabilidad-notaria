@@ -125,9 +125,10 @@ document.addEventListener('DOMContentLoaded', function () {
 // Función de validación de teléfono (reutilizable)
 function validarTelefonoFrontend(telefono) {
     if (!telefono) return { valido: true };
-    const regex = /^\\d{10}$/;
-    if (!regex.test(telefono)) {
-        return { valido: false, mensaje: "El número telefónico debe tener 10 dígitos numéricos." };
+    // Eliminar todos los caracteres no numéricos
+    const telefonoLimpio = telefono.replace(/\D/g, '');
+    if (telefonoLimpio.length !== 10) {
+        return { valido: false, mensaje: "El número telefónico debe contener exactamente 10 dígitos. Se ignorarán espacios, guiones y otros caracteres no numéricos." };
     }
     return { valido: true };
 }
@@ -152,8 +153,10 @@ document.addEventListener('DOMContentLoaded', function() {
     if (form && telefonoInput) {
         telefonoInput.addEventListener('input', function() {
             const telefono = telefonoInput.value.trim();
-            const validacion = validarTelefonoFrontend(telefono);
             if (telefono) {
+                // Solo eliminar caracteres no numéricos al validar, no al escribir
+                const telefonoLimpio = telefono.replace(/\D/g, '');
+                const validacion = validarTelefonoFrontend(telefonoLimpio);
                 if (!validacion.valido) {
                     telefonoInput.classList.add('is-invalid');
                     if (telefonoErrorContainer) telefonoErrorContainer.textContent = validacion.mensaje;
@@ -193,7 +196,9 @@ document.addEventListener('DOMContentLoaded', function() {
             if (telefonoInput) {
                 const telefono = telefonoInput.value.trim();
                 if (telefono) {
-                    const validacionTelefono = validarTelefonoFrontend(telefono);
+                    // Actualizar el valor del input para eliminar caracteres no numéricos
+                    telefonoInput.value = telefono.replace(/\D/g, '');
+                    const validacionTelefono = validarTelefonoFrontend(telefonoInput.value);
                     if (!validacionTelefono.valido) {
                         formValido = false;
                         telefonoInput.classList.add('is-invalid');

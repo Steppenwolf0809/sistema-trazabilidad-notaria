@@ -49,8 +49,10 @@ exports.mostrarFormularioRegistro = async (req, res) => {
 
 function validarTelefono(telefono) {
   if (!telefono) return true; // Permitir campo vacío si no es obligatorio por el modelo
-  const regex = /^\d{10}$/;
-  return regex.test(telefono);
+  // Eliminar todos los caracteres no numéricos
+  const telefonoLimpio = telefono.replace(/\D/g, '');
+  // Verificar que la longitud sea exactamente 10 dígitos
+  return telefonoLimpio.length === 10;
 }
 
 function validarEmail(email) {
@@ -89,7 +91,11 @@ exports.registrarDocumento = async (req, res) => {
 
     // Validación de teléfono
     if (telefonoCliente && !validarTelefono(telefonoCliente)) {
-      req.flash('error', 'El número telefónico debe tener 10 dígitos numéricos.');
+      req.flash('error', 'El número telefónico debe contener exactamente 10 dígitos. Se ignorarán espacios, guiones y otros caracteres no numéricos.');
+      let matrizadoresList = [];
+      if (usuario.rol === 'admin') {
+          matrizadoresList = await Matrizador.findAll({ order: [['nombre', 'ASC']] });
+      }
       return res.status(400).render(`${viewBase}/registro`, {
         layout,
         title: 'Registro de Documento',
@@ -1437,7 +1443,7 @@ exports.actualizarDocumento = async (req, res) => {
 
     // Validación de teléfono
     if (telefonoCliente && !validarTelefono(telefonoCliente)) {
-      req.flash('error', 'El número telefónico debe tener 10 dígitos numéricos.');
+      req.flash('error', 'El número telefónico debe contener exactamente 10 dígitos. Se ignorarán espacios, guiones y otros caracteres no numéricos.');
       let matrizadoresList = [];
       if (usuario.rol === 'admin') {
           matrizadoresList = await Matrizador.findAll({ order: [['nombre', 'ASC']] });
