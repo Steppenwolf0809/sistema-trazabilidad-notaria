@@ -25,7 +25,7 @@ git add .
 Realiza el primer commit:
 
 ```bash
-git commit -m "Primera versión del Sistema de Trazabilidad Documental para Notarías"
+git commit -m "admin puede editar, recepcin cambia estado y matrizador editar"
 ```
 
 ## 3. Crear un repositorio en GitHub
@@ -43,7 +43,7 @@ git commit -m "Primera versión del Sistema de Trazabilidad Documental para Nota
 GitHub te mostrará instrucciones después de crear el repositorio. Copia los comandos para un repositorio existente:
 
 ```bash
-git remote add origin https://github.com/TU_USUARIO/sistema-trazabilidad-notaria.git
+git remote add origin https://github.com/Steppenwolf0809/sistema-trazabilidad-notariasistema-trazabilidad-notaria.git
 git branch -M main
 git push -u origin main
 ```

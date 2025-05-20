@@ -14,6 +14,7 @@ const Documento = require('../models/Documento');
 const EventoDocumento = require('../models/EventoDocumento');
 const RegistroAuditoria = require('../models/RegistroAuditoria');
 const { Op } = require('sequelize');
+const moment = require('moment');
 
 // Objeto que contendrá todas las funciones del controlador
 const matrizadorController = {
@@ -640,12 +641,321 @@ const matrizadorController = {
     }
   },
 
-  // Dashboard para matrizador
-  dashboard: (req, res) => {
+  /**
+   * Muestra el dashboard del matrizador con estadísticas y documentos relevantes
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  dashboard: async (req, res) => {
     console.log("Accediendo al dashboard de matrizador");
     console.log("Usuario:", req.matrizador?.nombre, "Rol:", req.matrizador?.rol);
     console.log("Ruta solicitada:", req.originalUrl);
-    res.render('matrizadores/dashboard', { layout: 'matrizador', title: 'Panel de Matrizadores', userRole: req.matrizador?.rol, userName: req.matrizador?.nombre });
+    
+    try {
+      // Procesar parámetros de período
+      const tipoPeriodo = req.query.tipoPeriodo || 'mes';
+      let fechaInicio, fechaFin;
+      const hoy = moment().startOf('day');
+      
+      // Establecer fechas según el período seleccionado
+      switch (tipoPeriodo) {
+        case 'hoy':
+          fechaInicio = hoy.clone();
+          fechaFin = moment().endOf('day');
+          break;
+        case 'semana':
+          fechaInicio = hoy.clone().startOf('week');
+          fechaFin = moment().endOf('day');
+          break;
+        case 'mes':
+          fechaInicio = hoy.clone().startOf('month');
+          fechaFin = moment().endOf('day');
+          break;
+        case 'ultimo_mes':
+          fechaInicio = hoy.clone().subtract(30, 'days');
+          fechaFin = moment().endOf('day');
+          break;
+        case 'personalizado':
+          fechaInicio = req.query.fechaInicio ? moment(req.query.fechaInicio) : hoy.clone().startOf('month');
+          fechaFin = req.query.fechaFin ? moment(req.query.fechaFin).endOf('day') : moment().endOf('day');
+          break;
+        default:
+          fechaInicio = hoy.clone().startOf('month');
+          fechaFin = moment().endOf('day');
+      }
+      
+      // Formatear fechas para las consultas
+      const fechaInicioSQL = fechaInicio.format('YYYY-MM-DD HH:mm:ss');
+      const fechaFinSQL = fechaFin.format('YYYY-MM-DD HH:mm:ss');
+      
+      // Consulta de documentos activos del matrizador actual
+      const [documentosActivos] = await sequelize.query(`
+        SELECT COUNT(*) as total 
+        FROM documentos 
+        WHERE id_matrizador = :idMatrizador 
+        AND estado != 'cancelado'
+      `, {
+        replacements: { idMatrizador: req.matrizador.id },
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      // Documentos en proceso en el período seleccionado
+      const [documentosEnProceso] = await sequelize.query(`
+        SELECT COUNT(*) as total 
+        FROM documentos 
+        WHERE id_matrizador = :idMatrizador 
+        AND estado = 'en_proceso'
+        AND created_at BETWEEN :fechaInicio AND :fechaFin
+      `, {
+        replacements: { 
+          idMatrizador: req.matrizador.id,
+          fechaInicio: fechaInicioSQL,
+          fechaFin: fechaFinSQL
+        },
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      // Documentos completados en el período seleccionado
+      const [documentosCompletados] = await sequelize.query(`
+        SELECT COUNT(*) as total 
+        FROM documentos 
+        WHERE id_matrizador = :idMatrizador 
+        AND estado = 'listo_para_entrega'
+      `, {
+        replacements: { idMatrizador: req.matrizador.id },
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      // Documentos entregados en el período seleccionado
+      const [documentosEntregados] = await sequelize.query(`
+        SELECT COUNT(*) as total 
+        FROM documentos 
+        WHERE id_matrizador = :idMatrizador 
+        AND estado = 'entregado'
+        AND fecha_entrega BETWEEN :fechaInicio AND :fechaFin
+      `, {
+        replacements: { 
+          idMatrizador: req.matrizador.id,
+          fechaInicio: fechaInicioSQL,
+          fechaFin: fechaFinSQL
+        },
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      // Tiempo promedio de procesamiento
+      const [tiempoPromedio] = await sequelize.query(`
+        SELECT AVG(EXTRACT(EPOCH FROM (updated_at - created_at))/86400) as promedio
+        FROM documentos
+        WHERE id_matrizador = :idMatrizador
+        AND estado IN ('listo_para_entrega', 'entregado')
+        AND updated_at BETWEEN :fechaInicio AND :fechaFin
+      `, {
+        replacements: { 
+          idMatrizador: req.matrizador.id,
+          fechaInicio: fechaInicioSQL,
+          fechaFin: fechaFinSQL
+        },
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      // Eficiencia de procesamiento (% completados en menos de 7 días)
+      const [eficiencia] = await sequelize.query(`
+        SELECT 
+          COUNT(CASE WHEN EXTRACT(EPOCH FROM (updated_at - created_at))/86400 <= 7 THEN 1 END) * 100.0 / COUNT(*) as porcentaje
+        FROM documentos
+        WHERE id_matrizador = :idMatrizador
+        AND estado IN ('listo_para_entrega', 'entregado')
+        AND updated_at BETWEEN :fechaInicio AND :fechaFin
+      `, {
+        replacements: { 
+          idMatrizador: req.matrizador.id,
+          fechaInicio: fechaInicioSQL,
+          fechaFin: fechaFinSQL
+        },
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      // Obtener documentos con alertas (más de 7 días en proceso)
+      const documentosAlerta = await Documento.findAll({
+        where: {
+          idMatrizador: req.matrizador.id,
+          estado: 'en_proceso',
+          [Op.and]: [
+            sequelize.literal(`EXTRACT(EPOCH FROM (NOW() - created_at))/86400 >= 7`)
+          ]
+        },
+        order: [
+          [sequelize.literal(`EXTRACT(EPOCH FROM (NOW() - created_at))/86400`), 'DESC']
+        ],
+        limit: 10
+      });
+      
+      // Procesar documentos de alerta para añadir métricas
+      const alertas = documentosAlerta.map(doc => {
+        const diasEnSistema = moment().diff(moment(doc.created_at), 'days');
+        return {
+          ...doc.toJSON(),
+          diasEnSistema,
+          porcentajeDemora: Math.min(diasEnSistema * 10, 100) // Escala de 0-100 para barra de progreso
+        };
+      });
+      
+      // Obtener documentos en proceso recientes
+      const docsEnProceso = await Documento.findAll({
+        where: {
+          idMatrizador: req.matrizador.id,
+          estado: 'en_proceso'
+        },
+        order: [['created_at', 'DESC']],
+        limit: 10
+      });
+      
+      // Añadir días en proceso a cada documento
+      const documentosEnProcesoData = docsEnProceso.map(doc => {
+        const diasEnProceso = moment().diff(moment(doc.created_at), 'days');
+        return {
+          ...doc.toJSON(),
+          diasEnProceso
+        };
+      });
+      
+      // Obtener documentos listos sin retirar
+      const docsListos = await Documento.findAll({
+        where: {
+          idMatrizador: req.matrizador.id,
+          estado: 'listo_para_entrega'
+        },
+        order: [['updated_at', 'DESC']],
+        limit: 10
+      });
+      
+      // Añadir días sin retirar a cada documento
+      const documentosListos = docsListos.map(doc => {
+        const fechaListo = doc.updated_at; // La fecha en que se actualizó al estado 'listo_para_entrega'
+        const diasSinRetirar = moment().diff(moment(fechaListo), 'days');
+        return {
+          ...doc.toJSON(),
+          fechaListo,
+          diasSinRetirar
+        };
+      });
+      
+      // Datos para gráficos de productividad
+      const datosProductividad = await sequelize.query(`
+        SELECT 
+          TO_CHAR(updated_at, 'YYYY-MM-DD') as fecha,
+          COUNT(*) as total
+        FROM documentos
+        WHERE id_matrizador = :idMatrizador
+        AND updated_at BETWEEN :fechaInicio AND :fechaFin
+        AND (
+          (estado = 'listo_para_entrega') OR
+          (estado = 'entregado' AND updated_at BETWEEN :fechaInicio AND :fechaFin)
+        )
+        GROUP BY TO_CHAR(updated_at, 'YYYY-MM-DD')
+        ORDER BY fecha
+      `, {
+        replacements: { 
+          idMatrizador: req.matrizador.id,
+          fechaInicio: fechaInicioSQL,
+          fechaFin: fechaFinSQL
+        },
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      // Datos para gráficos de tiempo promedio por tipo de documento
+      const datosTiempos = await sequelize.query(`
+        SELECT 
+          tipo_documento,
+          AVG(EXTRACT(EPOCH FROM (updated_at - created_at))/86400) as promedio
+        FROM documentos
+        WHERE id_matrizador = :idMatrizador
+        AND estado IN ('listo_para_entrega', 'entregado')
+        GROUP BY tipo_documento
+        ORDER BY promedio DESC
+      `, {
+        replacements: { idMatrizador: req.matrizador.id },
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      // Datos para gráficos por tipo de documento
+      const datosTipos = await sequelize.query(`
+        SELECT 
+          tipo_documento,
+          COUNT(*) as total
+        FROM documentos
+        WHERE id_matrizador = :idMatrizador
+        AND created_at BETWEEN :fechaInicio AND :fechaFin
+        GROUP BY tipo_documento
+        ORDER BY total DESC
+      `, {
+        replacements: { 
+          idMatrizador: req.matrizador.id,
+          fechaInicio: fechaInicioSQL,
+          fechaFin: fechaFinSQL
+        },
+        type: sequelize.QueryTypes.SELECT
+      });
+
+      // Preparar datos para los gráficos
+      const datosGraficos = {
+        productividad: {
+          labels: datosProductividad.map(d => d.fecha),
+          datos: datosProductividad.map(d => d.total)
+        },
+        tiempos: {
+          labels: datosTiempos.map(d => d.tipo_documento),
+          datos: datosTiempos.map(d => parseFloat(d.promedio).toFixed(1))
+        },
+        tipos: {
+          labels: datosTipos.map(d => d.tipo_documento),
+          datos: datosTipos.map(d => d.total)
+        }
+      };
+      
+      // Preparar datos de período para la plantilla
+      const periodoData = {
+        esHoy: tipoPeriodo === 'hoy',
+        esSemana: tipoPeriodo === 'semana',
+        esMes: tipoPeriodo === 'mes',
+        esUltimoMes: tipoPeriodo === 'ultimo_mes',
+        esPersonalizado: tipoPeriodo === 'personalizado',
+        fechaInicio: fechaInicio.format('YYYY-MM-DD'),
+        fechaFin: fechaFin.format('YYYY-MM-DD')
+      };
+      
+      // Preparar estadísticas para la plantilla
+      const stats = {
+        activos: documentosActivos.total || 0,
+        enProceso: documentosEnProceso.total || 0,
+        completados: documentosCompletados.total || 0,
+        entregados: documentosEntregados.total || 0,
+        tiempoPromedio: tiempoPromedio.promedio ? parseFloat(tiempoPromedio.promedio).toFixed(1) : "0.0",
+        eficiencia: eficiencia.porcentaje ? parseFloat(eficiencia.porcentaje).toFixed(1) : "0.0",
+        alertas
+      };
+      
+      // Renderizar el dashboard con los datos obtenidos
+      res.render('matrizadores/dashboard', {
+        layout: 'matrizador',
+        title: 'Panel de Matrizador',
+        userRole: req.matrizador?.rol,
+        userName: req.matrizador?.nombre,
+        stats,
+        periodo: periodoData,
+        documentosEnProceso: documentosEnProcesoData,
+        documentosListos,
+        datosGraficos
+      });
+    } catch (error) {
+      console.error("Error al cargar el dashboard del matrizador:", error);
+      res.status(500).render('error', {
+        layout: 'matrizador',
+        title: 'Error',
+        message: 'Ha ocurrido un error al cargar el dashboard',
+        error
+      });
+    }
   },
   
   listarDocumentos: async (req, res) => {

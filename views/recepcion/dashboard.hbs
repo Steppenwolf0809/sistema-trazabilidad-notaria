@@ -1,7 +1,563 @@
 {{! Dashboard de Recepción }}
 {{! layout: 'recepcion' }}
-<div class="container mt-4">
-  <h1>Panel de Recepción</h1>
-  <p>Bienvenido, {{userName}} (Rol: {{userRole}})</p>
-  <div class="alert alert-info">Este es el dashboard de recepción. Aquí verás los documentos para entregar y tus acciones disponibles.</div>
-</div> 
+
+<!-- Selector de período de tiempo -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body">
+        <form id="periodoForm" class="row align-items-end">
+          <div class="col-md-3">
+            <label for="tipoPeriodo" class="form-label">Período</label>
+            <select id="tipoPeriodo" name="tipoPeriodo" class="form-select">
+              <option value="hoy" {{#if periodo.esHoy}}selected{{/if}}>Hoy</option>
+              <option value="semana" {{#if periodo.esSemana}}selected{{/if}}>Esta semana</option>
+              <option value="mes" {{#if periodo.esMes}}selected{{/if}}>Este mes</option>
+              <option value="ultimo_mes" {{#if periodo.esUltimoMes}}selected{{/if}}>Último mes</option>
+              <option value="personalizado" {{#if periodo.esPersonalizado}}selected{{/if}}>Personalizado</option>
+            </select>
+          </div>
+          
+          <div id="fechasPersonalizadas" class="row align-items-end" style="{{#unless periodo.esPersonalizado}}display: none;{{/unless}}">
+            <div class="col-md-3">
+              <label for="fechaInicio" class="form-label">Desde</label>
+              <input type="date" id="fechaInicio" name="fechaInicio" class="form-control" value="{{periodo.fechaInicio}}">
+            </div>
+            <div class="col-md-3">
+              <label for="fechaFin" class="form-label">Hasta</label>
+              <input type="date" id="fechaFin" name="fechaFin" class="form-control" value="{{periodo.fechaFin}}">
+            </div>
+          </div>
+          
+          <div class="col-md-3">
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-filter me-1"></i> Aplicar Filtro
+            </button>
+            <button type="button" id="exportarBtn" class="btn btn-outline-success ms-2">
+              <i class="fas fa-download me-1"></i> Exportar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Sistema de Alertas -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card border-warning">
+      <div class="card-header bg-warning text-dark">
+        <h5 class="mb-0">
+          <i class="fas fa-bell me-2"></i> Documentos Pendientes de Retiro
+          <span class="badge bg-danger float-end">{{#if stats.docsSinRetirar}}{{stats.docsSinRetirar.length}}{{else}}0{{/if}}</span>
+        </h5>
+      </div>
+      <div class="card-body p-0">
+        {{#if stats.docsSinRetirar.length}}
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Tipo</th>
+                  <th>Cliente</th>
+                  <th>Matrizador</th>
+                  <th>Días Pendiente</th>
+                  <th>Prioridad</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {{#each stats.docsSinRetirar}}
+                <tr>
+                  <td>
+                    <a href="/recepcion/documentos/detalle/{{this.id}}">{{this.codigoBarras}}</a>
+                    <span class="d-block small text-muted">{{this.tipoDocumento}}</span>
+                  </td>
+                  <td>{{this.tipoDocumento}}</td>
+                  <td>{{this.nombreCliente}}</td>
+                  <td>{{this.matrizador.nombre}}</td>
+                  <td>
+                    <strong class="{{#if (gte this.diasPendiente 15)}}text-danger{{else if (gte this.diasPendiente 7)}}text-warning{{else}}text-info{{/if}}">
+                      {{this.diasPendiente}} días
+                    </strong>
+                    <div class="progress" style="height: 4px;">
+                      <div class="progress-bar 
+                        {{#if (gte this.diasPendiente 15)}}bg-danger{{else if (gte this.diasPendiente 7)}}bg-warning{{else}}bg-info{{/if}}" 
+                        style="width: {{this.porcentajeDemora}}%">
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    {{#if (gte this.diasPendiente 15)}}
+                    <span class="badge bg-danger">Alta</span>
+                    {{else if (gte this.diasPendiente 7)}}
+                    <span class="badge bg-warning">Media</span>
+                    {{else}}
+                    <span class="badge bg-info">Baja</span>
+                    {{/if}}
+                  </td>
+                  <td>
+                    <a href="/recepcion/documentos/entrega/{{this.id}}" class="btn btn-sm btn-success">
+                      <i class="fas fa-hand-holding"></i> Entregar
+                    </a>
+                    <button class="btn btn-sm btn-outline-info notificarBtn" data-id="{{this.id}}" data-cliente="{{this.nombreCliente}}">
+                      <i class="fas fa-bell"></i>
+                    </button>
+                  </td>
+                </tr>
+                {{/each}}
+              </tbody>
+            </table>
+          </div>
+        {{else}}
+          <div class="alert alert-success m-3">
+            <i class="fas fa-check-circle me-2"></i> No hay documentos pendientes de retiro con más de 7 días.
+          </div>
+        {{/if}}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Dashboard principal -->
+<div class="row">
+  <!-- Tarjetas de estadísticas -->
+  <div class="col-md-3">
+    <div class="card text-white bg-primary">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-white">Listos para Entrega</h6>
+            <h2 class="mb-0">{{stats.listos}}</h2>
+          </div>
+          <i class="fas fa-check-circle fa-3x opacity-50"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3">
+    <div class="card text-white bg-success">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-white">Entregados Hoy</h6>
+            <h2 class="mb-0">{{stats.entregadosHoy}}</h2>
+            <small class="text-white">Total: {{stats.totalEntregados}}</small>
+          </div>
+          <i class="fas fa-hand-holding fa-3x opacity-50"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3">
+    <div class="card text-white bg-info">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-white">Tiempo Promedio de Retiro</h6>
+            <h2 class="mb-0">{{stats.tiempoRetiro}} días</h2>
+          </div>
+          <i class="fas fa-clock fa-3x opacity-50"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3">
+    <div class="card text-white bg-warning">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-white">Pendientes > 7 días</h6>
+            <h2 class="mb-0">{{stats.pendientesUrgentes}}</h2>
+            <small class="text-white">Requieren atención</small>
+          </div>
+          <i class="fas fa-exclamation-triangle fa-3x opacity-50"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Búsqueda Rápida y Acciones -->
+<div class="row mt-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">Búsqueda Rápida y Acciones</h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-8">
+            <form id="busquedaRapidaForm" class="d-flex">
+              <div class="input-group me-2">
+                <span class="input-group-text"><i class="fas fa-barcode"></i></span>
+                <input type="text" id="codigoBarras" name="codigoBarras" class="form-control" placeholder="Escanear código de barras...">
+                <button type="submit" class="btn btn-primary">Buscar</button>
+              </div>
+              <div class="input-group ms-2">
+                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                <input type="text" id="nombreCliente" name="nombreCliente" class="form-control" placeholder="Nombre de cliente...">
+                <button type="submit" class="btn btn-primary">Buscar</button>
+              </div>
+            </form>
+          </div>
+          <div class="col-md-4 text-end">
+            <a href="/recepcion/documentos?estado=listo_para_entrega" class="btn btn-success me-2">
+              <i class="fas fa-list-check me-1"></i> Ver Listos
+            </a>
+            <a href="/recepcion/documentos?estado=entregado" class="btn btn-info">
+              <i class="fas fa-history me-1"></i> Ver Historial
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Gráficos estadísticos -->
+<div class="row mt-4">
+  <div class="col-md-12">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Estadísticas de Entrega</span>
+        <div class="btn-group" role="group">
+          <button type="button" class="btn btn-sm btn-outline-primary active" id="btnEntregas">Entregas</button>
+          <button type="button" class="btn btn-sm btn-outline-primary" id="btnTiempos">Tiempos</button>
+          <button type="button" class="btn btn-sm btn-outline-primary" id="btnMatrizadores">Por Matrizador</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div id="graficoEntregas">
+          <canvas id="entregasChart" height="300"></canvas>
+        </div>
+        <div id="graficoTiempos" style="display: none;">
+          <canvas id="tiemposChart" height="300"></canvas>
+        </div>
+        <div id="graficoMatrizadores" style="display: none;">
+          <canvas id="matrizadoresChart" height="300"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Documentos -->
+<div class="row mt-4">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Documentos Listos Para Entrega</span>
+        <a href="/recepcion/documentos?estado=listo_para_entrega" class="btn btn-sm btn-outline-primary">Ver Todos</a>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Tipo</th>
+                <th>Cliente</th>
+                <th>Matrizador</th>
+                <th>Listo Desde</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each documentosListos}}
+              <tr>
+                <td>{{this.codigoBarras}}</td>
+                <td>{{this.tipoDocumento}}</td>
+                <td>{{this.nombreCliente}}</td>
+                <td>{{this.matrizador.nombre}}</td>
+                <td>{{formatDate this.fechaListo}}</td>
+                <td>
+                  <a href="/recepcion/documentos/entrega/{{this.id}}" class="btn btn-sm btn-success">
+                    <i class="fas fa-hand-holding"></i>
+                  </a>
+                </td>
+              </tr>
+              {{else}}
+              <tr>
+                <td colspan="6" class="text-center py-3">No hay documentos listos para entrega</td>
+              </tr>
+              {{/each}}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Últimos Documentos Entregados</span>
+        <a href="/recepcion/documentos?estado=entregado" class="btn btn-sm btn-outline-primary">Ver Todos</a>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Cliente</th>
+                <th>Receptor</th>
+                <th>Fecha Entrega</th>
+                <th>Detalles</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each ultimasEntregas}}
+              <tr>
+                <td>{{this.codigoBarras}}</td>
+                <td>{{this.nombreCliente}}</td>
+                <td>{{this.nombreReceptor}}</td>
+                <td>{{formatDate this.fechaEntrega}}</td>
+                <td>
+                  <a href="/recepcion/documentos/detalle/{{this.id}}" class="btn btn-sm btn-info">
+                    <i class="fas fa-eye"></i>
+                  </a>
+                </td>
+              </tr>
+              {{else}}
+              <tr>
+                <td colspan="5" class="text-center py-3">No hay documentos entregados recientes</td>
+              </tr>
+              {{/each}}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Notificación -->
+<div class="modal fade" id="notificarModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Notificar Cliente</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="notificarForm">
+          <input type="hidden" id="documentoId" name="documentoId">
+          <div class="mb-3">
+            <label for="clienteNombre" class="form-label">Cliente</label>
+            <input type="text" id="clienteNombre" class="form-control" readonly>
+          </div>
+          <div class="mb-3">
+            <label for="metodoNotificacion" class="form-label">Método de notificación</label>
+            <select id="metodoNotificacion" name="metodoNotificacion" class="form-select">
+              <option value="whatsapp">WhatsApp</option>
+              <option value="email">Email</option>
+              <option value="telefono">Llamada Telefónica</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="observaciones" class="form-label">Observaciones</label>
+            <textarea id="observaciones" name="observaciones" class="form-control" rows="3"></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="enviarNotificacion">Enviar Notificación</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts para el funcionamiento del dashboard -->
+<script>
+  // Mostrar/ocultar selector de fechas personalizadas
+  document.getElementById('tipoPeriodo').addEventListener('change', function() {
+    const fechasPersonalizadas = document.getElementById('fechasPersonalizadas');
+    if (this.value === 'personalizado') {
+      fechasPersonalizadas.style.display = 'flex';
+    } else {
+      fechasPersonalizadas.style.display = 'none';
+    }
+  });
+
+  // Modal de notificación
+  document.querySelectorAll('.notificarBtn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const id = this.getAttribute('data-id');
+      const cliente = this.getAttribute('data-cliente');
+      
+      document.getElementById('documentoId').value = id;
+      document.getElementById('clienteNombre').value = cliente;
+      
+      const modal = new bootstrap.Modal(document.getElementById('notificarModal'));
+      modal.show();
+    });
+  });
+
+  // Enviar notificación
+  document.getElementById('enviarNotificacion').addEventListener('click', function() {
+    const formData = new FormData(document.getElementById('notificarForm'));
+    const data = Object.fromEntries(formData);
+    
+    fetch('/recepcion/documentos/notificar', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.exito) {
+        alert('Notificación enviada con éxito');
+        bootstrap.Modal.getInstance(document.getElementById('notificarModal')).hide();
+      } else {
+        alert('Error al enviar la notificación: ' + data.mensaje);
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error al enviar la notificación');
+    });
+  });
+
+  // Configuración de gráficos cuando los datos estén disponibles
+  document.addEventListener('DOMContentLoaded', function() {
+    // Cambio entre diferentes gráficos
+    document.getElementById('btnEntregas').addEventListener('click', function() {
+      document.getElementById('graficoEntregas').style.display = 'block';
+      document.getElementById('graficoTiempos').style.display = 'none';
+      document.getElementById('graficoMatrizadores').style.display = 'none';
+      this.classList.add('active');
+      document.getElementById('btnTiempos').classList.remove('active');
+      document.getElementById('btnMatrizadores').classList.remove('active');
+    });
+
+    document.getElementById('btnTiempos').addEventListener('click', function() {
+      document.getElementById('graficoEntregas').style.display = 'none';
+      document.getElementById('graficoTiempos').style.display = 'block';
+      document.getElementById('graficoMatrizadores').style.display = 'none';
+      this.classList.add('active');
+      document.getElementById('btnEntregas').classList.remove('active');
+      document.getElementById('btnMatrizadores').classList.remove('active');
+    });
+
+    document.getElementById('btnMatrizadores').addEventListener('click', function() {
+      document.getElementById('graficoEntregas').style.display = 'none';
+      document.getElementById('graficoTiempos').style.display = 'none';
+      document.getElementById('graficoMatrizadores').style.display = 'block';
+      this.classList.add('active');
+      document.getElementById('btnEntregas').classList.remove('active');
+      document.getElementById('btnTiempos').classList.remove('active');
+    });
+
+    // Inicializar gráficos si hay datos
+    if (typeof Chart !== 'undefined') {
+      {{#if datosGraficos}}
+        // Gráfico de entregas
+        const ctxEntregas = document.getElementById('entregasChart').getContext('2d');
+        const labelsEntregas = {{{json datosGraficos.entregas.labels}}};
+        const datosEntregas = {{{json datosGraficos.entregas.datos}}};
+        
+        new Chart(ctxEntregas, {
+          type: 'line',
+          data: {
+            labels: labelsEntregas,
+            datasets: [{
+              label: 'Documentos entregados',
+              data: datosEntregas,
+              backgroundColor: 'rgba(75, 192, 192, 0.2)',
+              borderColor: 'rgba(75, 192, 192, 1)',
+              borderWidth: 2,
+              tension: 0.4
+            }]
+          },
+          options: {
+            scales: {
+              y: {
+                beginAtZero: true,
+                title: {
+                  display: true,
+                  text: 'Cantidad de documentos'
+                }
+              },
+              x: {
+                title: {
+                  display: true,
+                  text: 'Fecha'
+                }
+              }
+            }
+          }
+        });
+
+        // Gráfico de tiempos
+        const ctxTiempos = document.getElementById('tiemposChart').getContext('2d');
+        const labelsTiempos = {{{json datosGraficos.tiempos.labels}}};
+        const datosTiempos = {{{json datosGraficos.tiempos.datos}}};
+        
+        new Chart(ctxTiempos, {
+          type: 'bar',
+          data: {
+            labels: labelsTiempos,
+            datasets: [{
+              label: 'Tiempo promedio hasta retiro (días)',
+              data: datosTiempos,
+              backgroundColor: 'rgba(255, 159, 64, 0.2)',
+              borderColor: 'rgba(255, 159, 64, 1)',
+              borderWidth: 1
+            }]
+          },
+          options: {
+            scales: {
+              y: {
+                beginAtZero: true,
+                title: {
+                  display: true,
+                  text: 'Días'
+                }
+              }
+            }
+          }
+        });
+
+        // Gráfico por matrizador
+        const ctxMatrizadores = document.getElementById('matrizadoresChart').getContext('2d');
+        const labelsMatrizadores = {{{json datosGraficos.matrizadores.labels}}};
+        const datosMatrizadores = {{{json datosGraficos.matrizadores.datos}}};
+        
+        new Chart(ctxMatrizadores, {
+          type: 'bar',
+          data: {
+            labels: labelsMatrizadores,
+            datasets: [{
+              label: 'Documentos entregados',
+              data: datosMatrizadores,
+              backgroundColor: 'rgba(153, 102, 255, 0.2)',
+              borderColor: 'rgba(153, 102, 255, 1)',
+              borderWidth: 1
+            }]
+          },
+          options: {
+            scales: {
+              y: {
+                beginAtZero: true,
+                title: {
+                  display: true,
+                  text: 'Cantidad de documentos'
+                }
+              }
+            }
+          }
+        });
+      {{/if}}
+    }
+  });
+</script> 

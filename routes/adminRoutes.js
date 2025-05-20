@@ -29,6 +29,7 @@ router.get('/', adminController.dashboard);
 
 // Reportes - Solo para administradores
 router.get('/reportes', adminController.reportes);
+router.get('/reportes/descargar', adminController.descargarReporte);
 router.get('/auditoria', adminController.verRegistrosAuditoria);
 
 // Rutas de gestión de documentos - Solo para administradores

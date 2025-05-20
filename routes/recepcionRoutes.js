@@ -24,4 +24,7 @@ router.post('/documentos/entrega/:id', roleAuth(['recepcion', 'admin']), recepci
 // Nueva ruta para marcar documento como listo para entrega - Solo para recepción y admin
 router.post('/documentos/marcar-listo', roleAuth(['recepcion', 'admin']), recepcionController.marcarDocumentoListoParaEntrega);
 
+// Ruta para notificar a clientes sobre documentos listos para entrega
+router.post('/documentos/notificar', roleAuth(['recepcion', 'admin']), recepcionController.notificarCliente);
+
 module.exports = router; 

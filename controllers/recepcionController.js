@@ -3,23 +3,287 @@ const Matrizador = require('../models/Matrizador');
 const EventoDocumento = require('../models/EventoDocumento');
 const { sequelize } = require('../config/database');
 const { Op } = require('sequelize');
+const moment = require('moment');
 
 const recepcionController = {
-  dashboard: (req, res) => {
+  /**
+   * Muestra el dashboard de recepción con estadísticas y documentos pendientes
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  dashboard: async (req, res) => {
     console.log("Accediendo al dashboard de recepción");
     console.log("Usuario:", req.matrizador?.nombre, "Rol:", req.matrizador?.rol);
     console.log("Ruta solicitada:", req.originalUrl);
-    res.render('recepcion/dashboard', { 
-      layout: 'recepcion', 
-      title: 'Panel de Recepción', 
-      userRole: req.matrizador?.rol, 
-      userName: req.matrizador?.nombre,
-      usuario: {
-        id: req.matrizador?.id,
-        rol: req.matrizador?.rol,
-        nombre: req.matrizador?.nombre
+    
+    try {
+      // Procesar parámetros de período
+      const tipoPeriodo = req.query.tipoPeriodo || 'mes';
+      let fechaInicio, fechaFin;
+      const hoy = moment().startOf('day');
+      
+      // Establecer fechas según el período seleccionado
+      switch (tipoPeriodo) {
+        case 'hoy':
+          fechaInicio = hoy.clone();
+          fechaFin = moment().endOf('day');
+          break;
+        case 'semana':
+          fechaInicio = hoy.clone().startOf('week');
+          fechaFin = moment().endOf('day');
+          break;
+        case 'mes':
+          fechaInicio = hoy.clone().startOf('month');
+          fechaFin = moment().endOf('day');
+          break;
+        case 'ultimo_mes':
+          fechaInicio = hoy.clone().subtract(30, 'days');
+          fechaFin = moment().endOf('day');
+          break;
+        case 'personalizado':
+          fechaInicio = req.query.fechaInicio ? moment(req.query.fechaInicio) : hoy.clone().startOf('month');
+          fechaFin = req.query.fechaFin ? moment(req.query.fechaFin).endOf('day') : moment().endOf('day');
+          break;
+        default:
+          fechaInicio = hoy.clone().startOf('month');
+          fechaFin = moment().endOf('day');
       }
-    });
+      
+      // Formatear fechas para las consultas
+      const fechaInicioSQL = fechaInicio.format('YYYY-MM-DD HH:mm:ss');
+      const fechaFinSQL = fechaFin.format('YYYY-MM-DD HH:mm:ss');
+      
+      // Número total de documentos listos para entrega
+      const [documentosListos] = await sequelize.query(`
+        SELECT COUNT(*) as total
+        FROM documentos
+        WHERE estado = 'listo_para_entrega'
+      `, {
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      // Número de documentos entregados hoy
+      const [entregadosHoy] = await sequelize.query(`
+        SELECT COUNT(*) as total
+        FROM documentos
+        WHERE estado = 'entregado'
+        AND DATE(fecha_entrega) = CURRENT_DATE
+      `, {
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      // Total de documentos entregados en el período
+      const [entregadosPeriodo] = await sequelize.query(`
+        SELECT COUNT(*) as total
+        FROM documentos
+        WHERE estado = 'entregado'
+        AND fecha_entrega BETWEEN :fechaInicio AND :fechaFin
+      `, {
+        replacements: {
+          fechaInicio: fechaInicioSQL,
+          fechaFin: fechaFinSQL
+        },
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      // Tiempo promedio que tarda un documento en ser retirado desde que está listo
+      const [tiempoRetiro] = await sequelize.query(`
+        SELECT AVG(EXTRACT(EPOCH FROM (fecha_entrega - updated_at))/86400) as promedio
+        FROM documentos
+        WHERE estado = 'entregado'
+        AND fecha_entrega BETWEEN :fechaInicio AND :fechaFin
+      `, {
+        replacements: {
+          fechaInicio: fechaInicioSQL,
+          fechaFin: fechaFinSQL
+        },
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      // Documentos pendientes de retiro con más de 7 días
+      const [pendientesUrgentes] = await sequelize.query(`
+        SELECT COUNT(*) as total
+        FROM documentos
+        WHERE estado = 'listo_para_entrega'
+        AND EXTRACT(EPOCH FROM (NOW() - updated_at))/86400 > 7
+      `, {
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      // Obtener documentos pendientes de retiro con detalles
+      const docsSinRetirar = await Documento.findAll({
+        where: {
+          estado: 'listo_para_entrega',
+          [Op.and]: [
+            sequelize.literal(`EXTRACT(EPOCH FROM (NOW() - "Documento"."updated_at"))/86400 >= 5`)
+          ]
+        },
+        include: [
+          {
+            model: Matrizador,
+            as: 'matrizador',
+            attributes: ['id', 'nombre']
+          }
+        ],
+        order: [
+          [sequelize.literal(`EXTRACT(EPOCH FROM (NOW() - "Documento"."updated_at"))/86400`), 'DESC']
+        ],
+        limit: 10
+      });
+      
+      // Procesar documentos sin retirar para añadir métricas
+      const documentosSinRetirar = docsSinRetirar.map(doc => {
+        const diasPendiente = moment().diff(moment(doc.updated_at), 'days');
+        return {
+          ...doc.toJSON(),
+          diasPendiente,
+          porcentajeDemora: Math.min(diasPendiente * 5, 100) // Escala de 0-100 para barra de progreso
+        };
+      });
+      
+      // Obtener documentos listos para entrega
+      const docsListos = await Documento.findAll({
+        where: {
+          estado: 'listo_para_entrega'
+        },
+        include: [
+          {
+            model: Matrizador,
+            as: 'matrizador',
+            attributes: ['id', 'nombre']
+          }
+        ],
+        order: [['updated_at', 'DESC']],
+        limit: 10
+      });
+      
+      // Obtener últimos documentos entregados
+      const ultimasEntregas = await Documento.findAll({
+        where: {
+          estado: 'entregado'
+        },
+        order: [['fecha_entrega', 'DESC']],
+        limit: 10
+      });
+      
+      // Datos para gráfico de entregas por día
+      const datosEntregas = await sequelize.query(`
+        SELECT 
+          TO_CHAR(fecha_entrega, 'YYYY-MM-DD') as fecha,
+          COUNT(*) as total
+        FROM documentos
+        WHERE estado = 'entregado'
+        AND fecha_entrega BETWEEN :fechaInicio AND :fechaFin
+        GROUP BY TO_CHAR(fecha_entrega, 'YYYY-MM-DD')
+        ORDER BY fecha
+      `, {
+        replacements: {
+          fechaInicio: fechaInicioSQL,
+          fechaFin: fechaFinSQL
+        },
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      // Datos para gráfico de tiempo promedio de retiro por tipo de documento
+      const datosTiempos = await sequelize.query(`
+        SELECT 
+          tipo_documento,
+          AVG(EXTRACT(EPOCH FROM (fecha_entrega - updated_at))/86400) as promedio
+        FROM documentos
+        WHERE estado = 'entregado'
+        AND fecha_entrega BETWEEN :fechaInicio AND :fechaFin
+        GROUP BY tipo_documento
+        ORDER BY promedio DESC
+      `, {
+        replacements: {
+          fechaInicio: fechaInicioSQL,
+          fechaFin: fechaFinSQL
+        },
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      // Datos para gráfico de documentos entregados por matrizador
+      const datosMatrizadores = await sequelize.query(`
+        SELECT 
+          m.nombre as matrizador,
+          COUNT(d.id) as total
+        FROM documentos d
+        JOIN matrizadores m ON d.id_matrizador = m.id
+        WHERE d.estado = 'entregado'
+        AND d.fecha_entrega BETWEEN :fechaInicio AND :fechaFin
+        GROUP BY m.id, m.nombre
+        ORDER BY total DESC
+        LIMIT 10
+      `, {
+        replacements: {
+          fechaInicio: fechaInicioSQL,
+          fechaFin: fechaFinSQL
+        },
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      // Preparar datos para los gráficos
+      const datosGraficos = {
+        entregas: {
+          labels: datosEntregas.map(d => d.fecha),
+          datos: datosEntregas.map(d => d.total)
+        },
+        tiempos: {
+          labels: datosTiempos.map(d => d.tipo_documento),
+          datos: datosTiempos.map(d => parseFloat(d.promedio).toFixed(1))
+        },
+        matrizadores: {
+          labels: datosMatrizadores.map(d => d.matrizador),
+          datos: datosMatrizadores.map(d => d.total)
+        }
+      };
+      
+      // Preparar datos de período para la plantilla
+      const periodoData = {
+        esHoy: tipoPeriodo === 'hoy',
+        esSemana: tipoPeriodo === 'semana',
+        esMes: tipoPeriodo === 'mes',
+        esUltimoMes: tipoPeriodo === 'ultimo_mes',
+        esPersonalizado: tipoPeriodo === 'personalizado',
+        fechaInicio: fechaInicio.format('YYYY-MM-DD'),
+        fechaFin: fechaFin.format('YYYY-MM-DD')
+      };
+      
+      // Preparar estadísticas para la plantilla
+      const stats = {
+        listos: documentosListos.total || 0,
+        entregadosHoy: entregadosHoy.total || 0,
+        totalEntregados: entregadosPeriodo.total || 0,
+        tiempoRetiro: tiempoRetiro.promedio ? parseFloat(tiempoRetiro.promedio).toFixed(1) : "0.0",
+        pendientesUrgentes: pendientesUrgentes.total || 0,
+        docsSinRetirar: documentosSinRetirar
+      };
+      
+      res.render('recepcion/dashboard', { 
+        layout: 'recepcion', 
+        title: 'Panel de Recepción', 
+        userRole: req.matrizador?.rol, 
+        userName: req.matrizador?.nombre,
+        usuario: {
+          id: req.matrizador?.id,
+          rol: req.matrizador?.rol,
+          nombre: req.matrizador?.nombre
+        },
+        stats,
+        periodo: periodoData,
+        documentosListos: docsListos,
+        ultimasEntregas,
+        datosGraficos
+      });
+    } catch (error) {
+      console.error("Error al cargar el dashboard de recepción:", error);
+      res.status(500).render('error', {
+        layout: 'recepcion',
+        title: 'Error',
+        message: 'Ha ocurrido un error al cargar el dashboard',
+        error
+      });
+    }
   },
   
   listarDocumentos: async (req, res) => {
@@ -496,7 +760,70 @@ const recepcionController = {
       req.flash('error', 'Error al procesar la solicitud: ' + error.message);
       res.redirect('/recepcion/documentos');
     }
-  }
+  },
+
+  /**
+   * Registra una notificación al cliente sobre un documento listo para entrega
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  notificarCliente: async (req, res) => {
+    try {
+      const { documentoId, metodoNotificacion, observaciones } = req.body;
+      
+      if (!documentoId) {
+        return res.status(400).json({
+          exito: false,
+          mensaje: 'ID de documento no proporcionado'
+        });
+      }
+      
+      // Obtener el documento
+      const documento = await Documento.findOne({
+        where: { 
+          id: documentoId,
+          estado: 'listo_para_entrega'
+        }
+      });
+      
+      if (!documento) {
+        return res.status(404).json({
+          exito: false,
+          mensaje: 'Documento no encontrado o no está listo para entrega'
+        });
+      }
+      
+      // Registrar el evento de notificación
+      await EventoDocumento.create({
+        idDocumento: documento.id,
+        tipo: 'otro',
+        detalles: `Notificación al cliente via ${metodoNotificacion}`,
+        usuario: req.matrizador.nombre,
+        metadatos: {
+          metodoNotificacion,
+          observaciones,
+          fechaNotificacion: new Date()
+        }
+      });
+      
+      // Aquí se podría integrar con sistemas de envío de notificaciones reales
+      // como servicios de WhatsApp, Email, etc.
+      
+      console.log(`Notificación registrada para documento ${documento.codigoBarras} via ${metodoNotificacion}`);
+      
+      return res.status(200).json({
+        exito: true,
+        mensaje: 'Notificación registrada correctamente'
+      });
+    } catch (error) {
+      console.error('Error al notificar cliente:', error);
+      return res.status(500).json({
+        exito: false,
+        mensaje: 'Error al registrar la notificación',
+        error: error.message
+      });
+    }
+  },
 };
 
 module.exports = recepcionController; 

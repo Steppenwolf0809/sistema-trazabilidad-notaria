@@ -1,7 +1,534 @@
 {{! Dashboard de Matrizadores }}
 {{! layout: 'matrizador' }}
-<div class="container mt-4">
-  <h1>Panel de Matrizadores</h1>
-  <p>Bienvenido, {{userName}} (Rol: {{userRole}})</p>
-  <div class="alert alert-info">Este es el dashboard del matrizador. Aquí verás tus documentos y acciones disponibles.</div>
-</div> 
+
+<!-- Selector de período de tiempo -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body">
+        <form id="periodoForm" class="row align-items-end">
+          <div class="col-md-3">
+            <label for="tipoPeriodo" class="form-label">Período</label>
+            <select id="tipoPeriodo" name="tipoPeriodo" class="form-select">
+              <option value="hoy" {{#if periodo.esHoy}}selected{{/if}}>Hoy</option>
+              <option value="semana" {{#if periodo.esSemana}}selected{{/if}}>Esta semana</option>
+              <option value="mes" {{#if periodo.esMes}}selected{{/if}}>Este mes</option>
+              <option value="ultimo_mes" {{#if periodo.esUltimoMes}}selected{{/if}}>Último mes</option>
+              <option value="personalizado" {{#if periodo.esPersonalizado}}selected{{/if}}>Personalizado</option>
+            </select>
+          </div>
+          
+          <div id="fechasPersonalizadas" class="row align-items-end" style="{{#unless periodo.esPersonalizado}}display: none;{{/unless}}">
+            <div class="col-md-3">
+              <label for="fechaInicio" class="form-label">Desde</label>
+              <input type="date" id="fechaInicio" name="fechaInicio" class="form-control" value="{{periodo.fechaInicio}}">
+            </div>
+            <div class="col-md-3">
+              <label for="fechaFin" class="form-label">Hasta</label>
+              <input type="date" id="fechaFin" name="fechaFin" class="form-control" value="{{periodo.fechaFin}}">
+            </div>
+          </div>
+          
+          <div class="col-md-3">
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-filter me-1"></i> Aplicar Filtro
+            </button>
+            <button type="button" id="exportarBtn" class="btn btn-outline-success ms-2">
+              <i class="fas fa-download me-1"></i> Exportar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Sistema de Alertas -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card border-danger">
+      <div class="card-header bg-danger text-white">
+        <h5 class="mb-0">
+          <i class="fas fa-exclamation-triangle me-2"></i> Alertas Prioritarias
+          <span class="badge bg-light text-danger float-end">{{#if stats.alertas}}{{stats.alertas.length}}{{else}}0{{/if}}</span>
+        </h5>
+      </div>
+      <div class="card-body p-0">
+        {{#if stats.alertas.length}}
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead>
+                <tr>
+                  <th>Documento</th>
+                  <th>Cliente</th>
+                  <th>Tiempo en Sistema</th>
+                  <th>Estado</th>
+                  <th>Prioridad</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {{#each stats.alertas}}
+                <tr>
+                  <td>
+                    <a href="/matrizador/documentos/detalle/{{this.id}}">{{this.codigoBarras}}</a>
+                    <span class="d-block small text-muted">{{this.tipoDocumento}}</span>
+                  </td>
+                  <td>{{this.nombreCliente}}</td>
+                  <td>
+                    <strong class="text-danger">{{this.diasEnSistema}} días</strong>
+                    <div class="progress" style="height: 4px;">
+                      <div class="progress-bar bg-danger" style="width: {{this.porcentajeDemora}}%"></div>
+                    </div>
+                  </td>
+                  <td>
+                    {{#if (eq this.estado "en_proceso")}}
+                    <span class="badge bg-warning">En Proceso</span>
+                    {{else}}
+                    <span class="badge bg-info">{{this.estado}}</span>
+                    {{/if}}
+                  </td>
+                  <td>
+                    {{#if (gte this.diasEnSistema 10)}}
+                    <span class="badge bg-danger">Crítica</span>
+                    {{else if (gte this.diasEnSistema 7)}}
+                    <span class="badge bg-warning">Alta</span>
+                    {{else}}
+                    <span class="badge bg-info">Media</span>
+                    {{/if}}
+                  </td>
+                  <td>
+                    <a href="/matrizador/documentos/editar/{{this.id}}" class="btn btn-sm btn-outline-primary">
+                      <i class="fas fa-edit"></i> Procesar
+                    </a>
+                  </td>
+                </tr>
+                {{/each}}
+              </tbody>
+            </table>
+          </div>
+        {{else}}
+          <div class="alert alert-success m-3">
+            <i class="fas fa-check-circle me-2"></i> No tienes documentos con alta prioridad en este momento.
+          </div>
+        {{/if}}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Dashboard principal -->
+<div class="row">
+  <!-- Tarjetas de estadísticas -->
+  <div class="col-md-3">
+    <div class="card text-white bg-primary">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-white">Documentos Activos</h6>
+            <h2 class="mb-0">{{stats.activos}}</h2>
+          </div>
+          <i class="fas fa-file-alt fa-3x opacity-50"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3">
+    <div class="card text-white bg-warning">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-white">En Proceso</h6>
+            <h2 class="mb-0">{{stats.enProceso}}</h2>
+            <small class="text-white">En el período seleccionado</small>
+          </div>
+          <i class="fas fa-clock fa-3x opacity-50"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3">
+    <div class="card text-white bg-success">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-white">Completados</h6>
+            <h2 class="mb-0">{{stats.completados}}</h2>
+            <small class="text-white">Listos para entrega</small>
+          </div>
+          <i class="fas fa-check-circle fa-3x opacity-50"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3">
+    <div class="card text-white bg-info">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-white">Entregados</h6>
+            <h2 class="mb-0">{{stats.entregados}}</h2>
+            <small class="text-white">Documentos entregados</small>
+          </div>
+          <i class="fas fa-hand-holding fa-3x opacity-50"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Métricas adicionales -->
+<div class="row mt-3">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="card-title">Tiempo Promedio de Procesamiento</h6>
+            <h3 class="mb-0">{{stats.tiempoPromedio}} días</h3>
+            <small class="text-muted">Desde registro hasta listo para entrega</small>
+          </div>
+          <i class="fas fa-stopwatch fa-3x text-warning opacity-50"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="card-title">Eficiencia de Procesamiento</h6>
+            <h3 class="mb-0">{{stats.eficiencia}}%</h3>
+            <small class="text-muted">Documentos completados dentro del tiempo esperado</small>
+          </div>
+          <i class="fas fa-tachometer-alt fa-3x text-info opacity-50"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Gráficos estadísticos -->
+<div class="row mt-4">
+  <div class="col-md-12">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Estadísticas Personales</span>
+        <div class="btn-group" role="group">
+          <button type="button" class="btn btn-sm btn-outline-primary active" id="btnProductividad">Productividad</button>
+          <button type="button" class="btn btn-sm btn-outline-primary" id="btnTiempos">Tiempos</button>
+          <button type="button" class="btn btn-sm btn-outline-primary" id="btnTipos">Por Tipo</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div id="graficoProductividad">
+          <canvas id="productividadChart" height="300"></canvas>
+        </div>
+        <div id="graficoTiempos" style="display: none;">
+          <canvas id="tiemposChart" height="300"></canvas>
+        </div>
+        <div id="graficoTipos" style="display: none;">
+          <canvas id="tiposChart" height="300"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Accesos Rápidos -->
+<div class="row mt-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">Accesos Rápidos</h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-3 mb-3">
+            <a href="/matrizador/documentos/registro" class="btn btn-lg btn-primary d-block">
+              <i class="fas fa-file-medical fa-2x mb-2"></i><br>
+              Registrar Documento
+            </a>
+          </div>
+          <div class="col-md-3 mb-3">
+            <a href="/matrizador/documentos" class="btn btn-lg btn-info d-block">
+              <i class="fas fa-folder-open fa-2x mb-2"></i><br>
+              Ver Mis Documentos
+            </a>
+          </div>
+          <div class="col-md-3 mb-3">
+            <a href="/matrizador/documentos/entrega" class="btn btn-lg btn-success d-block">
+              <i class="fas fa-hand-holding fa-2x mb-2"></i><br>
+              Entregas Pendientes
+            </a>
+          </div>
+          <div class="col-md-3 mb-3">
+            <a href="/matrizador/documentos/buscar" class="btn btn-lg btn-secondary d-block">
+              <i class="fas fa-search fa-2x mb-2"></i><br>
+              Buscar Documento
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Documentos -->
+<div class="row mt-4">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Documentos En Proceso</span>
+        <a href="/matrizador/documentos?estado=en_proceso" class="btn btn-sm btn-outline-primary">Ver Todos</a>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Tipo</th>
+                <th>Cliente</th>
+                <th>Fecha Inicio</th>
+                <th>Tiempo</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each documentosEnProceso}}
+              <tr>
+                <td>{{this.codigoBarras}}</td>
+                <td>{{this.tipoDocumento}}</td>
+                <td>{{this.nombreCliente}}</td>
+                <td>{{formatDate this.fechaCreacion}}</td>
+                <td>
+                  {{this.diasEnProceso}} días
+                  {{#if (gte this.diasEnProceso 7)}}
+                  <i class="fas fa-exclamation-triangle text-danger"></i>
+                  {{/if}}
+                </td>
+                <td>
+                  <a href="/matrizador/documentos/editar/{{this.id}}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-edit"></i>
+                  </a>
+                </td>
+              </tr>
+              {{else}}
+              <tr>
+                <td colspan="6" class="text-center py-3">No hay documentos en proceso</td>
+              </tr>
+              {{/each}}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Documentos Listos Sin Retirar</span>
+        <a href="/matrizador/documentos?estado=listo_para_entrega" class="btn btn-sm btn-outline-primary">Ver Todos</a>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Tipo</th>
+                <th>Cliente</th>
+                <th>Listo Desde</th>
+                <th>Días Sin Retirar</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each documentosListos}}
+              <tr>
+                <td>{{this.codigoBarras}}</td>
+                <td>{{this.tipoDocumento}}</td>
+                <td>{{this.nombreCliente}}</td>
+                <td>{{formatDate this.fechaListo}}</td>
+                <td>
+                  {{this.diasSinRetirar}} días
+                  {{#if (gte this.diasSinRetirar 15)}}
+                  <i class="fas fa-exclamation-triangle text-danger"></i>
+                  {{else if (gte this.diasSinRetirar 7)}}
+                  <i class="fas fa-exclamation-circle text-warning"></i>
+                  {{/if}}
+                </td>
+                <td>
+                  <a href="/matrizador/documentos/entrega/{{this.id}}" class="btn btn-sm btn-success">
+                    <i class="fas fa-hand-holding"></i>
+                  </a>
+                </td>
+              </tr>
+              {{else}}
+              <tr>
+                <td colspan="6" class="text-center py-3">No hay documentos listos sin retirar</td>
+              </tr>
+              {{/each}}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts para el funcionamiento del dashboard -->
+<script>
+  // Mostrar/ocultar selector de fechas personalizadas
+  document.getElementById('tipoPeriodo').addEventListener('change', function() {
+    const fechasPersonalizadas = document.getElementById('fechasPersonalizadas');
+    if (this.value === 'personalizado') {
+      fechasPersonalizadas.style.display = 'flex';
+    } else {
+      fechasPersonalizadas.style.display = 'none';
+    }
+  });
+
+  // Configuración de gráficos cuando los datos estén disponibles
+  document.addEventListener('DOMContentLoaded', function() {
+    // Cambio entre diferentes gráficos
+    document.getElementById('btnProductividad').addEventListener('click', function() {
+      document.getElementById('graficoProductividad').style.display = 'block';
+      document.getElementById('graficoTiempos').style.display = 'none';
+      document.getElementById('graficoTipos').style.display = 'none';
+      this.classList.add('active');
+      document.getElementById('btnTiempos').classList.remove('active');
+      document.getElementById('btnTipos').classList.remove('active');
+    });
+
+    document.getElementById('btnTiempos').addEventListener('click', function() {
+      document.getElementById('graficoProductividad').style.display = 'none';
+      document.getElementById('graficoTiempos').style.display = 'block';
+      document.getElementById('graficoTipos').style.display = 'none';
+      this.classList.add('active');
+      document.getElementById('btnProductividad').classList.remove('active');
+      document.getElementById('btnTipos').classList.remove('active');
+    });
+
+    document.getElementById('btnTipos').addEventListener('click', function() {
+      document.getElementById('graficoProductividad').style.display = 'none';
+      document.getElementById('graficoTiempos').style.display = 'none';
+      document.getElementById('graficoTipos').style.display = 'block';
+      this.classList.add('active');
+      document.getElementById('btnProductividad').classList.remove('active');
+      document.getElementById('btnTiempos').classList.remove('active');
+    });
+
+    // Inicializar gráficos si hay datos
+    if (typeof Chart !== 'undefined') {
+      {{#if datosGraficos}}
+        // Gráfico de productividad
+        const ctxProductividad = document.getElementById('productividadChart').getContext('2d');
+        const labelsProductividad = {{{json datosGraficos.productividad.labels}}};
+        const datosProductividad = {{{json datosGraficos.productividad.datos}}};
+        
+        new Chart(ctxProductividad, {
+          type: 'line',
+          data: {
+            labels: labelsProductividad,
+            datasets: [{
+              label: 'Documentos procesados',
+              data: datosProductividad,
+              backgroundColor: 'rgba(54, 162, 235, 0.2)',
+              borderColor: 'rgba(54, 162, 235, 1)',
+              borderWidth: 2,
+              tension: 0.4
+            }]
+          },
+          options: {
+            scales: {
+              y: {
+                beginAtZero: true,
+                title: {
+                  display: true,
+                  text: 'Cantidad de documentos'
+                }
+              },
+              x: {
+                title: {
+                  display: true,
+                  text: 'Fecha'
+                }
+              }
+            }
+          }
+        });
+
+        // Gráfico de tiempos
+        const ctxTiempos = document.getElementById('tiemposChart').getContext('2d');
+        const labelsTiempos = {{{json datosGraficos.tiempos.labels}}};
+        const datosTiempos = {{{json datosGraficos.tiempos.datos}}};
+        
+        new Chart(ctxTiempos, {
+          type: 'bar',
+          data: {
+            labels: labelsTiempos,
+            datasets: [{
+              label: 'Tiempo promedio (días)',
+              data: datosTiempos,
+              backgroundColor: 'rgba(255, 159, 64, 0.2)',
+              borderColor: 'rgba(255, 159, 64, 1)',
+              borderWidth: 1
+            }]
+          },
+          options: {
+            scales: {
+              y: {
+                beginAtZero: true,
+                title: {
+                  display: true,
+                  text: 'Días'
+                }
+              }
+            }
+          }
+        });
+
+        // Gráfico por tipos
+        const ctxTipos = document.getElementById('tiposChart').getContext('2d');
+        const labelsTipos = {{{json datosGraficos.tipos.labels}}};
+        const datosTipos = {{{json datosGraficos.tipos.datos}}};
+        
+        new Chart(ctxTipos, {
+          type: 'pie',
+          data: {
+            labels: labelsTipos,
+            datasets: [{
+              data: datosTipos,
+              backgroundColor: [
+                'rgba(54, 162, 235, 0.7)',
+                'rgba(255, 99, 132, 0.7)',
+                'rgba(255, 206, 86, 0.7)',
+                'rgba(75, 192, 192, 0.7)',
+                'rgba(153, 102, 255, 0.7)',
+                'rgba(255, 159, 64, 0.7)',
+                'rgba(199, 199, 199, 0.7)'
+              ],
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: {
+                position: 'right',
+              }
+            }
+          }
+        });
+      {{/if}}
+    }
+  });
+</script> 

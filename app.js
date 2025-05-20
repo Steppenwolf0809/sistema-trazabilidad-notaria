@@ -68,6 +68,11 @@ const hbs = engine({
   helpers: {
     eq: (v1, v2) => v1 === v2,
     neq: (v1, v2) => v1 !== v2,
+    // Helpers de comparación
+    gt: (v1, v2) => v1 > v2,
+    gte: (v1, v2) => v1 >= v2,
+    lt: (v1, v2) => v1 < v2,
+    lte: (v1, v2) => v1 <= v2,
     hasRole: (userRole, roles) => {
       if (!userRole) return false;
       if (typeof roles === 'string') {
@@ -121,6 +126,10 @@ const hbs = engine({
     },
     stringifyNumber: (num) => {
       return num ? num.toString() : '';
+    },
+    // Helper para convertir objeto a JSON string
+    json: (context) => {
+      return JSON.stringify(context);
     },
     // Helper para determinar si un usuario puede editar un documento
     puedeEditarDocumento: (usuario, documento) => {
