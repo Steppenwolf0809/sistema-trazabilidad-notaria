@@ -49,10 +49,7 @@
                 <i class="fas fa-info-circle me-2"></i> Este documento está listo para ser entregado al cliente.
               </div>
               <p>
-                <strong>Código de verificación:</strong> 
-                <span class="badge bg-primary">{{documento.codigoVerificacion}}</span>
-                <br>
-                <small class="text-muted">El cliente debe proporcionar este código para la entrega.</small>
+                <small class="text-muted">El cliente debe proporcionar el código de verificación para la entrega.</small>
               </p>
             </div>
           </div>
@@ -128,18 +125,46 @@
     </div>
   </div>
   {{else}}
-  <!-- Búsqueda y listado de documentos listos para entrega -->
+  <!-- Búsqueda y filtrado de documentos listos para entrega -->
   <div class="row mb-4">
-    <div class="col-md-8 mx-auto">
+    <div class="col-md-12">
       <div class="card">
         <div class="card-header">
-          <i class="fas fa-search me-2"></i> Buscar documento para entregar
+          <i class="fas fa-search me-2"></i> Buscar y filtrar documentos para entregar
         </div>
         <div class="card-body">
-          <form action="/recepcion/documentos/entrega" method="GET">
-            <div class="input-group">
-              <input type="text" class="form-control" name="codigo" placeholder="Ingrese el código de barras del documento">
-              <button class="btn btn-primary" type="submit">Buscar</button>
+          <form action="/recepcion/documentos/entrega" method="GET" class="row g-3">
+            <div class="col-md-3">
+              <label for="codigo" class="form-label">Código de barras</label>
+              <input type="text" class="form-control" id="codigo" name="codigo" placeholder="Código del documento" value="{{filtros.codigo}}">
+            </div>
+            <div class="col-md-3">
+              <label for="nombre" class="form-label">Nombre cliente</label>
+              <input type="text" class="form-control" id="nombre" name="nombre" placeholder="Nombre del cliente" value="{{filtros.nombre}}">
+            </div>
+            <div class="col-md-3">
+              <label for="identificacion" class="form-label">Identificación</label>
+              <input type="text" class="form-control" id="identificacion" name="identificacion" placeholder="Número de documento" value="{{filtros.identificacion}}">
+            </div>
+            <div class="col-md-3">
+              <label for="fechaDesde" class="form-label">Fecha desde</label>
+              <input type="date" class="form-control" id="fechaDesde" name="fechaDesde" value="{{filtros.fechaDesde}}">
+            </div>
+            <div class="col-md-3">
+              <label for="fechaHasta" class="form-label">Fecha hasta</label>
+              <input type="date" class="form-control" id="fechaHasta" name="fechaHasta" value="{{filtros.fechaHasta}}">
+            </div>
+            <div class="col-md-3">
+              <label for="matrizador" class="form-label">Matrizador</label>
+              <input type="text" class="form-control" id="matrizador" name="matrizador" placeholder="Nombre del matrizador" value="{{filtros.matrizador}}">
+            </div>
+            <div class="col-md-6 d-flex align-items-end">
+              <button class="btn btn-primary me-2" type="submit">
+                <i class="fas fa-search me-1"></i> Buscar
+              </button>
+              <a href="/recepcion/documentos/entrega" class="btn btn-outline-secondary">
+                <i class="fas fa-times me-1"></i> Limpiar filtros
+              </a>
             </div>
           </form>
         </div>

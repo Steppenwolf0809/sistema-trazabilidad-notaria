@@ -25,7 +25,7 @@ git add .
 Realiza el primer commit:
 
 ```bash
-git commit -m "admin puede editar, recepcin cambia estado y matrizador editar"
+git commit -m "mvp antes de notificaciones"
 ```
 
 ## 3. Crear un repositorio en GitHub

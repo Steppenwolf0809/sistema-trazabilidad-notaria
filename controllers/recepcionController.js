@@ -520,6 +520,11 @@ const recepcionController = {
     try {
       const documentoId = req.params.id;
       const codigo = req.query.codigo;
+      const nombre = req.query.nombre;
+      const identificacion = req.query.identificacion;
+      const fechaDesde = req.query.fechaDesde;
+      const fechaHasta = req.query.fechaHasta;
+      const matrizador = req.query.matrizador;
       
       // Si hay un ID, mostrar formulario de entrega para ese documento
       if (documentoId) {
@@ -567,30 +572,75 @@ const recepcionController = {
         req.flash('error', 'No se encontró un documento listo para entrega con ese código');
       }
       
-      // Obtener documentos listos para entrega
+      // Construir filtros para la búsqueda
+      const whereClause = {
+        estado: 'listo_para_entrega'
+      };
+      
+      // Aplicar filtros si hay parámetros
+      if (nombre) {
+        whereClause.nombreCliente = { [Op.like]: `%${nombre}%` };
+      }
+      
+      if (identificacion) {
+        whereClause.identificacionCliente = { [Op.like]: `%${identificacion}%` };
+      }
+      
+      // Filtro por fecha
+      if (fechaDesde || fechaHasta) {
+        whereClause.fechaCreacion = {};
+        
+        if (fechaDesde) {
+          whereClause.fechaCreacion[Op.gte] = new Date(fechaDesde);
+        }
+        
+        if (fechaHasta) {
+          // Sumar un día a la fecha hasta para incluir todo el día seleccionado
+          const fechaHastaObj = new Date(fechaHasta);
+          fechaHastaObj.setDate(fechaHastaObj.getDate() + 1);
+          whereClause.fechaCreacion[Op.lt] = fechaHastaObj;
+        }
+      }
+      
+      // Incluir filtro por matrizador si está presente
+      let matrizadorInclude = {
+        model: Matrizador,
+        as: 'matrizador',
+        attributes: ['id', 'nombre']
+      };
+      
+      if (matrizador) {
+        matrizadorInclude.where = {
+          nombre: { [Op.like]: `%${matrizador}%` }
+        };
+      }
+      
+      // Obtener documentos listos para entrega con filtros aplicados
       const documentosListos = await Documento.findAll({
-        where: {
-          estado: 'listo_para_entrega'
-        },
+        where: whereClause,
         include: [
-          {
-            model: Matrizador,
-            as: 'matrizador',
-            attributes: ['id', 'nombre']
-          }
+          matrizadorInclude
         ],
         order: [['updated_at', 'DESC']],
-        limit: 10
+        limit: 50
       });
       
-      console.log(`Documentos listos para entrega: ${documentosListos.length}`);
+      console.log(`Documentos listos para entrega encontrados: ${documentosListos.length}`);
       
       return res.render('recepcion/documentos/entrega', {
         layout: 'recepcion',
         title: 'Entrega de Documentos',
         documentosListos,
         userRole: req.matrizador?.rol,
-        userName: req.matrizador?.nombre
+        userName: req.matrizador?.nombre,
+        filtros: {
+          codigo,
+          nombre,
+          identificacion,
+          fechaDesde,
+          fechaHasta,
+          matrizador
+        }
       });
     } catch (error) {
       console.error('Error al mostrar la página de entrega:', error);

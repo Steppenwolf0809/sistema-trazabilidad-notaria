@@ -38,7 +38,7 @@ router.post('/documentos/editar/:id', roleAuth(['matrizador', 'admin']), documen
 // Entrega de documento
 router.get('/documentos/entrega', roleAuth(['matrizador', 'admin']), matrizadorController.mostrarEntrega);
 router.get('/documentos/entrega/:id', roleAuth(['matrizador', 'admin']), matrizadorController.mostrarEntrega);
-router.post('/documentos/entrega/:id', roleAuth(['matrizador', 'admin']), matrizadorController.completarEntrega);
+router.post('/documentos/completar-entrega/:id', roleAuth(['matrizador', 'admin']), matrizadorController.completarEntrega);
 
 // Marcar documento como listo para entrega
 router.post('/documentos/marcar-listo', roleAuth(['matrizador', 'admin']), matrizadorController.marcarDocumentoListo);
