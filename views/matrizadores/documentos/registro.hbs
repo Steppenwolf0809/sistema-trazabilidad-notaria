@@ -133,7 +133,47 @@
   </div>
 </template>
 
+{{#if errorCodeDuplicado}}
+<!-- Modal Código Duplicado -->
+<div class="modal fade" id="modalCodigoDuplicado" tabindex="-1" aria-labelledby="modalCodigoDuplicadoLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="modalCodigoDuplicadoLabel"><i class="fas fa-exclamation-triangle me-2"></i> Código de Barras Duplicado</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>{{modalErrorMessage}}</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-danger" data-bs-dismiss="modal" id="btnEntendidoCodigoDuplicado">Entendido</button>
+      </div>
+    </div>
+  </div>
+</div>
+{{/if}}
+
 <script>
+  // Función de validación de teléfono (reutilizable)
+  function validarTelefonoFrontend(telefono) {
+    if (!telefono) return { valido: true };
+    const regex = /^\\d{10}$/;
+    if (!regex.test(telefono)) {
+      return { valido: false, mensaje: "El número telefónico debe tener 10 dígitos numéricos." };
+    }
+    return { valido: true };
+  }
+
+  // Función de validación de email (reutilizable)
+  function validarEmailFrontend(email) {
+    if (!email) return { valido: true };
+    const regex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
+    if (!regex.test(email)) {
+      return { valido: false, mensaje: "Ingrese un correo electrónico válido (ejemplo@dominio.com)." };
+    }
+    return { valido: true };
+  }
+
   document.addEventListener('DOMContentLoaded', function() {
     // Auto-completar código de barras con prefijo fijo
     const codigoBarrasSufijo = document.getElementById('codigoBarrasSufijo');
@@ -178,5 +218,58 @@
     form.addEventListener('submit', function(event) {
       // Validación personalizada aquí si es necesario
     });
+
+    {{#if errorCodeDuplicado}}
+    var modalCodigoDuplicado = new bootstrap.Modal(document.getElementById('modalCodigoDuplicado'), {
+        keyboard: false,
+        backdrop: 'static'
+    });
+    modalCodigoDuplicado.show();
+
+    // Al cerrar el modal, enfocar el campo de código de barras
+    document.getElementById('modalCodigoDuplicado').addEventListener('hidden.bs.modal', function () {
+        const codigoBarrasInput = document.getElementById('codigoBarras');
+        if (codigoBarrasInput) {
+            codigoBarrasInput.focus();
+            codigoBarrasInput.select(); // Opcional: seleccionar el texto
+        }
+    });
+    {{/if}}
+
+    const telefonoInput = document.getElementById('telefonoCliente');
+    const emailInput = document.getElementById('emailCliente');
+    const errorContainer = telefonoInput ? telefonoInput.parentElement.querySelector('.invalid-feedback') : null;
+
+    if (form && telefonoInput) {
+      telefonoInput.addEventListener('input', function() {
+        const telefono = telefonoInput.value.trim();
+        const validacion = validarTelefonoFrontend(telefono);
+        if (telefono) {
+          if (!validacion.valido) {
+            telefonoInput.classList.add('is-invalid');
+            if (errorContainer) errorContainer.textContent = validacion.mensaje;
+          } else {
+            telefonoInput.classList.remove('is-invalid');
+            if (errorContainer) errorContainer.textContent = '';
+          }
+        } else {
+          telefonoInput.classList.remove('is-invalid');
+          if (errorContainer) errorContainer.textContent = '';
+        }
+      });
+
+      form.addEventListener('submit', function(event) {
+        const telefono = telefonoInput.value.trim();
+        if (telefono) {
+          const validacion = validarTelefonoFrontend(telefono);
+          if (!validacion.valido) {
+            event.preventDefault();
+            telefonoInput.classList.add('is-invalid');
+            if (errorContainer) errorContainer.textContent = validacion.mensaje;
+            telefonoInput.focus();
+          }
+        }
+      });
+    }
   });
 </script> 

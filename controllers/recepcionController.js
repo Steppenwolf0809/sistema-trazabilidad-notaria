@@ -9,7 +9,17 @@ const recepcionController = {
     console.log("Accediendo al dashboard de recepción");
     console.log("Usuario:", req.matrizador?.nombre, "Rol:", req.matrizador?.rol);
     console.log("Ruta solicitada:", req.originalUrl);
-    res.render('recepcion/dashboard', { layout: 'recepcion', title: 'Panel de Recepción', userRole: req.matrizador?.rol, userName: req.matrizador?.nombre });
+    res.render('recepcion/dashboard', { 
+      layout: 'recepcion', 
+      title: 'Panel de Recepción', 
+      userRole: req.matrizador?.rol, 
+      userName: req.matrizador?.nombre,
+      usuario: {
+        id: req.matrizador?.id,
+        rol: req.matrizador?.rol,
+        nombre: req.matrizador?.nombre
+      }
+    });
   },
   
   listarDocumentos: async (req, res) => {
@@ -144,7 +154,12 @@ const recepcionController = {
           busqueda
         },
         userRole: req.matrizador?.rol,
-        userName: req.matrizador?.nombre
+        userName: req.matrizador?.nombre,
+        usuario: {
+          id: req.matrizador?.id,
+          rol: req.matrizador?.rol,
+          nombre: req.matrizador?.nombre
+        }
       });
     } catch (error) {
       console.error('Error al listar documentos para recepción:', error);
@@ -192,7 +207,12 @@ const recepcionController = {
           documento: null,
           error: 'El documento solicitado no existe',
           userRole: req.matrizador?.rol,
-          userName: req.matrizador?.nombre
+          userName: req.matrizador?.nombre,
+          usuario: {
+            id: req.matrizador?.id,
+            rol: req.matrizador?.rol,
+            nombre: req.matrizador?.nombre
+          }
         });
       }
       
@@ -210,7 +230,12 @@ const recepcionController = {
         documento,
         historial,
         userRole: req.matrizador?.rol,
-        userName: req.matrizador?.nombre
+        userName: req.matrizador?.nombre,
+        usuario: {
+          id: req.matrizador?.id,
+          rol: req.matrizador?.rol,
+          nombre: req.matrizador?.nombre
+        }
       });
     } catch (error) {
       console.error('Error al obtener detalle de documento:', error);
@@ -402,6 +427,74 @@ const recepcionController = {
       console.error('Error al completar la entrega del documento:', error);
       req.flash('error', `Error al completar la entrega: ${error.message}`);
       res.redirect('/recepcion/documentos/entrega');
+    }
+  },
+
+  marcarDocumentoListoParaEntrega: async (req, res) => {
+    const transaction = await sequelize.transaction();
+    try {
+      const { idDocumento } = req.body;
+      const usuario = req.matrizador || req.usuario; // Usuario autenticado (debe ser recepcion)
+
+      if (!idDocumento) {
+        await transaction.rollback();
+        req.flash('error', 'ID de documento no proporcionado.');
+        return res.redirect('/recepcion/documentos');
+      }
+
+      const documento = await Documento.findByPk(idDocumento, { transaction });
+
+      if (!documento) {
+        await transaction.rollback();
+        req.flash('error', 'Documento no encontrado.');
+        return res.redirect('/recepcion/documentos');
+      }
+
+      if (documento.estado !== 'en_proceso') {
+        await transaction.rollback();
+        req.flash('error', 'Solo se pueden marcar como listos documentos en estado \'En Proceso\'.');
+        return res.redirect('/recepcion/documentos/detalle/' + idDocumento);
+      }
+
+      // Generar código de verificación de 4 dígitos (si es necesario según flujo)
+      // Si el código ya se genera cuando el matrizador lo crea o lo edita, este paso puede ser opcional
+      // o se puede decidir si recepción lo regenera o usa uno existente.
+      // Por ahora, asumimos que es parte del proceso de "listo para entrega".
+      const codigoVerificacion = Math.floor(1000 + Math.random() * 9000).toString();
+
+      documento.estado = 'listo_para_entrega';
+      documento.codigoVerificacion = codigoVerificacion; // Guardar si se genera aquí
+      // Quién marcó como listo (opcional, si se quiere guardar explícitamente)
+      // documento.idUsuarioMarcoListo = usuario.id;
+      // documento.fechaMarcoListo = new Date();
+
+      await documento.save({ transaction });
+
+      await EventoDocumento.create({
+        idDocumento: documento.id,
+        tipo: 'cambio_estado',
+        detalles: `Documento marcado como LISTO PARA ENTREGA por ${usuario.nombre || 'Recepción'} (${usuario.rol}). Código generado: ${codigoVerificacion}.`,
+        usuario: usuario.nombre || 'Recepción',
+        metadatos: {
+          idUsuario: usuario.id,
+          rolUsuario: usuario.rol,
+          codigoGenerado: codigoVerificacion
+        }
+      }, { transaction });
+
+      await transaction.commit();
+
+      // Simular envío de notificación al cliente (si aplica desde recepción)
+      console.log(`NOTIFICACIÓN (RECEPCIÓN): Código ${codigoVerificacion} para cliente ${documento.nombreCliente} del doc ${documento.codigoBarras}`);
+
+      req.flash('success', `Documento ${documento.codigoBarras} marcado como LISTO PARA ENTREGA.`);
+      res.redirect('/recepcion/documentos');
+
+    } catch (error) {
+      await transaction.rollback();
+      console.error('Error al marcar documento como listo para entrega por recepción:', error);
+      req.flash('error', 'Error al procesar la solicitud: ' + error.message);
+      res.redirect('/recepcion/documentos');
     }
   }
 };

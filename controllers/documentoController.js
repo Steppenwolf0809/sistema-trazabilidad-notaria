@@ -47,13 +47,34 @@ exports.mostrarFormularioRegistro = async (req, res) => {
   }
 };
 
+function validarTelefono(telefono) {
+  if (!telefono) return true; // Permitir campo vacío si no es obligatorio por el modelo
+  const regex = /^\d{10}$/;
+  return regex.test(telefono);
+}
+
+function validarEmail(email) {
+  if (!email) return true; // Permitir campo vacío si no es obligatorio
+  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  // Explicación Regex:
+  // ^[^\s@]+     => Comienza con uno o más caracteres que no son espacio ni @ (nombre de usuario)
+  // @            => Seguido del símbolo @
+  // [^\s@]+     => Seguido de uno o más caracteres que no son espacio ni @ (dominio)
+  // \.           => Seguido de un punto literal
+  // [^\s@]+$     => Termina con uno o más caracteres que no son espacio ni @ (extensión .com, .ec, etc.)
+  return regex.test(email);
+}
+
 /**
  * Procesa el registro de un nuevo documento
  */
 exports.registrarDocumento = async (req, res) => {
   const transaction = await sequelize.transaction();
+  const { layout, viewBase } = getLayoutAndViewBase(req);
+  let matrizadores = []; 
   
   try {
+    matrizadores = await Matrizador.findAll({ order: [['nombre', 'ASC']] });
     const {
       codigoBarras,
       tipoDocumento,
@@ -65,6 +86,32 @@ exports.registrarDocumento = async (req, res) => {
       idMatrizador,
       comparecientes
     } = req.body;
+
+    // Validación de teléfono
+    if (telefonoCliente && !validarTelefono(telefonoCliente)) {
+      req.flash('error', 'El número telefónico debe tener 10 dígitos numéricos.');
+      return res.status(400).render(`${viewBase}/registro`, {
+        layout,
+        title: 'Registro de Documento',
+        activeRegistro: true,
+        matrizadores,
+        error: req.flash('error'),
+        formData: req.body
+      });
+    }
+
+    // Validación de email
+    if (emailCliente && !validarEmail(emailCliente)) {
+      req.flash('error', 'Ingrese un correo electrónico válido (ejemplo@dominio.com).');
+      return res.status(400).render(`${viewBase}/registro`, {
+        layout,
+        title: 'Registro de Documento',
+        activeRegistro: true,
+        matrizadores,
+        error: req.flash('error'),
+        formData: req.body
+      });
+    }
     
     // Asegurar que idMatrizador sea un entero válido
     let idMatrizadorNum = null;
@@ -105,19 +152,36 @@ exports.registrarDocumento = async (req, res) => {
     await transaction.rollback();
     console.error('Error al registrar documento:', error);
     
-    // Obtener matrizadores para re-renderizar el formulario con errores
-    const matrizadores = await Matrizador.findAll({
-      order: [['nombre', 'ASC']]
-    });
+    let errorMessage = error.message;
+    let errorCodeDuplicado = false;
+
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      const esErrorCodigoBarras = error.errors && error.errors.some(e => e.path === 'codigo_barras' || e.path === 'codigoBarras');
+      if (esErrorCodigoBarras) {
+        errorMessage = `El código de barras '${req.body.codigoBarras}' ya existe. Por favor, ingrese uno diferente.`;
+        errorCodeDuplicado = true;
+      } else {
+        errorMessage = 'Ya existe un registro con uno de los valores únicos ingresados (ej. email, identificación).';
+      }
+    }
     
-    const { layout, viewBase } = getLayoutAndViewBase(req);
+    // Asegurarse que matrizadores esté disponible incluso si la carga inicial falló antes de la validación
+    if (matrizadores.length === 0) {
+        try {
+            matrizadores = await Matrizador.findAll({ order: [['nombre', 'ASC']] });
+        } catch (fetchError) {
+            console.error('Error al recargar matrizadores en catch:', fetchError);
+        }
+    }
+
     res.status(400).render(`${viewBase}/registro`, {
       layout,
       title: 'Registro de Documento',
       activeRegistro: true,
-      matrizadores,
-      error: error.message,
-      formData: req.body // Mantener los datos ingresados
+      matrizadores, // Usar la variable ya cargada o recargada
+      error: errorMessage, 
+      errorCodeDuplicado: errorCodeDuplicado, 
+      formData: req.body
     });
   }
 };
@@ -227,6 +291,17 @@ exports.listarDocumentos = async (req, res) => {
       order: [['nombre', 'ASC']]
     });
     
+    // DEBUG: Verificar datos antes de renderizar para Admin y Matrizador
+    if (req.usuario) { // Si el usuario es admin, req.usuario estará poblado
+        console.log("DEBUG Admin Listado - Usuario:", JSON.stringify(req.usuario));
+    } else if (req.matrizador) { // Si es matrizador, req.matrizador estará poblado
+        // Esta parte es más para el listado de matrizador, pero lo dejamos por si acaso
+        console.log("DEBUG Matrizador Listado - Usuario (Matrizador):", JSON.stringify(req.matrizador));
+    }
+    if (documentos && documentos.length > 0) {
+        console.log("DEBUG Listado - Primer Documento:", JSON.stringify(documentos[0]));
+    }
+
     const { layout, viewBase } = getLayoutAndViewBase(req);
     res.render(`${viewBase}/listado`, {
       layout,
@@ -243,7 +318,8 @@ exports.listarDocumentos = async (req, res) => {
         tipoDocumento,
         idMatrizador,
         busqueda
-      }
+      },
+      usuario: req.usuario || req.matrizador
     });
   } catch (error) {
     console.error('Error al listar documentos:', error);
@@ -1203,7 +1279,290 @@ if (!exports.obtenerCodigoVerificacion) {
   };
 }
 
-// Utilidad para obtener el layout y base de vista según el rol
+/**
+ * Muestra el formulario para editar un documento para el rol ADMIN.
+ */
+exports.mostrarFormularioEdicionAdmin = async (req, res) => {
+  try {
+    const documentoId = req.params.id;
+    const usuario = req.usuario; // Asumiendo que el middleware de auth carga req.usuario
+
+    const documento = await Documento.findByPk(documentoId, {
+      include: [{ model: Matrizador, as: 'matrizador' }]
+    });
+
+    if (!documento) {
+      req.flash('error', 'Documento no encontrado.');
+      return res.redirect('/admin/documentos/listado');
+    }
+
+    // Lógica de permisos para Admin
+    if (documento.estado === 'entregado') {
+      req.flash('error', 'Los documentos entregados no se pueden editar.');
+      return res.redirect('/admin/documentos/detalle/' + documentoId);
+    }
+    
+    const matrizadores = await Matrizador.findAll({ order: [['nombre', 'ASC']] });
+
+    res.render('admin/documentos/editar', {
+      layout: 'admin',
+      title: 'Editar Documento (Admin)',
+      documento,
+      matrizadores,
+      usuario,
+      activeEdicion: true
+    });
+
+  } catch (error) {
+    console.error('Error al mostrar formulario de edición ADMIN:', error);
+    req.flash('error', 'Error al cargar el formulario de edición para Admin.');
+    res.redirect('/admin/documentos/listado');
+  }
+};
+
+/**
+ * Muestra el formulario para editar un documento para el rol MATRIZADOR.
+ */
+exports.mostrarFormularioEdicionMatrizador = async (req, res) => {
+  try {
+    const documentoId = req.params.id;
+    const usuario = req.matrizador || req.usuario; // req.matrizador es poblado por el token
+
+    if (!usuario) {
+        req.flash('error', 'Usuario no autenticado correctamente.');
+        return res.redirect('/login');
+    }
+
+    const documento = await Documento.findByPk(documentoId, {
+        include: [{ model: Matrizador, as: 'matrizador' }]
+    });
+
+    if (!documento) {
+      req.flash('error', 'Documento no encontrado.');
+      // Log para depuración
+      console.log(`DEBUG: Documento no encontrado ID: ${documentoId} para Matrizador ID: ${usuario.id}`);
+      return res.redirect('/matrizador/documentos');
+    }
+
+    // Log para depuración
+    console.log(`DEBUG: Intentando editar doc ID ${documento.id} (Matrizador: ${documento.idMatrizador}, Estado: ${documento.estado}) por Usuario Matrizador ID: ${usuario.id}`);
+
+    // Lógica de permisos para Matrizador
+    if (documento.idMatrizador !== usuario.id) {
+      req.flash('error', 'No tiene permisos para editar este documento (no le pertenece).');
+      console.log(`DEBUG: Permiso denegado (propiedad) para Matrizador ID: ${usuario.id} en Doc ID: ${documento.id}`);
+      return res.redirect('/matrizador/documentos/detalle/' + documentoId);
+    }
+
+    if (documento.estado !== 'en_proceso' && documento.estado !== 'registrado') { // 'registrado' como sinónimo de 'en_proceso'
+      req.flash('error', 'Solo puede editar documentos en estado "En Proceso".');
+      console.log(`DEBUG: Permiso denegado (estado ${documento.estado}) para Matrizador ID: ${usuario.id} en Doc ID: ${documento.id}`);
+      return res.redirect('/matrizador/documentos/detalle/' + documentoId);
+    }
+
+    res.render('matrizadores/documentos/editar', {
+      layout: 'matrizador',
+      title: 'Editar Documento (Matrizador)',
+      documento,
+      usuario, // Pasar el objeto de usuario completo (req.matrizador)
+      activeEdicion: true
+    });
+
+  } catch (error) {
+    console.error('Error al mostrar formulario de edición MATRIZADOR:', error);
+    req.flash('error', 'Error al cargar el formulario de edición para Matrizador.');
+    // Log para depuración
+    console.log(`DEBUG: Catch en mostrarFormularioEdicionMatrizador para Usuario Matrizador ID: ${(req.matrizador || req.usuario)?.id}. Error: ${error.message}`);
+    res.redirect('/matrizador/documentos');
+  }
+};
+
+/**
+ * Procesa la actualización de un documento existente (método genérico).
+ * La lógica de permisos específica por rol se maneja aquí.
+ */
+exports.actualizarDocumento = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  const documentoId = req.params.id;
+  const usuario = req.matrizador || req.usuario; 
+  const baseRedirectPath = usuario.rol === 'admin' ? '/admin/documentos' : '/matrizador/documentos';
+  const viewToRender = usuario.rol === 'admin' ? 'admin/documentos/editar' : 'matrizadores/documentos/editar';
+  const layoutToRender = usuario.rol === 'admin' ? 'admin' : 'matrizador';
+
+  if (!usuario) {
+    req.flash('error', 'Usuario no autenticado correctamente.');
+    await transaction.rollback();
+    return res.redirect('/login');
+  }
+
+  try {
+    const documento = await Documento.findByPk(documentoId, { transaction });
+
+    if (!documento) {
+      req.flash('error', 'Documento no encontrado.');
+      await transaction.rollback();
+      return res.redirect(baseRedirectPath + '/listado');
+    }
+
+    // Lógica de permisos para actualizar
+    let puedeEditar = false;
+    if (usuario.rol === 'admin') {
+      if (documento.estado !== 'entregado') {
+        puedeEditar = true;
+      }
+    } else if (usuario.rol === 'matrizador') {
+      if (documento.idMatrizador === usuario.id &&
+          (documento.estado === 'en_proceso' || documento.estado === 'registrado')) {
+        puedeEditar = true;
+      }
+    }
+
+    if (!puedeEditar) {
+      req.flash('error', 'No tiene permisos para actualizar este documento o no es editable en su estado actual.');
+      await transaction.rollback();
+      return res.redirect(baseRedirectPath + '/detalle/' + documentoId);
+    }
+    
+    const {
+      tipoDocumento,
+      nombreCliente,
+      identificacionCliente,
+      emailCliente,
+      telefonoCliente,
+      notas,
+      estado, 
+      idMatrizador,
+      comparecientes
+    } = req.body;
+
+    // Validación de teléfono
+    if (telefonoCliente && !validarTelefono(telefonoCliente)) {
+      req.flash('error', 'El número telefónico debe tener 10 dígitos numéricos.');
+      let matrizadoresList = [];
+      if (usuario.rol === 'admin') {
+          matrizadoresList = await Matrizador.findAll({ order: [['nombre', 'ASC']] });
+      }
+      return res.status(400).render(viewToRender, {
+          layout: layoutToRender,
+          title: `Editar Documento (${usuario.rol})`,
+          documento: { ...documento.get(), ...req.body },
+          matrizadores: matrizadoresList,
+          usuario,
+          error: req.flash('error'),
+      });
+    }
+
+    // Validación de email
+    if (emailCliente && !validarEmail(emailCliente)) {
+      req.flash('error', 'Ingrese un correo electrónico válido (ejemplo@dominio.com).');
+      let matrizadoresList = [];
+      if (usuario.rol === 'admin') {
+          matrizadoresList = await Matrizador.findAll({ order: [['nombre', 'ASC']] });
+      }
+      return res.status(400).render(viewToRender, {
+          layout: layoutToRender,
+          title: `Editar Documento (${usuario.rol})`,
+          documento: { ...documento.get(), ...req.body },
+          matrizadores: matrizadoresList,
+          usuario,
+          error: req.flash('error'),
+      });
+    }
+
+    const datosActualizar = {
+      tipoDocumento: tipoDocumento || documento.tipoDocumento,
+      nombreCliente: nombreCliente || documento.nombreCliente,
+      identificacionCliente: identificacionCliente || documento.identificacionCliente,
+      emailCliente: emailCliente === undefined ? documento.emailCliente : emailCliente, // Permitir string vacío
+      telefonoCliente: telefonoCliente === undefined ? documento.telefonoCliente : telefonoCliente, // Permitir string vacío
+      notas: notas === undefined ? documento.notas : notas, // Permitir string vacío
+      // Asegurar que comparecientes sea un array; si no se envía, mantener el existente.
+      comparecientes: Array.isArray(comparecientes) ? comparecientes : (comparecientes === undefined ? documento.comparecientes : []) 
+    };
+
+    if (usuario.rol === 'admin') {
+      if (estado && documento.estado !== 'entregado') {
+        datosActualizar.estado = estado;
+      }
+      if (idMatrizador) {
+        const idMatrizadorNum = parseInt(idMatrizador, 10);
+        if (isNaN(idMatrizadorNum) && idMatrizador !== '') { // Permitir desasignar con string vacío
+            req.flash('error', 'El ID del matrizador no es válido.');
+            await transaction.rollback();
+            // Re-renderizar el formulario con el error
+            const matrizadoresList = await Matrizador.findAll({ order: [['nombre', 'ASC']] });
+            return res.status(400).render('admin/documentos/editar', { // Vista de admin
+                layout: 'admin',
+                title: 'Editar Documento (Admin)',
+                documento: { ...documento.get(), ...req.body },
+                matrizadores: matrizadoresList,
+                usuario,
+                error: 'El ID del matrizador no es válido.',
+            });
+        }
+        datosActualizar.idMatrizador = idMatrizador === '' ? null : idMatrizadorNum; // Permitir desasignar
+      } else if (idMatrizador === '') { // Si se envía explícitamente un idMatrizador vacío
+         datosActualizar.idMatrizador = null;
+      }
+    } else if (usuario.rol === 'matrizador') {
+      // Matrizador no puede cambiar estado ni idMatrizador aquí.
+    }
+    
+    await documento.update(datosActualizar, { transaction });
+
+    await EventoDocumento.create({
+      idDocumento: documento.id,
+      tipo: 'modificacion',
+      detalles: `Documento modificado por ${usuario.nombre || 'sistema'} (${usuario.rol || 'N/A'}).`,
+      usuario: usuario.nombre || 'sistema',
+      metadatos: {
+        idUsuario: usuario.id,
+        rolUsuario: usuario.rol
+      }
+    }, { transaction });
+    
+    await RegistroAuditoria.create({
+        accion: 'ACTUALIZACION_DOCUMENTO',
+        idDocumento: documento.id,
+        idMatrizador: usuario.id,
+        detalles: `Documento ID ${documento.id} actualizado por ${usuario.nombre}.`,
+        resultado: 'exitoso',
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
+    }, { transaction });
+
+    await transaction.commit();
+    req.flash('success', `Documento ${documento.codigoBarras} actualizado exitosamente.`);
+    res.redirect(baseRedirectPath + '/detalle/' + documentoId);
+
+  } catch (error) {
+    await transaction.rollback();
+    console.error('Error al procesar actualización de documento:', error);
+    req.flash('error', 'Error al actualizar el documento: ' + error.message);
+    
+    const documentoOriginal = await Documento.findByPk(documentoId); // No usar transacción aquí
+    const currentFormData = documentoOriginal ? { ...documentoOriginal.get(), ...req.body } : req.body;
+    let matrizadoresList = [];
+    if (usuario.rol === 'admin') {
+        try {
+            matrizadoresList = await Matrizador.findAll({ order: [['nombre', 'ASC']] });
+        } catch (fetchError) {
+            console.error('Error al recargar matrizadores en catch de actualizarDocumento:', fetchError);
+        }
+    }
+
+    res.status(500).render(viewToRender, {
+        layout: layoutToRender,
+        title: `Editar Documento (${usuario.rol})`,
+        documento: currentFormData,
+        matrizadores: matrizadoresList,
+        usuario,
+        error: 'Error al actualizar el documento: ' + error.message, // Usar el error que ya tiene req.flash
+    });
+  }
+};
+
+// Utilidad para obtener el layout y la ruta base de la vista según el rol
 function getLayoutAndViewBase(req) {
   if (req.matrizador && req.matrizador.rol === 'matrizador') {
     return { layout: 'matrizador', viewBase: 'matrizadores/documentos' };

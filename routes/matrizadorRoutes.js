@@ -8,6 +8,7 @@ const router = express.Router();
 const matrizadorController = require('../controllers/matrizadorController');
 const { verificarToken } = require('../middlewares/auth');
 const roleAuth = require('../middlewares/roleAuth');
+const documentoController = require('../controllers/documentoController');
 
 // Rutas públicas
 router.post('/login', matrizadorController.login);
@@ -29,6 +30,10 @@ router.get('/documentos/detalle/:id', roleAuth(['matrizador', 'admin']), matriza
 // Registro de documento
 router.get('/documentos/registro', roleAuth(['matrizador', 'admin']), matrizadorController.mostrarFormularioRegistro);
 router.post('/documentos/registro', roleAuth(['matrizador', 'admin']), matrizadorController.registrarDocumento);
+
+// Rutas para edición de documentos - Solo para matrizadores y admin
+router.get('/documentos/editar/:id', roleAuth(['matrizador', 'admin']), documentoController.mostrarFormularioEdicionMatrizador);
+router.post('/documentos/editar/:id', roleAuth(['matrizador', 'admin']), documentoController.actualizarDocumento);
 
 // Entrega de documento
 router.get('/documentos/entrega', roleAuth(['matrizador', 'admin']), matrizadorController.mostrarEntrega);

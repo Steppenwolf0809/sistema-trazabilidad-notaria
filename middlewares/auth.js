@@ -75,6 +75,11 @@ const verificarToken = async (req, res, next) => {
       rol: matrizador.rol
     };
     
+    // Si el rol es admin, hacer copia de req.matrizador en req.usuario para mayor compatibilidad
+    if (matrizador.rol === 'admin') {
+      req.usuario = { ...req.matrizador };
+    }
+    
     // Renovar el token si está a punto de expirar (menos de 2 días)
     const ahora = Math.floor(Date.now() / 1000);
     const dosDisEnSegundos = 2 * 24 * 60 * 60;

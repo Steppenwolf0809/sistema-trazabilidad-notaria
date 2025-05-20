@@ -121,6 +121,47 @@ const hbs = engine({
     },
     stringifyNumber: (num) => {
       return num ? num.toString() : '';
+    },
+    // Helper para determinar si un usuario puede editar un documento
+    puedeEditarDocumento: (usuario, documento) => {
+      console.log('DEBUG Helper puedeEditarDocumento:', 
+        JSON.stringify({
+          usuario: usuario ? { 
+            id: usuario.id, 
+            rol: usuario.rol 
+          } : 'undefined',
+          documento: documento ? { 
+            id: documento.id, 
+            estado: documento.estado,
+            idMatrizador: documento.idMatrizador
+          } : 'undefined'
+        })
+      );
+      
+      if (!usuario || !documento) return false;
+
+      if (usuario.rol === 'admin') {
+        // Admin puede editar si no está entregado
+        return documento.estado !== 'entregado';
+      }
+
+      if (usuario.rol === 'matrizador') {
+        // Matrizador puede editar si es suyo y está en proceso o registrado
+        // Asumimos que 'registrado' es un alias válido o se maneja como 'en_proceso'
+        return documento.idMatrizador === usuario.id && 
+               (documento.estado === 'en_proceso' || documento.estado === 'registrado');
+      }
+      
+      // Recepción y otros roles no pueden editar
+      return false;
+    },
+    // Helper para determinar si recepción puede marcar un documento como listo
+    puedeMarcarComoListoRecepcion: (usuario, documento) => {
+      if (!usuario || !documento) return false;
+
+      // Solo el rol 'recepcion' puede marcar como listo
+      // y solo si el documento está 'en_proceso'
+      return usuario.rol === 'recepcion' && documento.estado === 'en_proceso';
     }
   }
 });

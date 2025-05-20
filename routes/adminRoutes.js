@@ -39,6 +39,10 @@ router.post('/documentos/marcar-listo', documentoController.marcarComoListo);
 router.post('/documentos/cancelar', documentoController.cancelarDocumento);
 router.get('/documentos/detalle/:id', documentoController.mostrarDetalle);
 
+// Rutas para edición de documentos - Solo para administradores
+router.get('/documentos/editar/:id', documentoController.mostrarFormularioEdicionAdmin);
+router.post('/documentos/editar/:id', documentoController.actualizarDocumento);
+
 // Rutas para relaciones entre documentos - Solo para administradores
 router.get('/documentos/cliente', documentoController.buscarDocumentosCliente);
 router.post('/documentos/relacionar', documentoController.relacionarDocumentos);

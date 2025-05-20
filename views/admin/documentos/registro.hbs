@@ -140,8 +140,140 @@
   </div>
 </template>
 
+{{#if errorCodeDuplicado}}
+<!-- Modal Código Duplicado -->
+<div class="modal fade" id="modalCodigoDuplicadoAdmin" tabindex="-1" aria-labelledby="modalCodigoDuplicadoAdminLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="modalCodigoDuplicadoAdminLabel"><i class="fas fa-exclamation-triangle me-2"></i> Código de Barras Duplicado</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>{{error}}</p> {{!-- Usamos la variable error que ya se está pasando con el mensaje específico --}}
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-danger" data-bs-dismiss="modal" id="btnEntendidoCodigoDuplicadoAdmin">Entendido</button>
+      </div>
+    </div>
+  </div>
+</div>
+{{/if}}
+
 <script>
+  // Función de validación de teléfono (reutilizable)
+  function validarTelefonoFrontend(telefono) {
+    if (!telefono) return { valido: true };
+    const regex = /^\\d{10}$/;
+    if (!regex.test(telefono)) {
+      return { valido: false, mensaje: "El número telefónico debe tener 10 dígitos numéricos." };
+    }
+    return { valido: true };
+  }
+
+  // Función de validación de email (reutilizable)
+  function validarEmailFrontend(email) {
+    if (!email) return { valido: true }; // Permitir vacío si no es requerido explícitamente aquí
+    const regex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
+    if (!regex.test(email)) {
+      return { valido: false, mensaje: "Ingrese un correo electrónico válido (ejemplo@dominio.com)." };
+    }
+    return { valido: true };
+  }
+
   document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const telefonoInput = document.getElementById('telefonoCliente');
+    const emailInput = document.getElementById('emailCliente'); // Asegúrate que el ID sea 'emailCliente'
+    const telefonoErrorContainer = telefonoInput ? telefonoInput.parentElement.querySelector('.invalid-feedback') : null;
+    const emailErrorContainer = emailInput ? emailInput.parentElement.querySelector('.invalid-feedback') : null;
+
+    if (form && telefonoInput) {
+      telefonoInput.addEventListener('input', function() {
+        const telefono = telefonoInput.value.trim();
+        const validacion = validarTelefonoFrontend(telefono);
+        if (telefono) {
+            if (!validacion.valido) {
+                telefonoInput.classList.add('is-invalid');
+                if (telefonoErrorContainer) telefonoErrorContainer.textContent = validacion.mensaje;
+            } else {
+                telefonoInput.classList.remove('is-invalid');
+                if (telefonoErrorContainer) telefonoErrorContainer.textContent = '';
+            }
+        } else {
+            telefonoInput.classList.remove('is-invalid');
+            if (telefonoErrorContainer) telefonoErrorContainer.textContent = '';
+        }
+      });
+    }
+
+    if (form && emailInput) {
+      emailInput.addEventListener('input', function() {
+        const email = emailInput.value.trim();
+        const validacion = validarEmailFrontend(email);
+        if (email) { // Solo validar si hay algo escrito
+            if (!validacion.valido) {
+                emailInput.classList.add('is-invalid');
+                if (emailErrorContainer) emailErrorContainer.textContent = validacion.mensaje;
+            } else {
+                emailInput.classList.remove('is-invalid');
+                if (emailErrorContainer) emailErrorContainer.textContent = '';
+            }
+        } else { // Si está vacío, quitar clases de error
+            emailInput.classList.remove('is-invalid');
+            if (emailErrorContainer) emailErrorContainer.textContent = '';
+        }
+      });
+    }
+
+    if (form) {
+      form.addEventListener('submit', function(event) {
+        let formValido = true;
+        // Validación de teléfono al enviar
+        if (telefonoInput) {
+            const telefono = telefonoInput.value.trim();
+            if (telefono) {
+                const validacionTelefono = validarTelefonoFrontend(telefono);
+                if (!validacionTelefono.valido) {
+                    formValido = false;
+                    telefonoInput.classList.add('is-invalid');
+                    if (telefonoErrorContainer) telefonoErrorContainer.textContent = validacionTelefono.mensaje;
+                    if (formValido) telefonoInput.focus(); // Solo focus si es el primer error
+                }
+            }
+        }
+        // Validación de email al enviar
+        if (emailInput) {
+            const email = emailInput.value.trim();
+            if (email) {
+                const validacionEmail = validarEmailFrontend(email);
+                if (!validacionEmail.valido) {
+                    formValido = false;
+                    emailInput.classList.add('is-invalid');
+                    if (emailErrorContainer) emailErrorContainer.textContent = validacionEmail.mensaje;
+                    if (formValido) emailInput.focus(); // Solo focus si es el primer error
+                }
+            }
+        }
+
+        if (!formValido) {
+            event.preventDefault(); // Detener envío si algo no es válido
+        }
+      });
+    }
+    
+    // Lógica para el modal de código de barras duplicado (existente)
+    const errorCodeDuplicado = {{#if errorCodeDuplicado}}true{{else}}false{{/if}};
+    const codigoBarrasSufijoInput = document.getElementById('codigoBarrasSufijo'); // ID correcto
+    if (errorCodeDuplicado && codigoBarrasSufijoInput) {
+        const errorModal = new bootstrap.Modal(document.getElementById('modalCodigoDuplicadoAdmin'));
+        errorModal.show();
+        document.getElementById('modalCodigoDuplicadoAdmin').addEventListener('hidden.bs.modal', function () {
+            codigoBarrasSufijoInput.focus();
+            codigoBarrasSufijoInput.select();
+        });
+    }
+
     // Auto-completar código de barras con prefijo fijo
     const codigoBarrasSufijo = document.getElementById('codigoBarrasSufijo');
     const codigoBarrasCompleto = document.getElementById('codigoBarras');
@@ -178,12 +310,6 @@
       
       // Agregar al contenedor
       comparecientesContainer.appendChild(nuevoCompareciente);
-    });
-    
-    // Validación del formulario
-    const form = document.getElementById('registroDocumentoForm');
-    form.addEventListener('submit', function(event) {
-      // Validación personalizada aquí si es necesario
     });
   });
 </script> 

@@ -110,12 +110,18 @@
               </td>
               <td>
                 <div class="btn-group">
-                  <a href="/recepcion/documentos/detalle/{{this.id}}" class="btn btn-sm btn-outline-primary">
+                  <a href="/recepcion/documentos/detalle/{{this.id}}" class="btn btn-sm btn-outline-primary" title="Ver Detalles">
                     <i class="fas fa-eye"></i>
                   </a>
                   
+                  {{#if (puedeMarcarComoListoRecepcion ../usuario this)}}
+                  <button type="button" class="btn btn-sm btn-outline-success" title="Marcar como Listo para Entrega" onclick="mostrarModalMarcarListoRecepcion({{this.id}})">
+                    <i class="fas fa-check-circle"></i>
+                  </button>
+                  {{/if}}
+
                   {{#if (eq this.estado "listo_para_entrega")}}
-                  <a href="/recepcion/documentos/entrega/{{this.id}}" class="btn btn-sm btn-outline-info">
+                  <a href="/recepcion/documentos/entrega/{{this.id}}" class="btn btn-sm btn-outline-info" title="Registrar Entrega">
                     <i class="fas fa-hand-holding"></i>
                   </a>
                   {{/if}}
@@ -169,8 +175,37 @@
   </div>
 </div>
 
+<!-- Modal de Confirmación para Marcar como Listo (Recepción) -->
+<div class="modal fade" id="marcarListoModalRecepcion" tabindex="-1" aria-labelledby="marcarListoModalRecepcionLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="marcarListoModalRecepcionLabel">Confirmar Acción</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>¿Está seguro de que desea marcar este documento como "Listo para Entrega"?</p>
+        <p class="text-muted small">Esto generará un nuevo código de verificación si no existe uno o si se decide regenerar.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <form id="marcarListoFormRecepcion" action="/recepcion/documentos/marcar-listo" method="POST" class="d-inline">
+          <input type="hidden" id="idDocumentoMarcarListoRecepcion" name="idDocumento">
+          <button type="submit" class="btn btn-success">Confirmar y Marcar Listo</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     // Inicializar componentes si es necesario
   });
+
+  function mostrarModalMarcarListoRecepcion(idDocumento) {
+    document.getElementById('idDocumentoMarcarListoRecepcion').value = idDocumento;
+    const modal = new bootstrap.Modal(document.getElementById('marcarListoModalRecepcion'));
+    modal.show();
+  }
 </script> 

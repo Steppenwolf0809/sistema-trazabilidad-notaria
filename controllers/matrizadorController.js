@@ -12,6 +12,7 @@ const bcrypt = require('bcryptjs');
 const { redirigirSegunRol } = require('../middlewares/auth');
 const Documento = require('../models/Documento');
 const EventoDocumento = require('../models/EventoDocumento');
+const RegistroAuditoria = require('../models/RegistroAuditoria');
 const { Op } = require('sequelize');
 
 // Objeto que contendrá todas las funciones del controlador
@@ -666,7 +667,7 @@ const matrizadorController = {
       // Construir condiciones de filtrado
       const where = {
         // Importante: Filtrar por el ID del matrizador actual
-        id_matrizador: req.matrizador.id
+        idMatrizador: req.matrizador.id
       };
       
       if (estado) {
@@ -759,8 +760,7 @@ const matrizadorController = {
           tipoDocumento,
           busqueda
         },
-        userRole: req.matrizador?.rol,
-        userName: req.matrizador?.nombre
+        usuario: req.matrizador
       });
     } catch (error) {
       console.error('Error al listar documentos del matrizador:', error);
@@ -793,7 +793,7 @@ const matrizadorController = {
       const documento = await Documento.findOne({
         where: {
           id,
-          id_matrizador: req.matrizador.id
+          idMatrizador: req.matrizador.id
         }
       });
       
@@ -929,10 +929,19 @@ const matrizadorController = {
         emailCliente,
         telefonoCliente,
         notas,
-        id_matrizador: req.matrizador.id,
         estado: 'en_proceso',
-        fechaCreacion: new Date(),
-        comparecientes
+        idMatrizador: req.matrizador.id,
+        id_usuario_creador: req.matrizador.id,
+        rol_usuario_creador: 'matrizador',
+        comparecientes: comparecientes.map(c => ({
+          nombre: c.nombre,
+          identificacion: c.identificacion,
+          relacion: c.relacion,
+          tipoVerificacion: c.tipoVerificacion,
+          codigoVerificacion: c.codigoVerificacion,
+          observaciones: c.observaciones
+        })),
+        fechaCreacion: new Date()
       }, { transaction });
       
       // Registrar el evento de creación
@@ -955,7 +964,30 @@ const matrizadorController = {
     } catch (error) {
       await transaction.rollback();
       console.error('Error al registrar documento:', error);
-      req.flash('error', `Error al registrar el documento: ${error.message}`);
+
+      let errorMessage = error.message;
+      let errorCodeDuplicado = false;
+
+      if (error.name === 'SequelizeUniqueConstraintError') {
+        const esErrorCodigoBarras = error.errors && error.errors.some(e => e.path === 'codigo_barras' || e.path === 'codigoBarras');
+        if (esErrorCodigoBarras) {
+          errorMessage = `El código de barras '${req.body.codigoBarras}' ya existe. Por favor, ingrese uno diferente.`;
+          errorCodeDuplicado = true;
+        } else {
+          errorMessage = 'Ya existe un registro con uno de los valores únicos ingresados.';
+        }
+      } else if (error.message.includes('El código de barras debe comenzar con el prefijo')) {
+        // Este error ya se maneja con req.flash y render, pero podemos asegurar que no se active el modal si no es duplicado
+        // No es necesario cambiar errorMessage aquí si req.flash ya lo maneja, a menos que queramos unificar
+      }
+
+      // Si no es un error de código duplicado que queramos manejar con modal, 
+      // dejamos que la lógica de req.flash y render existente continúe.
+      // Solo si errorCodeDuplicado es true, la vista mostrará el modal.
+      if (!errorCodeDuplicado) {
+        req.flash('error', errorMessage); // Usar el errorMessage genérico o el específico si no es duplicado
+      }
+
       res.render('matrizadores/documentos/registro', {
         layout: 'matrizador',
         title: 'Registrar Documento',
@@ -963,7 +995,9 @@ const matrizadorController = {
         userName: req.matrizador?.nombre,
         usuario: req.matrizador,
         formData: req.body,
-        error: error.message
+        error: errorCodeDuplicado ? null : errorMessage, // Solo mostrar error general si no hay modal
+        errorCodeDuplicado: errorCodeDuplicado,
+        modalErrorMessage: errorCodeDuplicado ? errorMessage : null // Mensaje específico para el modal
       });
     }
   },
@@ -981,7 +1015,7 @@ const matrizadorController = {
         const documento = await Documento.findOne({
           where: {
             id: documentoId,
-            id_matrizador: req.matrizador.id,
+            idMatrizador: req.matrizador.id,
             estado: 'listo_para_entrega'
           }
         });
@@ -1005,7 +1039,7 @@ const matrizadorController = {
         const documento = await Documento.findOne({
           where: {
             codigo_barras: codigo,
-            id_matrizador: req.matrizador.id,
+            idMatrizador: req.matrizador.id,
             estado: 'listo_para_entrega'
           }
         });
@@ -1020,7 +1054,7 @@ const matrizadorController = {
       // Obtener documentos listos para entrega de este matrizador
       const documentosListos = await Documento.findAll({
         where: {
-          id_matrizador: req.matrizador.id,
+          idMatrizador: req.matrizador.id,
           estado: 'listo_para_entrega'
         },
         order: [['updated_at', 'DESC']],
@@ -1068,7 +1102,7 @@ const matrizadorController = {
       const documento = await Documento.findOne({
         where: {
           id,
-          id_matrizador: req.matrizador.id,
+          idMatrizador: req.matrizador.id,
           estado: 'listo_para_entrega'
         },
         transaction
@@ -1152,7 +1186,7 @@ const matrizadorController = {
       const documento = await Documento.findOne({
         where: {
           id: documentoId,
-          id_matrizador: req.matrizador.id
+          idMatrizador: req.matrizador.id
         },
         transaction
       });

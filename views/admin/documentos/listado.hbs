@@ -122,7 +122,9 @@
                   <span class="visually-hidden">Más opciones</span>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
-                  <li><a class="dropdown-item" href="/admin/documentos/editar/{{this.id}}">Editar</a></li>
+                  {{#if (puedeEditarDocumento ../usuario this)}}
+                  <li><a class="dropdown-item" href="/admin/documentos/editar/{{this.id}}"><i class="fas fa-edit me-2"></i>Editar</a></li>
+                  {{/if}}
                   {{#if (eq this.estado "en_proceso")}}
                   <li><a class="dropdown-item text-success" href="#" onclick="marcarListo({{this.id}})">Marcar como listo</a></li>
                   {{/if}}
