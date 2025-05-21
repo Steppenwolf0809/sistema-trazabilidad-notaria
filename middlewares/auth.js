@@ -235,6 +235,41 @@ const esRecepcion = (req, res, next) => {
 };
 
 /**
+ * Middleware para verificar que el usuario es de caja, matrizador o admin
+ */
+const esCaja = (req, res, next) => {
+  if (!req.matrizador) {
+    if (req.path.startsWith('/api/')) {
+      return res.status(401).json({
+        exito: false,
+        mensaje: 'No autorizado - Token no verificado'
+      });
+    }
+    
+    return res.redirect('/login?error=no_autorizado&redirect=' + encodeURIComponent(req.originalUrl));
+  }
+  
+  // Verificar que el rol sea válido para esta función
+  const rolesPermitidos = ['admin', 'matrizador', 'caja'];
+  if (!rolesPermitidos.includes(req.matrizador.rol)) {
+    if (req.path.startsWith('/api/')) {
+      return res.status(403).json({
+        exito: false,
+        mensaje: 'Prohibido - No tiene permisos de caja'
+      });
+    }
+    
+    return res.render('error', {
+      layout: 'admin',
+      title: 'Acceso denegado',
+      message: 'No tiene permisos para acceder a esta página. Se requieren privilegios de caja, matrizador o administrador.'
+    });
+  }
+  
+  next();
+};
+
+/**
  * Middleware para verificar que el usuario tiene al menos permisos de consulta
  */
 const esConsulta = (req, res, next) => {
@@ -254,6 +289,8 @@ function redirigirSegunRol(req, res) {
       return res.redirect('/matrizador');
     case 'recepcion':
       return res.redirect('/recepcion');
+    case 'caja':
+      return res.redirect('/caja');
     default:
       return res.redirect('/login');
   }
@@ -264,6 +301,7 @@ module.exports = {
   esAdmin,
   esMatrizador,
   esRecepcion,
+  esCaja,
   esConsulta,
   redirigirSegunRol
 }; 

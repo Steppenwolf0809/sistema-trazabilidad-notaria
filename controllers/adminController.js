@@ -547,7 +547,7 @@ exports.reportes = async (req, res) => {
           _id: item.idMatrizador,
           nombre: item['matrizador.nombre'] || 'Sin asignar',
           count: parseInt(item.count),
-          porcentaje: Math.round((parseInt(item.count) / totalDocumentosMatrizador) * 100)
+          porcentaje: totalDocumentosMatrizador > 0 ? Math.round((parseInt(item.count) / totalDocumentosMatrizador) * 100) : 0
         }));
         
         totales = { count: totalDocumentosMatrizador };

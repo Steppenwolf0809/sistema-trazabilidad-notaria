@@ -1,0 +1,288 @@
+<div class="card">
+  <div class="card-header">
+    <div class="d-flex justify-content-between align-items-center">
+      <div>
+        <i class="fas fa-money-bill-wave me-2"></i> Listado de Pagos
+      </div>
+      <a href="/caja/documentos" class="btn btn-sm btn-primary">
+        <i class="fas fa-file-invoice-dollar me-1"></i> Registrar Nuevo Pago
+      </a>
+    </div>
+  </div>
+  <div class="card-body">
+    <!-- Resumen de Pagos -->
+    <div class="row mb-4">
+      <div class="col-md-12">
+        <div class="alert alert-info">
+          <div class="row align-items-center">
+            <div class="col-md-8">
+              <h5 class="mb-1">Total recaudado: <strong>${{totalRecaudado}}</strong></h5>
+              <p class="mb-0">Período: {{filtros.fechaInicio}} al {{filtros.fechaFin}}</p>
+            </div>
+            <div class="col-md-4 text-end">
+              <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#filtrosModal">
+                <i class="fas fa-filter me-1"></i> Cambiar filtros
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Tabla de pagos -->
+    <div class="table-responsive">
+      <table class="table table-hover table-striped">
+        <thead class="table-light">
+          <tr>
+            <th>Factura</th>
+            <th>Cliente</th>
+            <th>Documento</th>
+            <th>Monto</th>
+            <th>Método</th>
+            <th>Fecha</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each pagos}}
+          <tr>
+            <td>
+              <span class="fw-bold">{{this.numeroFactura}}</span>
+            </td>
+            <td>{{this.nombreCliente}}</td>
+            <td>
+              <a href="/caja/documentos/detalle/{{this.id}}" class="text-decoration-none">
+                {{this.tipoDocumento}}
+                <div class="small text-muted">{{this.codigoBarras}}</div>
+              </a>
+            </td>
+            <td class="text-end">${{this.valorFactura}}</td>
+            <td>
+              <span class="badge bg-info text-dark">{{this.metodoPago}}</span>
+            </td>
+            <td>{{formatDate this.updated_at}}</td>
+            <td>
+              <div class="btn-group">
+                <a href="/caja/documentos/detalle/{{this.id}}" class="btn btn-sm btn-outline-primary">
+                  <i class="fas fa-eye"></i>
+                </a>
+                <button type="button" class="btn btn-sm btn-outline-info" title="Ver recibo"
+                        onclick="mostrarRecibo('{{this.id}}')">
+                  <i class="fas fa-receipt"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {{else}}
+          <tr>
+            <td colspan="7" class="text-center py-3">No se encontraron pagos con los filtros seleccionados</td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+    
+    <!-- Paginación -->
+    {{#if pagination.pages.length}}
+    <nav aria-label="Paginación de pagos">
+      <ul class="pagination justify-content-center mt-4">
+        {{#if pagination.prev}}
+        <li class="page-item">
+          <a class="page-link" href="{{pagination.prev}}" aria-label="Anterior">
+            <span aria-hidden="true">&laquo;</span>
+          </a>
+        </li>
+        {{else}}
+        <li class="page-item disabled">
+          <a class="page-link" href="#" aria-label="Anterior">
+            <span aria-hidden="true">&laquo;</span>
+          </a>
+        </li>
+        {{/if}}
+        
+        {{#each pagination.pages}}
+        <li class="page-item {{#if this.active}}active{{/if}}">
+          <a class="page-link" href="{{this.url}}">{{this.num}}</a>
+        </li>
+        {{/each}}
+        
+        {{#if pagination.next}}
+        <li class="page-item">
+          <a class="page-link" href="{{pagination.next}}" aria-label="Siguiente">
+            <span aria-hidden="true">&raquo;</span>
+          </a>
+        </li>
+        {{else}}
+        <li class="page-item disabled">
+          <a class="page-link" href="#" aria-label="Siguiente">
+            <span aria-hidden="true">&raquo;</span>
+          </a>
+        </li>
+        {{/if}}
+      </ul>
+    </nav>
+    {{/if}}
+  </div>
+</div>
+
+<!-- Modal de Filtros -->
+<div class="modal fade" id="filtrosModal" tabindex="-1" aria-labelledby="filtrosModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form action="/caja/pagos" method="GET">
+        <div class="modal-header">
+          <h5 class="modal-title" id="filtrosModalLabel">Filtrar Pagos</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="fechaInicio" class="form-label">Fecha Inicio</label>
+            <input type="date" class="form-control" id="fechaInicio" name="fechaInicio" value="{{filtros.fechaInicio}}">
+          </div>
+          <div class="mb-3">
+            <label for="fechaFin" class="form-label">Fecha Fin</label>
+            <input type="date" class="form-control" id="fechaFin" name="fechaFin" value="{{filtros.fechaFin}}">
+          </div>
+          <div class="mb-3">
+            <label for="metodoPago" class="form-label">Método de Pago</label>
+            <select class="form-select" id="metodoPago" name="metodoPago">
+              <option value="" {{#if (eq filtros.metodoPago "")}}selected{{/if}}>Todos</option>
+              <option value="efectivo" {{#if (eq filtros.metodoPago "efectivo")}}selected{{/if}}>Efectivo</option>
+              <option value="tarjeta" {{#if (eq filtros.metodoPago "tarjeta")}}selected{{/if}}>Tarjeta</option>
+              <option value="transferencia" {{#if (eq filtros.metodoPago "transferencia")}}selected{{/if}}>Transferencia</option>
+              <option value="cheque" {{#if (eq filtros.metodoPago "cheque")}}selected{{/if}}>Cheque</option>
+              <option value="otro" {{#if (eq filtros.metodoPago "otro")}}selected{{/if}}>Otro</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="busqueda" class="form-label">Buscar por Cliente o Factura</label>
+            <input type="text" class="form-control" id="busqueda" name="busqueda" value="{{filtros.busqueda}}" placeholder="Nombre, identificación o número de factura">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Aplicar Filtros</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para mostrar recibo -->
+<div class="modal fade" id="reciboModal" tabindex="-1" aria-labelledby="reciboModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="reciboModalLabel">Comprobante de Pago</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="reciboContenido">
+          <div class="text-center mb-4">
+            <h4>Notaría Digital</h4>
+            <p>Comprobante de Pago</p>
+          </div>
+          
+          <div class="row mb-3">
+            <div class="col-6">
+              <p><strong>Factura:</strong> <span id="reciboFactura"></span></p>
+              <p><strong>Fecha:</strong> <span id="reciboFecha"></span></p>
+            </div>
+            <div class="col-6">
+              <p><strong>Cliente:</strong> <span id="reciboCliente"></span></p>
+              <p><strong>Método:</strong> <span id="reciboMetodo"></span></p>
+            </div>
+          </div>
+          
+          <div class="table-responsive">
+            <table class="table table-bordered">
+              <thead>
+                <tr>
+                  <th>Concepto</th>
+                  <th class="text-end">Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td id="reciboConcepto">Trámite Notarial</td>
+                  <td class="text-end">$<span id="reciboValor"></span></td>
+                </tr>
+                <tr>
+                  <th>Total</th>
+                  <th class="text-end">$<span id="reciboTotal"></span></th>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="mt-3">
+            <p><strong>Observaciones:</strong></p>
+            <p id="reciboObservaciones">Pago recibido satisfactoriamente.</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        <button type="button" class="btn btn-primary" onclick="imprimirRecibo()">
+          <i class="fas fa-print me-1"></i> Imprimir
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Función para mostrar recibo
+  function mostrarRecibo(idDocumento) {
+    // Encontrar el pago en la lista
+    const pagos = {{json pagos}};
+    const pago = pagos.find(p => p.id.toString() === idDocumento);
+    
+    if (pago) {
+      // Rellenar datos del recibo
+      document.getElementById('reciboFactura').textContent = pago.numeroFactura || 'N/A';
+      document.getElementById('reciboFecha').textContent = new Date(pago.updated_at).toLocaleDateString('es-ES');
+      document.getElementById('reciboCliente').textContent = pago.nombreCliente;
+      document.getElementById('reciboMetodo').textContent = pago.metodoPago || 'N/A';
+      document.getElementById('reciboConcepto').textContent = `${pago.tipoDocumento} - ${pago.codigoBarras}`;
+      document.getElementById('reciboValor').textContent = pago.valorFactura;
+      document.getElementById('reciboTotal').textContent = pago.valorFactura;
+      
+      // Mostrar el modal
+      new bootstrap.Modal(document.getElementById('reciboModal')).show();
+    }
+  }
+  
+  // Función para imprimir recibo
+  function imprimirRecibo() {
+    const contenido = document.getElementById('reciboContenido').innerHTML;
+    const ventana = window.open('', '_blank');
+    
+    ventana.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Comprobante de Pago</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <style>
+          body { padding: 20px; }
+          @media print {
+            @page { margin: 0.5cm; }
+            body { margin: 1cm; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          ${contenido}
+        </div>
+        <script>
+          window.onload = function() { window.print(); }
+        </script>
+      </body>
+      </html>
+    `);
+    
+    ventana.document.close();
+  }
+</script> 

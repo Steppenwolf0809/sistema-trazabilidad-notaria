@@ -1,0 +1,165 @@
+<div class="row">
+  <div class="col-md-6 mx-auto">
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-hand-holding me-2"></i> Entrega de Documentos
+      </div>
+      <div class="card-body">
+        {{#if documento}}
+          <!-- Modo: Verificación de documento específico -->
+          <h5 class="mb-4">Verificación para Entrega</h5>
+          
+          <div class="alert alert-info">
+            <div class="d-flex align-items-center">
+              <i class="fas fa-info-circle fa-2x me-3"></i>
+              <div>
+                <p class="mb-0">El cliente debe proporcionar el código de verificación de 4 dígitos que recibió por teléfono o correo electrónico.</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="row mb-4">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Documento:</label>
+                <div class="form-control bg-light">{{documento.tipoDocumento}}</div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Código de Barras:</label>
+                <div class="form-control bg-light">{{documento.codigoBarras}}</div>
+              </div>
+            </div>
+            <div class="col-md-12">
+              <div class="mb-0">
+                <label class="form-label">Cliente:</label>
+                <div class="form-control bg-light">
+                  {{documento.nombreCliente}} ({{documento.identificacionCliente}})
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <form id="formVerificacion" action="/caja/documentos/entregar" method="POST">
+            <input type="hidden" name="codigoBarras" value="{{documento.codigoBarras}}">
+            
+            <!-- Sección de verificación -->
+            <div class="card bg-light mb-4">
+              <div class="card-body">
+                <h6 class="card-title">Verificación de Código</h6>
+                
+                <div class="form-group mb-3">
+                  <label for="codigoVerificacion" class="form-label">Código de 4 dígitos:</label>
+                  <div class="input-group">
+                    <input type="text" class="form-control form-control-lg text-center" id="codigoVerificacion" name="codigoVerificacion" 
+                           maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="0000" required
+                           style="letter-spacing: 0.5em; font-weight: bold;">
+                    <button class="btn btn-primary" type="submit">
+                      <i class="fas fa-check-circle me-1"></i> Verificar
+                    </button>
+                  </div>
+                  {{#if error}}
+                  <div class="text-danger mt-2">
+                    <i class="fas fa-exclamation-circle me-1"></i> {{error}}
+                  </div>
+                  {{/if}}
+                </div>
+              </div>
+            </div>
+            
+            <!-- Sección de datos del receptor -->
+            <div class="card mb-4">
+              <div class="card-body">
+                <h6 class="card-title">Datos de quien recibe</h6>
+                
+                <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <label for="nombreRecibe" class="form-label">Nombre completo:</label>
+                    <input type="text" class="form-control" id="nombreRecibe" name="nombreRecibe" required>
+                  </div>
+                  
+                  <div class="col-md-6 mb-3">
+                    <label for="identificacionRecibe" class="form-label">Identificación:</label>
+                    <input type="text" class="form-control" id="identificacionRecibe" name="identificacionRecibe" required>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="d-grid">
+              <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-paper-plane me-1"></i> Completar Entrega
+              </button>
+            </div>
+          </form>
+        {{else}}
+          <!-- Modo: Búsqueda de documento para entrega -->
+          <h5 class="mb-4">Buscar Documento para Entrega</h5>
+          
+          <div class="alert alert-info mb-4">
+            <div class="d-flex align-items-center">
+              <i class="fas fa-info-circle fa-2x me-3"></i>
+              <div>
+                <p class="mb-0">Ingrese el código de barras para buscar un documento listo para entrega.</p>
+              </div>
+            </div>
+          </div>
+          
+          <form action="/caja/documentos/entrega" method="GET">
+            <div class="input-group mb-4">
+              <input type="text" class="form-control" name="codigo" placeholder="Escanear o ingresar código de barras">
+              <button class="btn btn-primary" type="submit">
+                <i class="fas fa-search me-1"></i> Buscar
+              </button>
+            </div>
+          </form>
+          
+          <h6 class="mb-3 border-bottom pb-2">Documentos Listos para Entrega</h6>
+          
+          <div class="list-group">
+            {{#each documentosListos}}
+            <a href="/caja/documentos/entrega?codigo={{this.codigoBarras}}" class="list-group-item list-group-item-action">
+              <div class="d-flex w-100 justify-content-between">
+                <h6 class="mb-1">{{this.tipoDocumento}}</h6>
+                <small>{{formatDate this.updatedAt}}</small>
+              </div>
+              <p class="mb-1">{{this.nombreCliente}}</p>
+              <small>Código: {{this.codigoBarras}}</small>
+            </a>
+            {{else}}
+            <div class="text-center py-4">
+              <i class="fas fa-info-circle me-2"></i> No hay documentos listos para entrega
+            </div>
+            {{/each}}
+          </div>
+        {{/if}}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Auto-focus en el campo de código
+    const codigoInput = document.getElementById('codigoVerificacion');
+    if (codigoInput) {
+      codigoInput.focus();
+      
+      // Solo permitir dígitos
+      codigoInput.addEventListener('input', function(e) {
+        this.value = this.value.replace(/[^0-9]/g, '');
+      });
+      
+      // Submit del formulario cuando se complete el código
+      codigoInput.addEventListener('input', function() {
+        if (this.value.length === 4) {
+          // Dar tiempo para verificar visualmente
+          setTimeout(function() {
+            document.getElementById('nombreRecibe').focus();
+          }, 300);
+        }
+      });
+    }
+  });
+</script> 

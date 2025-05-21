@@ -1,0 +1,192 @@
+<!-- Dashboard Caja -->
+<div class="row">
+  <div class="col-md-12 mb-4">
+    <div class="alert alert-info">
+      <i class="fas fa-info-circle me-2"></i> Bienvenido al panel de Caja. Desde aquí podrás gestionar pagos, facturas y documentos.
+    </div>
+  </div>
+  
+  <!-- Tarjetas de estadísticas -->
+  <div class="col-md-3 mb-4">
+    <div class="card bg-primary text-white">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="card-title mb-0">Total Facturado</h6>
+            <h2 class="display-6 mt-2 mb-0">${{stats.totalFacturado}}</h2>
+          </div>
+          <i class="fas fa-dollar-sign fa-3x opacity-50"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3 mb-4">
+    <div class="card bg-success text-white">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="card-title mb-0">Documentos Facturados</h6>
+            <h2 class="display-6 mt-2 mb-0">{{stats.documentosFacturados}}</h2>
+          </div>
+          <i class="fas fa-file-invoice fa-3x opacity-50"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3 mb-4">
+    <div class="card bg-warning text-white">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="card-title mb-0">Pendientes de Pago</h6>
+            <h2 class="display-6 mt-2 mb-0">{{stats.pendientesDePago}}</h2>
+          </div>
+          <i class="fas fa-clock fa-3x opacity-50"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3 mb-4">
+    <div class="card bg-info text-white">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="card-title mb-0">Recaudado Reciente</h6>
+            <h2 class="display-6 mt-2 mb-0">{{stats.recaudadoReciente}}</h2>
+          </div>
+          <i class="fas fa-hand-holding-usd fa-3x opacity-50"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Accesos rápidos -->
+  <div class="col-md-12 mb-4">
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-bolt me-2"></i> Acciones Rápidas
+      </div>
+      <div class="card-body">
+        <div class="row text-center">
+          <div class="col-md-3 mb-3">
+            <a href="/caja/documentos" class="btn btn-lg btn-outline-primary w-100 h-100 py-4">
+              <i class="fas fa-file-invoice-dollar d-block mb-3 fa-2x"></i>
+              Ver Documentos
+            </a>
+          </div>
+          <div class="col-md-3 mb-3">
+            <a href="/caja/pagos" class="btn btn-lg btn-outline-success w-100 h-100 py-4">
+              <i class="fas fa-money-bill-wave d-block mb-3 fa-2x"></i>
+              Gestionar Pagos
+            </a>
+          </div>
+          <div class="col-md-3 mb-3">
+            <a href="/caja/documentos/nuevo-xml" class="btn btn-lg btn-outline-warning w-100 h-100 py-4">
+              <i class="fas fa-file-code d-block mb-3 fa-2x"></i>
+              Cargar XML
+            </a>
+          </div>
+          <div class="col-md-3 mb-3">
+            <a href="/caja/reportes" class="btn btn-lg btn-outline-info w-100 h-100 py-4">
+              <i class="fas fa-chart-bar d-block mb-3 fa-2x"></i>
+              Ver Reportes
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Documentos pendientes de pago -->
+  <div class="col-md-6 mb-4">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-exclamation-circle text-warning me-2"></i> Documentos Pendientes de Pago</span>
+        <a href="/caja/documentos?estadoPago=pendiente" class="btn btn-sm btn-outline-secondary">Ver Todos</a>
+      </div>
+      <div class="card-body p-0">
+        {{#if documentosPendientes.length}}
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Cliente</th>
+                  <th>Factura</th>
+                  <th>Valor</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {{#each documentosPendientes}}
+                  <tr>
+                    <td>{{this.codigoBarras}}</td>
+                    <td>{{this.nombreCliente}}</td>
+                    <td>{{this.numeroFactura}}</td>
+                    <td>${{this.valorFactura}}</td>
+                    <td>
+                      <a href="/caja/documentos/detalle/{{this.id}}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-edit"></i>
+                      </a>
+                    </td>
+                  </tr>
+                {{/each}}
+              </tbody>
+            </table>
+          </div>
+        {{else}}
+          <div class="text-center py-5">
+            <i class="fas fa-check-circle text-success fa-3x mb-3"></i>
+            <p class="mb-0">No hay documentos pendientes de pago</p>
+          </div>
+        {{/if}}
+      </div>
+    </div>
+  </div>
+  
+  <!-- Pagos recientes -->
+  <div class="col-md-6 mb-4">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-money-bill-wave text-success me-2"></i> Pagos Recientes</span>
+        <a href="/caja/pagos" class="btn btn-sm btn-outline-secondary">Ver Todos</a>
+      </div>
+      <div class="card-body p-0">
+        {{#if documentosPagadosRecientes.length}}
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Cliente</th>
+                  <th>Valor</th>
+                  <th>Método</th>
+                  <th>Fecha</th>
+                </tr>
+              </thead>
+              <tbody>
+                {{#each documentosPagadosRecientes}}
+                  <tr>
+                    <td>{{this.codigoBarras}}</td>
+                    <td>{{this.nombreCliente}}</td>
+                    <td>${{this.valorFactura}}</td>
+                    <td>{{this.metodoPago}}</td>
+                    <td>{{formatDate this.updatedAt}}</td>
+                  </tr>
+                {{/each}}
+              </tbody>
+            </table>
+          </div>
+        {{else}}
+          <div class="text-center py-5">
+            <i class="fas fa-exclamation-triangle text-warning fa-3x mb-3"></i>
+            <p class="mb-0">No hay pagos recientes registrados</p>
+          </div>
+        {{/if}}
+      </div>
+    </div>
+  </div>
+</div> 

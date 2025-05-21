@@ -1570,16 +1570,28 @@ exports.actualizarDocumento = async (req, res) => {
 
 // Utilidad para obtener el layout y la ruta base de la vista según el rol
 function getLayoutAndViewBase(req) {
-  if (req.matrizador && req.matrizador.rol === 'matrizador') {
-    return { layout: 'matrizador', viewBase: 'matrizadores/documentos' };
+  if (req.matrizador) {
+    if (req.matrizador.rol === 'matrizador') {
+      return { layout: 'matrizador', viewBase: 'matrizadores/documentos' };
+    } else if (req.matrizador.rol === 'caja') {
+      return { layout: 'caja', viewBase: 'caja/documentos' };
+    } else if (req.matrizador.rol === 'recepcion') {
+      return { layout: 'recepcion', viewBase: 'recepcion/documentos' };
+    }
   }
   return { layout: 'admin', viewBase: 'admin/documentos' };
 }
 
 // Utilidad para obtener la ruta base según el rol
 function getBasePath(req) {
-  if (req.matrizador && req.matrizador.rol === 'matrizador') {
-    return '/matrizador/documentos';
+  if (req.matrizador) {
+    if (req.matrizador.rol === 'matrizador') {
+      return '/matrizador/documentos';
+    } else if (req.matrizador.rol === 'caja') {
+      return '/caja/documentos';
+    } else if (req.matrizador.rol === 'recepcion') {
+      return '/recepcion/documentos';
+    }
   }
   return '/admin/documentos';
 } 

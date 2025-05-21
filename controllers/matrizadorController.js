@@ -148,7 +148,7 @@ const matrizadorController = {
       };
       
       // Validar que el rol sea válido
-      const rolesValidos = ['admin', 'matrizador', 'recepcion', 'consulta'];
+      const rolesValidos = ['admin', 'matrizador', 'recepcion', 'consulta', 'caja'];
       if (rol && !rolesValidos.includes(rol)) {
         datosMatrizador.rol = 'matrizador'; // Rol por defecto si no es válido
       }
@@ -1164,15 +1164,27 @@ const matrizadorController = {
     const transaction = await sequelize.transaction();
     
     try {
-      // Extraer datos del formulario
-      const { 
-        codigoBarras, 
-        tipoDocumento, 
-        nombreCliente, 
-        identificacionCliente, 
-        emailCliente, 
-        telefonoCliente, 
-        notas 
+      // Extraer los datos del formulario
+      const {
+        codigoBarras,
+        tipoDocumento,
+        nombreCliente,
+        identificacionCliente,
+        emailCliente,
+        telefonoCliente,
+        idMatrizador,
+        notas,
+        // Nuevos campos de facturación y pago
+        numeroFactura,
+        valorFactura,
+        fechaFactura,
+        estadoPago,
+        metodoPago,
+        // Campos de omisión de notificaciones
+        omitirNotificacion,
+        motivoOmision,
+        detalleOmision,
+        comparecientesJSON
       } = req.body;
       
       // Verificar campos obligatorios
@@ -1186,20 +1198,6 @@ const matrizadorController = {
           userName: req.matrizador?.nombre,
           usuario: req.matrizador,
           formData: req.body // Mantener los datos ingresados
-        });
-      }
-      
-      // Verificar que el código de barras tenga el formato correcto
-      if (!codigoBarras.startsWith('20251701018')) {
-        await transaction.rollback();
-        req.flash('error', 'El código de barras debe comenzar con el prefijo 20251701018');
-        return res.render('matrizadores/documentos/registro', {
-          layout: 'matrizador',
-          title: 'Registrar Documento',
-          userRole: req.matrizador?.rol,
-          userName: req.matrizador?.nombre,
-          usuario: req.matrizador,
-          formData: req.body
         });
       }
       
@@ -1222,13 +1220,19 @@ const matrizadorController = {
         });
       }
       
-      // Procesar comparecientes si existen
-      let comparecientes = [];
-      if (req.body.comparecientes) {
-        comparecientes = Array.isArray(req.body.comparecientes) 
-          ? req.body.comparecientes 
-          : [req.body.comparecientes];
+      // Procesar comparecientes
+      let comparecientesJson = [];
+      try {
+        if (comparecientesJSON) {
+          comparecientesJson = JSON.parse(comparecientesJSON);
+        }
+      } catch (e) {
+        console.error('Error al procesar comparecientes:', e);
+        comparecientesJson = [];
       }
+      
+      // Generar un código de verificación de 4 dígitos
+      const codigoVerificacion = Math.floor(1000 + Math.random() * 9000).toString();
       
       // Crear el nuevo documento
       const nuevoDocumento = await Documento.create({
@@ -1236,22 +1240,24 @@ const matrizadorController = {
         tipoDocumento,
         nombreCliente,
         identificacionCliente,
-        emailCliente,
-        telefonoCliente,
-        notas,
+        emailCliente: emailCliente || null,
+        telefonoCliente: telefonoCliente || null,
         estado: 'en_proceso',
+        codigoVerificacion,
         idMatrizador: req.matrizador.id,
-        id_usuario_creador: req.matrizador.id,
-        rol_usuario_creador: 'matrizador',
-        comparecientes: comparecientes.map(c => ({
-          nombre: c.nombre,
-          identificacion: c.identificacion,
-          relacion: c.relacion,
-          tipoVerificacion: c.tipoVerificacion,
-          codigoVerificacion: c.codigoVerificacion,
-          observaciones: c.observaciones
-        })),
-        fechaCreacion: new Date()
+        notas: notas || null,
+        // Agregar nuevos campos
+        numeroFactura: numeroFactura || null,
+        valorFactura: valorFactura ? parseFloat(valorFactura) : null,
+        fechaFactura: fechaFactura ? new Date(fechaFactura) : null,
+        estadoPago: estadoPago || 'pendiente',
+        metodoPago: metodoPago || null,
+        omitirNotificacion: omitirNotificacion === 'true',
+        motivoOmision: omitirNotificacion === 'true' ? motivoOmision : null,
+        detalleOmision: (omitirNotificacion === 'true' && motivoOmision === 'otro') ? detalleOmision : null,
+        idUsuarioCreador: req.matrizador.id,
+        rolUsuarioCreador: req.matrizador.rol,
+        comparecientes: comparecientesJson
       }, { transaction });
       
       // Registrar el evento de creación

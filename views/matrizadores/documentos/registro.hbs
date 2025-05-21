@@ -19,13 +19,12 @@
         </div>
         
         <div class="col-md-4 mb-3">
-          <label for="codigoBarras" class="form-label">Código de Barras</label>
+          <label for="codigoBarras" class="form-label">Código de documento</label>
           <div class="input-group">
-            <span class="input-group-text bg-light">20251701018</span>
-            <input type="text" class="form-control" id="codigoBarrasSufijo" name="codigoBarrasSufijo" placeholder="Escanear o ingresar" required>
-            <input type="hidden" id="codigoBarras" name="codigoBarras">
+            <input type="text" class="form-control" id="codigoBarras" name="codigoBarras" 
+              value="{{formData.codigoBarras}}" required>
           </div>
-          <div class="form-text">El código debe comenzar con el prefijo 20251701018</div>
+          <div class="form-text">Ingrese el código completo del documento</div>
         </div>
         
         <div class="col-md-4 mb-3">
@@ -44,7 +43,7 @@
         
         <div class="col-md-12 mb-3">
           <label for="notas" class="form-label">Notas o Descripción</label>
-          <textarea class="form-control" id="notas" name="notas" rows="2"></textarea>
+          <textarea class="form-control" id="notas" name="notas" rows="2">{{formData.notas}}</textarea>
         </div>
       </div>
       
@@ -94,6 +93,91 @@
       
       <!-- El matrizador actual se asigna automáticamente -->
       <input type="hidden" name="idMatrizador" value="{{usuario.id}}">
+      
+      <!-- Nuevos campos de facturación y pago -->
+      <div class="card mb-4">
+        <div class="card-header bg-light">
+          <h5 class="card-title mb-0">Información de Facturación</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-4 mb-3">
+              <label for="numeroFactura" class="form-label">Número de Factura</label>
+              <input type="text" class="form-control" id="numeroFactura" name="numeroFactura" 
+                value="{{formData.numeroFactura}}">
+            </div>
+            
+            <div class="col-md-4 mb-3">
+              <label for="valorFactura" class="form-label">Valor de Factura</label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="number" step="0.01" class="form-control" id="valorFactura" 
+                  name="valorFactura" value="{{formData.valorFactura}}">
+              </div>
+            </div>
+            
+            <div class="col-md-4 mb-3">
+              <label for="fechaFactura" class="form-label">Fecha de Factura</label>
+              <input type="date" class="form-control" id="fechaFactura" name="fechaFactura" 
+                value="{{formData.fechaFactura}}">
+            </div>
+          </div>
+          
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="estadoPago" class="form-label">Estado de Pago</label>
+              <select class="form-select" id="estadoPago" name="estadoPago">
+                <option value="pendiente" {{#if (eq formData.estadoPago "pendiente")}}selected{{/if}}>Pendiente</option>
+                <option value="pagado" {{#if (eq formData.estadoPago "pagado")}}selected{{/if}}>Pagado</option>
+              </select>
+            </div>
+            
+            <div class="col-md-6 mb-3">
+              <label for="metodoPago" class="form-label">Método de Pago</label>
+              <select class="form-select" id="metodoPago" name="metodoPago">
+                <option value="" {{#if (eq formData.metodoPago "")}}selected{{/if}}>Seleccione...</option>
+                <option value="efectivo" {{#if (eq formData.metodoPago "efectivo")}}selected{{/if}}>Efectivo</option>
+                <option value="tarjeta" {{#if (eq formData.metodoPago "tarjeta")}}selected{{/if}}>Tarjeta</option>
+                <option value="transferencia" {{#if (eq formData.metodoPago "transferencia")}}selected{{/if}}>Transferencia</option>
+                <option value="otro" {{#if (eq formData.metodoPago "otro")}}selected{{/if}}>Otro</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Opciones de notificación -->
+      <div class="card mb-4">
+        <div class="card-header bg-light">
+          <h5 class="card-title mb-0">Opciones de Notificación</h5>
+        </div>
+        <div class="card-body">
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="omitirNotificacion" name="omitirNotificacion" value="true" 
+              {{#if formData.omitirNotificacion}}checked{{/if}}>
+            <label class="form-check-label" for="omitirNotificacion">
+              Omitir envío de notificaciones
+            </label>
+          </div>
+          
+          <div id="motivoOmisionContainer" class="{{#unless formData.omitirNotificacion}}d-none{{/unless}}">
+            <div class="mb-3">
+              <label for="motivoOmision" class="form-label">Motivo de omisión</label>
+              <select class="form-select" id="motivoOmision" name="motivoOmision">
+                <option value="entrega_directa" {{#if (eq formData.motivoOmision "entrega_directa")}}selected{{/if}}>Entrega directa</option>
+                <option value="parte_expediente" {{#if (eq formData.motivoOmision "parte_expediente")}}selected{{/if}}>Parte de expediente</option>
+                <option value="cliente_rechaza" {{#if (eq formData.motivoOmision "cliente_rechaza")}}selected{{/if}}>Cliente rechaza</option>
+                <option value="otro" {{#if (eq formData.motivoOmision "otro")}}selected{{/if}}>Otro</option>
+              </select>
+            </div>
+            
+            <div id="detalleOmisionContainer" class="{{#unless (eq formData.motivoOmision 'otro')}}d-none{{/unless}} mb-3">
+              <label for="detalleOmision" class="form-label">Detalle del motivo</label>
+              <textarea class="form-control" id="detalleOmision" name="detalleOmision" rows="2">{{formData.detalleOmision}}</textarea>
+            </div>
+          </div>
+        </div>
+      </div>
       
       <div class="d-flex justify-content-end mt-4">
         <button type="button" class="btn btn-outline-secondary me-2" onclick="window.location.href='/matrizador/documentos'">
@@ -176,14 +260,6 @@
   }
 
   document.addEventListener('DOMContentLoaded', function() {
-    // Auto-completar código de barras con prefijo fijo
-    const codigoBarrasSufijo = document.getElementById('codigoBarrasSufijo');
-    const codigoBarrasCompleto = document.getElementById('codigoBarras');
-    
-    codigoBarrasSufijo.addEventListener('input', function() {
-      codigoBarrasCompleto.value = '20251701018' + this.value;
-    });
-    
     // Manejo de comparecientes
     const comparecientesContainer = document.getElementById('comparecientesContainer');
     const agregarComparecienteBtn = document.getElementById('agregarCompareciente');
@@ -270,6 +346,24 @@
           telefonoInput.classList.remove('is-invalid');
           if (errorContainer) errorContainer.textContent = '';
         }
+      });
+    }
+
+    // Manejo de visibilidad para campos de omisión de notificaciones
+    const omitirNotificacionCheckbox = document.getElementById('omitirNotificacion');
+    const motivoOmisionContainer = document.getElementById('motivoOmisionContainer');
+    const motivoOmisionSelect = document.getElementById('motivoOmision');
+    const detalleOmisionContainer = document.getElementById('detalleOmisionContainer');
+    
+    if (omitirNotificacionCheckbox) {
+      omitirNotificacionCheckbox.addEventListener('change', function() {
+        motivoOmisionContainer.classList.toggle('d-none', !this.checked);
+      });
+    }
+    
+    if (motivoOmisionSelect) {
+      motivoOmisionSelect.addEventListener('change', function() {
+        detalleOmisionContainer.classList.toggle('d-none', this.value !== 'otro');
       });
     }
   });

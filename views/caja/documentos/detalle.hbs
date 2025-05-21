@@ -1,0 +1,361 @@
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <div>
+      <i class="fas fa-file-alt me-2"></i> Detalle de Documento
+    </div>
+    <div>
+      <a href="/caja/documentos" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i> Volver
+      </a>
+    </div>
+  </div>
+  <div class="card-body">
+    <!-- Información general -->
+    <div class="row mb-4">
+      <div class="col-md-4">
+        <div class="mb-3">
+          <h5 class="border-bottom pb-2">Información General</h5>
+          <p><strong>Código:</strong> <span class="badge bg-primary">{{documento.codigoBarras}}</span></p>
+          <p><strong>Tipo:</strong> {{documento.tipoDocumento}}</p>
+          <p><strong>Estado:</strong> 
+            {{#if (eq documento.estado "en_proceso")}}
+            <span class="badge bg-warning text-dark">En Proceso</span>
+            {{else if (eq documento.estado "listo_para_entrega")}}
+            <span class="badge bg-info">Listo para Entrega</span>
+            {{else if (eq documento.estado "entregado")}}
+            <span class="badge bg-success">Entregado</span>
+            {{else}}
+            <span class="badge bg-secondary">Cancelado</span>
+            {{/if}}
+          </p>
+          <p><strong>Fecha Creación:</strong> {{formatDate documento.created_at}}</p>
+          {{#if documento.fechaEntrega}}
+          <p><strong>Fecha Entrega:</strong> {{formatDate documento.fechaEntrega}}</p>
+          {{/if}}
+        </div>
+      </div>
+      
+      <div class="col-md-4">
+        <div class="mb-3">
+          <h5 class="border-bottom pb-2">Cliente</h5>
+          <p><strong>Nombre:</strong> {{documento.nombreCliente}}</p>
+          <p><strong>Identificación:</strong> {{documento.identificacionCliente}}</p>
+          {{#if documento.emailCliente}}
+          <p><strong>Email:</strong> {{documento.emailCliente}}</p>
+          {{/if}}
+          {{#if documento.telefonoCliente}}
+          <p><strong>Teléfono:</strong> {{documento.telefonoCliente}}</p>
+          {{/if}}
+        </div>
+      </div>
+      
+      <div class="col-md-4">
+        <div class="mb-3">
+          <h5 class="border-bottom pb-2">Matrizador Asignado</h5>
+          {{#if documento.matrizador}}
+          <p><strong>Nombre:</strong> {{documento.matrizador.nombre}}</p>
+          <p><strong>Email:</strong> {{documento.matrizador.email}}</p>
+          <button class="btn btn-sm btn-outline-secondary mt-2" 
+                  data-bs-toggle="modal" data-bs-target="#cambiarMatrizadorModal"
+                  data-documento-id="{{documento.id}}"
+                  data-matrizador-actual-id="{{documento.matrizador.id}}"
+                  data-matrizador-actual-nombre="{{documento.matrizador.nombre}}">
+            <i class="fas fa-exchange-alt me-1"></i> Cambiar Matrizador
+          </button>
+          {{else}}
+          <p>No hay matrizador asignado</p>
+          <button class="btn btn-sm btn-primary mt-2" 
+                  data-bs-toggle="modal" data-bs-target="#cambiarMatrizadorModal"
+                  data-documento-id="{{documento.id}}">
+            <i class="fas fa-user-plus me-1"></i> Asignar Matrizador
+          </button>
+          {{/if}}
+        </div>
+      </div>
+    </div>
+    
+    <!-- Información de facturación -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center" id="pago">
+            <h5 class="mb-0">Información de Facturación</h5>
+            {{#if (neq documento.estado "entregado")}}
+            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#registrarPagoModal">
+              <i class="fas fa-plus-circle me-1"></i> Registrar Pago
+            </button>
+            {{/if}}
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-3">
+                <p><strong>Estado:</strong> 
+                  {{#if (eq documento.estadoPago "pagado")}}
+                  <span class="badge bg-success">Pagado</span>
+                  {{else}}
+                  <span class="badge bg-danger">Pendiente</span>
+                  {{/if}}
+                </p>
+              </div>
+              <div class="col-md-3">
+                <p><strong>N° Factura:</strong> {{#if documento.numeroFactura}}{{documento.numeroFactura}}{{else}}No registrado{{/if}}</p>
+              </div>
+              <div class="col-md-3">
+                <p><strong>Valor:</strong> ${{#if documento.valorFactura}}{{documento.valorFactura}}{{else}}0.00{{/if}}</p>
+              </div>
+              <div class="col-md-3">
+                <p><strong>Método de Pago:</strong> {{#if documento.metodoPago}}{{documento.metodoPago}}{{else}}No registrado{{/if}}</p>
+              </div>
+              {{#if documento.fechaFactura}}
+              <div class="col-md-12">
+                <p><strong>Fecha de Factura:</strong> {{formatDate documento.fechaFactura}}</p>
+              </div>
+              {{/if}}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Notas -->
+    {{#if documento.notas}}
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">Notas</h5>
+          </div>
+          <div class="card-body">
+            <p>{{documento.notas}}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    {{/if}}
+    
+    <!-- Comparecientes -->
+    {{#if documento.comparecientes.length}}
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">Comparecientes</h5>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-hover">
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Identificación</th>
+                    <th>Rol</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {{#each documento.comparecientes}}
+                  <tr>
+                    <td>{{this.nombre}}</td>
+                    <td>{{this.identificacion}}</td>
+                    <td>{{this.rol}}</td>
+                  </tr>
+                  {{/each}}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {{/if}}
+    
+    <!-- Historial de eventos -->
+    {{#if documento.eventos}}
+    <div class="row">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">Historial</h5>
+          </div>
+          <div class="card-body">
+            <div class="timeline">
+              {{#each documento.eventos}}
+              <div class="timeline-item">
+                <div class="timeline-marker"></div>
+                <div class="timeline-content">
+                  <h5 class="mb-1">{{this.tipoEvento}}</h5>
+                  <p class="mb-0">{{this.descripcion}}</p>
+                  <small class="text-muted">{{formatDate this.createdAt}}</small>
+                </div>
+              </div>
+              {{/each}}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {{/if}}
+  </div>
+</div>
+
+<!-- Modal para cambiar matrizador -->
+<div class="modal fade" id="cambiarMatrizadorModal" tabindex="-1" aria-labelledby="cambiarMatrizadorModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="formCambiarMatrizador" action="/caja/documentos/cambiar-matrizador" method="POST">
+        <div class="modal-header">
+          <h5 class="modal-title" id="cambiarMatrizadorModalLabel">Cambiar Matrizador</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="documentoId" name="documentoId" value="{{documento.id}}">
+          
+          <div class="mb-3">
+            <label for="matrizadorActual" class="form-label">Matrizador Actual</label>
+            <input type="text" class="form-control bg-light" id="matrizadorActual" readonly 
+                   value="{{#if documento.matrizador}}{{documento.matrizador.nombre}}{{else}}No asignado{{/if}}">
+          </div>
+          
+          <div class="mb-3">
+            <label for="matrizadorId" class="form-label">Nuevo Matrizador</label>
+            <select class="form-select" id="matrizadorIdModal" name="matrizadorId" required>
+              <option value="" selected disabled>Seleccionar matrizador...</option>
+              {{#each matrizadores}}
+              <option value="{{this.id}}">{{this.nombre}}</option>
+              {{/each}}
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label for="justificacion" class="form-label">Justificación</label>
+            <textarea class="form-control" id="justificacion" name="justificacion" rows="3" required></textarea>
+            <div class="form-text">Por favor, explique brevemente el motivo del cambio de matrizador.</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para registrar pago -->
+<div class="modal fade" id="registrarPagoModal" tabindex="-1" aria-labelledby="registrarPagoModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="formRegistrarPago" action="/caja/pagos/registrar" method="POST">
+        <div class="modal-header">
+          <h5 class="modal-title" id="registrarPagoModalLabel">Registrar Pago</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" name="documentoId" value="{{documento.id}}">
+          
+          <div class="mb-3">
+            <label for="numeroFactura" class="form-label">Número de Factura</label>
+            <input type="text" class="form-control" id="numeroFactura" name="numeroFactura" 
+                   value="{{documento.numeroFactura}}" required>
+          </div>
+          
+          <div class="mb-3">
+            <label for="valorFactura" class="form-label">Valor ($)</label>
+            <input type="number" class="form-control" id="valorFactura" name="valorFactura" 
+                   value="{{documento.valorFactura}}" min="0" step="0.01" required>
+          </div>
+          
+          <div class="mb-3">
+            <label for="metodoPago" class="form-label">Método de Pago</label>
+            <select class="form-select" id="metodoPago" name="metodoPago" required>
+              <option value="" disabled>Seleccionar método...</option>
+              <option value="pendiente" {{#if (eq documento.metodoPago "pendiente")}}selected{{/if}}>Pendiente</option>
+              <option value="efectivo" {{#if (eq documento.metodoPago "efectivo")}}selected{{/if}}>Efectivo</option>
+              <option value="tarjeta_credito" {{#if (eq documento.metodoPago "tarjeta_credito")}}selected{{/if}}>Tarjeta de Crédito</option>
+              <option value="tarjeta_debito" {{#if (eq documento.metodoPago "tarjeta_debito")}}selected{{/if}}>Tarjeta de Débito</option>
+              <option value="transferencia" {{#if (eq documento.metodoPago "transferencia")}}selected{{/if}}>Transferencia Bancaria</option>
+              <option value="otro" {{#if (eq documento.metodoPago "otro")}}selected{{/if}}>Otro</option>
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label for="observaciones" class="form-label">Observaciones</label>
+            <textarea class="form-control" id="observaciones" name="observaciones" rows="3"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Registrar Pago</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* Estilos para la timeline */
+  .timeline {
+    position: relative;
+    padding-left: 30px;
+  }
+  
+  .timeline-item {
+    position: relative;
+    padding-bottom: 20px;
+  }
+  
+  .timeline-marker {
+    position: absolute;
+    left: -30px;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background-color: #3498db;
+    border: 3px solid #fff;
+    box-shadow: 0 0 0 2px #3498db;
+  }
+  
+  .timeline-item:before {
+    content: '';
+    position: absolute;
+    left: -23px;
+    top: 15px;
+    bottom: 0;
+    width: 2px;
+    background-color: #3498db;
+  }
+  
+  .timeline-item:last-child:before {
+    display: none;
+  }
+  
+  .timeline-content {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 4px;
+    border-left: 3px solid #3498db;
+  }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Manejar el modal de cambio de matrizador
+    const cambiarMatrizadorModal = document.getElementById('cambiarMatrizadorModal');
+    if (cambiarMatrizadorModal) {
+      cambiarMatrizadorModal.addEventListener('show.bs.modal', function (event) {
+        // Botón que activó el modal
+        const button = event.relatedTarget;
+        // Extraer información de los atributos data-*
+        const documentoId = button.getAttribute('data-documento-id');
+        const matrizadorActualId = button.getAttribute('data-matrizador-actual-id');
+        const matrizadorActualNombre = button.getAttribute('data-matrizador-actual-nombre');
+        
+        // Actualizar los campos del modal si vienen nuevos datos del botón
+        if (documentoId) document.getElementById('documentoId').value = documentoId;
+        
+        if (matrizadorActualNombre) {
+          document.getElementById('matrizadorActual').value = matrizadorActualNombre;
+        }
+      });
+    }
+  });
+</script> 

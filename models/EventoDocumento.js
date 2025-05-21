@@ -30,7 +30,7 @@ const EventoDocumento = sequelize.define('EventoDocumento', {
     type: DataTypes.STRING,
     allowNull: false,
     validate: {
-      isIn: [['creacion', 'cambio_estado', 'entrega', 'cancelacion', 'edicion', 'otro', 'verificacion_codigo', 'verificacion_llamada', 'modificacion']]
+      isIn: [['creacion', 'cambio_estado', 'entrega', 'cancelacion', 'edicion', 'otro', 'verificacion_codigo', 'verificacion_llamada', 'modificacion', 'pago', 'confirmacion_pago', 'tipoEvento']]
     }
   },
   

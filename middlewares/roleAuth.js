@@ -25,11 +25,17 @@ module.exports = function roleAuth(rolesPermitidos) {
       return next();
     }
     
+    // Regla especial: Si la ruta comienza con '/caja' y el usuario es caja, permitir acceso
+    if (req.path.startsWith('/caja') && req.matrizador.rol === 'caja') {
+      return next();
+    }
+    
     console.log(`Acceso denegado: El usuario ${req.matrizador.nombre} con rol '${req.matrizador.rol}' intentó acceder a la ruta ${req.originalUrl} que requiere alguno de estos roles: ${rolesPermitidos.join(', ')}`);
     
     // Si no tiene permiso, renderizar página de acceso denegado con el layout correspondiente
     const layout = req.matrizador.rol === 'matrizador' ? 'matrizador' : 
-                   req.matrizador.rol === 'recepcion' ? 'recepcion' : 'admin';
+                   req.matrizador.rol === 'recepcion' ? 'recepcion' : 
+                   req.matrizador.rol === 'caja' ? 'caja' : 'admin';
                    
     return res.status(403).render('acceso_denegado', {
       layout,

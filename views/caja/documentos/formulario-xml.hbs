@@ -1,0 +1,77 @@
+<div class="card">
+  <div class="card-header">
+    <i class="fas fa-file-code me-2"></i> Cargar Archivo XML
+  </div>
+  <div class="card-body">
+    <div class="alert alert-info mb-4">
+      <div class="d-flex align-items-center">
+        <div class="me-3">
+          <i class="fas fa-info-circle fa-2x"></i>
+        </div>
+        <div>
+          <h5 class="alert-heading mb-1">Carga desde Facturación Electrónica</h5>
+          <p class="mb-0">Cargue el archivo XML de facturación electrónica para extraer automáticamente los datos del documento.</p>
+        </div>
+      </div>
+    </div>
+    
+    <form id="xmlUploadForm" action="/caja/documentos/procesar-xml" method="POST" enctype="multipart/form-data">
+      <div class="mb-4">
+        <label for="xmlFile" class="form-label">Seleccionar archivo XML</label>
+        <input type="file" class="form-control" id="xmlFile" name="xmlFile" accept=".xml" required>
+        <div class="form-text">Solo se permiten archivos con extensión .xml</div>
+      </div>
+      
+      <div class="row mb-4">
+        <div class="col-md-6">
+          <div class="mb-3">
+            <label for="idMatrizador" class="form-label">Matrizador Asignado (Opcional)</label>
+            <select class="form-select" id="idMatrizador" name="idMatrizador">
+              <option value="" selected>Seleccionar después de procesar XML</option>
+              {{#each matrizadores}}
+              <option value="{{this.id}}">{{this.nombre}}</option>
+              {{/each}}
+            </select>
+            <div class="form-text">Puede asignar un matrizador ahora o después de procesar el XML</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="d-flex justify-content-end">
+        <button type="button" class="btn btn-outline-secondary me-2" onclick="window.location.href='/caja/documentos'">
+          Cancelar
+        </button>
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-upload me-1"></i> Procesar XML
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Validación de formulario
+    const form = document.getElementById('xmlUploadForm');
+    const fileInput = document.getElementById('xmlFile');
+    
+    form.addEventListener('submit', function(event) {
+      // Verificar que se haya seleccionado un archivo
+      if (!fileInput.files || fileInput.files.length === 0) {
+        event.preventDefault();
+        alert('Por favor, seleccione un archivo XML para continuar.');
+        return false;
+      }
+      
+      // Verificar extensión del archivo
+      const fileName = fileInput.files[0].name;
+      if (!fileName.toLowerCase().endsWith('.xml')) {
+        event.preventDefault();
+        alert('Solo se permiten archivos con extensión .xml');
+        return false;
+      }
+      
+      return true;
+    });
+  });
+</script> 

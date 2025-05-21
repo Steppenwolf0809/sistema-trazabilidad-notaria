@@ -7,6 +7,9 @@ const Matrizador = require('./Matrizador');
 const EventoDocumento = require('./EventoDocumento');
 const RegistroAuditoria = require('./RegistroAuditoria');
 const DocumentoRelacion = require('./DocumentoRelacion');
+const CambioMatrizador = require('./CambioMatrizador');
+const AutorizacionEntrega = require('./AutorizacionEntrega');
+const DocumentosRelacionados = require('./DocumentosRelacionados');
 
 // Relaciones entre modelos
 
@@ -68,10 +71,106 @@ DocumentoRelacion.belongsTo(Matrizador, {
   as: 'creador'
 });
 
+// Relaciones de CambioMatrizador
+Documento.hasMany(CambioMatrizador, {
+  foreignKey: 'documentoId',
+  as: 'cambiosMatrizador'
+});
+CambioMatrizador.belongsTo(Documento, {
+  foreignKey: 'documentoId',
+  as: 'documento'
+});
+
+Matrizador.hasMany(CambioMatrizador, {
+  foreignKey: 'matrizadorAnteriorId',
+  as: 'cambiosDesde'
+});
+CambioMatrizador.belongsTo(Matrizador, {
+  foreignKey: 'matrizadorAnteriorId',
+  as: 'matrizadorAnterior'
+});
+
+Matrizador.hasMany(CambioMatrizador, {
+  foreignKey: 'matrizadorNuevoId',
+  as: 'cambiosHacia'
+});
+CambioMatrizador.belongsTo(Matrizador, {
+  foreignKey: 'matrizadorNuevoId',
+  as: 'matrizadorNuevo'
+});
+
+Matrizador.hasMany(CambioMatrizador, {
+  foreignKey: 'usuarioId',
+  as: 'cambiosRealizados'
+});
+CambioMatrizador.belongsTo(Matrizador, {
+  foreignKey: 'usuarioId',
+  as: 'usuarioCambio'
+});
+
+// Relaciones de AutorizacionEntrega
+Documento.hasMany(AutorizacionEntrega, {
+  foreignKey: 'documentoId',
+  as: 'autorizacionesEntrega'
+});
+AutorizacionEntrega.belongsTo(Documento, {
+  foreignKey: 'documentoId',
+  as: 'documento'
+});
+
+Matrizador.hasMany(AutorizacionEntrega, {
+  foreignKey: 'usuarioId',
+  as: 'entregasRealizadas'
+});
+AutorizacionEntrega.belongsTo(Matrizador, {
+  foreignKey: 'usuarioId',
+  as: 'usuario'
+});
+
+Matrizador.hasMany(AutorizacionEntrega, {
+  foreignKey: 'autorizadorId',
+  as: 'autorizacionesOtorgadas'
+});
+AutorizacionEntrega.belongsTo(Matrizador, {
+  foreignKey: 'autorizadorId',
+  as: 'autorizador'
+});
+
+// Relaciones de DocumentosRelacionados
+Documento.hasMany(DocumentosRelacionados, {
+  foreignKey: 'documentoPrincipalId',
+  as: 'documentosSecundarios'
+});
+DocumentosRelacionados.belongsTo(Documento, {
+  foreignKey: 'documentoPrincipalId',
+  as: 'documentoPrincipal'
+});
+
+Documento.hasMany(DocumentosRelacionados, {
+  foreignKey: 'documentoSecundarioId',
+  as: 'relDocumentosPrincipales'
+});
+DocumentosRelacionados.belongsTo(Documento, {
+  foreignKey: 'documentoSecundarioId',
+  as: 'documentoSecundario'
+});
+
+Matrizador.hasMany(DocumentosRelacionados, {
+  foreignKey: 'usuarioId',
+  as: 'relacionesDocumentosCreadas'
+});
+DocumentosRelacionados.belongsTo(Matrizador, {
+  foreignKey: 'usuarioId',
+  as: 'usuario'
+});
+
 module.exports = {
   Documento,
   Matrizador,
   EventoDocumento,
   RegistroAuditoria,
-  DocumentoRelacion
+  DocumentoRelacion,
+  CambioMatrizador,
+  AutorizacionEntrega,
+  DocumentosRelacionados
 }; 

@@ -46,7 +46,7 @@ const Matrizador = sequelize.define('Matrizador', {
   
   // Rol del usuario en el sistema
   rol: {
-    type: DataTypes.ENUM('admin', 'matrizador', 'recepcion', 'consulta'),
+    type: DataTypes.ENUM('admin', 'matrizador', 'recepcion', 'consulta', 'caja'),
     allowNull: false,
     defaultValue: 'matrizador'
   },
@@ -61,6 +61,13 @@ const Matrizador = sequelize.define('Matrizador', {
   // Contraseña (hasheada)
   password: {
     type: DataTypes.STRING,
+    allowNull: true
+  },
+  
+  // Última fecha de acceso
+  ultimoAcceso: {
+    type: DataTypes.DATE,
+    field: 'ultimo_acceso',
     allowNull: true
   }
 }, {

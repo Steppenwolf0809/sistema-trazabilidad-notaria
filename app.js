@@ -229,11 +229,13 @@ const documentoRoutes = require('./routes/documentoRoutes');
 const matrizadorRoutes = require('./routes/matrizadorRoutes');
 const documentoRelacionRoutes = require('./routes/documentoRelacionRoutes');
 const recepcionRoutes = require('./routes/recepcionRoutes');
+const cajaRoutes = require('./routes/cajaRoutes');
 app.use('/api/documentos', documentoRoutes);
 app.use('/api/matrizadores', matrizadorRoutes);
 app.use('/api/documento-relaciones', documentoRelacionRoutes);
 app.use('/matrizador', matrizadorRoutes);
 app.use('/recepcion', recepcionRoutes);
+app.use('/caja', cajaRoutes);
 
 // Rutas administrativas
 const adminRoutes = require('./routes/adminRoutes');
@@ -267,6 +269,8 @@ app.get('/', (req, res) => {
         return res.redirect('/matrizador');
       case 'recepcion':
         return res.redirect('/recepcion');
+      case 'caja':
+        return res.redirect('/caja');
       default:
         return res.redirect('/login');
     }

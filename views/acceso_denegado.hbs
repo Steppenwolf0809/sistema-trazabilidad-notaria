@@ -28,6 +28,10 @@
               <a href="/recepcion" class="btn btn-primary">
                 <i class="fas fa-home me-2"></i>Volver al Dashboard Recepción
               </a>
+            {{else if (eq userRole 'caja')}}
+              <a href="/caja" class="btn btn-primary">
+                <i class="fas fa-home me-2"></i>Volver al Dashboard Caja
+              </a>
             {{else}}
               <a href="/" class="btn btn-primary">
                 <i class="fas fa-home me-2"></i>Volver al Inicio

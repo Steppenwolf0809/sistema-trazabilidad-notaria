@@ -1,0 +1,186 @@
+<div class="card">
+  <div class="card-header">
+    <i class="fas fa-file-code me-2"></i> Confirmar Datos del XML
+  </div>
+  <div class="card-body">
+    <div class="alert alert-success mb-4">
+      <div class="d-flex align-items-center">
+        <div class="me-3">
+          <i class="fas fa-check-circle fa-2x"></i>
+        </div>
+        <div>
+          <h5 class="alert-heading mb-1">Archivo XML procesado correctamente</h5>
+          <p class="mb-0">El archivo <strong>{{xmlFileName}}</strong> ha sido procesado. Verifique los datos extraídos antes de registrar el documento.</p>
+        </div>
+      </div>
+    </div>
+    
+    {{#if mensajeMatrizador}}
+    <div class="alert alert-info mb-4">
+      <i class="fas fa-info-circle me-1"></i> {{mensajeMatrizador}}
+    </div>
+    {{/if}}
+    
+    <form id="confirmForm" action="/caja/documentos/registrar-xml" method="POST">
+      <!-- Sección de información del documento -->
+      <div class="row">
+        <div class="col-12 mb-3">
+          <h5 class="border-bottom pb-2">Información del Documento</h5>
+        </div>
+        
+        <div class="col-md-4 mb-3">
+          <label for="tipoDocumento" class="form-label">Tipo de Documento</label>
+          <select class="form-select" id="tipoDocumento" name="tipoDocumento" required>
+            <option value="" disabled>Seleccionar tipo...</option>
+            <option value="Escritura Pública" {{#if (eq documento.tipoDocumento "Escritura Pública")}}selected{{/if}}>Escritura Pública</option>
+            <option value="Reconocimiento de Firma" {{#if (eq documento.tipoDocumento "Reconocimiento de Firma")}}selected{{/if}}>Reconocimiento de Firma</option>
+            <option value="Arrendamiento" {{#if (eq documento.tipoDocumento "Arrendamiento")}}selected{{/if}}>Arrendamiento</option>
+            <option value="Certificación" {{#if (eq documento.tipoDocumento "Certificación")}}selected{{/if}}>Certificación</option>
+            <option value="Copia de Archivo" {{#if (eq documento.tipoDocumento "Copia de Archivo")}}selected{{/if}}>Copia de Archivo</option>
+            <option value="Marginación" {{#if (eq documento.tipoDocumento "Marginación")}}selected{{/if}}>Marginación</option>
+            <option value="Otro" {{#if (eq documento.tipoDocumento "Otro")}}selected{{/if}}>Otro</option>
+          </select>
+        </div>
+        
+        <div class="col-md-4 mb-3">
+          <label for="numeroLibro" class="form-label">Número de Libro / Código</label>
+          <input type="text" class="form-control" id="numeroLibro" name="numeroLibro" value="{{documento.numeroLibro}}">
+        </div>
+        
+        <div class="col-md-4 mb-3">
+          <label for="fechaEmision" class="form-label">Fecha de Emisión</label>
+          <input type="text" class="form-control" id="fechaEmision" name="fechaEmision" value="{{documento.fechaEmision}}">
+        </div>
+      </div>
+      
+      <!-- Sección de información del cliente -->
+      <div class="row mt-4">
+        <div class="col-12 mb-3">
+          <h5 class="border-bottom pb-2">Información del Cliente</h5>
+        </div>
+        
+        <div class="col-md-6 mb-3">
+          <label for="nombreCliente" class="form-label">Nombre Completo</label>
+          <input type="text" class="form-control" id="nombreCliente" name="nombreCliente" value="{{documento.nombreCliente}}" required>
+        </div>
+        
+        <div class="col-md-6 mb-3">
+          <label for="identificacionCliente" class="form-label">Identificación</label>
+          <input type="text" class="form-control" id="identificacionCliente" name="identificacionCliente" value="{{documento.identificacionCliente}}" required>
+        </div>
+        
+        <div class="col-md-6 mb-3">
+          <label for="emailCliente" class="form-label">Correo Electrónico</label>
+          <input type="email" class="form-control" id="emailCliente" name="emailCliente" value="{{documento.emailCliente}}">
+        </div>
+        
+        <div class="col-md-6 mb-3">
+          <label for="telefonoCliente" class="form-label">Teléfono</label>
+          <input type="tel" class="form-control" id="telefonoCliente" name="telefonoCliente" value="{{documento.telefonoCliente}}">
+        </div>
+      </div>
+      
+      <!-- Sección de facturación -->
+      <div class="row mt-4">
+        <div class="col-12 mb-3">
+          <h5 class="border-bottom pb-2">Información de Facturación</h5>
+        </div>
+        
+        <div class="col-md-4 mb-3">
+          <label for="numeroFactura" class="form-label">Número de Factura</label>
+          <input type="text" class="form-control" id="numeroFactura" name="numeroFactura" value="{{documento.numeroFactura}}">
+        </div>
+        
+        <div class="col-md-4 mb-3">
+          <label for="valorFactura" class="form-label">Valor ($)</label>
+          <input type="number" class="form-control" id="valorFactura" name="valorFactura" min="0" step="0.01" value="{{documento.valorFactura}}">
+        </div>
+        
+        <div class="col-md-4 mb-3">
+          <label for="estadoPago" class="form-label">Estado de Pago</label>
+          <select class="form-select" id="estadoPago" name="estadoPago">
+            <option value="pendiente" selected>Pendiente</option>
+            <option value="pagado">Pagado</option>
+          </select>
+        </div>
+        
+        <div class="col-md-4 mb-3">
+          <label for="metodoPago" class="form-label">Método de Pago</label>
+          <select class="form-select" id="metodoPago" name="metodoPago">
+            <option value="" selected disabled>Seleccionar método...</option>
+            <option value="efectivo">Efectivo</option>
+            <option value="tarjeta">Tarjeta de Crédito/Débito</option>
+            <option value="transferencia">Transferencia Bancaria</option>
+            <option value="cheque">Cheque</option>
+            <option value="otro">Otro</option>
+          </select>
+        </div>
+      </div>
+      
+      <!-- Sección del matrizador -->
+      <div class="row mt-4">
+        <div class="col-12 mb-3">
+          <h5 class="border-bottom pb-2">Matrizador</h5>
+        </div>
+        
+        <div class="col-md-6 mb-3">
+          <label for="idMatrizador" class="form-label">Matrizador Asignado</label>
+          <select class="form-select" id="idMatrizador" name="idMatrizador" required>
+            <option value="" disabled>Seleccionar matrizador...</option>
+            {{#each matrizadores}}
+            <option value="{{this.id}}" {{#if (eq ../documento.idMatrizador this.id)}}selected{{/if}}>{{this.nombre}}</option>
+            {{/each}}
+          </select>
+        </div>
+        
+        {{#if documento.nombreMatrizador}}
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Nombre del Matrizador en XML</label>
+          <input type="text" class="form-control bg-light" value="{{documento.nombreMatrizador}}" readonly>
+        </div>
+        {{/if}}
+      </div>
+      
+      <!-- Comparecientes ocultos -->
+      <input type="hidden" name="comparecientes" value="[]">
+      
+      <div class="d-flex justify-content-end mt-4">
+        <button type="button" class="btn btn-outline-secondary me-2" onclick="window.location.href='/caja/documentos/nuevo-xml'">
+          Cancelar
+        </button>
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-save me-1"></i> Registrar Documento
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Validaciones del formulario
+    const form = document.getElementById('confirmForm');
+    const estadoPagoSelect = document.getElementById('estadoPago');
+    const metodoPagoSelect = document.getElementById('metodoPago');
+    
+    // Si el estado es "pagado", requerir método de pago
+    estadoPagoSelect.addEventListener('change', function() {
+      if (this.value === 'pagado') {
+        metodoPagoSelect.setAttribute('required', 'required');
+      } else {
+        metodoPagoSelect.removeAttribute('required');
+      }
+    });
+    
+    // Validación al enviar
+    form.addEventListener('submit', function(event) {
+      if (estadoPagoSelect.value === 'pagado' && !metodoPagoSelect.value) {
+        event.preventDefault();
+        alert('Si el pago está marcado como "Pagado", debe seleccionar un método de pago.');
+        return false;
+      }
+      
+      return true;
+    });
+  });
+</script> 

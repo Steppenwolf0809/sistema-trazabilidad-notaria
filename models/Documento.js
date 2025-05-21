@@ -23,13 +23,7 @@ const Documento = sequelize.define('Documento', {
     unique: true,
     allowNull: false,
     validate: {
-      notEmpty: true,
-      // Asegurar que el código comienza con el prefijo requerido
-      isValidBarcode(value) {
-        if (!value.startsWith('20251701018')) {
-          throw new Error('El código de barras debe comenzar con el prefijo 20251701018');
-        }
-      }
+      notEmpty: true
     }
   },
   
@@ -145,6 +139,84 @@ const Documento = sequelize.define('Documento', {
       model: 'matrizadores',
       key: 'id'
     }
+  },
+  
+  // Número de factura asociada al documento
+  numeroFactura: {
+    type: DataTypes.STRING,
+    field: 'numero_factura',
+    allowNull: true
+  },
+  
+  // Valor total de la factura
+  valorFactura: {
+    type: DataTypes.DECIMAL(10, 2),
+    field: 'valor_factura',
+    allowNull: true
+  },
+  
+  // Fecha de emisión de la factura
+  fechaFactura: {
+    type: DataTypes.DATE,
+    field: 'fecha_factura',
+    allowNull: true
+  },
+  
+  // Estado del pago (Pagado/Pendiente)
+  estadoPago: {
+    type: DataTypes.ENUM('pagado', 'pendiente'),
+    field: 'estado_pago',
+    defaultValue: 'pendiente'
+  },
+  
+  // Método de pago utilizado
+  metodoPago: {
+    type: DataTypes.ENUM('pendiente', 'efectivo', 'tarjeta_credito', 'tarjeta_debito', 'transferencia', 'otro'),
+    field: 'metodo_pago',
+    defaultValue: 'pendiente',
+    allowNull: true
+  },
+  
+  // Indica si se debe omitir el envío de notificaciones
+  omitirNotificacion: {
+    type: DataTypes.BOOLEAN,
+    field: 'omitir_notificacion',
+    defaultValue: false
+  },
+  
+  // Razón por la que se omite la notificación
+  motivoOmision: {
+    type: DataTypes.ENUM('entrega_directa', 'parte_expediente', 'cliente_rechaza', 'otro'),
+    field: 'motivo_omision',
+    allowNull: true
+  },
+  
+  // Detalles adicionales cuando el motivo de omisión es "otro"
+  detalleOmision: {
+    type: DataTypes.TEXT,
+    field: 'detalle_omision',
+    allowNull: true
+  },
+  
+  // Indica si el documento es secundario y forma parte de otro expediente
+  esDocumentoSecundario: {
+    type: DataTypes.BOOLEAN,
+    field: 'es_documento_secundario',
+    defaultValue: false
+  },
+  
+  // ID del usuario que creó el documento (puede ser diferente del matrizador)
+  idUsuarioCreador: {
+    type: DataTypes.INTEGER,
+    field: 'id_usuario_creador',
+    allowNull: true
+  },
+  
+  // Rol del usuario que creó el documento
+  rolUsuarioCreador: {
+    type: DataTypes.ENUM('admin', 'matrizador', 'recepcion', 'caja'),
+    field: 'rol_usuario_creador',
+    allowNull: true
   }
 }, {
   // Opciones del modelo

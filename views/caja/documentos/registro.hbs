@@ -1,0 +1,284 @@
+<div class="card">
+  <div class="card-header">
+    <i class="fas fa-file-alt me-2"></i> Registro de Nuevo Documento
+  </div>
+  <div class="card-body">
+    <div class="alert alert-info mb-4">
+      <div class="d-flex align-items-center">
+        <div class="me-3">
+          <i class="fas fa-info-circle fa-2x"></i>
+        </div>
+        <div>
+          <h5 class="alert-heading mb-1">Opción Alternativa</h5>
+          <p class="mb-0">Si tienes un archivo XML de facturación electrónica, puedes usarlo para completar automáticamente los datos del documento.</p>
+        </div>
+        <div class="ms-auto">
+          <a href="/caja/documentos/nuevo-xml" class="btn btn-primary">
+            <i class="fas fa-file-code me-1"></i> Cargar XML
+          </a>
+        </div>
+      </div>
+    </div>
+    
+    <form id="registroDocumentoForm" action="/caja/documentos/registro" method="POST">
+      
+      <!-- Sección de información del documento -->
+      <div class="row">
+        <div class="col-12 mb-3">
+          <h5 class="border-bottom pb-2">Información del Documento</h5>
+        </div>
+        
+        <div class="col-md-4 mb-3">
+          <label for="codigoBarras" class="form-label">Código de Barras</label>
+          <input type="text" class="form-control" id="codigoBarras" name="codigoBarras" placeholder="Escanear o ingresar código" required>
+        </div>
+        
+        <div class="col-md-4 mb-3">
+          <label for="tipoDocumento" class="form-label">Tipo de Documento</label>
+          <select class="form-select" id="tipoDocumento" name="tipoDocumento" required>
+            <option value="" selected disabled>Seleccionar tipo...</option>
+            <option value="Escritura Pública">Escritura Pública</option>
+            <option value="Reconocimiento de Firma">Reconocimiento de Firma</option>
+            <option value="Arrendamiento">Arrendamiento</option>
+            <option value="Certificación">Certificación</option>
+            <option value="Copia de Archivo">Copia de Archivo</option>
+            <option value="Marginación">Marginación</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+        
+        <div class="col-md-12 mb-3">
+          <label for="notas" class="form-label">Notas o Descripción</label>
+          <textarea class="form-control" id="notas" name="notas" rows="2"></textarea>
+        </div>
+      </div>
+      
+      <!-- Sección de información del cliente -->
+      <div class="row mt-4">
+        <div class="col-12 mb-3">
+          <h5 class="border-bottom pb-2">Información del Cliente</h5>
+        </div>
+        
+        <div class="col-md-6 mb-3">
+          <label for="nombreCliente" class="form-label">Nombre Completo</label>
+          <input type="text" class="form-control" id="nombreCliente" name="nombreCliente" required>
+        </div>
+        
+        <div class="col-md-6 mb-3">
+          <label for="identificacionCliente" class="form-label">Identificación</label>
+          <input type="text" class="form-control" id="identificacionCliente" name="identificacionCliente" required>
+        </div>
+        
+        <div class="col-md-6 mb-3">
+          <label for="emailCliente" class="form-label">Correo Electrónico</label>
+          <input type="email" class="form-control" id="emailCliente" name="emailCliente">
+        </div>
+        
+        <div class="col-md-6 mb-3">
+          <label for="telefonoCliente" class="form-label">Teléfono</label>
+          <input type="tel" class="form-control" id="telefonoCliente" name="telefonoCliente">
+          <div class="form-text">Para notificaciones de entrega</div>
+        </div>
+      </div>
+      
+      <!-- Sección de facturación -->
+      <div class="row mt-4">
+        <div class="col-12 mb-3">
+          <h5 class="border-bottom pb-2">
+            Información de Facturación
+            <div class="form-check form-switch float-end">
+              <input class="form-check-input" type="checkbox" id="habilitarFacturacion" checked>
+              <label class="form-check-label" for="habilitarFacturacion">Habilitar facturación</label>
+            </div>
+          </h5>
+        </div>
+        
+        <div id="seccionFacturacion">
+          <div class="col-md-4 mb-3">
+            <label for="numeroFactura" class="form-label">Número de Factura</label>
+            <input type="text" class="form-control" id="numeroFactura" name="numeroFactura">
+          </div>
+          
+          <div class="col-md-4 mb-3">
+            <label for="valorFactura" class="form-label">Valor ($)</label>
+            <input type="number" class="form-control" id="valorFactura" name="valorFactura" min="0" step="0.01">
+          </div>
+          
+          <div class="col-md-4 mb-3">
+            <label for="fechaFactura" class="form-label">Fecha</label>
+            <input type="date" class="form-control" id="fechaFactura" name="fechaFactura">
+          </div>
+          
+          <div class="col-md-4 mb-3">
+            <label for="estadoPago" class="form-label">Estado de Pago</label>
+            <select class="form-select" id="estadoPago" name="estadoPago">
+              <option value="pendiente">Pendiente</option>
+              <option value="pagado">Pagado</option>
+              <option value="anulado">Anulado</option>
+            </select>
+          </div>
+          
+          <div class="col-md-4 mb-3">
+            <label for="metodoPago" class="form-label">Método de Pago</label>
+            <select class="form-select" id="metodoPago" name="metodoPago">
+              <option value="pendiente" selected>Pendiente</option>
+              <option value="efectivo">Efectivo</option>
+              <option value="tarjeta_credito">Tarjeta de Crédito</option>
+              <option value="tarjeta_debito">Tarjeta de Débito</option>
+              <option value="transferencia">Transferencia Bancaria</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+          
+          <div class="col-md-4 mb-3">
+            <div class="form-check mt-4">
+              <input class="form-check-input" type="checkbox" id="omitirNotificacion" name="omitirNotificacion">
+              <label class="form-check-label" for="omitirNotificacion">
+                Omitir notificación al cliente
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Sección de comparecientes adicionales -->
+      <div class="row mt-4">
+        <div class="col-12 mb-3">
+          <h5 class="border-bottom pb-2">
+            Comparecientes Adicionales
+            <button type="button" id="agregarCompareciente" class="btn btn-sm btn-outline-primary float-end">
+              <i class="fas fa-plus"></i> Agregar
+            </button>
+          </h5>
+        </div>
+        
+        <div id="comparecientesContainer" class="col-12">
+          <!-- Aquí se agregarán dinámicamente los comparecientes -->
+        </div>
+      </div>
+      
+      <!-- Sección del matrizador -->
+      <div class="row mt-4">
+        <div class="col-12 mb-3">
+          <h5 class="border-bottom pb-2">Matrizador</h5>
+        </div>
+        
+        <div class="col-md-6 mb-3">
+          <label for="idMatrizador" class="form-label">Matrizador Asignado</label>
+          <select class="form-select" id="idMatrizador" name="idMatrizador" required>
+            <option value="" selected disabled>Seleccionar matrizador...</option>
+            {{#each matrizadores}}
+            <option value="{{this.id}}">{{this.nombre}}</option>
+            {{/each}}
+          </select>
+        </div>
+      </div>
+      
+      <div class="d-flex justify-content-end mt-4">
+        <button type="button" class="btn btn-outline-secondary me-2" onclick="window.location.href='/caja/documentos'">
+          Cancelar
+        </button>
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-save me-1"></i> Registrar Documento
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Template para nuevos comparecientes -->
+<template id="comparecienteTemplate">
+  <div class="compareciente-item border rounded p-3 mb-3">
+    <div class="d-flex justify-content-between mb-2">
+      <h6 class="mb-0">Compareciente #<span class="numero-compareciente"></span></h6>
+      <button type="button" class="btn btn-sm btn-outline-danger eliminar-compareciente">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="row">
+      <div class="col-md-6 mb-3">
+        <label class="form-label">Nombre Completo</label>
+        <input type="text" class="form-control" name="comparecientes[__index__][nombre]" required>
+      </div>
+      <div class="col-md-6 mb-3">
+        <label class="form-label">Identificación</label>
+        <input type="text" class="form-control" name="comparecientes[__index__][identificacion]" required>
+      </div>
+      <div class="col-md-12 mb-0">
+        <label class="form-label">Rol o participación</label>
+        <input type="text" class="form-control" name="comparecientes[__index__][rol]">
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Validación de formulario
+    const form = document.querySelector('form');
+    const telefonoInput = document.getElementById('telefonoCliente');
+    const emailInput = document.getElementById('emailCliente');
+    
+    // Manejo de la sección de facturación
+    const habilitarFacturacionCheck = document.getElementById('habilitarFacturacion');
+    const seccionFacturacion = document.getElementById('seccionFacturacion');
+    const metodoPagoSelect = document.getElementById('metodoPago');
+    const estadoPagoSelect = document.getElementById('estadoPago');
+    
+    // Mostrar/ocultar sección de facturación
+    habilitarFacturacionCheck.addEventListener('change', function() {
+      if (this.checked) {
+        seccionFacturacion.style.display = 'block';
+      } else {
+        seccionFacturacion.style.display = 'none';
+      }
+    });
+    
+    // Si el estado es "pagado", exigir método de pago
+    estadoPagoSelect.addEventListener('change', function() {
+      if (this.value === 'pagado') {
+        metodoPagoSelect.setAttribute('required', 'required');
+      } else {
+        metodoPagoSelect.removeAttribute('required');
+      }
+    });
+    
+    // Manejo de comparecientes
+    const comparecientesContainer = document.getElementById('comparecientesContainer');
+    const agregarComparecienteBtn = document.getElementById('agregarCompareciente');
+    const comparecienteTemplate = document.getElementById('comparecienteTemplate');
+    let contadorComparecientes = 0;
+    
+    agregarComparecienteBtn.addEventListener('click', function() {
+      // Clonar el template
+      const nuevoCompareciente = document.importNode(comparecienteTemplate.content, true);
+      
+      // Actualizar índice y número
+      contadorComparecientes++;
+      nuevoCompareciente.querySelector('.numero-compareciente').textContent = contadorComparecientes;
+      
+      // Actualizar nombres de campos reemplazando __index__ con el contador actual
+      const inputs = nuevoCompareciente.querySelectorAll('input');
+      inputs.forEach(input => {
+        input.name = input.name.replace('__index__', contadorComparecientes - 1);
+      });
+      
+      // Agregar evento para eliminar
+      const btnEliminar = nuevoCompareciente.querySelector('.eliminar-compareciente');
+      btnEliminar.addEventListener('click', function() {
+        this.closest('.compareciente-item').remove();
+      });
+      
+      // Agregar al contenedor
+      comparecientesContainer.appendChild(nuevoCompareciente);
+    });
+    
+    // Al enviar el formulario
+    form.addEventListener('submit', function(event) {
+      // Validar datos aquí si es necesario
+      
+      // Si el formulario es válido, enviarlo
+      return true;
+    });
+  });
+</script> 
