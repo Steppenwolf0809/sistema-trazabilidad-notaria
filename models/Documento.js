@@ -184,6 +184,13 @@ const Documento = sequelize.define('Documento', {
     defaultValue: false
   },
   
+  // Indica si el documento ya fue visto por el matrizador
+  visto_por_matrizador: {
+    type: DataTypes.BOOLEAN,
+    field: 'visto_por_matrizador',
+    defaultValue: false
+  },
+  
   // Razón por la que se omite la notificación
   motivoOmision: {
     type: DataTypes.ENUM('entrega_directa', 'parte_expediente', 'cliente_rechaza', 'otro'),

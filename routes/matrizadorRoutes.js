@@ -43,6 +43,9 @@ router.post('/documentos/completar-entrega/:id', roleAuth(['matrizador', 'admin'
 // Marcar documento como listo para entrega
 router.post('/documentos/marcar-listo', roleAuth(['matrizador', 'admin']), matrizadorController.marcarDocumentoListo);
 
+// Marcar documento como visto
+router.post('/documentos/marcar-visto/:id', roleAuth(['matrizador', 'admin']), matrizadorController.marcarDocumentoVisto);
+
 // Rutas de logout - Disponible para todos los usuarios
 router.get('/logout', matrizadorController.logout);
 

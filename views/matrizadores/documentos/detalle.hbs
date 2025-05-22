@@ -13,6 +13,10 @@
             <i class="fas fa-arrow-left me-1"></i> Volver
           </a>
           
+          <a href="/matrizador/documentos/editar/{{documento.id}}" class="btn btn-primary btn-sm ms-1">
+            <i class="fas fa-edit me-1"></i> Editar Documento
+          </a>
+          
           {{#if (eq documento.estado "en_proceso")}}
           <button type="button" class="btn btn-success btn-sm ms-1" onclick="marcarListo({{documento.id}})">
             <i class="fas fa-check me-1"></i> Marcar como listo
@@ -66,12 +70,12 @@
             <div class="row mb-3">
               <div class="col-md-6">
                 <label class="form-label small text-muted">Fecha de Registro:</label>
-                <div class="form-control bg-light">{{formatDate documento.createdAt}}</div>
+                <div class="form-control bg-light">{{#if (formatDate documento.createdAt)}}{{formatDate documento.createdAt}}{{else}}{{documento.createdAt}}{{/if}}</div>
               </div>
               
               <div class="col-md-6">
                 <label class="form-label small text-muted">Última Actualización:</label>
-                <div class="form-control bg-light">{{formatDate documento.updatedAt}}</div>
+                <div class="form-control bg-light">{{#if (formatDate documento.updatedAt)}}{{formatDate documento.updatedAt}}{{else}}{{documento.updatedAt}}{{/if}}</div>
               </div>
             </div>
           </div>
@@ -107,6 +111,30 @@
             </div>
           </div>
         </div>
+        
+        <!-- Información de Entrega -->
+        {{#if (eq documento.estado "listo_para_entrega")}}        
+        <div class="row mt-4">
+          <div class="col-md-12">
+            <h6 class="border-bottom pb-2 mb-3">Información de Entrega</h6>
+            <div class="card bg-light shadow-sm">
+              <div class="card-body text-center">
+                <p class="lead mb-2">Utilice el siguiente código para confirmar la entrega al cliente:</p>
+                <h2 class="display-4 text-success fw-bold">{{documento.codigoVerificacion}}</h2>
+                <p class="small text-muted mt-2">Este código se genera cuando el documento está listo para ser entregado y es único para esta transacción.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        {{else if (eq documento.estado "en_proceso")}}
+        <div class="row mt-4">
+          <div class="col-md-12">
+            <div class="alert alert-info">
+              <i class="fas fa-info-circle me-2"></i> El código de entrega se generará automáticamente cuando el documento sea marcado como "Listo para Entrega".
+            </div>
+          </div>
+        </div>
+        {{/if}}
         
         <!-- Notas -->
         <div class="row mt-4">
@@ -221,6 +249,28 @@
     const modal = new bootstrap.Modal(document.getElementById('marcarListoModal'));
     modal.show();
   }
+
+  // Marcar documento como visto
+  document.addEventListener('DOMContentLoaded', function() {
+    {{#if documento}}
+    {{#unless documento.visto_por_matrizador}}
+    // Enviar petición para marcar como visto
+    fetch('/matrizador/documentos/marcar-visto/{{documento.id}}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      console.log('Documento marcado como visto:', data);
+    })
+    .catch(error => {
+      console.error('Error al marcar documento como visto:', error);
+    });
+    {{/unless}}
+    {{/if}}
+  });
 </script>
 {{else}}
 <div class="alert alert-warning">

@@ -55,7 +55,7 @@
             <div class="col-md-6">
                 <div class="mb-3">
                     <label for="telefonoCliente" class="form-label">Teléfono del Cliente</label>
-                    <input type="tel" class="form-control" id="telefonoCliente" name="telefonoCliente" value="{{documento.telefonoCliente}}">
+                    <input type="tel" class="form-control" id="telefonoCliente" name="telefonoCliente" value="{{documento.telefonoCliente}}" pattern="[0-9+\-\s()]*" inputmode="numeric">
                 </div>
             </div>
         </div>
@@ -136,7 +136,7 @@ function validarTelefonoFrontend(telefono) {
 // Función de validación de email (reutilizable)
 function validarEmailFrontend(email) {
     if (!email) return { valido: true };
-    const regex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!regex.test(email)) {
         return { valido: false, mensaje: "Ingrese un correo electrónico válido (ejemplo@dominio.com)." };
     }

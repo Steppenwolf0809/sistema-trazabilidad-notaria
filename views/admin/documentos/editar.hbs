@@ -55,7 +55,7 @@
             <div class="col-md-6">
                 <div class="mb-3">
                     <label for="telefonoCliente" class="form-label">Teléfono del Cliente</label>
-                    <input type="tel" class="form-control" id="telefonoCliente" name="telefonoCliente" value="{{documento.telefonoCliente}}">
+                    <input type="tel" class="form-control" id="telefonoCliente" name="telefonoCliente" value="{{documento.telefonoCliente}}" pattern="[0-9+\-\s()]*" inputmode="numeric">
                 </div>
             </div>
         </div>

@@ -1555,6 +1555,57 @@ const matrizadorController = {
       res.redirect('/matrizador/documentos');
     }
   },
+
+  /**
+   * Marcar un documento como visto por el matrizador
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  marcarDocumentoVisto: async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      if (!id) {
+        return res.status(400).json({
+          exito: false,
+          mensaje: 'ID de documento no proporcionado'
+        });
+      }
+      
+      // Buscar el documento
+      const documento = await Documento.findByPk(id);
+      
+      if (!documento) {
+        return res.status(404).json({
+          exito: false,
+          mensaje: `No se encontró documento con ID ${id}`
+        });
+      }
+      
+      // Actualizar el campo visto_por_matrizador
+      await documento.update({ visto_por_matrizador: true });
+      
+      // Registrar evento
+      await EventoDocumento.create({
+        documentoId: id,
+        tipo: 'vista',
+        detalles: 'Documento visto por matrizador',
+        usuario: req.matrizador.nombre
+      });
+      
+      return res.status(200).json({
+        exito: true,
+        mensaje: 'Documento marcado como visto correctamente'
+      });
+    } catch (error) {
+      console.error('Error al marcar documento como visto:', error);
+      return res.status(500).json({
+        exito: false,
+        mensaje: 'Error al marcar el documento como visto',
+        error: error.message
+      });
+    }
+  },
 };
 
 module.exports = matrizadorController; 

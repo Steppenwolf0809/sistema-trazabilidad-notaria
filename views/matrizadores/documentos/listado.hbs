@@ -63,22 +63,28 @@
     
     <!-- Tabla de documentos -->
     <div class="table-responsive">
-      <table class="table table-hover table-striped">
+      <table class="table table-hover table-striped tabla-ordenable">
         <thead class="table-light">
           <tr>
-            <th>Código</th>
-            <th>Tipo</th>
-            <th>Cliente</th>
-            <th>Fecha</th>
-            <th>Estado</th>
+            <th class="ordenable" data-columna="codigo" data-tipo="texto">Código</th>
+            <th class="ordenable" data-columna="tipo" data-tipo="texto">Tipo</th>
+            <th class="ordenable" data-columna="cliente" data-tipo="texto">Cliente</th>
+            <th class="ordenable" data-columna="fecha" data-tipo="fecha">Fecha</th>
+            <th class="ordenable" data-columna="estado" data-tipo="estado">Estado</th>
+            <th>Código Entrega</th>
             <th>Acciones</th>
           </tr>
         </thead>
         <tbody>
           {{#each documentos}}
-          <tr>
+          <tr {{#unless this.visto_por_matrizador}}class="documento-nuevo"{{/unless}} data-id="{{this.id}}">
             <td><span class="small">{{this.codigoBarras}}</span></td>
-            <td>{{this.tipoDocumento}}</td>
+            <td>
+              {{this.tipoDocumento}}
+              {{#unless this.visto_por_matrizador}}
+              <span class="badge bg-danger badge-nuevo ms-1">NUEVO</span>
+              {{/unless}}
+            </td>
             <td>
               {{this.nombreCliente}}
               <div class="small text-muted">{{this.identificacionCliente}}</div>
@@ -96,13 +102,24 @@
               {{/if}}
             </td>
             <td>
+              {{#if (eq this.estado "listo_para_entrega")}}
+                {{#if this.codigoVerificacion}}
+                  <span class="badge bg-success">{{this.codigoVerificacion}}</span>
+                {{else}}
+                  <span>-</span>
+                {{/if}}
+              {{else}}
+                <span>-</span>
+              {{/if}}
+            </td>
+            <td>
               <div class="btn-group">
-                <a href="/matrizador/documentos/detalle/{{this.id}}" class="btn btn-sm btn-outline-primary" title="Ver Detalles">
+                <a href="/matrizador/documentos/detalle/{{this.id}}" class="btn btn-sm btn-outline-primary" title="Ver Detalles" onclick="marcarComoVisto({{this.id}}, event)">
                   <i class="fas fa-eye"></i>
                 </a>
                 
                 {{#if (puedeEditarDocumento ../usuario this)}}
-                <a href="/matrizador/documentos/editar/{{this.id}}" class="btn btn-sm btn-outline-warning" title="Editar Documento">
+                <a href="/matrizador/documentos/editar/{{this.id}}" class="btn btn-sm btn-outline-warning" title="Editar Documento" onclick="marcarComoVisto({{this.id}})">
                   <i class="fas fa-edit"></i>
                 </a>
                 {{/if}}
@@ -123,7 +140,7 @@
           </tr>
           {{else}}
           <tr>
-            <td colspan="6" class="text-center py-4">
+            <td colspan="7" class="text-center py-4">
               <i class="fas fa-search me-2"></i> No se encontraron documentos con los filtros actuales
             </td>
           </tr>
@@ -196,6 +213,49 @@
     document.getElementById('documentoId').value = id;
     const modal = new bootstrap.Modal(document.getElementById('marcarListoModal'));
     modal.show();
+  }
+  
+  // Función para marcar un documento como visto
+  function marcarComoVisto(id, event) {
+    // Evitar la acción predeterminada si se pasa el evento
+    if (event) {
+      event.preventDefault();
+    }
+    
+    // Enviar petición para marcar como visto
+    fetch(`/matrizador/documentos/marcar-visto/${id}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      console.log('Documento marcado como visto:', data);
+      
+      // Si hay evento, significa que es desde el botón de detalle y debemos redireccionar
+      if (event) {
+        window.location.href = `/matrizador/documentos/detalle/${id}`;
+      }
+      
+      // Actualizar la interfaz de usuario (quitar la etiqueta "NUEVO")
+      const fila = document.querySelector(`tr[data-id="${id}"]`);
+      if (fila) {
+        fila.classList.remove('documento-nuevo');
+        const badge = fila.querySelector('.badge-nuevo');
+        if (badge) {
+          badge.remove();
+        }
+      }
+    })
+    .catch(error => {
+      console.error('Error al marcar documento como visto:', error);
+      
+      // Si hay evento, redireccionar de todos modos
+      if (event) {
+        window.location.href = `/matrizador/documentos/detalle/${id}`;
+      }
+    });
   }
   
   document.addEventListener('DOMContentLoaded', function() {
