@@ -1,18 +1,25 @@
 /**
- * Controlador para el módulo de Caja
- * Proporciona funciones para la gestión de pagos y facturación
+ * Controlador para gestionar operaciones de caja
+ * Contiene funciones para registrar pagos, facturación, y reportes
  */
 
-const { sequelize, Sequelize } = require('../config/database');
-const { Op } = require('sequelize');
+const { sequelize } = require('../config/database');
 const Documento = require('../models/Documento');
 const Matrizador = require('../models/Matrizador');
 const EventoDocumento = require('../models/EventoDocumento');
-const CambioMatrizador = require('../models/CambioMatrizador');
-const xml2js = require('xml2js');
+const { Op } = require('sequelize');
 const fs = require('fs');
 const path = require('path');
+const util = require('util');
+const xml2js = require('xml2js');
 const moment = require('moment');
+const { 
+  inferirTipoDocumentoPorCodigo, 
+  procesarFechaFactura, 
+  formatearValorMonetario,
+  mapearMetodoPago,
+  mapearMetodoPagoInverso 
+} = require('../utils/documentoUtils');
 
 // Objeto que contendrá todas las funciones del controlador
 const cajaController = {
@@ -63,11 +70,13 @@ const cajaController = {
       const fechaInicioSQL = fechaInicio.format('YYYY-MM-DD HH:mm:ss');
       const fechaFinSQL = fechaFin.format('YYYY-MM-DD HH:mm:ss');
       
-      // Obtener estadísticas de facturación
-      const [totalFacturado] = await sequelize.query(`
+      // Dinero Facturado: Suma de todos los documentos con monto definido, excluyendo anulados/cancelados
+      const [totalFacturadoResult] = await sequelize.query(`
         SELECT COALESCE(SUM(valor_factura), 0) as total
         FROM documentos
-        WHERE fecha_factura BETWEEN :fechaInicio AND :fechaFin
+        WHERE valor_factura IS NOT NULL
+          AND estado != 'cancelado'  -- Excluir cancelados
+          AND fecha_factura BETWEEN :fechaInicio AND :fechaFin
       `, {
         replacements: { 
           fechaInicio: fechaInicioSQL,
@@ -75,13 +84,49 @@ const cajaController = {
         },
         type: sequelize.QueryTypes.SELECT
       });
+      const totalFacturado = parseFloat(totalFacturadoResult.total);
+
+      // Dinero Cobrado/Recaudado: Solo documentos marcados como "pagado", excluyendo anulados/cancelados
+      const [totalCobradoResult] = await sequelize.query(`
+        SELECT COALESCE(SUM(valor_factura), 0) as total
+        FROM documentos
+        WHERE estado_pago = 'pagado'
+          AND estado != 'cancelado'  -- Excluir cancelados
+          AND fecha_factura BETWEEN :fechaInicio AND :fechaFin -- Opcional: considerar si el cobro puede ser fuera del periodo de facturación
+      `, {
+        replacements: { 
+          fechaInicio: fechaInicioSQL,
+          fechaFin: fechaFinSQL
+        },
+        type: sequelize.QueryTypes.SELECT
+      });
+      const totalCobrado = parseFloat(totalCobradoResult.total);
+
+      // Dinero Pendiente: Documentos no pagados que no estén anulados/cancelados
+      // Se puede calcular como Total Facturado - Total Cobrado, o con una consulta directa:
+      const [totalPendienteResult] = await sequelize.query(`
+        SELECT COALESCE(SUM(valor_factura), 0) as total
+        FROM documentos
+        WHERE estado_pago = 'pendiente'
+          AND estado != 'cancelado' -- Excluir cancelados
+          AND valor_factura IS NOT NULL
+          AND fecha_factura BETWEEN :fechaInicio AND :fechaFin
+      `, {
+        replacements: {
+          fechaInicio: fechaInicioSQL,
+          fechaFin: fechaFinSQL
+        },
+        type: sequelize.QueryTypes.SELECT
+      });
+      const totalPendiente = parseFloat(totalPendienteResult.total);
       
-      // Obtener cantidad de documentos facturados
-      const [documentosFacturados] = await sequelize.query(`
+      // Obtener cantidad de documentos facturados (que no estén cancelados)
+      const [documentosFacturadosResult] = await sequelize.query(`
         SELECT COUNT(*) as total
         FROM documentos
         WHERE numero_factura IS NOT NULL
-        AND fecha_factura BETWEEN :fechaInicio AND :fechaFin
+          AND estado != 'cancelado' -- Excluir cancelados
+          AND fecha_factura BETWEEN :fechaInicio AND :fechaFin
       `, {
         replacements: { 
           fechaInicio: fechaInicioSQL,
@@ -89,39 +134,62 @@ const cajaController = {
         },
         type: sequelize.QueryTypes.SELECT
       });
+      const documentosFacturados = parseInt(documentosFacturadosResult.total);
       
-      // Obtener documentos pendientes de pago
-      const documentosPendientes = await Documento.findAll({
+      // Obtener cantidad de documentos pendientes de pago (que no estén cancelados)
+      const [documentosPendientesPagoResult] = await sequelize.query(`
+        SELECT COUNT(*) as total
+        FROM documentos
+        WHERE estado_pago = 'pendiente'
+          AND numero_factura IS NOT NULL
+          AND estado != 'cancelado' -- Excluir cancelados
+          AND fecha_factura BETWEEN :fechaInicio AND :fechaFin 
+      `, {
+        replacements: {
+            fechaInicio: fechaInicioSQL,
+            fechaFin: fechaFinSQL
+        },
+        type: sequelize.QueryTypes.SELECT
+      });
+      const documentosPendientesPago = parseInt(documentosPendientesPagoResult.total);
+
+      // Documentos pendientes de pago para la lista (que no estén cancelados)
+      const documentosPendientesLista = await Documento.findAll({
         where: {
           estadoPago: 'pendiente',
-          numeroFactura: { [Op.not]: null }
+          numeroFactura: { [Op.not]: null },
+          estado: { [Op.ne]: 'cancelado' } // Excluir cancelados
         },
         order: [['fechaFactura', 'ASC']],
         limit: 10
       });
       
-      // Obtener documentos pagados recientemente
-      const documentosPagadosRecientes = await Documento.findAll({
+      // Documentos pagados recientemente (que no estén cancelados)
+      const documentosPagadosRecientesLista = await Documento.findAll({
         where: {
           estadoPago: 'pagado',
-          numeroFactura: { [Op.not]: null }
+          numeroFactura: { [Op.not]: null },
+          estado: { [Op.ne]: 'cancelado' } // Excluir cancelados
+          // Considerar si se filtra por fecha de pago si existiera ese campo, o fecha_factura/updated_at
         },
-        order: [['updated_at', 'DESC']],
+        order: [['updated_at', 'DESC']], // O por fecha de pago si existe
         limit: 10
       });
       
-      // Obtener estadísticas por tipo de documento
+      // Obtener estadísticas por tipo de documento (excluyendo cancelados)
       const estadisticasPorTipo = await sequelize.query(`
         SELECT 
           tipo_documento, 
           COUNT(*) as cantidad, 
+          COALESCE(SUM(CASE WHEN estado_pago = 'pagado' THEN valor_factura ELSE 0 END), 0) as total_cobrado,
           COALESCE(SUM(valor_factura), 0) as total_facturado,
           CASE 
             WHEN COUNT(*) > 0 THEN COALESCE(AVG(valor_factura), 0)
             ELSE 0
-          END as promedio
+          END as promedio_facturado
         FROM documentos
-        WHERE fecha_factura BETWEEN :fechaInicio AND :fechaFin
+        WHERE estado != 'cancelado' -- Excluir cancelados
+          AND fecha_factura BETWEEN :fechaInicio AND :fechaFin
         GROUP BY tipo_documento
         ORDER BY total_facturado DESC
       `, {
@@ -208,13 +276,14 @@ const cajaController = {
         userRole: req.matrizador?.rol,
         userName: req.matrizador?.nombre,
         stats: {
-          totalFacturado: parseFloat(totalFacturado.total).toFixed(2),
-          documentosFacturados: documentosFacturados.total,
-          pendientesDePago: documentosPendientes.length,
-          recaudadoReciente: documentosPagadosRecientes.length
+          totalFacturado: formatearValorMonetario(totalFacturado),
+          totalCobrado: formatearValorMonetario(totalCobrado),
+          totalPendiente: formatearValorMonetario(totalPendiente),
+          documentosFacturados: documentosFacturados,
+          documentosPendientesPago: documentosPendientesPago // Cantidad de docs pendientes
         },
-        documentosPendientes,
-        documentosPagadosRecientes,
+        documentosPendientes: documentosPendientesLista, // Lista para la tabla
+        documentosPagadosRecientes: documentosPagadosRecientesLista, // Lista para la tabla
         estadisticasPorTipo,
         estadisticasPorMatrizador,
         periodo: periodoData,
@@ -251,6 +320,8 @@ const cajaController = {
       const tipoDocumento = req.query.tipoDocumento || '';
       const matrizadorId = req.query.matrizadorId || '';
       const busqueda = req.query.busqueda || '';
+      const fechaDesde = req.query.fechaDesde || ''; // Nuevo
+      const fechaHasta = req.query.fechaHasta || ''; // Nuevo
       
       // Construir condiciones de filtrado
       const where = {};
@@ -277,6 +348,21 @@ const cajaController = {
           { nombreCliente: { [Op.iLike]: `%${busqueda}%` } },
           { numeroFactura: { [Op.iLike]: `%${busqueda}%` } }
         ];
+      }
+      
+      // Filtro de rango de fechas
+      if (fechaDesde && fechaHasta) {
+        where.fechaFactura = {
+          [Op.between]: [moment(fechaDesde).startOf('day').toDate(), moment(fechaHasta).endOf('day').toDate()]
+        };
+      } else if (fechaDesde) {
+        where.fechaFactura = {
+          [Op.gte]: moment(fechaDesde).startOf('day').toDate()
+        };
+      } else if (fechaHasta) {
+        where.fechaFactura = {
+          [Op.lte]: moment(fechaHasta).endOf('day').toDate()
+        };
       }
       
       // Obtener documentos con paginación
@@ -336,6 +422,8 @@ const cajaController = {
       if (tipoDocumento) queryParams.append('tipoDocumento', tipoDocumento);
       if (matrizadorId) queryParams.append('matrizadorId', matrizadorId);
       if (busqueda) queryParams.append('busqueda', busqueda);
+      if (fechaDesde) queryParams.append('fechaDesde', fechaDesde); // Nuevo
+      if (fechaHasta) queryParams.append('fechaHasta', fechaHasta); // Nuevo
       
       // Generar enlaces de paginación
       for (let i = 1; i <= totalPages; i++) {
@@ -363,23 +451,48 @@ const cajaController = {
       }
       
       // Renderizar la vista
-      res.render('caja/documentos/listado', {
-        layout: 'caja',
-        title: 'Documentos',
-        documentos,
-        matrizadores,
-        tiposDocumento,
-        pagination,
-        filtros: {
-          estado: estado || '',
-          estadoPago: estadoPago || '',
-          tipoDocumento: tipoDocumento || '',
-          matrizadorId: matrizadorId || '',
-          busqueda: busqueda || ''
-        },
-        userRole: req.matrizador?.rol,
-        userName: req.matrizador?.nombre
-      });
+      if (req.xhr || (req.headers.accept && req.headers.accept.indexOf('html') === -1 && req.headers['x-requested-with'] == 'XMLHttpRequest')) {
+        // Si es una solicitud AJAX, renderizar solo el partial de la tabla
+        res.render('partials/caja/tablaDocumentosPaginada', {
+          layout: false, 
+          documentos,
+          matrizadores, 
+          tiposDocumento,
+          pagination,
+          filtros: {
+            estado: estado || '',
+            estadoPago: estadoPago || '',
+            tipoDocumento: tipoDocumento || '',
+            matrizadorId: matrizadorId || '',
+            busqueda: busqueda || '',
+            fechaDesde: fechaDesde || '',
+            fechaHasta: fechaHasta || ''
+          },
+          userRole: req.matrizador?.rol, 
+          userName: req.matrizador?.nombre
+        });
+      } else {
+        // Si es una solicitud normal, renderizar la página completa
+        res.render('caja/documentos/listado', {
+          layout: 'caja',
+          title: 'Documentos',
+          documentos,
+          matrizadores,
+          tiposDocumento,
+          pagination,
+          filtros: {
+            estado: estado || '',
+            estadoPago: estadoPago || '',
+            tipoDocumento: tipoDocumento || '',
+            matrizadorId: matrizadorId || '',
+            busqueda: busqueda || '',
+            fechaDesde: fechaDesde || '',
+            fechaHasta: fechaHasta || ''
+          },
+          userRole: req.matrizador?.rol,
+          userName: req.matrizador?.nombre
+        });
+      }
     } catch (error) {
       console.error('Error al listar documentos:', error);
       return res.status(500).render('error', {
@@ -956,20 +1069,35 @@ const cajaController = {
         let descripcionServicios = '';
         let tipoDocumentoInferido = 'Otro';
         
+        // Intentar extraer tipo de documento del número de libro
+        const numeroLibro = camposAdicionales['NÚMERO DE LIBRO'] || '';
+        if (numeroLibro) {
+          tipoDocumentoInferido = inferirTipoDocumentoPorCodigo(numeroLibro);
+        }
+        
         if (result.factura.detalles && result.factura.detalles.detalle) {
           const detalles = Array.isArray(result.factura.detalles.detalle) ? 
             result.factura.detalles.detalle : [result.factura.detalles.detalle];
           
-          // Intentar inferir el tipo de documento
+          // Si no se pudo inferir por código, intentar por descripción
+          if (tipoDocumentoInferido === 'Otro') {
+            for (const detalle of detalles) {
+              const desc = detalle.descripcion.toLowerCase();
+              if (desc.includes('escritura')) tipoDocumentoInferido = 'Escritura';
+              else if (desc.includes('donación')) tipoDocumentoInferido = 'Donación';
+              else if (desc.includes('poder')) tipoDocumentoInferido = 'Poder';
+              else if (desc.includes('testamento')) tipoDocumentoInferido = 'Testamento';
+              else if (desc.includes('certificación')) tipoDocumentoInferido = 'Certificación';
+              else if (desc.includes('protocolo')) tipoDocumentoInferido = 'Protocolo';
+              else if (desc.includes('diligencia')) tipoDocumentoInferido = 'Diligencia';
+              else if (desc.includes('arrendamiento')) tipoDocumentoInferido = 'Arrendamiento';
+              
+              if (tipoDocumentoInferido !== 'Otro') break;
+            }
+          }
+          
+          // Construir descripción completa
           for (const detalle of detalles) {
-            const desc = detalle.descripcion.toLowerCase();
-            if (desc.includes('escritura')) tipoDocumentoInferido = 'Escritura';
-            else if (desc.includes('donación')) tipoDocumentoInferido = 'Donación';
-            else if (desc.includes('poder')) tipoDocumentoInferido = 'Poder';
-            else if (desc.includes('testamento')) tipoDocumentoInferido = 'Testamento';
-            else if (desc.includes('certificación')) tipoDocumentoInferido = 'Certificación';
-            
-            // Construir descripción completa
             descripcionServicios += `- ${detalle.descripcion}: ${detalle.cantidad} x $${detalle.precioUnitario}\n`;
           }
         }
@@ -1112,23 +1240,28 @@ const cajaController = {
         // Generar código de verificación para entrega
         const codigoVerificacion = Math.floor(1000 + Math.random() * 9000).toString();
         
-        // Convertir fecha de emisión si está disponible
+        // Convertir fecha de emisión del XML para usar como fecha de factura
         let fechaFactura = null;
         if (fechaEmision) {
-          // Convertir formato DD/MM/YYYY a Date
+          // Convertir formato DD/MM/YYYY a Date con hora 00:00:00
           const partesFecha = fechaEmision.split('/');
           if (partesFecha.length === 3) {
             fechaFactura = new Date(
               parseInt(partesFecha[2]), // año
               parseInt(partesFecha[1]) - 1, // mes (0-11)
-              parseInt(partesFecha[0]) // día
+              parseInt(partesFecha[0]), // día
+              0, 0, 0, 0 // hora 00:00:00
             );
           }
         }
         
-        // Si no se pudo convertir la fecha, usar la fecha actual
-        if (!fechaFactura) {
+        // Si no se pudo convertir la fecha del XML, usar la fecha actual como fallback
+        if (!fechaFactura || isNaN(fechaFactura.getTime())) {
+          console.log('Fecha del XML no válida, usando fecha actual como fallback para fecha de factura');
           fechaFactura = new Date();
+          fechaFactura.setHours(0, 0, 0, 0); // Asegurar que esté a medianoche
+        } else {
+          console.log(`Usando fecha del XML: ${fechaEmision} convertida a: ${fechaFactura}`);
         }
         
         // Crear el documento
@@ -1192,12 +1325,29 @@ const cajaController = {
    */
   reportes: async (req, res) => {
     try {
-      // Renderizar la vista de selección de reportes
+      // Obtener matrizadores para los filtros
+      const matrizadores = await Matrizador.findAll({
+        where: {
+          rol: 'matrizador',
+          activo: true
+        },
+        attributes: ['id', 'nombre'],
+        order: [['nombre', 'ASC']]
+      });
+      
+      // Determinar el reporte activo (si lo hay)
+      const reporteActivo = '';
+      
+      // Renderizar la vista principal de reportes
       res.render('caja/reportes/index', {
         layout: 'caja',
-        title: 'Reportes de Caja',
+        title: 'Reportes y Estadísticas',
+        activeReportes: true,
+        matrizadores,
         userRole: req.matrizador?.rol,
-        userName: req.matrizador?.nombre
+        userName: req.matrizador?.nombre,
+        reporteActivo,
+        formAction: '/caja/reportes'
       });
     } catch (error) {
       console.error('Error al mostrar página de reportes:', error);
@@ -1211,236 +1361,520 @@ const cajaController = {
   },
   
   /**
-   * Genera y muestra el reporte de facturación
+   * Genera y muestra el reporte financiero
    * @param {Object} req - Objeto de solicitud Express
    * @param {Object} res - Objeto de respuesta Express
    */
-  reporteFacturacion: async (req, res) => {
+  reporteFinanciero: async (req, res) => {
     try {
-      // Procesar parámetros
-      const fechaInicio = req.query.fechaInicio ? moment(req.query.fechaInicio).startOf('day') : moment().subtract(30, 'days').startOf('day');
-      const fechaFin = req.query.fechaFin ? moment(req.query.fechaFin).endOf('day') : moment().endOf('day');
-      const tipoAgrupacion = req.query.tipoAgrupacion || 'dia';
+      // Procesar parámetros de filtrado
+      const rango = req.query.rango || 'mes';
+      const idMatrizador = req.query.idMatrizador; // Leer el idMatrizador del query
+      let fechaInicio, fechaFin, periodoTexto;
       
-      // Formatear fechas para SQL
+      // Establecer fechas según el rango seleccionado
+      const hoy = moment().startOf('day');
+      
+      switch (rango) {
+        case 'hoy':
+          fechaInicio = hoy.clone();
+          fechaFin = moment().endOf('day');
+          periodoTexto = 'Hoy ' + fechaInicio.format('DD/MM/YYYY');
+          break;
+        case 'ayer':
+          fechaInicio = hoy.clone().subtract(1, 'days');
+          fechaFin = hoy.clone().subtract(1, 'days').endOf('day');
+          periodoTexto = 'Ayer ' + fechaInicio.format('DD/MM/YYYY');
+          break;
+        case 'semana':
+          fechaInicio = hoy.clone().startOf('week');
+          fechaFin = moment().endOf('day');
+          periodoTexto = 'Esta semana (desde ' + fechaInicio.format('DD/MM/YYYY') + ')';
+          break;
+        case 'mes':
+          fechaInicio = hoy.clone().startOf('month');
+          fechaFin = moment().endOf('day');
+          periodoTexto = 'Este mes (desde ' + fechaInicio.format('DD/MM/YYYY') + ')';
+          break;
+        case 'ultimo_mes':
+          fechaInicio = hoy.clone().subtract(30, 'days');
+          fechaFin = moment().endOf('day');
+          periodoTexto = 'Últimos 30 días';
+          break;
+        case 'personalizado':
+          fechaInicio = req.query.fechaInicio ? moment(req.query.fechaInicio).startOf('day') : hoy.clone().startOf('month');
+          fechaFin = req.query.fechaFin ? moment(req.query.fechaFin).endOf('day') : moment().endOf('day');
+          periodoTexto = 'Del ' + fechaInicio.format('DD/MM/YYYY') + ' al ' + fechaFin.format('DD/MM/YYYY');
+          break;
+        default:
+          fechaInicio = hoy.clone().startOf('month');
+          fechaFin = moment().endOf('day');
+          periodoTexto = 'Este mes (desde ' + fechaInicio.format('DD/MM/YYYY') + ')';
+      }
+      
+      // Formatear fechas para consultas SQL
       const fechaInicioSQL = fechaInicio.format('YYYY-MM-DD HH:mm:ss');
       const fechaFinSQL = fechaFin.format('YYYY-MM-DD HH:mm:ss');
       
-      // Preparar consulta SQL basada en el tipo de agrupación
-      let groupByClause, dateFormat;
-      
-      switch (tipoAgrupacion) {
-        case 'dia':
-          groupByClause = "TO_CHAR(fecha_factura, 'YYYY-MM-DD')";
-          dateFormat = 'YYYY-MM-DD';
-          break;
-        case 'semana':
-          groupByClause = "TO_CHAR(fecha_factura, 'IYYY-IW')";
-          dateFormat = "'Semana 'IW' de 'IYYY";
-          break;
-        case 'mes':
-          groupByClause = "TO_CHAR(fecha_factura, 'YYYY-MM')";
-          dateFormat = 'YYYY-MM';
-          break;
-        case 'anio':
-          groupByClause = "TO_CHAR(fecha_factura, 'YYYY')";
-          dateFormat = 'YYYY';
-          break;
-        case 'tipo_documento':
-          groupByClause = "tipo_documento";
-          dateFormat = null;
-          break;
-        default:
-          groupByClause = "TO_CHAR(fecha_factura, 'YYYY-MM-DD')";
-          dateFormat = 'YYYY-MM-DD';
-      }
-      
-      // Ejecutar consulta para datos de facturación
-      let datosFacturacion;
-      
-      if (tipoAgrupacion === 'tipo_documento') {
-        datosFacturacion = await sequelize.query(`
-          SELECT 
-            tipo_documento as grupo,
-            COUNT(*) as cantidad,
-            COALESCE(SUM(valor_factura), 0) as total,
-            COALESCE(AVG(valor_factura), 0) as promedio
-          FROM documentos
-          WHERE fecha_factura BETWEEN :fechaInicio AND :fechaFin
-          GROUP BY tipo_documento
-          ORDER BY total DESC
-        `, {
-          replacements: { fechaInicio: fechaInicioSQL, fechaFin: fechaFinSQL },
-          type: sequelize.QueryTypes.SELECT
-        });
-      } else {
-        datosFacturacion = await sequelize.query(`
-          SELECT 
-            ${groupByClause} as grupo,
-            TO_CHAR(MIN(fecha_factura), '${dateFormat}') as fecha_formateada,
-            COUNT(*) as cantidad,
-            COALESCE(SUM(valor_factura), 0) as total,
-            COALESCE(AVG(valor_factura), 0) as promedio
-          FROM documentos
-          WHERE fecha_factura BETWEEN :fechaInicio AND :fechaFin
-          GROUP BY ${groupByClause}
-          ORDER BY grupo
-        `, {
-          replacements: { fechaInicio: fechaInicioSQL, fechaFin: fechaFinSQL },
-          type: sequelize.QueryTypes.SELECT
-        });
-      }
-      
-      // Calcular resumen general
-      const resumen = datosFacturacion.reduce((acc, item) => {
-        acc.cantidadTotal += parseInt(item.cantidad);
-        acc.valorTotal += parseFloat(item.total);
-        acc.promedioTotal += parseFloat(item.promedio) * parseInt(item.cantidad);
-        return acc;
-      }, { cantidadTotal: 0, valorTotal: 0, promedioTotal: 0 });
-      
-      if (resumen.cantidadTotal > 0) {
-        resumen.promedioTotal = resumen.promedioTotal / resumen.cantidadTotal;
-      } else {
-        resumen.promedioTotal = 0;
-      }
-      
-      // Obtener datos para gráfico
-      const datosGrafico = {
-        grupos: tipoAgrupacion === 'tipo_documento' ? 
-          datosFacturacion.map(d => d.grupo) : 
-          datosFacturacion.map(d => d.fecha_formateada || d.grupo),
-        cantidades: datosFacturacion.map(d => parseInt(d.cantidad)),
-        totales: datosFacturacion.map(d => parseFloat(d.total))
+      // Obtener estadísticas financieras generales usando Sequelize ORM
+      const whereClause = {
+        valor_factura: { [Op.not]: null },
+        estado: { [Op.ne]: 'cancelado' },
+        created_at: {
+          [Op.between]: [fechaInicioSQL, fechaFinSQL]
+        }
       };
       
-      // Renderizar el reporte
-      res.render('caja/reportes/facturacion', {
+      // Añadir filtro por matrizador si se seleccionó uno
+      if (idMatrizador && idMatrizador !== 'todos' && idMatrizador !== '') {
+        whereClause.id_matrizador = parseInt(idMatrizador, 10);
+      }
+      
+      const totalFacturado = await Documento.sum('valor_factura', {
+        where: whereClause
+      }) || 0;
+      
+      const totalCobrado = await Documento.sum('valor_factura', {
+        where: {
+          ...whereClause,
+          estado_pago: 'pagado'
+        }
+      }) || 0;
+      
+      const totalPendiente = totalFacturado - totalCobrado;
+      
+      // Calcular porcentaje de recuperación
+      const porcentajeRecuperacion = totalFacturado > 0 ? 
+        Math.round((totalCobrado / totalFacturado) * 100) : 0;
+      
+      // Obtener datos diarios para el gráfico y tabla
+      const documentosPorDia = await Documento.findAll({
+        where: whereClause,
+        attributes: [
+          [sequelize.fn('DATE', sequelize.col('created_at')), 'fecha'],
+          [sequelize.fn('SUM', sequelize.col('valor_factura')), 'totalFacturado'],
+          [sequelize.fn('SUM', 
+            sequelize.literal("CASE WHEN estado_pago = 'pagado' THEN valor_factura ELSE 0 END")
+          ), 'totalCobrado']
+        ],
+        group: [sequelize.fn('DATE', sequelize.col('created_at'))],
+        order: [[sequelize.fn('DATE', sequelize.col('created_at')), 'ASC']],
+        raw: true
+      });
+      
+      // Preparar datos para la tabla
+      const datosTabla = documentosPorDia.map(item => {
+        const facturado = parseFloat(item.totalFacturado) || 0;
+        const cobrado = parseFloat(item.totalCobrado) || 0;
+        const pendiente = facturado - cobrado;
+        const porcentaje = facturado > 0 ? Math.round((cobrado / facturado) * 100) : 0;
+        
+        return {
+          fecha: moment(item.fecha).format('DD/MM/YYYY'),
+          facturado: facturado.toFixed(2),
+          cobrado: cobrado.toFixed(2),
+          pendiente: pendiente.toFixed(2),
+          porcentaje: porcentaje
+        };
+      });
+      
+      // Preparar datos para el gráfico de tendencia
+      const graficoTendencia = {
+        fechas: documentosPorDia.map(item => moment(item.fecha).format('DD/MM/YYYY')),
+        facturado: documentosPorDia.map(item => parseFloat(item.totalFacturado) || 0),
+        cobrado: documentosPorDia.map(item => parseFloat(item.totalCobrado) || 0),
+        pendiente: documentosPorDia.map(item => 
+          (parseFloat(item.totalFacturado) || 0) - (parseFloat(item.totalCobrado) || 0)
+        )
+      };
+      
+      // Obtener todos los matrizadores para el dropdown
+      const matrizadores = await Matrizador.findAll({
+        attributes: ['id', 'nombre'],
+        where: { activo: true, rol: 'matrizador' }, // Opcional: filtrar por rol si es necesario
+        order: [['nombre', 'ASC']],
+        raw: true
+      });
+      
+      // Renderizar la vista con los datos
+      res.render('caja/reportes/financiero', {
         layout: 'caja',
-        title: 'Reporte de Facturación',
-        fechaInicio: fechaInicio.format('YYYY-MM-DD'),
-        fechaFin: fechaFin.format('YYYY-MM-DD'),
-        tipoAgrupacion,
-        datosFacturacion,
-        resumen,
-        datosGrafico,
+        title: 'Reporte Financiero',
+        activeReportes: true,
         userRole: req.matrizador?.rol,
-        userName: req.matrizador?.nombre
+        userName: req.matrizador?.nombre,
+        matrizadores, // Pasar lista de matrizadores
+        idMatrizadorSeleccionado: idMatrizador || 'todos', // Pasar ID seleccionado
+        stats: {
+          totalFacturado: formatearValorMonetario(totalFacturado), // Corregido
+          totalCobrado: formatearValorMonetario(totalCobrado),   // Corregido
+          totalPendiente: formatearValorMonetario(totalPendiente), // Corregido
+          porcentajeRecuperacion: porcentajeRecuperacion
+        },
+        datosTabla,
+        graficoTendencia,
+        periodoTexto,
+        filtros: {
+          rango,
+          fechaInicio: fechaInicio.format('YYYY-MM-DD'),
+          fechaFin: fechaFin.format('YYYY-MM-DD')
+        }
       });
     } catch (error) {
-      console.error('Error al generar reporte de facturación:', error);
+      console.error('Error al generar reporte financiero:', error);
       return res.status(500).render('error', {
         layout: 'caja',
         title: 'Error',
-        message: 'Error al generar el reporte de facturación',
+        message: 'Error al generar el reporte financiero',
         error
       });
     }
   },
   
   /**
-   * Genera y muestra el reporte de pagos
+   * Genera y muestra el reporte de documentos
    * @param {Object} req - Objeto de solicitud Express
    * @param {Object} res - Objeto de respuesta Express
    */
-  reportePagos: async (req, res) => {
+  reporteDocumentos: async (req, res) => {
     try {
-      // Procesar parámetros
-      const fechaInicio = req.query.fechaInicio ? moment(req.query.fechaInicio).startOf('day') : moment().subtract(30, 'days').startOf('day');
-      const fechaFin = req.query.fechaFin ? moment(req.query.fechaFin).endOf('day') : moment().endOf('day');
-      const agruparPor = req.query.agruparPor || 'metodo_pago';
+      // Procesar parámetros de filtrado
+      const rango = req.query.rango || 'mes';
+      let fechaInicio, fechaFin, periodoTexto;
       
-      // Formatear fechas para SQL
+      // Establecer fechas según el rango seleccionado
+      const hoy = moment().startOf('day');
+      
+      switch (rango) {
+        case 'hoy':
+          fechaInicio = hoy.clone();
+          fechaFin = moment().endOf('day');
+          periodoTexto = 'Hoy ' + fechaInicio.format('DD/MM/YYYY');
+          break;
+        case 'ayer':
+          fechaInicio = hoy.clone().subtract(1, 'days');
+          fechaFin = hoy.clone().subtract(1, 'days').endOf('day');
+          periodoTexto = 'Ayer ' + fechaInicio.format('DD/MM/YYYY');
+          break;
+        case 'semana':
+          fechaInicio = hoy.clone().startOf('week');
+          fechaFin = moment().endOf('day');
+          periodoTexto = 'Esta semana (desde ' + fechaInicio.format('DD/MM/YYYY') + ')';
+          break;
+        case 'mes':
+          fechaInicio = hoy.clone().startOf('month');
+          fechaFin = moment().endOf('day');
+          periodoTexto = 'Este mes (desde ' + fechaInicio.format('DD/MM/YYYY') + ')';
+          break;
+        case 'ultimo_mes':
+          fechaInicio = hoy.clone().subtract(30, 'days');
+          fechaFin = moment().endOf('day');
+          periodoTexto = 'Últimos 30 días';
+          break;
+        case 'personalizado':
+          fechaInicio = req.query.fechaInicio ? moment(req.query.fechaInicio).startOf('day') : hoy.clone().startOf('month');
+          fechaFin = req.query.fechaFin ? moment(req.query.fechaFin).endOf('day') : moment().endOf('day');
+          periodoTexto = 'Del ' + fechaInicio.format('DD/MM/YYYY') + ' al ' + fechaFin.format('DD/MM/YYYY');
+          break;
+        default:
+          fechaInicio = hoy.clone().startOf('month');
+          fechaFin = moment().endOf('day');
+          periodoTexto = 'Este mes (desde ' + fechaInicio.format('DD/MM/YYYY') + ')';
+      }
+      
+      // Formatear fechas para consultas SQL
       const fechaInicioSQL = fechaInicio.format('YYYY-MM-DD HH:mm:ss');
       const fechaFinSQL = fechaFin.format('YYYY-MM-DD HH:mm:ss');
       
-      // Obtener datos de pagos agrupados
-      let datosPagos;
-      
-      if (agruparPor === 'metodo_pago') {
-        datosPagos = await sequelize.query(`
-          SELECT 
-            metodo_pago as grupo,
-            COUNT(*) as cantidad,
-            COALESCE(SUM(valor_factura), 0) as total
-          FROM documentos
-          WHERE estado_pago = 'pagado'
-          AND updated_at BETWEEN :fechaInicio AND :fechaFin
-          GROUP BY metodo_pago
-          ORDER BY total DESC
-        `, {
-          replacements: { fechaInicio: fechaInicioSQL, fechaFin: fechaFinSQL },
-          type: sequelize.QueryTypes.SELECT
-        });
-      } else if (agruparPor === 'dia') {
-        datosPagos = await sequelize.query(`
-          SELECT 
-            TO_CHAR(updated_at, 'YYYY-MM-DD') as grupo,
-            COUNT(*) as cantidad,
-            COALESCE(SUM(valor_factura), 0) as total
-          FROM documentos
-          WHERE estado_pago = 'pagado'
-          AND updated_at BETWEEN :fechaInicio AND :fechaFin
-          GROUP BY TO_CHAR(updated_at, 'YYYY-MM-DD')
-          ORDER BY grupo
-        `, {
-          replacements: { fechaInicio: fechaInicioSQL, fechaFin: fechaFinSQL },
-          type: sequelize.QueryTypes.SELECT
-        });
-      } else {
-        datosPagos = await sequelize.query(`
-          SELECT 
-            TO_CHAR(updated_at, 'YYYY-MM') as grupo,
-            COUNT(*) as cantidad,
-            COALESCE(SUM(valor_factura), 0) as total
-          FROM documentos
-          WHERE estado_pago = 'pagado'
-          AND updated_at BETWEEN :fechaInicio AND :fechaFin
-          GROUP BY TO_CHAR(updated_at, 'YYYY-MM')
-          ORDER BY grupo
-        `, {
-          replacements: { fechaInicio: fechaInicioSQL, fechaFin: fechaFinSQL },
-          type: sequelize.QueryTypes.SELECT
-        });
-      }
-      
-      // Obtener totales generales
-      const totalPagos = datosPagos.reduce((sum, item) => sum + parseFloat(item.total), 0);
-      const totalDocumentos = datosPagos.reduce((sum, item) => sum + parseInt(item.cantidad), 0);
-      
-      // Calcular porcentajes para gráfico
-      datosPagos.forEach(item => {
-        item.porcentaje = totalPagos > 0 ? (parseFloat(item.total) / totalPagos * 100).toFixed(2) : "0.00";
+      // Obtener estadísticas de documentos
+      const [statsResult] = await sequelize.query(`
+        SELECT 
+          COUNT(*) as total_documentos,
+          COUNT(CASE WHEN numero_factura IS NOT NULL THEN 1 END) as con_factura,
+          COUNT(CASE WHEN estado_pago = 'pendiente' THEN 1 END) as pendientes,
+          COUNT(CASE WHEN estado_pago = 'pagado' THEN 1 END) as pagados,
+          COALESCE(SUM(valor_factura), 0) as total_facturado,
+          CASE 
+            WHEN COUNT(*) > 0 THEN COALESCE(AVG(valor_factura), 0)
+            ELSE 0
+          END as promedio_facturado
+        FROM documentos
+        WHERE fecha_factura BETWEEN :fechaInicio AND :fechaFin
+          AND estado != 'cancelado'
+      `, {
+        replacements: { fechaInicio: fechaInicioSQL, fechaFin: fechaFinSQL },
+        type: sequelize.QueryTypes.SELECT
       });
       
-      // Datos para gráfico
-      const datosGrafico = {
-        grupos: datosPagos.map(d => d.grupo),
-        cantidades: datosPagos.map(d => parseInt(d.cantidad)),
-        totales: datosPagos.map(d => parseFloat(d.total)),
-        porcentajes: datosPagos.map(d => parseFloat(d.porcentaje))
+      // Obtener estadísticas por tipo de documento
+      const estadisticasPorTipo = await sequelize.query(`
+        SELECT 
+          tipo_documento as "tipoDocumento", 
+          COUNT(*) as cantidad, 
+          COALESCE(SUM(valor_factura), 0) as "totalFacturado",
+          CASE 
+            WHEN COUNT(*) > 0 THEN COALESCE(AVG(valor_factura), 0)
+            ELSE 0
+          END as promedio
+        FROM documentos
+        WHERE fecha_factura BETWEEN :fechaInicio AND :fechaFin
+          AND estado != 'cancelado'
+        GROUP BY tipo_documento
+        ORDER BY cantidad DESC
+      `, {
+        replacements: { fechaInicio: fechaInicioSQL, fechaFin: fechaFinSQL },
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      // Formatear valores numéricos para estadísticas por tipo
+      estadisticasPorTipo.forEach(item => {
+        item.totalFacturado = formatearValorMonetario(item.totalFacturado);
+        item.promedio = formatearValorMonetario(item.promedio);
+      });
+      
+      // Preparar datos para gráficos
+      const graficoTipoDocumento = {
+        tipos: estadisticasPorTipo.map(item => item.tipoDocumento),
+        cantidades: estadisticasPorTipo.map(item => parseInt(item.cantidad))
       };
       
-      // Renderizar el reporte
-      res.render('caja/reportes/pagos', {
+      // Tendencia de documentos por día
+      const tendenciaDiaria = await sequelize.query(`
+        SELECT 
+          TO_CHAR(fecha_factura, 'YYYY-MM-DD') as fecha,
+          COUNT(*) as cantidad
+        FROM documentos
+        WHERE fecha_factura BETWEEN :fechaInicio AND :fechaFin
+          AND estado != 'cancelado'
+        GROUP BY TO_CHAR(fecha_factura, 'YYYY-MM-DD')
+        ORDER BY fecha
+      `, {
+        replacements: { fechaInicio: fechaInicioSQL, fechaFin: fechaFinSQL },
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      const graficoTendencia = {
+        fechas: tendenciaDiaria.map(item => moment(item.fecha).format('DD/MM/YYYY')),
+        cantidades: tendenciaDiaria.map(item => parseInt(item.cantidad))
+      };
+      
+      // Obtener lista de documentos
+      const documentos = await Documento.findAll({
+        where: {
+          fechaFactura: {
+            [Op.between]: [fechaInicio.toDate(), fechaFin.toDate()]
+          },
+          estado: {
+            [Op.ne]: 'cancelado'
+          }
+        },
+        order: [['fechaFactura', 'DESC']],
+        limit: 100 // Limitar a 100 documentos para no sobrecargar la vista
+      });
+      
+      // Calcular porcentajes para las estadísticas
+      const totalDocumentos = parseInt(statsResult.total_documentos);
+      const conFactura = parseInt(statsResult.con_factura);
+      const pendientes = parseInt(statsResult.pendientes);
+      const pagados = parseInt(statsResult.pagados);
+      
+      const porcentajeFacturados = totalDocumentos > 0 ? Math.round((conFactura / totalDocumentos) * 100) : 0;
+      const porcentajePendientes = totalDocumentos > 0 ? Math.round((pendientes / totalDocumentos) * 100) : 0;
+      const porcentajePagados = totalDocumentos > 0 ? Math.round((pagados / totalDocumentos) * 100) : 0;
+      
+      // Renderizar la vista con los datos
+      res.render('caja/reportes/documentos', {
         layout: 'caja',
-        title: 'Reporte de Pagos',
-        fechaInicio: fechaInicio.format('YYYY-MM-DD'),
-        fechaFin: fechaFin.format('YYYY-MM-DD'),
-        agruparPor,
-        datosPagos,
-        totalPagos,
-        totalDocumentos,
-        datosGrafico,
+        title: 'Reporte de Documentos',
+        activeReportes: true,
         userRole: req.matrizador?.rol,
-        userName: req.matrizador?.nombre
+        userName: req.matrizador?.nombre,
+        stats: {
+          totalDocumentos,
+          conFactura,
+          pendientes,
+          pagados,
+          totalFacturado: formatearValorMonetario(statsResult.total_facturado),
+          promedioFacturado: formatearValorMonetario(statsResult.promedio_facturado),
+          porcentajeFacturados,
+          porcentajePendientes,
+          porcentajePagados
+        },
+        estadisticasPorTipo,
+        graficoTipoDocumento,
+        graficoTendencia,
+        documentos,
+        periodoTexto,
+        filtros: {
+          rango,
+          fechaInicio: fechaInicio.format('YYYY-MM-DD'),
+          fechaFin: fechaFin.format('YYYY-MM-DD')
+        }
       });
     } catch (error) {
-      console.error('Error al generar reporte de pagos:', error);
+      console.error('Error al generar reporte de documentos:', error);
       return res.status(500).render('error', {
         layout: 'caja',
         title: 'Error',
-        message: 'Error al generar el reporte de pagos',
+        message: 'Error al generar el reporte de documentos',
+        error
+      });
+    }
+  },
+  
+  /**
+   * Genera y muestra el reporte de documentos pendientes
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  reportePendientes: async (req, res) => {
+    try {
+      // Obtener parámetros de filtrado
+      const { antiguedad, matrizador, ordenar, page = 1 } = req.query;
+      const limit = 50;
+      const offset = (page - 1) * limit;
+      
+      // Construir condiciones de filtrado
+      const whereConditions = {
+        estadoPago: 'pendiente'
+      };
+      
+      if (matrizador) {
+        whereConditions.matrizadorId = matrizador;
+      }
+      
+      // Construir ORDER BY según el filtro
+      let order = [['fechaFactura', 'ASC']]; // Por defecto más antiguos
+      if (ordenar === 'monto') {
+        order = [['valorFactura', 'DESC']];
+      } else if (ordenar === 'fecha') {
+        order = [['fechaFactura', 'DESC']];
+      }
+      
+      // Obtener documentos pendientes
+      const { count, rows: documentosPendientes } = await Documento.findAndCountAll({
+        where: whereConditions,
+        include: [{
+          model: Matrizador,
+          as: 'matrizador',
+          attributes: ['id', 'nombre']
+        }],
+        order,
+        limit,
+        offset
+      });
+      
+      // Calcular estadísticas por rangos de antigüedad usando SQL para mayor eficiencia (PostgreSQL syntax)
+      const statsQuery = `
+        SELECT 
+          COUNT(CASE WHEN EXTRACT(DAY FROM NOW() - fecha_factura) BETWEEN 1 AND 7 THEN 1 END) as rango1_7,
+          COUNT(CASE WHEN EXTRACT(DAY FROM NOW() - fecha_factura) BETWEEN 8 AND 15 THEN 1 END) as rango8_15,
+          COUNT(CASE WHEN EXTRACT(DAY FROM NOW() - fecha_factura) BETWEEN 16 AND 60 THEN 1 END) as rango16_60,
+          COUNT(CASE WHEN EXTRACT(DAY FROM NOW() - fecha_factura) > 60 THEN 1 END) as rango60,
+          SUM(CASE WHEN EXTRACT(DAY FROM NOW() - fecha_factura) BETWEEN 1 AND 7 THEN valor_factura ELSE 0 END) as monto1_7,
+          SUM(CASE WHEN EXTRACT(DAY FROM NOW() - fecha_factura) BETWEEN 8 AND 15 THEN valor_factura ELSE 0 END) as monto8_15,
+          SUM(CASE WHEN EXTRACT(DAY FROM NOW() - fecha_factura) BETWEEN 16 AND 60 THEN valor_factura ELSE 0 END) as monto16_60,
+          SUM(CASE WHEN EXTRACT(DAY FROM NOW() - fecha_factura) > 60 THEN valor_factura ELSE 0 END) as monto60,
+          COUNT(*) as totalPendientes
+        FROM documentos
+        WHERE estado_pago = 'pendiente'
+        ${matrizador ? `AND id_matrizador = ${matrizador}` : ''}
+      `;
+      
+      const stats = await sequelize.query(statsQuery, {
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      const statsResult = stats[0];
+      
+      // Obtener lista de matrizadores para filtros
+      const matrizadores = await Matrizador.findAll({
+        where: {
+          rol: 'matrizador',
+          activo: true
+        },
+        attributes: ['id', 'nombre'],
+        order: [['nombre', 'ASC']]
+      });
+      
+      // Agregar días de antigüedad y nombre del matrizador a cada documento
+      const documentosConDatos = documentosPendientes.map(doc => {
+        const diasAntiguedad = moment().diff(moment(doc.fechaFactura), 'days');
+        return {
+          ...doc.toJSON(),
+          diasAntiguedad,
+          matrizador: doc.matrizador?.nombre || 'Sin asignar'
+        };
+      });
+      
+      // Filtrar por antigüedad si se especifica
+      let documentosFiltrados = documentosConDatos;
+      if (antiguedad) {
+        documentosFiltrados = documentosConDatos.filter(doc => {
+          const dias = doc.diasAntiguedad;
+          switch (antiguedad) {
+            case '1-7': return dias >= 1 && dias <= 7;
+            case '8-15': return dias >= 8 && dias <= 15;
+            case '16-60': return dias >= 16 && dias <= 60;
+            case '60+': return dias > 60;
+            default: return true;
+          }
+        });
+      }
+      
+      // Preparar paginación
+      const totalPages = Math.ceil(count / limit);
+      const pagination = {
+        currentPage: parseInt(page),
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+        next: page < totalPages ? parseInt(page) + 1 : null,
+        prev: page > 1 ? parseInt(page) - 1 : null,
+        pages: []
+      };
+      
+      // Generar números de página para mostrar
+      for (let i = Math.max(1, page - 2); i <= Math.min(totalPages, parseInt(page) + 2); i++) {
+        pagination.pages.push({
+          page: i,
+          active: i === parseInt(page)
+        });
+      }
+      
+      // Renderizar la vista con los datos
+      res.render('caja/reportes/pendientes', {
+        layout: 'caja',
+        title: 'Reporte de Documentos Pendientes',
+        activeReportes: true,
+        userRole: req.matrizador?.rol,
+        userName: req.matrizador?.nombre,
+        documentosPendientes: documentosFiltrados,
+        stats: {
+          rango1_7: parseInt(statsResult.rango1_7) || 0,
+          rango8_15: parseInt(statsResult.rango8_15) || 0,
+          rango16_60: parseInt(statsResult.rango16_60) || 0,
+          rango60: parseInt(statsResult.rango60) || 0,
+          monto1_7: parseFloat(statsResult.monto1_7) || 0,
+          monto8_15: parseFloat(statsResult.monto8_15) || 0,
+          monto16_60: parseFloat(statsResult.monto16_60) || 0,
+          monto60: parseFloat(statsResult.monto60) || 0,
+          totalPendientes: parseInt(statsResult.totalPendientes) || 0
+        },
+        matrizadores,
+        filtros: {
+          antiguedad,
+          matrizador,
+          ordenar
+        },
+        pagination: totalPages > 1 ? pagination : null
+      });
+    } catch (error) {
+      console.error('Error al generar reporte de documentos pendientes:', error);
+      return res.status(500).render('error', {
+        layout: 'caja',
+        title: 'Error',
+        message: 'Error al generar el reporte de documentos pendientes',
         error
       });
     }
@@ -1781,33 +2215,429 @@ const cajaController = {
       req.flash('error', 'Error al entregar el documento: ' + error.message);
       return res.redirect('/caja/documentos/entrega');
     }
+  },
+  
+  /**
+   * Filtrar métricas del dashboard por rango de fechas (AJAX)
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  filtrarDashboard: async (req, res) => {
+    try {
+      const { fechaDesde, fechaHasta } = req.body;
+      
+      // Validar fechas
+      if (!fechaDesde || !fechaHasta) {
+        return res.json({
+          success: false,
+          message: 'Las fechas son requeridas'
+        });
+      }
+      
+      const fechaDesdeObj = new Date(fechaDesde + 'T00:00:00.000Z');
+      const fechaHastaObj = new Date(fechaHasta + 'T23:59:59.999Z');
+      
+      if (fechaDesdeObj > fechaHastaObj) {
+        return res.json({
+          success: false,
+          message: 'La fecha desde no puede ser mayor a la fecha hasta'
+        });
+      }
+      
+      // Configurar filtros de fecha
+      const whereClause = {
+        created_at: {
+          [Op.between]: [fechaDesdeObj, fechaHastaObj]
+        }
+      };
+      
+      // Obtener métricas filtradas
+      const [
+        totalFacturado,
+        totalCobrado,
+        totalPendiente,
+        documentosFacturados,
+        documentosPendientesPago
+      ] = await Promise.all([
+        // Total facturado
+        Documento.sum('valorFactura', {
+          where: {
+            ...whereClause,
+            valorFactura: { [Op.not]: null },
+            estado: { [Op.ne]: 'cancelado' }
+          }
+        }),
+        
+        // Total cobrado
+        Documento.sum('valorFactura', {
+          where: {
+            ...whereClause,
+            estadoPago: 'pagado',
+            estado: { [Op.ne]: 'cancelado' }
+          }
+        }),
+        
+        // Total pendiente
+        Documento.sum('valorFactura', {
+          where: {
+            ...whereClause,
+            estadoPago: 'pendiente',
+            estado: { [Op.ne]: 'cancelado' }
+          }
+        }),
+        
+        // Cantidad documentos facturados
+        Documento.count({
+          where: {
+            ...whereClause,
+            valorFactura: { [Op.not]: null },
+            estado: { [Op.ne]: 'cancelado' }
+          }
+        }),
+        
+        // Cantidad documentos pendientes de pago
+        Documento.count({
+          where: {
+            ...whereClause,
+            estadoPago: 'pendiente',
+            estado: { [Op.ne]: 'cancelado' }
+          }
+        })
+      ]);
+      
+      // Obtener documentos pendientes para la tabla
+      const documentosPendientes = await Documento.findAll({
+        where: {
+          ...whereClause,
+          estadoPago: 'pendiente',
+          estado: { [Op.ne]: 'cancelado' }
+        },
+        attributes: ['id', 'codigoBarras', 'nombreCliente', 'numeroFactura', 'valorFactura'],
+        limit: 10,
+        order: [['created_at', 'DESC']]
+      });
+      
+      // Obtener pagos recientes para la tabla (documentos marcados como pagados en el período)
+      const documentosPagadosRecientes = await Documento.findAll({
+        where: {
+          estadoPago: 'pagado',
+          estado: { [Op.ne]: 'cancelado' },
+          updated_at: {
+            [Op.between]: [fechaDesdeObj, fechaHastaObj]
+          }
+        },
+        attributes: ['id', 'codigoBarras', 'nombreCliente', 'valorFactura', 'metodoPago', 'updated_at'],
+        limit: 10,
+        order: [['updated_at', 'DESC']]
+      });
+      
+      // Formatear los valores
+      const stats = {
+        totalFacturado: formatearValorMonetario(totalFacturado || 0),
+        totalCobrado: formatearValorMonetario(totalCobrado || 0),
+        totalPendiente: formatearValorMonetario(totalPendiente || 0),
+        documentosFacturados: documentosFacturados || 0,
+        documentosPendientesPago: documentosPendientesPago || 0
+      };
+      
+      return res.json({
+        success: true,
+        datos: {
+          stats,
+          documentosPendientes: documentosPendientes.map(doc => ({
+            id: doc.id,
+            codigoBarras: doc.codigoBarras,
+            nombreCliente: doc.nombreCliente,
+            numeroFactura: doc.numeroFactura,
+            valorFactura: doc.valorFactura ? parseFloat(doc.valorFactura).toFixed(2) : '0.00'
+          })),
+          documentosPagadosRecientes: documentosPagadosRecientes.map(doc => ({
+            id: doc.id,
+            codigoBarras: doc.codigoBarras,
+            nombreCliente: doc.nombreCliente,
+            valorFactura: doc.valorFactura ? parseFloat(doc.valorFactura).toFixed(2) : '0.00',
+            metodoPago: mapearMetodoPagoInverso(doc.metodoPago),
+            updated_at: doc.updated_at
+          }))
+        }
+      });
+      
+    } catch (error) {
+      console.error('Error al filtrar dashboard:', error);
+      return res.json({
+        success: false,
+        message: 'Error interno del servidor'
+      });
+    }
+  },
+
+  /**
+   * Envía recordatorio de pago individual
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  recordarPagoIndividual: async (req, res) => {
+    try {
+      const documentoId = req.params.id;
+      
+      // Obtener el documento con información del cliente
+      const documento = await Documento.findByPk(documentoId, {
+        include: [{
+          model: Matrizador,
+          as: 'matrizador',
+          attributes: ['nombre', 'email']
+        }]
+      });
+      
+      if (!documento) {
+        return res.status(404).json({
+          success: false,
+          message: 'Documento no encontrado'
+        });
+      }
+      
+      // Aquí puedes implementar la lógica real de envío de email
+      // Por ahora, simularemos el envío
+      console.log(`Enviando recordatorio para documento ${documento.codigoBarras} a ${documento.emailCliente}`);
+      
+      res.json({
+        success: true,
+        message: 'Recordatorio enviado exitosamente'
+      });
+    } catch (error) {
+      console.error('Error al enviar recordatorio individual:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error interno del servidor'
+      });
+    }
+  },
+
+  /**
+   * Envía recordatorios de pago masivos
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  recordarPagoMasivo: async (req, res) => {
+    try {
+      const { documentosIds, tipo } = req.body;
+      
+      if (!documentosIds || documentosIds.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'No se especificaron documentos'
+        });
+      }
+      
+      // Obtener documentos
+      const documentos = await Documento.findAll({
+        where: {
+          id: documentosIds,
+          estadoPago: 'pendiente'
+        },
+        include: [{
+          model: Matrizador,
+          as: 'matrizador',
+          attributes: ['nombre', 'email']
+        }]
+      });
+      
+      let enviados = 0;
+      
+      // Simular envío de recordatorios
+      for (const documento of documentos) {
+        if (documento.emailCliente) {
+          console.log(`Enviando recordatorio masivo para documento ${documento.codigoBarras} a ${documento.emailCliente}`);
+          enviados++;
+        }
+      }
+      
+      res.json({
+        success: true,
+        message: `Recordatorios enviados exitosamente`,
+        enviados
+      });
+    } catch (error) {
+      console.error('Error al enviar recordatorios masivos:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error interno del servidor'
+      });
+    }
+  },
+
+  /**
+   * Exporta documentos pendientes a Excel
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  exportarPendientes: async (req, res) => {
+    try {
+      const { ids } = req.query;
+      
+      // Construir condiciones de consulta
+      const whereConditions = {
+        estadoPago: 'pendiente'
+      };
+      
+      if (ids) {
+        whereConditions.id = ids.split(',');
+      }
+      
+      // Obtener documentos pendientes
+      const documentos = await Documento.findAll({
+        where: whereConditions,
+        include: [{
+          model: Matrizador,
+          as: 'matrizador',
+          attributes: ['nombre']
+        }],
+        order: [['fechaFactura', 'ASC']]
+      });
+      
+      // Crear contenido CSV
+      let csvContent = 'Código,Cliente,Tipo,Fecha Factura,Valor,Días Pendiente,Matrizador\n';
+      
+      documentos.forEach(doc => {
+        const diasPendiente = moment().diff(moment(doc.fechaFactura), 'days');
+        csvContent += `"${doc.codigoBarras}","${doc.nombreCliente}","${doc.tipoDocumento}","${moment(doc.fechaFactura).format('DD/MM/YYYY')}","${doc.valorFactura}","${diasPendiente}","${doc.matrizador?.nombre || 'Sin asignar'}"\n`;
+      });
+      
+      // Configurar headers para descarga
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="documentos_pendientes_${moment().format('YYYY-MM-DD')}.csv"`);
+      
+      res.send('\ufeff' + csvContent); // BOM para UTF-8
+    } catch (error) {
+      console.error('Error al exportar pendientes:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error al exportar datos'
+      });
+    }
+  },
+
+  /**
+   * Genera reporte PDF de documentos pendientes
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  generarPdfPendientes: async (req, res) => {
+    try {
+      // Por ahora, redirigir a una página de "en desarrollo"
+      res.status(501).json({
+        success: false,
+        message: 'Generación de PDF en desarrollo'
+      });
+    } catch (error) {
+      console.error('Error al generar PDF:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error al generar PDF'
+      });
+    }
+  },
+
+  /**
+   * Marca un documento como pagado
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  marcarComoPagado: async (req, res) => {
+    try {
+      const documentoId = req.params.id;
+      
+      // Buscar el documento
+      const documento = await Documento.findByPk(documentoId);
+      
+      if (!documento) {
+        return res.status(404).json({
+          success: false,
+          message: 'Documento no encontrado'
+        });
+      }
+      
+      if (documento.estadoPago === 'pagado') {
+        return res.status(400).json({
+          success: false,
+          message: 'El documento ya está marcado como pagado'
+        });
+      }
+      
+      // Actualizar el estado del documento
+      await documento.update({
+        estadoPago: 'pagado',
+        fechaPago: new Date(),
+        observacionesPago: 'Marcado como pagado manualmente desde reportes'
+      });
+      
+      res.json({
+        success: true,
+        message: 'Documento marcado como pagado exitosamente'
+      });
+    } catch (error) {
+      console.error('Error al marcar como pagado:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error interno del servidor'
+      });
+    }
+  },
+
+  /**
+   * Muestra la página para buscar un documento por código de barras para registrar un pago.
+   */
+  mostrarPaginaBuscarDocumentoParaPago: async (req, res) => {
+    try {
+      // Asegurarse que los mensajes flash se pasan a la vista
+      const errorBusqueda = req.flash('errorBusqueda') || null;
+      const successMessage = req.flash('success') || null;
+      
+      res.render('caja/pagos/buscarDocumento', {
+        layout: 'caja',
+        title: 'Buscar Documento para Registrar Pago',
+        activePagos: true,
+        codigoBusqueda: req.query.codigoBusqueda || '',
+        errorBusqueda: req.query.errorBusqueda || null,
+        userRole: req.matrizador?.rol || req.user?.rol, // Asegurar que el rol se obtiene correctamente
+        userName: req.matrizador?.nombre || req.user?.nombre // Asegurar que el nombre se obtiene correctamente
+      });
+    } catch (error) {
+      console.error('Error al mostrar página de búsqueda de documento para pago:', error);
+      req.flash('error', 'Error al cargar la página de búsqueda.');
+      res.redirect('/caja');
+    }
+  },
+
+  procesarBusquedaDocumentoParaPago: async (req, res) => {
+    const { codigoBarras } = req.body;
+    try {
+      if (!codigoBarras || codigoBarras.trim() === '') {
+        // Usar req.flash para mensajes de error y redirigir para que se muestren con el layout correcto
+        req.flash('errorBusqueda', 'Ingrese un código de barras.');
+        return res.redirect('/caja/pagos/buscar-documento');
+      }
+
+      const documento = await Documento.findOne({ where: { codigoBarras: codigoBarras.trim() } });
+
+      if (documento) {
+        if (documento.estado === 'cancelado') {
+          req.flash('errorBusqueda', `El documento con código ${codigoBarras} se encuentra cancelado.`);
+          return res.redirect(`/caja/pagos/buscar-documento?codigoBusqueda=${encodeURIComponent(codigoBarras)}`);
+        }
+        // Redirigir a la página de detalle del documento, anclando a la sección de pago
+        // Asegúrate que la vista de detalle tenga un elemento con id="seccion-pago"
+        res.redirect(`/caja/documentos/detalle/${documento.id}#seccion-pago`);
+      } else {
+        req.flash('errorBusqueda', `Documento con código ${codigoBarras} no encontrado.`);
+        return res.redirect(`/caja/pagos/buscar-documento?codigoBusqueda=${encodeURIComponent(codigoBarras)}`);
+      }
+    } catch (error) {
+      console.error('Error al procesar búsqueda de documento para pago:', error);
+      req.flash('error', 'Error interno al buscar el documento.');
+      res.redirect(`/caja/pagos/buscar-documento?codigoBusqueda=${encodeURIComponent(codigoBarras)}`);
+    }
   }
 };
 
-// Agregar una función de mapeo para método de pago en la parte superior del controlador después de las importaciones
-/**
- * Mapea los valores del formulario a los valores del enum de la base de datos
- * @param {string} metodoFormulario - Valor del método de pago desde el formulario
- * @returns {string} - Valor compatible con la base de datos
- */
-const mapearMetodoPago = (metodoFormulario) => {
-  const mapeo = {
-    'pendiente': null,
-    'tarjeta_credito': 'tarjeta',
-    'tarjeta_debito': 'tarjeta'
-  };
-  
-  return mapeo[metodoFormulario] !== undefined ? mapeo[metodoFormulario] : metodoFormulario;
-};
-
-/**
- * Mapea los valores de la base de datos a los valores para el formulario
- * @param {string} metodoDB - Valor del método de pago desde la base de datos
- * @returns {string} - Valor para mostrar en el formulario
- */
-const mapearMetodoPagoInverso = (metodoDB) => {
-  if (metodoDB === null) return 'pendiente';
-  return metodoDB;
-};
-
-module.exports = cajaController; 
+module.exports = cajaController;

@@ -264,11 +264,16 @@ function ordenarTabla(tabla, columna, orden, tipo) {
   }
   
   // Función para obtener el valor de la columna
-  const getValorColumna = (fila, indiceColumna) => {
+  const getValorColumna = (fila, indiceColumna, tipo) => {
     const celda = fila.cells[indiceColumna];
     if (!celda) {
       console.log(`No se encontró la celda en índice ${indiceColumna}`);
       return '';
+    }
+
+    // Si es de tipo fecha y existe data-sort-value, usarlo.
+    if (tipo === 'fecha' && celda.dataset.sortValue) {
+      return celda.dataset.sortValue;
     }
     
     // Intentar extraer el contenido más relevante
@@ -289,10 +294,12 @@ function ordenarTabla(tabla, columna, orden, tipo) {
   // Obtener el índice de la columna a ordenar
   const encabezados = tabla.querySelectorAll('th');
   let indiceColumna = -1;
+  let tipoDatoColumna = 'texto'; // tipo por defecto
   
   for (let i = 0; i < encabezados.length; i++) {
     if (encabezados[i].dataset.columna === columna) {
       indiceColumna = i;
+      tipoDatoColumna = encabezados[i].dataset.tipo || 'texto'; // Obtener el tipo del encabezado
       break;
     }
   }
@@ -306,19 +313,51 @@ function ordenarTabla(tabla, columna, orden, tipo) {
   
   // Ordenar las filas
   filas.sort((a, b) => {
-    let valorA = getValorColumna(a, indiceColumna);
-    let valorB = getValorColumna(b, indiceColumna);
+    // Pasar el tipo de dato a getValorColumna
+    let valorA = getValorColumna(a, indiceColumna, tipoDatoColumna);
+    let valorB = getValorColumna(b, indiceColumna, tipoDatoColumna);
     
-    console.log(`Comparando: "${valorA}" con "${valorB}"`);
+    console.log(`Comparando: "${valorA}" con "${valorB}" (Tipo: ${tipoDatoColumna})`);
     
     // Aplicar formato según el tipo de datos
-    if (tipo === 'numero') {
-      valorA = parseFloat(valorA.replace(/[^\d.-]/g, '')) || 0;
-      valorB = parseFloat(valorB.replace(/[^\d.-]/g, '')) || 0;
-    } else if (tipo === 'fecha') {
-      valorA = new Date(valorA).getTime() || 0;
-      valorB = new Date(valorB).getTime() || 0;
-    } else if (tipo === 'estado') {
+    if (tipoDatoColumna === 'numero') {
+      valorA = parseFloat(valorA.replace(/[^\\d.-]/g, '')) || 0;
+      valorB = parseFloat(valorB.replace(/[^\\d.-]/g, '')) || 0;
+    } else if (tipoDatoColumna === 'fecha') {
+      // Intentar convertir desde varios formatos comunes o si ya es timestamp
+      const parseDate = (dateString) => {
+        if (!dateString) return 0;
+        // Si es un número, asumimos que es un timestamp
+        if (!isNaN(dateString)) return parseInt(dateString, 10);
+
+        // Formato DD/MM/YYYY o DD/MM/YYYY, HH:MM:SS
+        const dateTimeParts = dateString.split(', ');
+        const dateParts = dateTimeParts[0].split('/');
+        if (dateParts.length === 3) {
+          // new Date(year, monthIndex, day, hours, minutes, seconds)
+          const day = parseInt(dateParts[0], 10);
+          const month = parseInt(dateParts[1], 10) - 1; // Mes es 0-indexado
+          const year = parseInt(dateParts[2], 10);
+          
+          let hours = 0, minutes = 0, seconds = 0;
+          if (dateTimeParts.length > 1) {
+            const timeParts = dateTimeParts[1].split(':');
+            if (timeParts.length >= 2) {
+              hours = parseInt(timeParts[0], 10) || 0;
+              minutes = parseInt(timeParts[1], 10) || 0;
+            }
+            if (timeParts.length === 3) {
+              seconds = parseInt(timeParts[2], 10) || 0;
+            }
+          }
+          return new Date(year, month, day, hours, minutes, seconds).getTime();
+        }
+        // Si no es DD/MM/YYYY, intentar directamente (puede ser ISO)
+        return new Date(dateString).getTime() || 0;
+      };
+      valorA = parseDate(valorA);
+      valorB = parseDate(valorB);
+    } else if (tipoDatoColumna === 'estado') {
       // Ordenar por prioridad de estado
       const prioridades = {
         'En Proceso': 1,

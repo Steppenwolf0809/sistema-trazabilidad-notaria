@@ -142,6 +142,17 @@ const hbs = engine({
     json: (context) => {
       return JSON.stringify(context);
     },
+    // Helper para formatear valores monetarios (máximo 2 decimales)
+    formatMoney: (value) => {
+      if (value === null || value === undefined || value === '') {
+        return '0.00';
+      }
+      const numero = parseFloat(value);
+      if (isNaN(numero)) {
+        return '0.00';
+      }
+      return (Math.round(numero * 100) / 100).toFixed(2);
+    },
     // Helper para calcular el tiempo transcurrido entre dos fechas
     tiempoTranscurrido: (fechaInicio, fechaFin) => {
       if (!fechaInicio || !fechaFin) return 'N/A';

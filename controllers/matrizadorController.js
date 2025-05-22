@@ -15,6 +15,11 @@ const EventoDocumento = require('../models/EventoDocumento');
 const RegistroAuditoria = require('../models/RegistroAuditoria');
 const { Op } = require('sequelize');
 const moment = require('moment');
+const { 
+  inferirTipoDocumentoPorCodigo, 
+  procesarFechaFactura, 
+  formatearValorMonetario 
+} = require('../utils/documentoUtils');
 
 // Objeto que contendrá todas las funciones del controlador
 const matrizadorController = {
@@ -775,6 +780,22 @@ const matrizadorController = {
         type: sequelize.QueryTypes.SELECT
       });
       
+      // Total Facturado por el matrizador en el período
+      const [totalFacturadoMatrizador] = await sequelize.query(`
+        SELECT SUM(valor_factura) as total
+        FROM documentos
+        WHERE id_matrizador = :idMatrizador
+        AND fecha_factura BETWEEN :fechaInicio AND :fechaFin
+        AND valor_factura IS NOT NULL
+      `, {
+        replacements: {
+          idMatrizador: req.matrizador.id,
+          fechaInicio: fechaInicioSQL,
+          fechaFin: fechaFinSQL
+        },
+        type: sequelize.QueryTypes.SELECT
+      });
+      
       // Obtener documentos con alertas (más de 7 días en proceso)
       const documentosAlerta = await Documento.findAll({
         where: {
@@ -930,6 +951,7 @@ const matrizadorController = {
         enProceso: documentosEnProceso.total || 0,
         completados: documentosCompletados.total || 0,
         entregados: documentosEntregados.total || 0,
+        totalFacturado: totalFacturadoMatrizador.total || 0,
         tiempoPromedio: tiempoPromedio.promedio ? parseFloat(tiempoPromedio.promedio).toFixed(1) : "0.0",
         eficiencia: eficiencia.porcentaje ? parseFloat(eficiencia.porcentaje).toFixed(1) : "0.0",
         alertas
@@ -1249,7 +1271,7 @@ const matrizadorController = {
         // Agregar nuevos campos
         numeroFactura: numeroFactura || null,
         valorFactura: valorFactura ? parseFloat(valorFactura) : null,
-        fechaFactura: fechaFactura ? new Date(fechaFactura) : null,
+        fechaFactura: procesarFechaFactura(fechaFactura),
         estadoPago: estadoPago || 'pendiente',
         metodoPago: metodoPago || null,
         omitirNotificacion: omitirNotificacion === 'true',

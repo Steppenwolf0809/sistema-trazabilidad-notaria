@@ -45,6 +45,7 @@ router.use(roleAuth(['caja', 'admin']));
 
 // Dashboard de Caja
 router.get('/', cajaController.dashboard);
+router.post('/dashboard/filtrar', cajaController.filtrarDashboard);
 
 // Rutas para gestión de documentos
 router.get('/documentos', cajaController.listarDocumentos);
@@ -64,6 +65,20 @@ router.post('/pagos/confirmar/:id', cajaController.confirmarPago);
 
 // Ruta para cambiar matrizador - Ahora desde modal en el listado
 router.post('/documentos/cambiar-matrizador', cajaController.cambiarMatrizador);
+
+// Rutas para reportes
+router.get('/reportes', cajaController.reportes);
+router.get('/reportes/financiero', cajaController.reporteFinanciero);
+router.get('/reportes/matrizadores', cajaController.reporteMatrizadores);
+router.get('/reportes/documentos', cajaController.reporteDocumentos);
+router.get('/reportes/pendientes', cajaController.reportePendientes);
+
+// Rutas para funcionalidades adicionales de reportes
+router.post('/reportes/recordar-pago/:id', cajaController.recordarPagoIndividual);
+router.post('/reportes/recordar-masivo', cajaController.recordarPagoMasivo);
+router.get('/reportes/exportar-pendientes', cajaController.exportarPendientes);
+router.get('/reportes/pendientes-pdf', cajaController.generarPdfPendientes);
+router.post('/documentos/marcar-pagado/:id', cajaController.marcarComoPagado);
 
 // Exportar router
 module.exports = router; 

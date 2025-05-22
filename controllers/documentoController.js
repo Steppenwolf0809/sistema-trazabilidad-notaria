@@ -10,6 +10,11 @@ const RegistroAuditoria = require('../models/RegistroAuditoria');
 const DocumentoRelacion = require('../models/DocumentoRelacion');
 const { sequelize } = require('../config/database');
 const { Op } = require('sequelize');
+const { 
+  inferirTipoDocumentoPorCodigo, 
+  procesarFechaFactura, 
+  formatearValorMonetario 
+} = require('../utils/documentoUtils');
 
 /**
  * Muestra el formulario para registrar un nuevo documento
@@ -86,7 +91,13 @@ exports.registrarDocumento = async (req, res) => {
       telefonoCliente,
       notas,
       idMatrizador,
-      comparecientes
+      comparecientes,
+      // Campos adicionales de facturación
+      fechaFactura,
+      numeroFactura,
+      valorFactura,
+      estadoPago,
+      metodoPago
     } = req.body;
 
     // Validación de teléfono
@@ -139,7 +150,13 @@ exports.registrarDocumento = async (req, res) => {
       notas,
       estado: 'en_proceso',
       idMatrizador: idMatrizadorNum,
-      comparecientes: comparecientes || []
+      comparecientes: comparecientes || [],
+      // Campos de facturación
+      fechaFactura: procesarFechaFactura(fechaFactura),
+      numeroFactura: numeroFactura || null,
+      valorFactura: valorFactura ? parseFloat(valorFactura) : null,
+      estadoPago: estadoPago || 'pendiente',
+      metodoPago: metodoPago || null
     }, { transaction });
     
     // Registrar evento de creación
@@ -1438,7 +1455,13 @@ exports.actualizarDocumento = async (req, res) => {
       notas,
       estado, 
       idMatrizador,
-      comparecientes
+      comparecientes,
+      // Campos de facturación
+      fechaFactura,
+      numeroFactura,
+      valorFactura,
+      estadoPago,
+      metodoPago
     } = req.body;
 
     // Validación de teléfono
@@ -1483,7 +1506,13 @@ exports.actualizarDocumento = async (req, res) => {
       telefonoCliente: telefonoCliente === undefined ? documento.telefonoCliente : telefonoCliente, // Permitir string vacío
       notas: notas === undefined ? documento.notas : notas, // Permitir string vacío
       // Asegurar que comparecientes sea un array; si no se envía, mantener el existente.
-      comparecientes: Array.isArray(comparecientes) ? comparecientes : (comparecientes === undefined ? documento.comparecientes : []) 
+      comparecientes: Array.isArray(comparecientes) ? comparecientes : (comparecientes === undefined ? documento.comparecientes : []),
+      // Campos de facturación
+      fechaFactura: fechaFactura !== undefined ? procesarFechaFactura(fechaFactura) : documento.fechaFactura,
+      numeroFactura: numeroFactura !== undefined ? numeroFactura : documento.numeroFactura,
+      valorFactura: valorFactura !== undefined ? (valorFactura ? parseFloat(valorFactura) : null) : documento.valorFactura,
+      estadoPago: estadoPago || documento.estadoPago || 'pendiente',
+      metodoPago: metodoPago !== undefined ? metodoPago : documento.metodoPago
     };
 
     if (usuario.rol === 'admin') {
@@ -1567,6 +1596,8 @@ exports.actualizarDocumento = async (req, res) => {
     });
   }
 };
+
+// Nota: procesarFechaFactura ahora se importa desde utils/documentoUtils.js
 
 // Utilidad para obtener el layout y la ruta base de la vista según el rol
 function getLayoutAndViewBase(req) {

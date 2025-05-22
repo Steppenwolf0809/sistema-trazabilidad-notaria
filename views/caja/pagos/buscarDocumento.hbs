@@ -1,0 +1,50 @@
+<div class="container mt-4">
+  <div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+      <div class="card">
+        <div class="card-header">
+          <h4 class="mb-0"><i class="fas fa-search me-2"></i> Buscar Documento para Registrar Pago</h4>
+        </div>
+        <div class="card-body">
+          {{#if errorBusqueda}}
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+              <i class="fas fa-exclamation-triangle me-2"></i>{{errorBusqueda}}
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {{/if}}
+          {{#if success}}
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+              <i class="fas fa-check-circle me-2"></i>{{success}}
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {{/if}}
+          {{#if error}} {{!-- Para errores flash generales --}}
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+              <i class="fas fa-times-circle me-2"></i>{{error}}
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {{/if}}
+
+          <p class="text-muted">Ingrese el código de barras o número único del documento para acceder directamente al registro de su pago.</p>
+
+          <form method="POST" action="/caja/pagos/buscar-documento">
+            <div class="mb-3">
+              <label for="codigoBarras" class="form-label">Código de Barras del Documento</label>
+              <input type="text" class="form-control form-control-lg" id="codigoBarras" name="codigoBarras" value="{{codigoBusqueda}}" placeholder="Ej: 20240101A0001" required autofocus>
+            </div>
+            <div class="d-grid">
+              <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-search me-2"></i> Buscar y Registrar Pago
+              </button>
+            </div>
+          </form>
+        </div>
+        <div class="card-footer text-center">
+          <a href="/caja/documentos" class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-list me-1"></i> Ir al Listado de Documentos
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div> 

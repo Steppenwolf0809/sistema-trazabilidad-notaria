@@ -12,23 +12,23 @@
   <div class="card-body">
     <!-- Filtros -->
     <div class="mb-4">
-      <form action="/caja/documentos" method="GET" class="row g-3">
+      <form id="filtrosFormCaja" action="/caja/documentos" method="GET" class="row g-3 align-items-end">
         <div class="col-md-2">
           <label for="busqueda" class="form-label">Buscar</label>
-          <input type="text" class="form-control" id="busqueda" name="busqueda" value="{{filtros.busqueda}}" placeholder="Código o cliente">
+          <input type="text" class="form-control" id="busqueda" name="busqueda" value="{{filtros.busqueda}}" placeholder="Código, cliente, factura">
         </div>
         <div class="col-md-2">
-          <label for="estado" class="form-label">Estado</label>
+          <label for="estado" class="form-label">Estado Doc.</label>
           <select class="form-select" id="estado" name="estado">
             <option value="">Todos</option>
-            <option value="en_proceso" {{#if filtros.estado.en_proceso}}selected{{/if}}>En Proceso</option>
-            <option value="listo_para_entrega" {{#if filtros.estado.listo_para_entrega}}selected{{/if}}>Listo para Entrega</option>
-            <option value="entregado" {{#if filtros.estado.entregado}}selected{{/if}}>Entregado</option>
-            <option value="cancelado" {{#if filtros.estado.cancelado}}selected{{/if}}>Cancelado</option>
+            <option value="en_proceso" {{#if (eq filtros.estado "en_proceso")}}selected{{/if}}>En Proceso</option>
+            <option value="listo_para_entrega" {{#if (eq filtros.estado "listo_para_entrega")}}selected{{/if}}>Listo</option>
+            <option value="entregado" {{#if (eq filtros.estado "entregado")}}selected{{/if}}>Entregado</option>
+            <option value="cancelado" {{#if (eq filtros.estado "cancelado")}}selected{{/if}}>Cancelado</option>
           </select>
         </div>
         <div class="col-md-2">
-          <label for="estadoPago" class="form-label">Estado de Pago</label>
+          <label for="estadoPago" class="form-label">Estado Pago</label>
           <select class="form-select" id="estadoPago" name="estadoPago">
             <option value="">Todos</option>
             <option value="pendiente" {{#if (eq filtros.estadoPago "pendiente")}}selected{{/if}}>Pendiente</option>
@@ -36,7 +36,7 @@
           </select>
         </div>
         <div class="col-md-2">
-          <label for="tipoDocumento" class="form-label">Tipo</label>
+          <label for="tipoDocumento" class="form-label">Tipo Doc.</label>
           <select class="form-select" id="tipoDocumento" name="tipoDocumento">
             <option value="">Todos</option>
             {{#each tiposDocumento}}
@@ -49,147 +49,35 @@
           <select class="form-select" id="matrizadorId" name="matrizadorId">
             <option value="">Todos</option>
             {{#each matrizadores}}
-            <option value="{{this.id}}" {{#if (eq ../filtros.matrizadorId this.id)}}selected{{/if}}>{{this.nombre}}</option>
+            <option value="{{this.id}}" {{#if (eq ../filtros.matrizadorId (stringifyNumber this.id))}}selected{{/if}}>{{this.nombre}}</option>
             {{/each}}
           </select>
         </div>
+        <div class="col-md-2">
+          <label for="fechaDesde" class="form-label">Fecha Desde</label>
+          <input type="date" class="form-control" id="fechaDesde" name="fechaDesde" value="{{filtros.fechaDesde}}">
+        </div>
+        <div class="col-md-2">
+          <label for="fechaHasta" class="form-label">Fecha Hasta</label>
+          <input type="date" class="form-control" id="fechaHasta" name="fechaHasta" value="{{filtros.fechaHasta}}">
+        </div>
         <div class="col-md-2 d-flex align-items-end">
           <button type="submit" class="btn btn-primary w-100">
-            <i class="fas fa-search me-1"></i> Filtrar
+            <i class="fas fa-search me-1"></i> Aplicar Filtros
+          </button>
+        </div>
+        <div class="col-md-1 d-flex align-items-end">
+          <button type="button" class="btn btn-outline-secondary w-100" onclick="limpiarFiltrosCaja()">
+            <i class="fas fa-times"></i>
           </button>
         </div>
       </form>
     </div>
     
-    <!-- Tabla de documentos -->
-    <div class="table-responsive">
-      <table class="table table-hover table-striped">
-        <thead class="table-light">
-          <tr>
-            <th>Código</th>
-            <th>Tipo</th>
-            <th>Cliente</th>
-            <th>Estado</th>
-            <th>Factura</th>
-            <th>Matrizador</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {{#each documentos}}
-          <tr>
-            <td>
-              <a href="/caja/documentos/detalle/{{this.id}}" class="text-primary fw-bold">
-                {{this.codigoBarras}}
-              </a>
-            </td>
-            <td>{{this.tipoDocumento}}</td>
-            <td>{{this.nombreCliente}}</td>
-            <td>
-              {{#if (eq this.estado "en_proceso")}}
-              <span class="badge bg-warning text-dark">En Proceso</span>
-              {{else if (eq this.estado "listo_para_entrega")}}
-              <span class="badge bg-info">Listo</span>
-              {{else if (eq this.estado "entregado")}}
-              <span class="badge bg-success">Entregado</span>
-              {{else}}
-              <span class="badge bg-secondary">Cancelado</span>
-              {{/if}}
-              
-              {{#if (eq this.estadoPago "pagado")}}
-              <span class="badge bg-success ms-1">Pagado</span>
-              {{else}}
-              <span class="badge bg-danger ms-1">Pendiente</span>
-              {{/if}}
-            </td>
-            <td>
-              {{#if this.numeroFactura}}
-              {{this.numeroFactura}}
-              <div class="small text-muted">${{this.valorFactura}}</div>
-              {{else}}
-              <span class="text-muted">Sin factura</span>
-              {{/if}}
-            </td>
-            <td>
-              {{#if this.matrizador}}
-              <div class="d-flex align-items-center">
-                <span>{{this.matrizador.nombre}}</span>
-                <button type="button" class="btn btn-sm btn-outline-secondary ms-2" 
-                        data-bs-toggle="modal" data-bs-target="#cambiarMatrizadorModal" 
-                        data-documento-id="{{this.id}}"
-                        data-matrizador-actual-id="{{this.matrizador.id}}"
-                        data-matrizador-actual-nombre="{{this.matrizador.nombre}}">
-                  <i class="fas fa-edit"></i>
-                </button>
-              </div>
-              {{else}}
-              <button type="button" class="btn btn-sm btn-outline-primary" 
-                      data-bs-toggle="modal" data-bs-target="#cambiarMatrizadorModal" 
-                      data-documento-id="{{this.id}}">
-                <i class="fas fa-user-plus me-1"></i> Asignar
-              </button>
-              {{/if}}
-            </td>
-            <td>
-              <div class="btn-group">
-                <a href="/caja/documentos/detalle/{{this.id}}" class="btn btn-sm btn-outline-primary">
-                  <i class="fas fa-eye"></i>
-                </a>
-                <a href="/caja/documentos/detalle/{{this.id}}#pago" class="btn btn-sm btn-outline-success" title="Registrar pago">
-                  <i class="fas fa-money-bill-wave"></i>
-                </a>
-              </div>
-            </td>
-          </tr>
-          {{else}}
-          <tr>
-            <td colspan="7" class="text-center py-3">No se encontraron documentos con los filtros seleccionados</td>
-          </tr>
-          {{/each}}
-        </tbody>
-      </table>
+    <!-- Div para mostrar resultados de AJAX -->
+    <div id="listadoDocumentosContainer">
+      {{> caja/tablaDocumentosPaginada }}
     </div>
-    
-    <!-- Paginación -->
-    {{#if pagination.pages.length}}
-    <nav aria-label="Paginación de documentos">
-      <ul class="pagination justify-content-center mt-4">
-        {{#if pagination.prev}}
-        <li class="page-item">
-          <a class="page-link" href="{{pagination.prev}}" aria-label="Anterior">
-            <span aria-hidden="true">&laquo;</span>
-          </a>
-        </li>
-        {{else}}
-        <li class="page-item disabled">
-          <a class="page-link" href="#" aria-label="Anterior">
-            <span aria-hidden="true">&laquo;</span>
-          </a>
-        </li>
-        {{/if}}
-        
-        {{#each pagination.pages}}
-        <li class="page-item {{#if this.active}}active{{/if}}">
-          <a class="page-link" href="{{this.url}}">{{this.num}}</a>
-        </li>
-        {{/each}}
-        
-        {{#if pagination.next}}
-        <li class="page-item">
-          <a class="page-link" href="{{pagination.next}}" aria-label="Siguiente">
-            <span aria-hidden="true">&raquo;</span>
-          </a>
-        </li>
-        {{else}}
-        <li class="page-item disabled">
-          <a class="page-link" href="#" aria-label="Siguiente">
-            <span aria-hidden="true">&raquo;</span>
-          </a>
-        </li>
-        {{/if}}
-      </ul>
-    </nav>
-    {{/if}}
   </div>
 </div>
 
@@ -237,6 +125,86 @@
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
+    console.log('Script de filtros iniciado - Listado Caja');
+    const filtrosForm = document.getElementById('filtrosFormCaja');
+    const listadoContainer = document.getElementById('listadoDocumentosContainer');
+
+    // Log para depuración
+    if (filtrosForm) {
+      console.log('Formulario de filtros encontrado:', filtrosForm.id);
+    } else {
+      console.error('Formulario de filtros NO encontrado - ID: filtrosFormCaja');
+    }
+
+    // Función para cargar contenido via AJAX
+    async function cargarListado(url, pushState = true) {
+      console.log('Cargando listado AJAX:', url);
+      try {
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest' // Para que el backend sepa que es AJAX
+          }
+        });
+        if (!response.ok) {
+          throw new Error(`Error en la solicitud: ${response.statusText}`);
+        }
+        const html = await response.text();
+        listadoContainer.innerHTML = html;
+        
+        if (pushState) {
+          history.pushState(null, '', url); // Actualizar URL del navegador
+        }
+        
+        // Manejo seguro de inicializarOrdenamientoTablas
+        try {
+          if (typeof inicializarOrdenamientoTablas === 'function') {
+            console.log('Reinicializando ordenamiento de tablas');
+            inicializarOrdenamientoTablas();
+          } else {
+            console.warn('Función inicializarOrdenamientoTablas no encontrada');
+          }
+        } catch (error) {
+          console.error('Error al inicializar ordenamiento:', error);
+        }
+
+      } catch (error) {
+        console.error('Error al cargar listado AJAX:', error);
+        listadoContainer.innerHTML = '<div class="alert alert-danger">Error al cargar los datos. Por favor, intente de nuevo.</div>';
+      }
+    }
+
+    // Manejar submit del formulario de filtros
+    if (filtrosForm) {
+      filtrosForm.addEventListener('submit', function(event) {
+        console.log('Formulario de filtros enviado');
+        event.preventDefault();
+        const formData = new FormData(filtrosForm);
+        const params = new URLSearchParams(formData);
+        const url = `${filtrosForm.action}?${params.toString()}`;
+        console.log('URL de búsqueda:', url);
+        cargarListado(url);
+      });
+    }
+
+    // Manejar clics en paginación (delegación de eventos)
+    if (listadoContainer) {
+      listadoContainer.addEventListener('click', function(event) {
+        const target = event.target.closest('a.page-link');
+        if (target && target.dataset.ajaxUrl) {
+          event.preventDefault();
+          cargarListado(target.dataset.ajaxUrl);
+        }
+      });
+    }
+    
+    // Cargar estado inicial si la URL ya tiene filtros (para F5 o enlaces directos)
+    // Esto ya lo maneja el servidor al renderizar la página completa inicialmente.
+    // Solo necesitamos asegurarnos que el ordenamiento se aplica a la tabla inicial.
+    if (document.querySelector('table.tabla-ordenable')) {
+        inicializarOrdenamientoTablas();
+    }
+
     // Manejar el modal de cambio de matrizador
     const cambiarMatrizadorModal = document.getElementById('cambiarMatrizadorModal');
     if (cambiarMatrizadorModal) {
@@ -259,4 +227,16 @@
       });
     }
   });
+
+  function limpiarFiltrosCaja() {
+    document.getElementById('busqueda').value = '';
+    document.getElementById('estado').value = '';
+    document.getElementById('estadoPago').value = '';
+    document.getElementById('tipoDocumento').value = '';
+    document.getElementById('matrizadorId').value = '';
+    document.getElementById('fechaDesde').value = '';
+    document.getElementById('fechaHasta').value = '';
+    // Opcional: enviar el formulario para recargar la lista sin filtros
+    document.getElementById('filtrosFormCaja').submit(); 
+  }
 </script> 

@@ -1,0 +1,118 @@
+<!-- Vista principal de reportes -->
+<div class="row">
+  <div class="col-md-12 mb-4">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-chart-bar me-2"></i> Reportes y Estadísticas</span>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <!-- Navegación de reportes -->
+  <div class="col-md-3">
+    <div class="card mb-4">
+      <div class="card-header">
+        <i class="fas fa-list me-2"></i> Tipos de Reportes
+      </div>
+      <div class="card-body p-0">
+        <div class="list-group list-group-flush">
+          <a href="/caja/reportes/financiero" class="list-group-item list-group-item-action {{#if (eq reporteActivo 'financiero')}}active{{/if}}">
+            <i class="fas fa-dollar-sign me-2"></i> Reporte Financiero
+          </a>
+          <a href="/caja/reportes/matrizadores" class="list-group-item list-group-item-action {{#if (eq reporteActivo 'matrizadores')}}active{{/if}}">
+            <i class="fas fa-users me-2"></i> Reporte por Matrizador
+          </a>
+          <a href="/caja/reportes/documentos" class="list-group-item list-group-item-action {{#if (eq reporteActivo 'documentos')}}active{{/if}}">
+            <i class="fas fa-file-alt me-2"></i> Reporte de Documentos
+          </a>
+          <a href="/caja/reportes/pendientes" class="list-group-item list-group-item-action {{#if (eq reporteActivo 'pendientes')}}active{{/if}}">
+            <i class="fas fa-clock me-2"></i> Documentos Pendientes
+          </a>
+        </div>
+      </div>
+    </div>
+
+    
+  </div>
+  
+  <!-- Contenido del reporte -->
+  <div class="col-md-9">
+    {{#if reporteActivo}}
+      <!-- Contenido dinámico del reporte cargado -->
+      {{{contenidoReporte}}}
+    {{else}}
+      <!-- Bienvenida a reportes cuando no hay reporte activo -->
+      <div class="card">
+        <div class="card-body text-center py-5">
+          <i class="fas fa-chart-pie fa-5x text-primary mb-4"></i>
+          <h3>Bienvenido a Reportes</h3>
+          <p class="lead">Seleccione un tipo de reporte del menú lateral para comenzar.</p>
+          <div class="row mt-5">
+            <div class="col-md-6">
+              <div class="card bg-light mb-3">
+                <div class="card-body text-center p-4">
+                  <i class="fas fa-dollar-sign fa-3x text-success mb-3"></i>
+                  <h5>Reporte Financiero</h5>
+                  <p>Analice los montos facturados, cobrados y pendientes en diferentes períodos.</p>
+                  <a href="/caja/reportes/financiero" class="btn btn-outline-success">Ver Reporte</a>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card bg-light mb-3">
+                <div class="card-body text-center p-4">
+                  <i class="fas fa-users fa-3x text-info mb-3"></i>
+                  <h5>Reporte por Matrizador</h5>
+                  <p>Compare el desempeño de los matrizadores en facturación y documentos procesados.</p>
+                  <a href="/caja/reportes/matrizadores" class="btn btn-outline-info">Ver Reporte</a>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card bg-light mb-3">
+                <div class="card-body text-center p-4">
+                  <i class="fas fa-file-alt fa-3x text-primary mb-3"></i>
+                  <h5>Reporte de Documentos</h5>
+                  <p>Analice la distribución de documentos por tipo, estado y período.</p>
+                  <a href="/caja/reportes/documentos" class="btn btn-outline-primary">Ver Reporte</a>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card bg-light mb-3">
+                <div class="card-body text-center p-4">
+                  <i class="fas fa-clock fa-3x text-warning mb-3"></i>
+                  <h5>Documentos Pendientes</h5>
+                  <p>Identifique los documentos con pagos pendientes y su antigüedad.</p>
+                  <a href="/caja/reportes/pendientes" class="btn btn-outline-warning">Ver Reporte</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    {{/if}}
+  </div>
+</div>
+
+<script>
+  // Función para actualizar las fechas según el rango seleccionado
+  function actualizarFechas() {
+    const rangoSelect = document.getElementById('rango');
+    const fechasDiv = document.getElementById('fechasPersonalizadas');
+    
+    if (rangoSelect.value === 'personalizado') {
+      fechasDiv.style.display = 'block';
+    } else {
+      fechasDiv.style.display = 'none';
+    }
+  }
+  
+  // Inicializar al cargar la página
+  document.addEventListener('DOMContentLoaded', function() {
+    actualizarFechas();
+  });
+</script> 

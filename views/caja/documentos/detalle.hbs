@@ -101,7 +101,7 @@
                 <p><strong>N° Factura:</strong> {{#if documento.numeroFactura}}{{documento.numeroFactura}}{{else}}No registrado{{/if}}</p>
               </div>
               <div class="col-md-3">
-                <p><strong>Valor:</strong> ${{#if documento.valorFactura}}{{documento.valorFactura}}{{else}}0.00{{/if}}</p>
+                <p><strong>Valor:</strong> ${{#if documento.valorFactura}}{{formatMoney documento.valorFactura}}{{else}}0.00{{/if}}</p>
               </div>
               <div class="col-md-3">
                 <p><strong>Método de Pago:</strong> {{#if documento.metodoPago}}{{documento.metodoPago}}{{else}}No registrado{{/if}}</p>
@@ -242,49 +242,99 @@
 
 <!-- Modal para registrar pago -->
 <div class="modal fade" id="registrarPagoModal" tabindex="-1" aria-labelledby="registrarPagoModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
+  <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <form id="formRegistrarPago" action="/caja/pagos/registrar" method="POST">
-        <div class="modal-header">
-          <h5 class="modal-title" id="registrarPagoModalLabel">Registrar Pago</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="registrarPagoModalLabel">
+            <i class="fas fa-credit-card me-2"></i>Registrar Pago
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
           <input type="hidden" name="documentoId" value="{{documento.id}}">
           
-          <div class="mb-3">
-            <label for="numeroFactura" class="form-label">Número de Factura</label>
-            <input type="text" class="form-control" id="numeroFactura" name="numeroFactura" 
-                   value="{{documento.numeroFactura}}" required>
+          <!-- Información del documento -->
+          <div class="alert alert-info mb-4">
+            <div class="row">
+              <div class="col-md-6">
+                <strong>Documento:</strong> {{documento.codigoBarras}}<br>
+                <strong>Cliente:</strong> {{documento.nombreCliente}}
+              </div>
+              <div class="col-md-6">
+                <strong>Tipo:</strong> {{documento.tipoDocumento}}<br>
+                <strong>Estado actual:</strong> 
+                {{#if (eq documento.estadoPago "pagado")}}
+                <span class="badge bg-success">Pagado</span>
+                {{else}}
+                <span class="badge bg-warning">Pendiente</span>
+                {{/if}}
+              </div>
+            </div>
           </div>
           
-          <div class="mb-3">
-            <label for="valorFactura" class="form-label">Valor ($)</label>
-            <input type="number" class="form-control" id="valorFactura" name="valorFactura" 
-                   value="{{documento.valorFactura}}" min="0" step="0.01" required>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="montoPagado" class="form-label">Monto Pagado ($) <span class="text-danger">*</span></label>
+                <input type="number" class="form-control" id="montoPagado" name="valorFactura" 
+                       value="{{documento.valorFactura}}" min="0.01" step="0.01" required>
+                <div class="form-text">Ingrese el monto exacto recibido</div>
+              </div>
+            </div>
+            
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="metodoPago" class="form-label">Método de Pago <span class="text-danger">*</span></label>
+                <select class="form-select" id="metodoPago" name="metodoPago" required>
+                  <option value="" disabled selected>Seleccionar método...</option>
+                  <option value="efectivo">Efectivo</option>
+                  <option value="transferencia">Transferencia Bancaria</option>
+                  <option value="otro">Cheque</option>
+                  <option value="tarjeta">Tarjeta</option>
+                </select>
+              </div>
+            </div>
           </div>
           
-          <div class="mb-3">
-            <label for="metodoPago" class="form-label">Método de Pago</label>
-            <select class="form-select" id="metodoPago" name="metodoPago" required>
-              <option value="" disabled>Seleccionar método...</option>
-              <option value="pendiente" {{#if (eq documento.metodoPago "pendiente")}}selected{{/if}}>Pendiente</option>
-              <option value="efectivo" {{#if (eq documento.metodoPago "efectivo")}}selected{{/if}}>Efectivo</option>
-              <option value="tarjeta_credito" {{#if (eq documento.metodoPago "tarjeta_credito")}}selected{{/if}}>Tarjeta de Crédito</option>
-              <option value="tarjeta_debito" {{#if (eq documento.metodoPago "tarjeta_debito")}}selected{{/if}}>Tarjeta de Débito</option>
-              <option value="transferencia" {{#if (eq documento.metodoPago "transferencia")}}selected{{/if}}>Transferencia Bancaria</option>
-              <option value="otro" {{#if (eq documento.metodoPago "otro")}}selected{{/if}}>Otro</option>
-            </select>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="fechaPago" class="form-label">Fecha de Pago <span class="text-danger">*</span></label>
+                <input type="date" class="form-control" id="fechaPago" name="fechaPago" 
+                       value="" required>
+              </div>
+            </div>
+            
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="numeroFactura" class="form-label">Número de Factura</label>
+                <input type="text" class="form-control" id="numeroFactura" name="numeroFactura" 
+                       value="{{documento.numeroFactura}}" placeholder="Opcional">
+              </div>
+            </div>
           </div>
           
           <div class="mb-3">
             <label for="observaciones" class="form-label">Observaciones</label>
-            <textarea class="form-control" id="observaciones" name="observaciones" rows="3"></textarea>
+            <textarea class="form-control" id="observaciones" name="observaciones" rows="3" 
+                      placeholder="Información adicional sobre el pago (opcional)"></textarea>
+          </div>
+          
+          <!-- Confirmación -->
+          <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Confirmación:</strong> Al registrar este pago, el documento será marcado como <strong>PAGADO</strong> 
+            y no se podrá modificar sin justificación.
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary">Registrar Pago</button>
+          <button type="button" class="btn btn-secondary" id="cancelarPago">
+            <i class="fas fa-times me-1"></i>Cancelar
+          </button>
+          <button type="submit" class="btn btn-success" id="confirmarPago">
+            <i class="fas fa-check me-1"></i>Confirmar Pago
+          </button>
         </div>
       </form>
     </div>
@@ -338,7 +388,101 @@
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    // Manejar el modal de cambio de matrizador
+    // ============ FUNCIONALIDAD DE REGISTRO DE PAGOS ============
+    
+    // Detectar si la URL contiene el fragmento #pago
+    function checkForPaymentFragment() {
+      if (window.location.hash === '#pago') {
+        const pagoModal = new bootstrap.Modal(document.getElementById('registrarPagoModal'));
+        pagoModal.show();
+      }
+    }
+    
+    // Verificar al cargar la página
+    checkForPaymentFragment();
+    
+    // Verificar cuando cambie el hash
+    window.addEventListener('hashchange', checkForPaymentFragment);
+    
+    // Configurar fecha por defecto (hoy)
+    const fechaPagoInput = document.getElementById('fechaPago');
+    if (fechaPagoInput) {
+      const today = new Date().toISOString().split('T')[0];
+      fechaPagoInput.value = today;
+    }
+    
+    // Manejar botón cancelar - quitar #pago de URL
+    const cancelarPagoBtn = document.getElementById('cancelarPago');
+    if (cancelarPagoBtn) {
+      cancelarPagoBtn.addEventListener('click', function() {
+        // Cerrar modal
+        const pagoModal = bootstrap.Modal.getInstance(document.getElementById('registrarPagoModal'));
+        if (pagoModal) {
+          pagoModal.hide();
+        }
+        
+        // Quitar #pago de la URL
+        if (window.location.hash === '#pago') {
+          window.history.pushState("", document.title, window.location.pathname + window.location.search);
+        }
+      });
+    }
+    
+    // Validación del formulario de pago
+    const formRegistrarPago = document.getElementById('formRegistrarPago');
+    if (formRegistrarPago) {
+      formRegistrarPago.addEventListener('submit', function(e) {
+        const montoPagado = document.getElementById('montoPagado').value;
+        const metodoPago = document.getElementById('metodoPago').value;
+        const fechaPago = document.getElementById('fechaPago').value;
+        
+        // Validaciones
+        if (!montoPagado || parseFloat(montoPagado) <= 0) {
+          e.preventDefault();
+          alert('Por favor, ingrese un monto válido mayor a 0');
+          return false;
+        }
+        
+        if (!metodoPago) {
+          e.preventDefault();
+          alert('Por favor, seleccione un método de pago');
+          return false;
+        }
+        
+        if (!fechaPago) {
+          e.preventDefault();
+          alert('Por favor, seleccione la fecha de pago');
+          return false;
+        }
+        
+        // Validar que la fecha no sea futura
+        const fechaSeleccionada = new Date(fechaPago);
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+        
+        if (fechaSeleccionada > hoy) {
+          e.preventDefault();
+          alert('La fecha de pago no puede ser futura');
+          return false;
+        }
+        
+        // Confirmación final
+        const confirmacion = confirm(`¿Está seguro de registrar este pago?\n\nMonto: $${montoPagado}\nMétodo: ${metodoPago}\nFecha: ${fechaPago}\n\nEsta acción marcará el documento como PAGADO.`);
+        
+        if (!confirmacion) {
+          e.preventDefault();
+          return false;
+        }
+        
+        // Mostrar loading en el botón
+        const confirmarBtn = document.getElementById('confirmarPago');
+        confirmarBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
+        confirmarBtn.disabled = true;
+      });
+    }
+    
+    // ============ FUNCIONALIDAD DE CAMBIO DE MATRIZADOR ============
+    
     const cambiarMatrizadorModal = document.getElementById('cambiarMatrizadorModal');
     if (cambiarMatrizadorModal) {
       cambiarMatrizadorModal.addEventListener('show.bs.modal', function (event) {
@@ -356,6 +500,20 @@
           document.getElementById('matrizadorActual').value = matrizadorActualNombre;
         }
       });
+    }
+    
+    // ============ FUNCIONALIDAD ADICIONAL ============
+    
+    // Destacar sección de pago si viene de URL con #pago
+    if (window.location.hash === '#pago') {
+      const pagoSection = document.getElementById('pago');
+      if (pagoSection) {
+        pagoSection.scrollIntoView({ behavior: 'smooth' });
+        pagoSection.style.backgroundColor = '#fff3cd';
+        setTimeout(() => {
+          pagoSection.style.backgroundColor = '';
+        }, 3000);
+      }
     }
   });
 </script> 

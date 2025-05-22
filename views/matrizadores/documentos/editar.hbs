@@ -18,7 +18,18 @@
             <div class="col-md-6">
                 <div class="mb-3">
                     <label for="tipoDocumento" class="form-label">Tipo de Documento</label>
-                    <input type="text" class="form-control" id="tipoDocumento" name="tipoDocumento" value="{{documento.tipoDocumento}}" required>
+                    <select class="form-control" id="tipoDocumento" name="tipoDocumento" required>
+                        <option value="Escritura" {{#if (eq documento.tipoDocumento "Escritura")}}selected{{/if}}>Escritura</option>
+                        <option value="Escritura Pública" {{#if (eq documento.tipoDocumento "Escritura Pública")}}selected{{/if}}>Escritura Pública</option>
+                        <option value="Protocolo" {{#if (eq documento.tipoDocumento "Protocolo")}}selected{{/if}}>Protocolo</option>
+                        <option value="Diligencia" {{#if (eq documento.tipoDocumento "Diligencia")}}selected{{/if}}>Diligencia</option>
+                        <option value="Arrendamiento" {{#if (eq documento.tipoDocumento "Arrendamiento")}}selected{{/if}}>Arrendamiento</option>
+                        <option value="Certificación" {{#if (eq documento.tipoDocumento "Certificación")}}selected{{/if}}>Certificación</option>
+                        <option value="Otro" {{#if (eq documento.tipoDocumento "Otro")}}selected{{/if}}>Otro</option>
+                        <option value="Testamento" {{#if (eq documento.tipoDocumento "Testamento")}}selected{{/if}}>Testamento</option>
+                        <option value="Poder" {{#if (eq documento.tipoDocumento "Poder")}}selected{{/if}}>Poder</option>
+                        <option value="Donación" {{#if (eq documento.tipoDocumento "Donación")}}selected{{/if}}>Donación</option>
+                    </select>
                 </div>
             </div>
             <div class="col-md-6">

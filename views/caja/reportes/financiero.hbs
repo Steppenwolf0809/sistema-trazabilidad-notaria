@@ -1,0 +1,348 @@
+<!-- Botón Volver -->
+<div class="mb-3">
+  <a href="/caja/reportes" class="btn btn-outline-secondary">
+    <i class="fas fa-arrow-left me-1"></i> Volver a Reportes
+  </a>
+</div>
+
+<!-- Filtros del Reporte -->
+<div class="card mb-4">
+  <div class="card-header">
+    <i class="fas fa-filter me-2"></i> Filtros
+  </div>
+  <div class="card-body">
+    <form method="GET" action="/caja/reportes/financiero">
+      <div class="row">
+        <div class="col-md-3">
+          <label for="rango" class="form-label">Período</label>
+          <select class="form-select" id="rango" name="rango" onchange="toggleFechasPersonalizadas()">
+            <option value="hoy" {{#if (eq filtros.rango 'hoy')}}selected{{/if}}>Hoy</option>
+            <option value="ayer" {{#if (eq filtros.rango 'ayer')}}selected{{/if}}>Ayer</option>
+            <option value="semana" {{#if (eq filtros.rango 'semana')}}selected{{/if}}>Esta Semana</option>
+            <option value="mes" {{#if (eq filtros.rango 'mes')}}selected{{/if}}>Este Mes</option>
+            <option value="ultimo_mes" {{#if (eq filtros.rango 'ultimo_mes')}}selected{{/if}}>Últimos 30 días</option>
+            <option value="personalizado" {{#if (eq filtros.rango 'personalizado')}}selected{{/if}}>Personalizado</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label for="idMatrizador" class="form-label">Matrizador</label>
+          <select class="form-select" id="idMatrizador" name="idMatrizador">
+            <option value="todos" {{#if (eq idMatrizadorSeleccionado "todos")}}selected{{/if}}>Todos los Matrizadores</option>
+            {{#each matrizadores}}
+              <option value="{{this.id}}" {{#if (eq ../idMatrizadorSeleccionado (stringifyNumber this.id))}}selected{{/if}}>{{this.nombre}}</option>
+            {{/each}}
+          </select>
+        </div>
+        <div class="col-md-2" id="fechaInicioDiv" {{#unless (eq filtros.rango 'personalizado')}}style="display: none;"{{/unless}}>
+          <label for="fechaInicio" class="form-label">Fecha Inicio</label>
+          <input type="date" class="form-control" id="fechaInicio" name="fechaInicio" value="{{filtros.fechaInicio}}">
+        </div>
+        <div class="col-md-2" id="fechaFinDiv" {{#unless (eq filtros.rango 'personalizado')}}style="display: none;"{{/unless}}>
+          <label for="fechaFin" class="form-label">Fecha Fin</label>
+          <input type="date" class="form-control" id="fechaFin" name="fechaFin" value="{{filtros.fechaFin}}">
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+          <button type="submit" class="btn btn-primary me-2">
+            <i class="fas fa-search me-1"></i> Aplicar
+          </button>
+        </div>
+      </div>
+    </form>
+    <div class="mt-2">
+        <button type="button" class="btn btn-outline-info btn-sm" onclick="exportarExcel()">
+            <i class="fas fa-file-excel me-1"></i> Excel
+        </button>
+    </div>
+  </div>
+</div>
+
+<!-- Reporte Financiero General -->
+<div class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="fas fa-dollar-sign me-2"></i> Reporte Financiero General</span>
+    <div class="d-flex align-items-center">
+      <span class="badge bg-primary me-2">{{periodoTexto}}</span>
+      <button class="btn btn-sm btn-outline-primary me-2" onclick="window.print()">
+        <i class="fas fa-print me-1"></i> Imprimir
+      </button>
+      <button type="button" class="btn btn-sm btn-outline-success" onclick="exportarReporteExcel()">
+        <i class="fas fa-file-excel me-1"></i> Excel
+      </button>
+    </div>
+  </div>
+  <div class="card-body">
+    <!-- Resumen Financiero en Tarjetas -->
+    <div class="row mb-4">
+      <div class="col-md-3">
+        <div class="card bg-primary text-white">
+          <div class="card-body">
+            <div class="d-flex justify-content-between">
+              <div>
+                <h6 class="card-title mb-0">Total Facturado</h6>
+                <h2 class="display-6 mb-0">${{formatMoney stats.totalFacturado}}</h2>
+              </div>
+              <i class="fas fa-file-invoice-dollar fa-3x opacity-50"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card bg-success text-white">
+          <div class="card-body">
+            <div class="d-flex justify-content-between">
+              <div>
+                <h6 class="card-title mb-0">Total Cobrado</h6>
+                <h2 class="display-6 mb-0">${{formatMoney stats.totalCobrado}}</h2>
+              </div>
+              <i class="fas fa-money-bill-wave fa-3x opacity-50"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card bg-warning text-white">
+          <div class="card-body">
+            <div class="d-flex justify-content-between">
+              <div>
+                <h6 class="card-title mb-0">Pendiente de Cobro</h6>
+                <h2 class="display-6 mb-0">${{formatMoney stats.totalPendiente}}</h2>
+              </div>
+              <i class="fas fa-clock fa-3x opacity-50"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card bg-info text-white">
+          <div class="card-body">
+            <div class="d-flex justify-content-between">
+              <div>
+                <h6 class="card-title mb-0">% Recuperación</h6>
+                <h2 class="display-6 mb-0">{{stats.porcentajeRecuperacion}}%</h2>
+              </div>
+              <i class="fas fa-percentage fa-3x opacity-50"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gráfico de Tendencia Financiera -->
+    <div class="row mb-4">
+      <div class="col-md-12">
+        <div class="card">
+          <div class="card-header">
+            <i class="fas fa-chart-line me-2"></i> Tendencia Financiera
+          </div>
+          <div class="card-body">
+            {{#if graficoTendencia.fechas.length}}
+            <canvas id="tendenciaFinanciera" height="250"></canvas>
+            {{else}}
+            <div class="text-center py-5">
+              <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+              <h5>No hay datos para mostrar</h5>
+              <p>No se encontraron datos financieros en el período seleccionado.</p>
+            </div>
+            {{/if}}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabla de Resumen por Día -->
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-table me-2"></i> Resumen Diario
+      </div>
+      <div class="card-body">
+        {{#if datosTabla.length}}
+        <div class="table-responsive">
+          <table class="table table-striped table-hover">
+            <thead class="table-light">
+              <tr>
+                <th>Fecha</th>
+                <th class="text-end">Facturado</th>
+                <th class="text-end">Cobrado</th>
+                <th class="text-end">Pendiente</th>
+                <th class="text-end">% Recuperación</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each datosTabla}}
+              <tr>
+                <td>{{this.fecha}}</td>
+                <td class="text-end">${{formatMoney this.facturado}}</td>
+                <td class="text-end">${{formatMoney this.cobrado}}</td>
+                <td class="text-end">${{formatMoney this.pendiente}}</td>
+                <td class="text-end">
+                  <span class="badge {{#if (gte this.porcentaje 80)}}bg-success{{else if (gte this.porcentaje 50)}}bg-warning{{else}}bg-danger{{/if}}">
+                    {{this.porcentaje}}%
+                  </span>
+                </td>
+              </tr>
+              {{/each}}
+            </tbody>
+            <tfoot class="table-light">
+              <tr>
+                <th>TOTAL</th>
+                                <th class="text-end">${{formatMoney stats.totalFacturado}}</th>                <th class="text-end">${{formatMoney stats.totalCobrado}}</th>                <th class="text-end">${{formatMoney stats.totalPendiente}}</th>
+                <th class="text-end">
+                  <span class="badge {{#if (gte stats.porcentajeRecuperacion 80)}}bg-success{{else if (gte stats.porcentajeRecuperacion 50)}}bg-warning{{else}}bg-danger{{/if}}">
+                    {{stats.porcentajeRecuperacion}}%
+                  </span>
+                </th>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        {{else}}
+        <div class="text-center py-5">
+          <i class="fas fa-table fa-3x text-muted mb-3"></i>
+          <h5>No hay datos para mostrar</h5>
+          <p>No se encontraron datos financieros en el período seleccionado.</p>
+        </div>
+        {{/if}}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Función para mostrar/ocultar fechas personalizadas
+    window.toggleFechasPersonalizadas = function() {
+      const rango = document.getElementById('rango').value;
+      const fechaInicioDiv = document.getElementById('fechaInicioDiv');
+      const fechaFinDiv = document.getElementById('fechaFinDiv');
+      
+      if (rango === 'personalizado') {
+        fechaInicioDiv.style.display = 'block';
+        fechaFinDiv.style.display = 'block';
+      } else {
+        fechaInicioDiv.style.display = 'none';
+        fechaFinDiv.style.display = 'none';
+      }
+    };
+    
+    // Función para exportar a Excel del reporte financiero
+    window.exportarReporteExcel = function() {
+      exportarExcel();
+    };
+    
+    // Función para exportar a Excel
+    window.exportarExcel = function() {
+      // Crear datos para exportar
+      const datosExportar = {{{json datosTabla}}};
+      const stats = {{{json stats}}};
+      
+      if (datosExportar && datosExportar.length > 0) {
+        let csvContent = "data:text/csv;charset=utf-8,";
+        
+        // Headers
+        csvContent += "Fecha,Facturado,Cobrado,Pendiente,% Recuperación\n";
+        
+        // Datos
+        datosExportar.forEach(row => {
+          csvContent += `${row.fecha},${row.facturado},${row.cobrado},${row.pendiente},${row.porcentaje}%\n`;
+        });
+        
+        // Totales
+        csvContent += `TOTAL,${stats.totalFacturado},${stats.totalCobrado},${stats.totalPendiente},${stats.porcentajeRecuperacion}%\n`;
+        
+        // Descargar archivo
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `reporte_financiero_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        alert('No hay datos para exportar');
+      }
+    };
+
+    // Verificar que tenemos datos para el gráfico
+    const graficoData = {{{json graficoTendencia}}};
+    
+    if (graficoData && graficoData.fechas && graficoData.fechas.length > 0) {
+      // Datos para el gráfico de tendencia financiera
+      const ctx = document.getElementById('tendenciaFinanciera').getContext('2d');
+      
+      const datos = {
+        labels: graficoData.fechas,
+        datasets: [
+          {
+            label: 'Facturado',
+            data: graficoData.facturado,
+            borderColor: '#0d6efd',
+            backgroundColor: 'rgba(13, 110, 253, 0.1)',
+            tension: 0.4,
+            fill: true
+          },
+          {
+            label: 'Cobrado',
+            data: graficoData.cobrado,
+            borderColor: '#198754',
+            backgroundColor: 'rgba(25, 135, 84, 0.1)',
+            tension: 0.4,
+            fill: true
+          },
+          {
+            label: 'Pendiente',
+            data: graficoData.pendiente,
+            borderColor: '#ffc107',
+            backgroundColor: 'rgba(255, 193, 7, 0.1)',
+            tension: 0.4,
+            fill: true
+          }
+        ]
+      };
+      
+      new Chart(ctx, {
+        type: 'line',
+        data: datos,
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: 'Evolución de Facturación y Cobros'
+            },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+              callbacks: {
+                label: function(context) {
+                  let label = context.dataset.label || '';
+                  if (label) {
+                    label += ': ';
+                  }
+                  if (context.parsed.y !== null) {
+                    label += new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'USD' }).format(context.parsed.y);
+                  }
+                  return label;
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: function(value) {
+                  return '$' + value.toLocaleString();
+                }
+              }
+            }
+          },
+          interaction: {
+            mode: 'index',
+            intersect: false
+          }
+        }
+      });
+    }
+  });
+</script> 

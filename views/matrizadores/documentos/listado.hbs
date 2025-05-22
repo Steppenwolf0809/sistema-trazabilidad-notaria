@@ -89,7 +89,7 @@
               {{this.nombreCliente}}
               <div class="small text-muted">{{this.identificacionCliente}}</div>
             </td>
-            <td>{{formatDate this.fechaCreacion}}</td>
+            <td data-sort-value="{{this.fechaFactura}}">{{formatDate this.fechaFactura}}</td>
             <td>
               {{#if (eq this.estado "en_proceso")}}
               <span class="badge bg-warning">En Proceso</span>
