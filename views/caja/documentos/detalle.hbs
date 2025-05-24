@@ -24,8 +24,12 @@
             <span class="badge bg-info">Listo para Entrega</span>
             {{else if (eq documento.estado "entregado")}}
             <span class="badge bg-success">Entregado</span>
+            {{else if (eq documento.estado "nota_credito")}}
+            <span class="badge bg-secondary">Nota de Crédito</span>
+            {{else if (eq documento.estado "eliminado")}}
+            <span class="badge bg-danger">Eliminado</span>
             {{else}}
-            <span class="badge bg-secondary">Cancelado</span>
+            <span class="badge bg-secondary">{{translateEstado documento.estado}}</span>
             {{/if}}
           </p>
           <p><strong>Fecha Creación:</strong> {{formatDate documento.fechaFactura}}</p>
@@ -80,7 +84,7 @@
         <div class="card">
           <div class="card-header d-flex justify-content-between align-items-center" id="pago">
             <h5 class="mb-0">Información de Facturación</h5>
-            {{#if (neq documento.estado "entregado")}}
+            {{#if (and (neq documento.estado "entregado") (neq documento.estado "eliminado") (neq documento.estado "nota_credito"))}}
             <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#registrarPagoModal">
               <i class="fas fa-plus-circle me-1"></i> Registrar Pago
             </button>
@@ -107,9 +111,31 @@
                 <p><strong>Método de Pago:</strong> {{#if documento.metodoPago}}{{documento.metodoPago}}{{else}}No registrado{{/if}}</p>
               </div>
               {{#if documento.fechaFactura}}
-              <div class="col-md-12">
+              <div class="col-md-6">
                 <p><strong>Fecha de Factura:</strong> {{formatDate documento.fechaFactura}}</p>
               </div>
+              {{/if}}
+              {{#if (eq documento.estadoPago "pagado")}}
+              <div class="col-md-6">
+                <p><strong>📅 Fecha de Pago:</strong> 
+                  <span class="badge bg-success-subtle text-success-emphasis px-3 py-2">
+                    {{#if documento.fechaRegistroPago}}
+                    {{formatDateTime documento.fechaRegistroPago}}
+                    {{else}}
+                    {{formatDateTime documento.updatedAt}} (estimada)
+                    {{/if}}
+                  </span>
+                </p>
+              </div>
+              {{#if usuarioPago}}
+              <div class="col-md-12">
+                <p><strong>👤 Registrado por:</strong> 
+                  <span class="badge bg-info-subtle text-info-emphasis px-3 py-2">
+                    {{usuarioPago.nombre}} ({{usuarioPago.rol}})
+                  </span>
+                </p>
+              </div>
+              {{/if}}
               {{/if}}
             </div>
           </div>
@@ -168,27 +194,93 @@
     </div>
     {{/if}}
     
-    <!-- Historial de eventos -->
-    {{#if documento.eventos}}
+    <!-- Historial de eventos SIMPLIFICADO PARA CAJA -->
+    {{#if eventos.length}}
     <div class="row">
       <div class="col-12">
         <div class="card">
-          <div class="card-header">
-            <h5 class="mb-0">Historial</h5>
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+              <i class="fas fa-history me-2"></i>Historial del Documento
+            </h5>
+            <small class="text-muted">Eventos más recientes primero</small>
           </div>
           <div class="card-body">
-            <div class="timeline">
-              {{#each documento.eventos}}
-              <div class="timeline-item">
-                <div class="timeline-marker"></div>
-                <div class="timeline-content">
-                  <h5 class="mb-1">{{this.tipoEvento}}</h5>
-                  <p class="mb-0">{{this.descripcion}}</p>
-                  <small class="text-muted">{{formatDate this.createdAt}}</small>
+            <!-- Lista simple de eventos para caja -->
+            <div class="historial-simple-caja">
+              {{#each eventos}}
+              <div class="evento-simple mb-3 p-3 border-start border-4 border-{{this.color}} bg-light">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div class="flex-grow-1">
+                    <!-- Fecha y título del evento -->
+                    <div class="fw-bold text-{{this.color}} mb-1">
+                      📅 {{formatDate this.fecha}} - {{this.titulo}}
+                    </div>
+                    
+                    <!-- Información específica del evento -->
+                    {{#if (eq this.tipo "pago")}}
+                    <div class="small text-dark">
+                      💰 <strong>Valor:</strong> ${{formatMoney this.detalles.valor}} | 
+                      💳 <strong>Método:</strong> {{this.detalles.metodoPago}} | 
+                      👤 <strong>Por:</strong> {{this.detalles.usuarioCaja}}
+                      {{#if this.detalles.numeroFactura}}
+                      <br>📄 <strong>Factura:</strong> {{this.detalles.numeroFactura}}
+                      {{/if}}
+                    </div>
+                    {{else if (eq this.tipo "entrega")}}
+                    <div class="small text-dark">
+                      📤 <strong>Entregado a:</strong> {{this.detalles.receptor}} ({{this.detalles.relacion}}) | 
+                      🆔 <strong>ID:</strong> {{this.detalles.identificacionReceptor}} | 
+                      👤 <strong>Por:</strong> {{this.usuario}}
+                    </div>
+                    {{else if (eq this.categoria "estado")}}
+                    <div class="small text-dark">
+                      📋 <strong>Cambio:</strong> {{this.descripcion}} | 
+                      👤 <strong>Por:</strong> {{this.usuario}}
+                    </div>
+                    {{else}}
+                    <div class="small text-dark">
+                      {{this.descripcion}} | 👤 <strong>Por:</strong> {{this.usuario}}
+                    </div>
+                    {{/if}}
+                  </div>
+                  
+                  <!-- Tiempo transcurrido -->
+                  {{#if this.tiempoTranscurrido}}
+                  <div class="small text-muted">
+                    <i class="fas fa-clock me-1"></i>{{this.tiempoTranscurrido}}
+                  </div>
+                  {{/if}}
                 </div>
               </div>
               {{/each}}
             </div>
+            
+            <!-- Leyenda simple -->
+            <div class="row mt-3">
+              <div class="col-12">
+                <small class="text-muted">
+                  💰 Pagos | 📤 Entregas | 📋 Estados | 📅 Fecha/Hora | 👤 Usuario
+                </small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {{else}}
+    <div class="row">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">
+              <i class="fas fa-history me-2"></i>Historial del Documento
+            </h5>
+          </div>
+          <div class="card-body text-center text-muted">
+            <i class="fas fa-clock fa-3x mb-3"></i>
+            <h5>Sin eventos operativos registrados</h5>
+            <p>No hay pagos ni entregas registrados para este documento.</p>
           </div>
         </div>
       </div>
@@ -342,47 +434,83 @@
 </div>
 
 <style>
-  /* Estilos para la timeline */
-  .timeline {
-    position: relative;
-    padding-left: 30px;
+  /* === ESTILOS SIMPLIFICADOS PARA HISTORIAL DE CAJA === */
+  .historial-simple-caja {
+    margin-top: 10px;
   }
   
-  .timeline-item {
-    position: relative;
-    padding-bottom: 20px;
+  .evento-simple {
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    background-color: #f8f9fa !important;
   }
   
-  .timeline-marker {
-    position: absolute;
-    left: -30px;
-    width: 15px;
-    height: 15px;
-    border-radius: 50%;
-    background-color: #3498db;
-    border: 3px solid #fff;
-    box-shadow: 0 0 0 2px #3498db;
+  .evento-simple:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   }
   
-  .timeline-item:before {
-    content: '';
-    position: absolute;
-    left: -23px;
-    top: 15px;
-    bottom: 0;
-    width: 2px;
-    background-color: #3498db;
+  /* Colores de borde por tipo */
+  .border-success {
+    border-color: #28a745 !important;
   }
   
-  .timeline-item:last-child:before {
-    display: none;
+  .border-info {
+    border-color: #17a2b8 !important;
   }
   
-  .timeline-content {
-    background-color: #f8f9fa;
-    padding: 15px;
-    border-radius: 4px;
-    border-left: 3px solid #3498db;
+  .border-warning {
+    border-color: #ffc107 !important;
+  }
+  
+  .border-primary {
+    border-color: #007bff !important;
+  }
+  
+  .border-secondary {
+    border-color: #6c757d !important;
+  }
+  
+  /* Colores de texto por tipo */
+  .text-success {
+    color: #28a745 !important;
+  }
+  
+  .text-info {
+    color: #17a2b8 !important;
+  }
+  
+  .text-warning {
+    color: #856404 !important;
+  }
+  
+  .text-primary {
+    color: #004085 !important;
+  }
+  
+  .text-secondary {
+    color: #383d41 !important;
+  }
+  
+  /* Responsive para móviles */
+  @media (max-width: 768px) {
+    .evento-simple {
+      padding: 15px !important;
+      margin-bottom: 15px !important;
+    }
+    
+    .evento-simple .fw-bold {
+      font-size: 0.9rem;
+    }
+    
+    .evento-simple .small {
+      font-size: 0.8rem;
+    }
+  }
+  
+  /* Emojis para mejor visualización */
+  .evento-simple .small {
+    line-height: 1.4;
   }
 </style>
 

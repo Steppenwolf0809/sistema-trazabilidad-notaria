@@ -16,34 +16,72 @@ psql -U usuario_bd -d nombre_bd -f migrations/20241215_add_eliminacion_fields.sq
 **O ejecutar manualmente los comandos SQL:**
 
 ```sql
--- Agregar nuevos estados al ENUM
-ALTER TYPE estado_documento_enum ADD VALUE 'eliminado';
-ALTER TYPE estado_documento_enum ADD VALUE 'nota_credito';
+-- ============================================
+-- MIGRACIÓN: SISTEMA DE ELIMINACIÓN DEFINITIVA
+-- ============================================
 
--- Agregar campos de eliminación
-ALTER TABLE documentos ADD COLUMN motivo_eliminacion VARCHAR(50);
-ALTER TABLE documentos ADD COLUMN eliminado_por INTEGER REFERENCES matrizadores(id);
-ALTER TABLE documentos ADD COLUMN fecha_eliminacion TIMESTAMP;
-ALTER TABLE documentos ADD COLUMN justificacion_eliminacion TEXT;
+-- 1. Agregar nuevos estados al ENUM
+ALTER TYPE estado_documento_enum ADD VALUE IF NOT EXISTS 'eliminado';
+ALTER TYPE estado_documento_enum ADD VALUE IF NOT EXISTS 'nota_credito';
 
--- Crear tabla de auditoría
-CREATE TABLE auditoria_eliminaciones (
+-- 2. Agregar campos de eliminación
+ALTER TABLE documentos 
+ADD COLUMN IF NOT EXISTS motivo_eliminacion VARCHAR(50),
+ADD COLUMN IF NOT EXISTS eliminado_por INTEGER REFERENCES matrizadores(id),
+ADD COLUMN IF NOT EXISTS fecha_eliminacion TIMESTAMP,
+ADD COLUMN IF NOT EXISTS justificacion_eliminacion TEXT;
+
+-- 3. Agregar campos de auditoría de pagos
+ALTER TABLE documentos 
+ADD COLUMN IF NOT EXISTS registrado_por INTEGER REFERENCES matrizadores(id),
+ADD COLUMN IF NOT EXISTS fecha_registro_pago TIMESTAMP;
+
+-- 4. Crear tabla de auditoría de eliminaciones
+CREATE TABLE IF NOT EXISTS auditoria_eliminaciones (
     id SERIAL PRIMARY KEY,
     documento_id INTEGER NOT NULL,
-    codigo_documento VARCHAR(255) NOT NULL,
-    datos_documento JSONB NOT NULL,
-    motivo VARCHAR(50) NOT NULL,
+    motivo_eliminacion VARCHAR(50) NOT NULL,
     justificacion TEXT NOT NULL,
     eliminado_por INTEGER NOT NULL REFERENCES matrizadores(id),
-    nombre_administrador VARCHAR(255) NOT NULL,
-    fecha_eliminacion TIMESTAMP DEFAULT NOW(),
-    valor_impacto DECIMAL(10,2),
-    estaba_pagado BOOLEAN DEFAULT FALSE,
-    ip VARCHAR(45),
+    fecha_eliminacion TIMESTAMP NOT NULL DEFAULT NOW(),
+    
+    -- Snapshot completo del documento antes de eliminar
+    snapshot_documento JSONB NOT NULL,
+    
+    -- Información de auditoría
+    ip_address INET,
     user_agent TEXT,
+    impacto_financiero JSONB,
+    
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
+
+-- 5. Índices para mejor rendimiento
+CREATE INDEX IF NOT EXISTS idx_auditoria_eliminaciones_documento_id ON auditoria_eliminaciones(documento_id);
+CREATE INDEX IF NOT EXISTS idx_auditoria_eliminaciones_eliminado_por ON auditoria_eliminaciones(eliminado_por);
+CREATE INDEX IF NOT EXISTS idx_auditoria_eliminaciones_fecha ON auditoria_eliminaciones(fecha_eliminacion);
+CREATE INDEX IF NOT EXISTS idx_documentos_estado ON documentos(estado);
+CREATE INDEX IF NOT EXISTS idx_documentos_registrado_por ON documentos(registrado_por);
+
+-- 6. Agregar acción de eliminación a auditoría general
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_type t 
+        JOIN pg_enum e ON t.oid = e.enumtypid 
+        WHERE t.typname = 'accion_auditoria_enum' 
+        AND e.enumlabel = 'ELIMINACION_DOCUMENTO'
+    ) THEN
+        ALTER TYPE accion_auditoria_enum ADD VALUE 'ELIMINACION_DOCUMENTO';
+    END IF;
+END $$;
+
+-- 7. Comentarios en tablas
+COMMENT ON TABLE auditoria_eliminaciones IS 'Registro completo de auditoría para documentos eliminados definitivamente';
+COMMENT ON COLUMN documentos.motivo_eliminacion IS 'Motivo por el cual se eliminó el documento';
+COMMENT ON COLUMN documentos.registrado_por IS 'Usuario que registró/confirmó el pago del documento';
+COMMENT ON COLUMN documentos.fecha_registro_pago IS 'Fecha y hora cuando se registró el pago';
 ```
 
 ### 2. Integrar Rutas en la Aplicación

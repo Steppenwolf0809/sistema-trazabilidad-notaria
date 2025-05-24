@@ -623,6 +623,7 @@ exports.completarEntrega = async (req, res) => {
 exports.mostrarDetalle = async (req, res) => {
   try {
     const { id } = req.params;
+    const userRole = req.matrizador?.rol || req.usuario?.rol || 'guest';
     
     // Buscar el documento con su matrizador
     const documento = await Documento.findByPk(id, {
@@ -637,11 +638,173 @@ exports.mostrarDetalle = async (req, res) => {
       return res.redirect(getBasePath(req) + '/listado');
     }
     
-    // Buscar eventos del documento
+    // Buscar eventos del documento con ordenamiento cronológico (más reciente primero)
     const eventos = await EventoDocumento.findAll({
       where: { idDocumento: id },
-      order: [['created_at', 'DESC']]
+      order: [['createdAt', 'DESC']]
     });
+
+    // Crear historial completo combinando diferentes fuentes de eventos
+    let historialCompleto = [];
+    
+    // 1. SOLO para ADMIN: agregar eventos de creación del documento 
+    if (userRole === 'admin' && documento.createdAt) {
+      historialCompleto.push({
+        tipo: 'creacion',
+        categoria: 'creacion',
+        icono: 'fas fa-file-plus',
+        color: 'primary',
+        titulo: 'Documento Creado',
+        descripcion: `Documento ${documento.tipoDocumento} registrado en el sistema`,
+        usuario: 'Sistema XML',
+        fecha: documento.createdAt,
+        timestamp: documento.createdAt,
+        mostrarEnCaja: false, // No mostrar en caja
+        detalles: {
+          tipoDocumento: documento.tipoDocumento,
+          codigoBarras: documento.codigoBarras
+        }
+      });
+    }
+    
+    // 2. Agregar eventos básicos del documento desde EventoDocumento
+    eventos.forEach(evento => {
+      // Verificar que el evento tenga datos válidos
+      if (evento && evento.tipo) {
+        const mostrarEnCaja = esMostrarEnCaja(evento.tipo);
+        // Para cambios de estado, verificar si es relevante para caja
+        const esRelevanteCaja = evento.tipo === 'cambio_estado' ? 
+          esCambioEstadoRelevanteCaja(evento.detalles) : mostrarEnCaja;
+        
+        historialCompleto.push({
+          tipo: 'evento',
+          categoria: determinarCategoriaEvento(evento.tipo),
+          icono: obtenerIconoEvento(evento.tipo),
+          color: obtenerColorEvento(evento.tipo),
+          titulo: traducirTipoEvento(evento.tipo),
+          descripcion: evento.detalles || 'Sin descripción',
+          usuario: evento.usuario || 'Sistema',
+          fecha: evento.createdAt,
+          timestamp: evento.createdAt,
+          mostrarEnCaja: esRelevanteCaja,
+          detalles: {
+            eventoId: evento.id,
+            tipo: evento.tipo
+          }
+        });
+      }
+    });
+
+    // 3. SIEMPRE agregar eventos de pago si el documento está pagado
+    if (documento.estadoPago === 'pagado') {
+      // Buscar información de pago del usuario responsable
+      const usuarioPago = await obtenerUsuarioPago(documento.registradoPor);
+      
+      historialCompleto.push({
+        tipo: 'pago',
+        categoria: 'pago',
+        icono: 'fas fa-money-bill-wave',
+        color: 'success',
+        titulo: 'Pago Registrado',
+        descripcion: `Pago procesado por $${formatearMoneda(documento.valorFactura)} via ${documento.metodoPago}`,
+        usuario: usuarioPago?.nombre || 'Usuario de Caja',
+        fecha: documento.fechaRegistroPago || documento.updatedAt,
+        timestamp: documento.fechaRegistroPago || documento.updatedAt,
+        mostrarEnCaja: true,
+        detalles: {
+          valor: documento.valorFactura,
+          metodoPago: documento.metodoPago,
+          numeroFactura: documento.numeroFactura,
+          usuarioCaja: usuarioPago?.nombre || 'Usuario de Caja'
+        }
+      });
+    }
+
+    // 4. SIEMPRE agregar eventos de entrega si está entregado
+    if (documento.estado === 'entregado' && documento.fechaEntrega) {
+      historialCompleto.push({
+        tipo: 'entrega',
+        categoria: 'entrega',
+        icono: 'fas fa-hand-holding',
+        color: 'info',
+        titulo: 'Documento Entregado',
+        descripcion: `Entregado a ${documento.nombreReceptor} (${documento.relacionReceptor})`,
+        usuario: 'Matrizador',
+        fecha: documento.fechaEntrega,
+        timestamp: documento.fechaEntrega,
+        mostrarEnCaja: true,
+        detalles: {
+          receptor: documento.nombreReceptor,
+          identificacionReceptor: documento.identificacionReceptor,
+          relacion: documento.relacionReceptor
+        }
+      });
+    }
+
+    // 5. Solo para ADMIN: Agregar eventos de auditoría y eliminación
+    if (userRole === 'admin') {
+      const auditoria = await RegistroAuditoria.findAll({
+        where: { idDocumento: id },
+        order: [['created_at', 'DESC']]
+      });
+
+      auditoria.forEach(evento => {
+        if (esEventoEliminacion(evento.accion)) {
+          historialCompleto.push({
+            tipo: 'eliminacion',
+            categoria: 'eliminacion',
+            icono: 'fas fa-trash',
+            color: 'danger',
+            titulo: 'Eliminación/Nota Crédito',
+            descripcion: evento.detalles,
+            usuario: evento.usuario || 'Admin',
+            fecha: evento.created_at, // Usar created_at directamente
+            timestamp: evento.created_at,
+            mostrarEnCaja: false,
+            detalles: {
+              accion: evento.accion,
+              resultado: evento.resultado,
+              ip: evento.ip
+            }
+          });
+        }
+      });
+    }
+
+    // Ordenar todo el historial cronológicamente (más reciente primero)
+    historialCompleto.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    // Filtrar eventos según el rol
+    const historialFiltrado = historialCompleto.filter(evento => {
+      if (userRole === 'admin') return true; // Admin ve todo
+      return evento.mostrarEnCaja; // Otros roles ven solo eventos relevantes
+    });
+
+    // Calcular tiempo transcurrido para cada evento
+    historialFiltrado.forEach((evento, index) => {
+      if (index < historialFiltrado.length - 1) {
+        const eventoAnterior = historialFiltrado[index + 1];
+        evento.tiempoTranscurrido = calcularTiempoTranscurrido(eventoAnterior.timestamp, evento.timestamp);
+      } else {
+        evento.tiempoTranscurrido = 'Evento inicial';
+      }
+    });
+    
+    // DEBUG temporal para caja
+    if (userRole === 'caja') {
+      console.log(`🔍 DEBUG CAJA - Documento ID: ${id}`);
+      console.log(`📄 Estado documento: ${documento.estado}, Pago: ${documento.estadoPago}`);
+      console.log(`📊 Total eventos encontrados: ${eventos.length}`);
+      console.log(`📋 Historial completo: ${historialCompleto.length} eventos`);
+      console.log(`✅ Historial filtrado para caja: ${historialFiltrado.length} eventos`);
+      
+      if (historialFiltrado.length > 0) {
+        console.log('🎯 Eventos que se mostrarán en caja:');
+        historialFiltrado.forEach((evento, i) => {
+          console.log(`  ${i + 1}. ${evento.titulo} - ${evento.descripcion}`);
+        });
+      }
+    }
     
     // Buscar documentos relacionados usando los nuevos alias
     const [componentes, documentosPrincipales] = await Promise.all([
@@ -679,15 +842,30 @@ exports.mostrarDetalle = async (req, res) => {
       limit: 10
     });
     
+    // Para caja: obtener matrizadores para el modal de cambio
+    let matrizadores = [];
+    if (userRole === 'caja' || userRole === 'admin') {
+      matrizadores = await Matrizador.findAll({
+        where: {
+          rol: 'matrizador',
+          activo: true
+        },
+        order: [['nombre', 'ASC']]
+      });
+    }
+    
     const { layout, viewBase } = getLayoutAndViewBase(req);
     res.render(`${viewBase}/detalle`, {
       layout,
       title: 'Detalle de Documento',
       documento,
-      eventos,
+      eventos: historialFiltrado, // Pasar el historial filtrado y organizado
       componentes,
       documentosPrincipales,
-      documentosCliente
+      documentosCliente,
+      matrizadores, // Agregar matrizadores para la vista
+      userRole,
+      historialCompleto: userRole === 'admin' ? historialCompleto : null // Solo admin ve historial completo
     });
   } catch (error) {
     console.error('Error al mostrar detalle del documento:', error);
@@ -699,6 +877,143 @@ exports.mostrarDetalle = async (req, res) => {
     });
   }
 };
+
+// === FUNCIONES AUXILIARES PARA HISTORIAL ===
+
+/**
+ * Determina la categoría de un evento para organización
+ */
+function determinarCategoriaEvento(tipoEvento) {
+  const categorias = {
+    'creacion': 'creacion',
+    'modificacion': 'estado',
+    'cambio_estado': 'estado',
+    'cambio_matrizador': 'matrizador',
+    'verificacion_codigo': 'entrega',
+    'verificacion_llamada': 'entrega',
+    'entrega': 'entrega',
+    'cancelacion': 'eliminacion'
+  };
+  return categorias[tipoEvento] || 'general';
+}
+
+/**
+ * Obtiene el icono FontAwesome para un tipo de evento
+ */
+function obtenerIconoEvento(tipoEvento) {
+  const iconos = {
+    'creacion': 'fas fa-file-plus',
+    'modificacion': 'fas fa-edit',
+    'cambio_estado': 'fas fa-exchange-alt',
+    'cambio_matrizador': 'fas fa-user-tag',
+    'verificacion_codigo': 'fas fa-key',
+    'verificacion_llamada': 'fas fa-phone',
+    'entrega': 'fas fa-hand-holding',
+    'cancelacion': 'fas fa-ban'
+  };
+  return iconos[tipoEvento] || 'fas fa-info-circle';
+}
+
+/**
+ * Obtiene el color Bootstrap para un tipo de evento
+ */
+function obtenerColorEvento(tipoEvento) {
+  const colores = {
+    'creacion': 'primary',
+    'modificacion': 'warning',
+    'cambio_estado': 'info',
+    'cambio_matrizador': 'secondary',
+    'verificacion_codigo': 'success',
+    'verificacion_llamada': 'success',
+    'entrega': 'success',
+    'cancelacion': 'danger'
+  };
+  return colores[tipoEvento] || 'secondary';
+}
+
+/**
+ * Determina si un evento debe mostrarse en la vista de caja
+ */
+function esMostrarEnCaja(tipoEvento) {
+  const eventosPermitidosEnCaja = [
+    'creacion', 'pago', 'confirmacion_pago', 'entrega', 
+    'cambio_estado' // Permitir cambios de estado en caja
+  ];
+  return eventosPermitidosEnCaja.includes(tipoEvento);
+}
+
+/**
+ * Verifica si un evento de cambio de estado es relevante para caja
+ */
+function esCambioEstadoRelevanteCaja(detalles) {
+  if (!detalles) return false;
+  const detallesLower = detalles.toLowerCase();
+  return detallesLower.includes('listo') || 
+         detallesLower.includes('entrega') || 
+         detallesLower.includes('pagado') ||
+         detallesLower.includes('procesado');
+}
+
+/**
+ * Verifica si un evento de auditoría es de eliminación
+ */
+function esEventoEliminacion(accion) {
+  const accionesEliminacion = [
+    'ELIMINACION_DOCUMENTO', 'NOTA_CREDITO', 
+    'eliminacion', 'nota_credito'
+  ];
+  return accionesEliminacion.includes(accion);
+}
+
+/**
+ * Obtiene información del usuario que procesó un pago
+ */
+async function obtenerUsuarioPago(usuarioId) {
+  if (!usuarioId) return null;
+  try {
+    // Intentar buscar en la tabla de Matrizador primero (donde están los usuarios del sistema)
+    return await Matrizador.findByPk(usuarioId, {
+      attributes: ['id', 'nombre', 'email', 'rol']
+    });
+  } catch (error) {
+    console.error('Error al obtener usuario de pago:', error);
+    return null;
+  }
+}
+
+/**
+ * Formatea un valor monetario
+ */
+function formatearMoneda(valor) {
+  if (!valor) return '0.00';
+  return parseFloat(valor).toLocaleString('es-EC', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
+/**
+ * Calcula el tiempo transcurrido entre dos fechas
+ */
+function calcularTiempoTranscurrido(fechaInicio, fechaFin) {
+  const inicio = new Date(fechaInicio);
+  const fin = new Date(fechaFin);
+  const diffMs = fin - inicio;
+  
+  const dias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const horas = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const minutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+  
+  if (dias > 0) {
+    return `${dias}d ${horas}h`;
+  } else if (horas > 0) {
+    return `${horas}h ${minutos}m`;
+  } else if (minutos > 0) {
+    return `${minutos}m`;
+  } else {
+    return 'Inmediato';
+  }
+}
 
 /**
  * Busca documentos del mismo cliente
@@ -1576,6 +1891,27 @@ exports.actualizarDocumento = async (req, res) => {
     });
   }
 };
+
+/**
+ * Traduce tipos de eventos a títulos legibles
+ */
+function traducirTipoEvento(tipoEvento) {
+  const traducciones = {
+    'creacion': 'Documento Creado',
+    'modificacion': 'Documento Modificado',
+    'cambio_estado': 'Estado Cambiado',
+    'cambio_matrizador': 'Matrizador Cambiado',
+    'verificacion_codigo': 'Código Verificado',
+    'verificacion_llamada': 'Verificación por Llamada',
+    'entrega': 'Documento Entregado',
+    'cancelacion': 'Documento Cancelado',
+    'pago': 'Pago Registrado',
+    'confirmacion_pago': 'Pago Confirmado',
+    'edicion': 'Documento Editado',
+    'otro': 'Evento Adicional'
+  };
+  return traducciones[tipoEvento] || tipoEvento.charAt(0).toUpperCase() + tipoEvento.slice(1);
+}
 
 // Nota: procesarFechaFactura ahora se importa desde utils/documentoUtils.js
 

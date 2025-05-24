@@ -177,6 +177,24 @@ const Documento = sequelize.define('Documento', {
     allowNull: true
   },
   
+  // ID del usuario que registró el pago (auditoría)
+  registradoPor: {
+    type: DataTypes.INTEGER,
+    field: 'registrado_por',
+    allowNull: true,
+    references: {
+      model: 'matrizadores',
+      key: 'id'
+    }
+  },
+  
+  // Fecha en que se registró el pago
+  fechaRegistroPago: {
+    type: DataTypes.DATE,
+    field: 'fecha_registro_pago',
+    allowNull: true
+  },
+  
   // Indica si se debe omitir el envío de notificaciones
   omitirNotificacion: {
     type: DataTypes.BOOLEAN,

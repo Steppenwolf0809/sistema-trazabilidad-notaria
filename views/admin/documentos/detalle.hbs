@@ -263,57 +263,246 @@
       </div>
     </div>
     
-    <!-- Historial de eventos -->
+    <!-- Historial de eventos ADMIN COMPLETO -->
     {{#if eventos.length}}
     <div class="row">
       <div class="col-12">
-        <h5 class="border-bottom pb-2">Historial de Eventos</h5>
-      </div>
-      
-      <div class="col-12">
-        <div class="table-responsive">
-          <table class="table table-sm table-hover">
-            <thead class="table-light">
-              <tr>
-                <th>Fecha y Hora</th>
-                <th>Tipo</th>
-                <th>Detalles</th>
-                <th>Usuario</th>
-                <th>Tiempo Transcurrido</th>
-              </tr>
-            </thead>
-            <tbody>
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+              <i class="fas fa-history me-2"></i>Historial Completo del Documento
+            </h5>
+            <div class="d-flex align-items-center gap-2">
+              <small class="text-muted">Trazabilidad completa</small>
+              {{#if historialCompleto}}
+              <span class="badge bg-primary">{{eventos.length}} eventos visibles</span>
+              {{/if}}
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="timeline-admin">
               {{#each eventos}}
-              <tr>
-                <td>{{formatDate this.createdAt}}</td>
-                <td>
+              <div class="timeline-item-admin" data-categoria="{{this.categoria}}" data-tipo="{{this.tipo}}">
+                <!-- Marcador con icono y color -->
+                <div class="timeline-marker-admin bg-{{this.color}}">
+                  <i class="{{this.icono}} text-white"></i>
+                </div>
+                
+                <!-- Contenido del evento -->
+                <div class="timeline-content-admin">
+                  <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div class="flex-grow-1">
+                      <div class="d-flex align-items-center mb-2">
+                        <i class="{{this.icono}} text-{{this.color}} me-2"></i>
+                        <h6 class="mb-0 fw-bold">{{this.titulo}}</h6>
+                        <span class="badge bg-{{this.color}} bg-opacity-20 text-{{this.color}} ms-2">
+                          {{this.categoria}}
+                        </span>
+                      </div>
+                      <p class="mb-0 text-dark">{{this.descripcion}}</p>
+                    </div>
+                    <div class="text-end">
+                      <div class="badge bg-light text-dark border">
+                        <i class="fas fa-clock me-1"></i>{{formatDate this.fecha}}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Información específica por tipo de evento -->
+                  {{#if (eq this.tipo "pago")}}
+                  <div class="alert alert-success border-start border-success border-4 mb-3">
+                    <div class="row">
+                      <div class="col-md-3">
+                        <strong>💰 Valor Pagado:</strong><br>
+                        <span class="h5 text-success">${{formatMoney this.detalles.valor}}</span>
+                      </div>
+                      <div class="col-md-3">
+                        <strong>💳 Método:</strong><br>
+                        <span class="badge bg-info">{{this.detalles.metodoPago}}</span>
+                      </div>
+                      <div class="col-md-3">
+                        {{#if this.detalles.numeroFactura}}
+                        <strong>📄 N° Factura:</strong><br>
+                        <code>{{this.detalles.numeroFactura}}</code>
+                        {{else}}
+                        <strong>📄 Factura:</strong><br>
+                        <span class="text-muted">No registrada</span>
+                        {{/if}}
+                      </div>
+                      <div class="col-md-3">
+                        <strong>👤 Cajero:</strong><br>
+                        <span class="fw-bold">{{this.detalles.usuarioCaja}}</span>
+                      </div>
+                    </div>
+                  </div>
+                  {{/if}}
+                  
+                  {{#if (eq this.tipo "entrega")}}
+                  <div class="alert alert-info border-start border-info border-4 mb-3">
+                    <div class="row">
+                      <div class="col-md-4">
+                        <strong>📋 Receptor:</strong><br>
+                        <span class="fw-bold">{{this.detalles.receptor}}</span>
+                      </div>
+                      <div class="col-md-4">
+                        <strong>🆔 Identificación:</strong><br>
+                        <code>{{this.detalles.identificacionReceptor}}</code>
+                      </div>
+                      <div class="col-md-4">
+                        <strong>👥 Relación:</strong><br>
+                        <span class="badge bg-secondary">{{this.detalles.relacion}}</span>
+                      </div>
+                    </div>
+                  </div>
+                  {{/if}}
+                  
                   {{#if (eq this.tipo "creacion")}}
-                  <span class="badge bg-primary">Creación</span>
-                  {{else if (eq this.tipo "cambio_estado")}}
-                  <span class="badge bg-info">Cambio Estado</span>
-                  {{else if (eq this.tipo "entrega")}}
-                  <span class="badge bg-success">Entrega</span>
-                  {{else if (eq this.tipo "cancelacion")}}
-                  <span class="badge bg-danger">Cancelación</span>
-                  {{else}}
-                  <span class="badge bg-secondary">{{this.tipo}}</span>
+                  <div class="alert alert-primary border-start border-primary border-4 mb-3">
+                    <div class="row">
+                      <div class="col-md-6">
+                        <strong>📄 Tipo de Documento:</strong><br>
+                        <span class="badge bg-primary">{{this.detalles.tipoDocumento}}</span>
+                      </div>
+                      <div class="col-md-6">
+                        <strong>🏷️ Código de Barras:</strong><br>
+                        <code class="bg-light p-1 rounded">{{this.detalles.codigoBarras}}</code>
+                      </div>
+                    </div>
+                  </div>
                   {{/if}}
-                </td>
-                <td>{{this.detalles}}</td>
-                <td>{{this.usuario}}</td>
-                <td>
-                  {{#if @index}}
-                    {{#with (lookup ../eventos (add @index 1))}}
-                      {{tiempoTranscurrido this.createdAt ../createdAt}}
-                    {{/with}}
-                  {{else}}
-                    -
+                  
+                  {{#if (eq this.tipo "eliminacion")}}
+                  <div class="alert alert-danger border-start border-danger border-4 mb-3">
+                    <div class="row">
+                      <div class="col-md-4">
+                        <strong>⚠️ Acción:</strong><br>
+                        <span class="badge bg-danger">{{this.detalles.accion}}</span>
+                      </div>
+                      <div class="col-md-4">
+                        <strong>✅ Resultado:</strong><br>
+                        <span class="badge bg-{{#if (eq this.detalles.resultado "exitoso")}}success{{else}}warning{{/if}}">
+                          {{this.detalles.resultado}}
+                        </span>
+                      </div>
+                      <div class="col-md-4">
+                        <strong>🌐 IP:</strong><br>
+                        <code>{{this.detalles.ip}}</code>
+                      </div>
+                    </div>
+                  </div>
                   {{/if}}
-                </td>
-              </tr>
+                  
+                  <!-- Footer con información del usuario y tiempo -->
+                  <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                    <div class="d-flex align-items-center text-muted">
+                      <div class="d-flex align-items-center me-4">
+                        <i class="fas fa-user-circle me-2"></i>
+                        <div>
+                          <small class="fw-bold d-block">{{this.usuario}}</small>
+                          <small class="text-muted">Usuario responsable</small>
+                        </div>
+                      </div>
+                      <div class="d-flex align-items-center">
+                        <i class="fas fa-calendar-alt me-2"></i>
+                        <div>
+                          <small class="d-block">{{formatDateTime this.fecha}}</small>
+                          <small class="text-muted">Fecha y hora</small>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="text-end">
+                      {{#if this.tiempoTranscurrido}}
+                      <div class="badge bg-light text-dark border">
+                        <i class="fas fa-stopwatch me-1"></i>{{this.tiempoTranscurrido}}
+                      </div>
+                      {{/if}}
+                    </div>
+                  </div>
+                </div>
+              </div>
               {{/each}}
-            </tbody>
-          </table>
+            </div>
+            
+            <!-- Panel de estadísticas del historial -->
+            <div class="row mt-4">
+              <div class="col-12">
+                <div class="card bg-light">
+                  <div class="card-body">
+                    <h6 class="card-title mb-3">
+                      <i class="fas fa-chart-bar me-2"></i>Resumen de Eventos
+                    </h6>
+                    <div class="row text-center">
+                      <div class="col-md-2">
+                        <div class="d-flex flex-column align-items-center">
+                          <i class="fas fa-file-plus text-primary fa-2x mb-2"></i>
+                          <span class="badge bg-primary px-3 py-2">
+                            {{contarEventosPorTipo eventos "creacion"}} Creación
+                          </span>
+                        </div>
+                      </div>
+                      <div class="col-md-2">
+                        <div class="d-flex flex-column align-items-center">
+                          <i class="fas fa-money-bill-wave text-success fa-2x mb-2"></i>
+                          <span class="badge bg-success px-3 py-2">
+                            {{contarEventosPorTipo eventos "pago"}} Pagos
+                          </span>
+                        </div>
+                      </div>
+                      <div class="col-md-2">
+                        <div class="d-flex flex-column align-items-center">
+                          <i class="fas fa-exchange-alt text-info fa-2x mb-2"></i>
+                          <span class="badge bg-info px-3 py-2">
+                            {{contarEventosPorCategoria eventos "estado"}} Estados
+                          </span>
+                        </div>
+                      </div>
+                      <div class="col-md-2">
+                        <div class="d-flex flex-column align-items-center">
+                          <i class="fas fa-hand-holding text-warning fa-2x mb-2"></i>
+                          <span class="badge bg-warning text-dark px-3 py-2">
+                            {{contarEventosPorCategoria eventos "entrega"}} Entregas
+                          </span>
+                        </div>
+                      </div>
+                      <div class="col-md-2">
+                        <div class="d-flex flex-column align-items-center">
+                          <i class="fas fa-user-tag text-secondary fa-2x mb-2"></i>
+                          <span class="badge bg-secondary px-3 py-2">
+                            {{contarEventosPorCategoria eventos "matrizador"}} Matrizador
+                          </span>
+                        </div>
+                      </div>
+                      <div class="col-md-2">
+                        <div class="d-flex flex-column align-items-center">
+                          <i class="fas fa-trash text-danger fa-2x mb-2"></i>
+                          <span class="badge bg-danger px-3 py-2">
+                            {{contarEventosPorCategoria eventos "eliminacion"}} Eliminaciones
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {{else}}
+    <div class="row">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">
+              <i class="fas fa-history me-2"></i>Historial del Documento
+            </h5>
+          </div>
+          <div class="card-body text-center text-muted">
+            <i class="fas fa-clock fa-4x mb-3"></i>
+            <h5>Sin eventos registrados</h5>
+            <p>Este documento no tiene eventos en el historial.</p>
+          </div>
         </div>
       </div>
     </div>
@@ -359,4 +548,235 @@
       return new bootstrap.Tooltip(tooltipTriggerEl);
     });
   });
-</script> 
+</script>
+
+<style>
+  /* === ESTILOS PARA TIMELINE ADMIN === */
+  .timeline-admin {
+    position: relative;
+    padding-left: 70px;
+    margin-top: 20px;
+  }
+  
+  .timeline-item-admin {
+    position: relative;
+    margin-bottom: 40px;
+    transition: all 0.3s ease;
+  }
+  
+  .timeline-item-admin:hover {
+    transform: translateY(-3px);
+  }
+  
+  .timeline-marker-admin {
+    position: absolute;
+    left: -70px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border: 4px solid #fff;
+    z-index: 2;
+    transition: all 0.3s ease;
+  }
+  
+  .timeline-marker-admin:hover {
+    transform: scale(1.15);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+  }
+  
+  /* Línea conectora vertical */
+  .timeline-item-admin:before {
+    content: '';
+    position: absolute;
+    left: -48px;
+    top: 50px;
+    bottom: -20px;
+    width: 4px;
+    background: linear-gradient(to bottom, #dee2e6, #adb5bd);
+    border-radius: 2px;
+    z-index: 1;
+  }
+  
+  .timeline-item-admin:last-child:before {
+    display: none;
+  }
+  
+  .timeline-content-admin {
+    background: #ffffff;
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    border: 1px solid #e9ecef;
+    position: relative;
+    transition: all 0.3s ease;
+  }
+  
+  .timeline-content-admin:hover {
+    box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+    border-color: #dee2e6;
+  }
+  
+  /* Flecha apuntando al marcador */
+  .timeline-content-admin:before {
+    content: '';
+    position: absolute;
+    left: -12px;
+    top: 25px;
+    width: 0;
+    height: 0;
+    border-top: 12px solid transparent;
+    border-bottom: 12px solid transparent;
+    border-right: 12px solid #fff;
+    filter: drop-shadow(-1px 0 1px rgba(0,0,0,0.1));
+  }
+  
+  /* Colores específicos para categorías en admin */
+  .timeline-item-admin[data-categoria="creacion"] .timeline-content-admin {
+    border-left: 5px solid #0d6efd;
+    background: linear-gradient(135deg, #f8f9ff 0%, #ffffff 100%);
+  }
+  
+  .timeline-item-admin[data-categoria="pago"] .timeline-content-admin {
+    border-left: 5px solid #198754;
+    background: linear-gradient(135deg, #f8fff9 0%, #ffffff 100%);
+  }
+  
+  .timeline-item-admin[data-categoria="estado"] .timeline-content-admin {
+    border-left: 5px solid #0dcaf0;
+    background: linear-gradient(135deg, #f8feff 0%, #ffffff 100%);
+  }
+  
+  .timeline-item-admin[data-categoria="entrega"] .timeline-content-admin {
+    border-left: 5px solid #fd7e14;
+    background: linear-gradient(135deg, #fffcf8 0%, #ffffff 100%);
+  }
+  
+  .timeline-item-admin[data-categoria="matrizador"] .timeline-content-admin {
+    border-left: 5px solid #6c757d;
+    background: linear-gradient(135deg, #fafafa 0%, #ffffff 100%);
+  }
+  
+  .timeline-item-admin[data-categoria="eliminacion"] .timeline-content-admin {
+    border-left: 5px solid #dc3545;
+    background: linear-gradient(135deg, #fff8f8 0%, #ffffff 100%);
+  }
+  
+  /* Animaciones de entrada escalonadas */
+  .timeline-item-admin {
+    opacity: 0;
+    animation: slideInRight 0.8s ease forwards;
+  }
+  
+  .timeline-item-admin:nth-child(1) { animation-delay: 0.1s; }
+  .timeline-item-admin:nth-child(2) { animation-delay: 0.2s; }
+  .timeline-item-admin:nth-child(3) { animation-delay: 0.3s; }
+  .timeline-item-admin:nth-child(4) { animation-delay: 0.4s; }
+  .timeline-item-admin:nth-child(5) { animation-delay: 0.5s; }
+  .timeline-item-admin:nth-child(n+6) { animation-delay: 0.6s; }
+  
+  @keyframes slideInRight {
+    from {
+      opacity: 0;
+      transform: translateX(50px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  
+  /* Mejorar badges con opacidad */
+  .bg-opacity-20 {
+    --bs-bg-opacity: 0.2 !important;
+  }
+  
+  /* Estilos para las alertas de información específica */
+  .alert.border-start {
+    border-left-width: 4px !important;
+    background: rgba(var(--bs-success-rgb), 0.05);
+  }
+  
+  .alert-success.border-start {
+    background: rgba(var(--bs-success-rgb), 0.05);
+  }
+  
+  .alert-info.border-start {
+    background: rgba(var(--bs-info-rgb), 0.05);
+  }
+  
+  .alert-primary.border-start {
+    background: rgba(var(--bs-primary-rgb), 0.05);
+  }
+  
+  .alert-danger.border-start {
+    background: rgba(var(--bs-danger-rgb), 0.05);
+  }
+  
+  /* Responsive para admin */
+  @media (max-width: 768px) {
+    .timeline-admin {
+      padding-left: 50px;
+    }
+    
+    .timeline-marker-admin {
+      left: -50px;
+      width: 40px;
+      height: 40px;
+    }
+    
+    .timeline-item-admin:before {
+      left: -33px;
+    }
+    
+    .timeline-content-admin {
+      padding: 20px;
+    }
+    
+    .timeline-content-admin:before {
+      left: -8px;
+      border-right-width: 8px;
+      border-top-width: 8px;
+      border-bottom-width: 8px;
+    }
+    
+    /* Hacer las estadísticas más compactas en mobile */
+    .row.text-center .col-md-2 {
+      margin-bottom: 15px;
+    }
+    
+    .fa-2x {
+      font-size: 1.5em !important;
+    }
+  }
+  
+  /* Mejorar la presentación de códigos */
+  code {
+    background-color: #f8f9fa;
+    color: #d63384;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.9em;
+  }
+  
+  /* Hover effects para las estadísticas */
+  .card.bg-light .col-md-2:hover {
+    transform: translateY(-3px);
+    transition: transform 0.3s ease;
+  }
+  
+  .card.bg-light .col-md-2:hover .badge {
+    transform: scale(1.05);
+    transition: transform 0.3s ease;
+  }
+  
+  /* Personalización de badges de tiempo */
+  .badge.bg-light.text-dark.border {
+    background-color: #f8f9fa !important;
+    border-color: #dee2e6 !important;
+    font-weight: 500;
+  }
+</style> 

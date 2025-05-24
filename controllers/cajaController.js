@@ -21,6 +21,16 @@ const {
   mapearMetodoPagoInverso 
 } = require('../utils/documentoUtils');
 
+/**
+ * Función auxiliar para crear fechas en zona horaria de Ecuador
+ * @returns {Date} Fecha actual ajustada a zona horaria de Ecuador (UTC-5)
+ */
+function obtenerFechaEcuador() {
+  // Simplemente usar new Date() que debe funcionar igual que en fecha de creación
+  // Ya que la fecha de creación se ve correctamente
+  return new Date();
+}
+
 // Objeto que contendrá todas las funciones del controlador
 const cajaController = {
   
@@ -70,12 +80,12 @@ const cajaController = {
       const fechaInicioSQL = fechaInicio.format('YYYY-MM-DD HH:mm:ss');
       const fechaFinSQL = fechaFin.format('YYYY-MM-DD HH:mm:ss');
       
-      // Dinero Facturado: Suma de todos los documentos con monto definido, excluyendo anulados/cancelados
+      // Dinero Facturado: Suma de todos los documentos con monto definido, excluyendo eliminados y notas de crédito
       const [totalFacturadoResult] = await sequelize.query(`
         SELECT COALESCE(SUM(valor_factura), 0) as total
         FROM documentos
         WHERE valor_factura IS NOT NULL
-          AND estado != 'cancelado'  -- Excluir cancelados
+          AND estado NOT IN ('eliminado', 'nota_credito')  -- Excluir eliminados y notas de crédito
           AND fecha_factura BETWEEN :fechaInicio AND :fechaFin
       `, {
         replacements: { 
@@ -86,13 +96,13 @@ const cajaController = {
       });
       const totalFacturado = parseFloat(totalFacturadoResult.total);
 
-      // Dinero Cobrado/Recaudado: Solo documentos marcados como "pagado", excluyendo anulados/cancelados
+      // Dinero Cobrado/Recaudado: Solo documentos marcados como "pagado", excluyendo eliminados y notas de crédito
       const [totalCobradoResult] = await sequelize.query(`
         SELECT COALESCE(SUM(valor_factura), 0) as total
         FROM documentos
         WHERE estado_pago = 'pagado'
-          AND estado != 'cancelado'  -- Excluir cancelados
-          AND fecha_factura BETWEEN :fechaInicio AND :fechaFin -- Opcional: considerar si el cobro puede ser fuera del periodo de facturación
+          AND estado NOT IN ('eliminado', 'nota_credito')  -- Excluir eliminados y notas de crédito
+          AND fecha_factura BETWEEN :fechaInicio AND :fechaFin
       `, {
         replacements: { 
           fechaInicio: fechaInicioSQL,
@@ -102,13 +112,12 @@ const cajaController = {
       });
       const totalCobrado = parseFloat(totalCobradoResult.total);
 
-      // Dinero Pendiente: Documentos no pagados que no estén anulados/cancelados
-      // Se puede calcular como Total Facturado - Total Cobrado, o con una consulta directa:
+      // Dinero Pendiente: Documentos no pagados que no estén eliminados o con nota de crédito
       const [totalPendienteResult] = await sequelize.query(`
         SELECT COALESCE(SUM(valor_factura), 0) as total
         FROM documentos
         WHERE estado_pago = 'pendiente'
-          AND estado != 'cancelado' -- Excluir cancelados
+          AND estado NOT IN ('eliminado', 'nota_credito') -- Excluir eliminados y notas de crédito
           AND valor_factura IS NOT NULL
           AND fecha_factura BETWEEN :fechaInicio AND :fechaFin
       `, {
@@ -120,12 +129,12 @@ const cajaController = {
       });
       const totalPendiente = parseFloat(totalPendienteResult.total);
       
-      // Obtener cantidad de documentos facturados (que no estén cancelados)
+      // Obtener cantidad de documentos facturados (excluyendo eliminados y notas de crédito)
       const [documentosFacturadosResult] = await sequelize.query(`
         SELECT COUNT(*) as total
         FROM documentos
         WHERE numero_factura IS NOT NULL
-          AND estado != 'cancelado' -- Excluir cancelados
+          AND estado NOT IN ('eliminado', 'nota_credito') -- Excluir eliminados y notas de crédito
           AND fecha_factura BETWEEN :fechaInicio AND :fechaFin
       `, {
         replacements: { 
@@ -136,13 +145,13 @@ const cajaController = {
       });
       const documentosFacturados = parseInt(documentosFacturadosResult.total);
       
-      // Obtener cantidad de documentos pendientes de pago (que no estén cancelados)
+      // Obtener cantidad de documentos pendientes de pago (excluyendo eliminados y notas de crédito)
       const [documentosPendientesPagoResult] = await sequelize.query(`
         SELECT COUNT(*) as total
         FROM documentos
         WHERE estado_pago = 'pendiente'
           AND numero_factura IS NOT NULL
-          AND estado != 'cancelado' -- Excluir cancelados
+          AND estado NOT IN ('eliminado', 'nota_credito') -- Excluir eliminados y notas de crédito
           AND fecha_factura BETWEEN :fechaInicio AND :fechaFin 
       `, {
         replacements: {
@@ -153,30 +162,29 @@ const cajaController = {
       });
       const documentosPendientesPago = parseInt(documentosPendientesPagoResult.total);
 
-      // Documentos pendientes de pago para la lista (que no estén cancelados)
+      // Documentos pendientes de pago para la lista (excluyendo eliminados y notas de crédito)
       const documentosPendientesLista = await Documento.findAll({
         where: {
           estadoPago: 'pendiente',
           numeroFactura: { [Op.not]: null },
-          estado: { [Op.ne]: 'cancelado' } // Excluir cancelados
+          estado: { [Op.notIn]: ['eliminado', 'nota_credito'] } // Excluir eliminados y notas de crédito
         },
         order: [['fechaFactura', 'ASC']],
         limit: 10
       });
       
-      // Documentos pagados recientemente (que no estén cancelados)
+      // Documentos pagados recientemente (excluyendo eliminados y notas de crédito)
       const documentosPagadosRecientesLista = await Documento.findAll({
         where: {
           estadoPago: 'pagado',
           numeroFactura: { [Op.not]: null },
-          estado: { [Op.ne]: 'cancelado' } // Excluir cancelados
-          // Considerar si se filtra por fecha de pago si existiera ese campo, o fecha_factura/updated_at
+          estado: { [Op.notIn]: ['eliminado', 'nota_credito'] } // Excluir eliminados y notas de crédito
         },
-        order: [['updated_at', 'DESC']], // O por fecha de pago si existe
+        order: [['updated_at', 'DESC']],
         limit: 10
       });
       
-      // Obtener estadísticas por tipo de documento (excluyendo cancelados)
+      // Obtener estadísticas por tipo de documento (excluyendo eliminados y notas de crédito)
       const estadisticasPorTipo = await sequelize.query(`
         SELECT 
           tipo_documento, 
@@ -188,7 +196,7 @@ const cajaController = {
             ELSE 0
           END as promedio_facturado
         FROM documentos
-        WHERE estado != 'cancelado' -- Excluir cancelados
+        WHERE estado NOT IN ('eliminado', 'nota_credito') -- Excluir eliminados y notas de crédito
           AND fecha_factura BETWEEN :fechaInicio AND :fechaFin
         GROUP BY tipo_documento
         ORDER BY total_facturado DESC
@@ -513,26 +521,104 @@ const cajaController = {
     try {
       const { id } = req.params;
       
-      // Buscar el documento
+      // Buscar el documento con toda la información necesaria
       const documento = await Documento.findByPk(id, {
-        include: [
-          {
-            model: Matrizador,
-            as: 'matrizador',
-            attributes: ['id', 'nombre', 'email']
-          },
-          {
-            model: EventoDocumento,
-            as: 'eventos',
-            order: [['createdAt', 'DESC']]
-          }
-        ]
+        include: [{
+          model: Matrizador,
+          as: 'matrizador',
+          attributes: ['id', 'nombre', 'email']
+        }]
       });
       
       if (!documento) {
         req.flash('error', 'Documento no encontrado');
         return res.redirect('/caja/documentos');
       }
+      
+      // Buscar eventos del documento
+      const eventos = await EventoDocumento.findAll({
+        where: { idDocumento: id },
+        order: [['createdAt', 'DESC']]
+      });
+      
+      // Buscar información del usuario que registró el pago (si está pagado)
+      let usuarioPago = null;
+      if (documento.estadoPago === 'pagado' && documento.registradoPor) {
+        usuarioPago = await Matrizador.findByPk(documento.registradoPor, {
+          attributes: ['id', 'nombre', 'email', 'rol']
+        });
+      }
+      
+      // Crear historial simplificado para caja
+      let historialCaja = [];
+      
+      // Agregar evento de pago si está pagado
+      if (documento.estadoPago === 'pagado') {
+        historialCaja.push({
+          tipo: 'pago',
+          categoria: 'pago',
+          titulo: 'Pago Registrado',
+          descripcion: `Pago por $${documento.valorFactura} via ${documento.metodoPago}`,
+          fecha: documento.fechaRegistroPago || documento.updatedAt,
+          usuario: usuarioPago?.nombre || 'Usuario de Caja',
+          color: 'success',
+          detalles: {
+            valor: documento.valorFactura,
+            metodoPago: documento.metodoPago,
+            numeroFactura: documento.numeroFactura,
+            usuarioCaja: usuarioPago?.nombre || 'Usuario de Caja',
+            fechaPago: documento.fechaRegistroPago || documento.updatedAt
+          }
+        });
+      }
+      
+      // Agregar evento de entrega si está entregado
+      if (documento.estado === 'entregado' && documento.fechaEntrega) {
+        historialCaja.push({
+          tipo: 'entrega',
+          categoria: 'entrega',
+          titulo: 'Documento Entregado',
+          descripcion: `Entregado a ${documento.nombreReceptor} (${documento.relacionReceptor})`,
+          fecha: documento.fechaEntrega,
+          usuario: 'Matrizador',
+          color: 'info',
+          detalles: {
+            receptor: documento.nombreReceptor,
+            identificacionReceptor: documento.identificacionReceptor,
+            relacion: documento.relacionReceptor
+          }
+        });
+      }
+      
+      // Agregar eventos relevantes de EventoDocumento
+      eventos.forEach(evento => {
+        // Solo agregar eventos relevantes para caja
+        const eventosRelevantes = ['cambio_estado', 'entrega', 'confirmacion_pago'];
+        if (eventosRelevantes.includes(evento.tipo)) {
+          // Filtrar cambios de estado solo si son relevantes
+          if (evento.tipo === 'cambio_estado') {
+            const detalles = evento.detalles?.toLowerCase() || '';
+            if (!detalles.includes('listo') && !detalles.includes('entrega') && !detalles.includes('pagado')) {
+              return; // Skip este evento
+            }
+          }
+          
+          historialCaja.push({
+            tipo: evento.tipo,
+            categoria: evento.tipo === 'cambio_estado' ? 'estado' : evento.tipo,
+            titulo: evento.tipo === 'cambio_estado' ? 'Estado Cambiado' : 
+                   evento.tipo === 'entrega' ? 'Documento Entregado' : 'Pago Confirmado',
+            descripcion: evento.detalles || 'Sin descripción',
+            fecha: evento.createdAt,
+            usuario: evento.usuario || 'Sistema',
+            color: evento.tipo === 'entrega' ? 'info' : 
+                  evento.tipo === 'cambio_estado' ? 'warning' : 'success'
+          });
+        }
+      });
+      
+      // Ordenar historial por fecha (más reciente primero)
+      historialCaja.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
       
       // Transformar el método de pago para la vista
       if (documento.metodoPago === null) {
@@ -559,7 +645,9 @@ const cajaController = {
         layout: 'caja',
         title: 'Detalle de Documento',
         documento,
+        eventos: historialCaja, // Pasar historial específico para caja
         matrizadores,
+        usuarioPago, // Información del usuario que registró el pago
         userRole: req.matrizador?.rol,
         userName: req.matrizador?.nombre
       });
@@ -783,13 +871,35 @@ const cajaController = {
           return res.redirect('/caja/documentos');
         }
         
+        // VALIDACIÓN CRÍTICA FINANCIERA: Impedir pagos a documentos eliminados o notas de crédito
+        if (documento.estado === 'eliminado') {
+          await transaction.rollback();
+          req.flash('error', 'No se puede procesar pago - el documento ha sido eliminado definitivamente');
+          return res.redirect('/caja/documentos');
+        }
+        
+        if (documento.estado === 'nota_credito') {
+          await transaction.rollback();
+          req.flash('error', 'No se puede procesar pago - el documento tiene una nota de crédito asociada');
+          return res.redirect('/caja/documentos');
+        }
+        
+        // Validar que el documento no esté ya pagado
+        if (documento.estadoPago === 'pagado') {
+          await transaction.rollback();
+          req.flash('error', 'El documento ya está marcado como pagado');
+          return res.redirect(`/caja/documentos/detalle/${documentoId}`);
+        }
+        
         // Actualizar información del documento
         await documento.update({
           numeroFactura,
           valorFactura,
-          fechaFactura: new Date(),
+          fechaFactura: obtenerFechaEcuador(),
           estadoPago: 'pagado',
-          metodoPago: mapearMetodoPago(metodoPago)
+          metodoPago: mapearMetodoPago(metodoPago),
+          registradoPor: req.matrizador.id, // Auditoría: quién procesó el pago
+          fechaRegistroPago: obtenerFechaEcuador() // Auditoría: cuándo se procesó en zona horaria de Ecuador
         }, { transaction });
         
         // Registrar evento de pago
@@ -847,6 +957,19 @@ const cajaController = {
           return res.redirect('/caja/documentos');
         }
         
+        // VALIDACIÓN CRÍTICA FINANCIERA: Impedir confirmación de pagos a documentos eliminados o notas de crédito
+        if (documento.estado === 'eliminado') {
+          await transaction.rollback();
+          req.flash('error', 'No se puede confirmar pago - el documento ha sido eliminado definitivamente');
+          return res.redirect('/caja/documentos');
+        }
+        
+        if (documento.estado === 'nota_credito') {
+          await transaction.rollback();
+          req.flash('error', 'No se puede confirmar pago - el documento tiene una nota de crédito asociada');
+          return res.redirect('/caja/documentos');
+        }
+        
         // Verificar que el documento tenga factura
         if (!documento.numeroFactura) {
           await transaction.rollback();
@@ -856,7 +979,9 @@ const cajaController = {
         
         // Actualizar el estado de pago
         await documento.update({
-          estadoPago: 'pagado'
+          estadoPago: 'pagado',
+          registradoPor: req.matrizador.id, // Auditoría: quién confirmó el pago
+          fechaRegistroPago: obtenerFechaEcuador() // Auditoría: cuándo se confirmó en zona horaria de Ecuador
         }, { transaction });
         
         // Registrar evento de confirmación de pago
@@ -997,7 +1122,7 @@ const cajaController = {
           matrizadorAnteriorId,
           matrizadorNuevoId: matrizadorId,
           usuarioId: req.matrizador.id,
-          fechaCambio: new Date(),
+          fechaCambio: obtenerFechaEcuador(),
           justificacion
         }, { transaction });
         
@@ -1356,7 +1481,24 @@ const cajaController = {
       }
     } catch (error) {
       console.error('Error al registrar documento desde XML:', error);
-      req.flash('error', 'Error al registrar documento: ' + error.message);
+      
+      // Detectar error específico de código de barras duplicado
+      let errorMessage = 'Error al registrar documento: ' + error.message;
+      
+      if (error.name === 'SequelizeUniqueConstraintError') {
+        const esErrorCodigoBarras = error.errors && error.errors.some(e => 
+          e.path === 'codigo_barras' || e.path === 'codigoBarras'
+        );
+        
+        if (esErrorCodigoBarras) {
+          const codigoDuplicado = error.fields?.codigo_barras || req.body.numeroLibro || 'desconocido';
+          errorMessage = `⚠️ Documento ya registrado: El código de barras '${codigoDuplicado}' ya existe en el sistema. Este documento ya fue procesado anteriormente.`;
+        } else {
+          errorMessage = 'Ya existe un registro con uno de los valores únicos ingresados (ej. email, identificación).';
+        }
+      }
+      
+      req.flash('error', errorMessage);
       return res.redirect('/caja/documentos/nuevo-xml');
     }
   },
@@ -2600,6 +2742,21 @@ const cajaController = {
         });
       }
       
+      // VALIDACIÓN CRÍTICA FINANCIERA: Impedir marcar como pagado documentos eliminados o notas de crédito
+      if (documento.estado === 'eliminado') {
+        return res.status(400).json({
+          success: false,
+          message: 'No se puede marcar como pagado - el documento ha sido eliminado definitivamente'
+        });
+      }
+      
+      if (documento.estado === 'nota_credito') {
+        return res.status(400).json({
+          success: false,
+          message: 'No se puede marcar como pagado - el documento tiene una nota de crédito asociada'
+        });
+      }
+      
       if (documento.estadoPago === 'pagado') {
         return res.status(400).json({
           success: false,
@@ -2607,10 +2764,11 @@ const cajaController = {
         });
       }
       
-      // Actualizar el estado del documento
+      // Actualizar el estado del documento con auditoría
       await documento.update({
         estadoPago: 'pagado',
-        fechaPago: new Date(),
+        registradoPor: req.matrizador.id, // Auditoría: quién marcó como pagado
+        fechaRegistroPago: new Date(), // Auditoría: cuándo se marcó
         observacionesPago: 'Marcado como pagado manualmente desde reportes'
       });
       

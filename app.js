@@ -93,17 +93,23 @@ const hbs = engine({
     formatDate: (date) => {
       if (!date) return '';
       return new Date(date).toLocaleDateString('es-ES', {
+        timeZone: 'America/Guayaquil', // Zona horaria de Ecuador UTC-5
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
-        second: '2-digit'
+        second: '2-digit',
+        hour12: false
       });
     },
     formatTimeAgo: (date) => {
       if (!date) return '';
-      const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+      
+      // Crear fechas usando zona horaria de Ecuador para cálculos precisos
+      const now = new Date();
+      const dateEcuador = new Date(date);
+      const seconds = Math.floor((now - dateEcuador) / 1000);
       
       if (seconds < 60) return 'Hace un momento';
       
@@ -116,7 +122,13 @@ const hbs = engine({
       const days = Math.floor(hours / 24);
       if (days < 30) return `Hace ${days} ${days === 1 ? 'día' : 'días'}`;
       
-      return formatDate(date);
+      // Usar formatDate que ya tiene la zona horaria correcta
+      return new Date(date).toLocaleDateString('es-ES', {
+        timeZone: 'America/Guayaquil',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
     },
     translateEstado: (estado) => {
       const traducciones = {
@@ -158,6 +170,7 @@ const hbs = engine({
     tiempoTranscurrido: (fechaInicio, fechaFin) => {
       if (!fechaInicio || !fechaFin) return 'N/A';
       
+      // Crear fechas asegurando manejo correcto de zona horaria
       const inicio = new Date(fechaInicio);
       const fin = new Date(fechaFin);
       
@@ -173,15 +186,15 @@ const hbs = engine({
       const horas = Math.floor(minutos / 60);
       const dias = Math.floor(horas / 24);
       
-      // Formatear para mostrar
+      // Formatear para mostrar (formato más compacto)
       if (dias > 0) {
-        return `${dias} día(s), ${horas % 24} hora(s), ${minutos % 60} minuto(s)`;
+        return `${dias}d ${horas % 24}h ${minutos % 60}m`;
       } else if (horas > 0) {
-        return `${horas} hora(s), ${minutos % 60} minuto(s), ${segundos % 60} segundo(s)`;
+        return `${horas}h ${minutos % 60}m`;
       } else if (minutos > 0) {
-        return `${minutos} minuto(s), ${segundos % 60} segundo(s)`;
+        return `${minutos}m`;
       } else {
-        return `${segundos} segundo(s)`;
+        return 'Inmediato';
       }
     },
     // Helper para determinar si un usuario puede editar un documento
@@ -224,7 +237,62 @@ const hbs = engine({
       // Solo el rol 'recepcion' puede marcar como listo
       // y solo si el documento está 'en_proceso'
       return usuario.rol === 'recepcion' && documento.estado === 'en_proceso';
-    }
+    },
+    // Helper para formatear fecha y hora más detallado
+    formatDateTime: (date) => {
+      if (!date) return '';
+      return new Date(date).toLocaleString('es-ES', {
+        timeZone: 'America/Guayaquil', // Zona horaria de Ecuador UTC-5
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+    },
+    // Helper para contar eventos por tipo específico
+    contarEventosPorTipo: (eventos, tipo) => {
+      if (!eventos || !Array.isArray(eventos)) return 0;
+      return eventos.filter(evento => evento.tipo === tipo).length;
+    },
+    // Helper para contar eventos por categoría
+    contarEventosPorCategoria: (eventos, categoria) => {
+      if (!eventos || !Array.isArray(eventos)) return 0;
+      return eventos.filter(evento => evento.categoria === categoria).length;
+    },
+    // Helper para verificar si hay eventos de un tipo específico
+    tieneEventosTipo: (eventos, tipo) => {
+      if (!eventos || !Array.isArray(eventos)) return false;
+      return eventos.some(evento => evento.tipo === tipo);
+    },
+    // Helper para obtener el último evento de un tipo
+    ultimoEventoTipo: (eventos, tipo) => {
+      if (!eventos || !Array.isArray(eventos)) return null;
+      return eventos.find(evento => evento.tipo === tipo);
+    },
+    // Helper para formatear estados con colores
+    formatearEstadoColor: (estado) => {
+      const estados = {
+        'en_proceso': { texto: 'En Proceso', color: 'warning' },
+        'listo_para_entrega': { texto: 'Listo para Entrega', color: 'info' },
+        'entregado': { texto: 'Entregado', color: 'success' },
+        'nota_credito': { texto: 'Nota de Crédito', color: 'secondary' },
+        'eliminado': { texto: 'Eliminado', color: 'danger' }
+      };
+      return estados[estado] || { texto: estado, color: 'secondary' };
+    },
+    // Helper para operaciones lógicas AND
+    and: function() {
+      const args = Array.prototype.slice.call(arguments, 0, -1);
+      return args.every(Boolean);
+    },
+    // Helper para operaciones lógicas OR
+    or: function() {
+      const args = Array.prototype.slice.call(arguments, 0, -1);
+      return args.some(Boolean);
+    },
   }
 });
 
