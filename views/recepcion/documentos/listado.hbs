@@ -9,62 +9,54 @@
     </div>
     <div class="card-body">
       <!-- Filtros -->
-      <div class="row mb-4">
-        <div class="col-md-12">
-          <div class="card bg-light">
-            <div class="card-body p-3">
-              <form id="filtrosForm" method="GET" action="/recepcion/documentos">
-                <div class="row">
-                  <div class="col-md-3 mb-2">
-                    <label for="filtroEstado" class="form-label small">Estado</label>
-                    <select class="form-select form-select-sm" id="filtroEstado" name="estado">
-                      <option value="">Todos</option>
-                      <option value="en_proceso" {{#if filtros.estado.en_proceso}}selected{{/if}}>En Proceso</option>
-                      <option value="listo_para_entrega" {{#if filtros.estado.listo_para_entrega}}selected{{/if}}>Listos para Entrega</option>
-                      <option value="entregado" {{#if filtros.estado.entregado}}selected{{/if}}>Entregados</option>
-                      <option value="cancelado" {{#if filtros.estado.cancelado}}selected{{/if}}>Cancelados</option>
-                    </select>
-                  </div>
-                  
-                  <div class="col-md-3 mb-2">
-                    <label for="filtroTipo" class="form-label small">Tipo de Documento</label>
-                    <select class="form-select form-select-sm" id="filtroTipo" name="tipoDocumento">
-                      <option value="">Todos</option>
-                      {{#each tiposDocumento}}
-                      <option value="{{this}}" {{#if (eq ../filtros.tipoDocumento this)}}selected{{/if}}>{{this}}</option>
-                      {{/each}}
-                    </select>
-                  </div>
-                  
-                  <div class="col-md-3 mb-2">
-                    <label for="filtroMatrizador" class="form-label small">Matrizador</label>
-                    <select class="form-select form-select-sm" id="filtroMatrizador" name="idMatrizador">
-                      <option value="">Todos</option>
-                      {{#each matrizadores}}
-                      <option value="{{this.id}}" {{#if (eq ../filtros.idMatrizador (stringifyNumber this.id))}}selected{{/if}}>{{this.nombre}}</option>
-                      {{/each}}
-                    </select>
-                  </div>
-                  
-                  <div class="col-md-3 mb-2">
-                    <label for="filtroBusqueda" class="form-label small">Búsqueda</label>
-                    <input type="text" class="form-control form-control-sm" id="filtroBusqueda" name="busqueda" placeholder="Código o nombre del cliente" value="{{filtros.busqueda}}">
-                  </div>
-                  
-                  <div class="col-md-12 text-end">
-                    <button type="submit" class="btn btn-sm btn-primary">
-                      <i class="fas fa-filter me-1"></i> Filtrar
-                    </button>
-                    <a href="/recepcion/documentos" class="btn btn-sm btn-outline-secondary ms-1">
-                      <i class="fas fa-times me-1"></i> Limpiar
-                    </a>
-                  </div>
-                </div>
-              </form>
-            </div>
+      <form method="GET" action="/recepcion/documentos" class="mb-4">
+        <div class="row mb-3">
+          <div class="col-md-2">
+            <label for="estado" class="form-label">Estado</label>
+            <select class="form-select form-select-sm" id="estado" name="estado">
+              <option value="">Todos</option>
+              <option value="en_proceso" {{#if filtros.estado.en_proceso}}selected{{/if}}>En Proceso</option>
+              <option value="listo_para_entrega" {{#if filtros.estado.listo_para_entrega}}selected{{/if}}>Listo</option>
+              <option value="entregado" {{#if filtros.estado.entregado}}selected{{/if}}>Entregado</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label for="estadoPago" class="form-label">Estado Pago</label>
+            <select class="form-select form-select-sm" id="estadoPago" name="estadoPago">
+              <option value="">Todos</option>
+              <option value="pendiente" {{#if (eq filtros.estadoPago "pendiente")}}selected{{/if}}>Pendiente</option>
+              <option value="pagado" {{#if (eq filtros.estadoPago "pagado")}}selected{{/if}}>Pagado</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label for="tipoDocumento" class="form-label">Tipo</label>
+            <select class="form-select form-select-sm" id="tipoDocumento" name="tipoDocumento">
+              <option value="">Todos</option>
+              {{#each tiposDocumento}}
+              <option value="{{this}}" {{#if (eq ../filtros.tipoDocumento this)}}selected{{/if}}>{{this}}</option>
+              {{/each}}
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label for="idMatrizador" class="form-label">Matrizador</label>
+            <select class="form-select form-select-sm" id="idMatrizador" name="idMatrizador">
+              <option value="">Todos</option>
+              {{#each matrizadores}}
+              <option value="{{this.id}}" {{#if (eq ../filtros.idMatrizador (stringifyNumber this.id))}}selected{{/if}}>{{this.nombre}}</option>
+              {{/each}}
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label for="busqueda" class="form-label">Buscar</label>
+            <input type="text" class="form-control form-control-sm" id="busqueda" name="busqueda" placeholder="Código o cliente..." value="{{filtros.busqueda}}">
+          </div>
+          <div class="col-md-1 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary btn-sm w-100">
+              <i class="fas fa-search"></i>
+            </button>
           </div>
         </div>
-      </div>
+      </form>
       
       <!-- Tabla de documentos -->
       <div class="table-responsive">
@@ -77,6 +69,7 @@
               <th>Matrizador</th>
               <th>Fecha</th>
               <th>Estado</th>
+              <th>Estado Pago</th>
               <th>Acciones</th>
             </tr>
           </thead>
@@ -96,7 +89,7 @@
                 <span class="text-muted">No asignado</span>
                 {{/if}}
               </td>
-              <td>{{formatDate this.fechaCreacion}}</td>
+              <td>{{formatDate this.fechaFactura}}</td>
               <td>
                 {{#if (eq this.estado "en_proceso")}}
                 <span class="badge bg-warning">En Proceso</span>
@@ -106,6 +99,13 @@
                 <span class="badge bg-info">Entregado</span>
                 {{else}}
                 <span class="badge bg-secondary">{{this.estado}}</span>
+                {{/if}}
+              </td>
+              <td>
+                {{#if (eq this.estadoPago "pagado")}}
+                <span class="badge bg-success"><i class="fas fa-check"></i> Pagado</span>
+                {{else}}
+                <span class="badge bg-warning"><i class="fas fa-exclamation-triangle"></i> Pendiente</span>
                 {{/if}}
               </td>
               <td>
@@ -121,8 +121,8 @@
                   {{/if}}
 
                   {{#if (eq this.estado "listo_para_entrega")}}
-                  <a href="/recepcion/documentos/entrega/{{this.id}}" class="btn btn-sm btn-outline-info" title="Registrar Entrega">
-                    <i class="fas fa-hand-holding"></i>
+                  <a href="/recepcion/documentos/entrega/{{this.id}}" class="btn btn-sm btn-outline-warning" title="Entregar Documento">
+                    <i class="fas fa-handshake"></i>
                   </a>
                   {{/if}}
                 </div>
@@ -130,8 +130,9 @@
             </tr>
             {{else}}
             <tr>
-              <td colspan="7" class="text-center py-4">
-                <i class="fas fa-search me-2"></i> No se encontraron documentos con los filtros actuales
+              <td colspan="8" class="text-center text-muted py-4">
+                <i class="fas fa-file-alt fa-2x mb-2"></i><br>
+                No se encontraron documentos
               </td>
             </tr>
             {{/each}}

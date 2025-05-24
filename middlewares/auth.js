@@ -155,10 +155,17 @@ const esAdmin = (req, res, next) => {
       });
     }
     
+    // Determinar layout correcto según el rol del usuario actual
+    const layout = req.matrizador.rol === 'matrizador' ? 'matrizador' : 
+                   req.matrizador.rol === 'recepcion' ? 'recepcion' : 
+                   req.matrizador.rol === 'caja' ? 'caja' : 'admin';
+    
     return res.render('error', {
-      layout: 'admin',
+      layout,
       title: 'Acceso denegado',
-      message: 'No tiene permisos para acceder a esta página. Se requieren privilegios de administrador.'
+      message: 'No tiene permisos para acceder a esta página. Se requieren privilegios de administrador.',
+      userRole: req.matrizador.rol,
+      userName: req.matrizador.nombre
     });
   }
   
@@ -189,10 +196,16 @@ const esMatrizador = (req, res, next) => {
       });
     }
     
+    // Determinar layout correcto según el rol del usuario actual
+    const layout = req.matrizador.rol === 'recepcion' ? 'recepcion' : 
+                   req.matrizador.rol === 'caja' ? 'caja' : 'admin';
+    
     return res.render('error', {
-      layout: 'admin',
+      layout,
       title: 'Acceso denegado',
-      message: 'No tiene permisos para acceder a esta página. Se requieren privilegios de matrizador o administrador.'
+      message: 'No tiene permisos para acceder a esta página. Se requieren privilegios de matrizador o administrador.',
+      userRole: req.matrizador.rol,
+      userName: req.matrizador.nombre
     });
   }
   
@@ -224,10 +237,15 @@ const esRecepcion = (req, res, next) => {
       });
     }
     
+    // Determinar layout correcto según el rol del usuario actual
+    const layout = req.matrizador.rol === 'caja' ? 'caja' : 'admin';
+    
     return res.render('error', {
-      layout: 'admin',
+      layout,
       title: 'Acceso denegado',
-      message: 'No tiene permisos para acceder a esta página. Se requieren privilegios de recepción, matrizador o administrador.'
+      message: 'No tiene permisos para acceder a esta página. Se requieren privilegios de recepción, matrizador o administrador.',
+      userRole: req.matrizador.rol,
+      userName: req.matrizador.nombre
     });
   }
   
@@ -259,10 +277,15 @@ const esCaja = (req, res, next) => {
       });
     }
     
+    // Determinar layout correcto según el rol del usuario actual
+    const layout = req.matrizador.rol === 'recepcion' ? 'recepcion' : 'admin';
+    
     return res.render('error', {
-      layout: 'admin',
+      layout,
       title: 'Acceso denegado',
-      message: 'No tiene permisos para acceder a esta página. Se requieren privilegios de caja, matrizador o administrador.'
+      message: 'No tiene permisos para acceder a esta página. Se requieren privilegios de caja, matrizador o administrador.',
+      userRole: req.matrizador.rol,
+      userName: req.matrizador.nombre
     });
   }
   
@@ -296,6 +319,106 @@ function redirigirSegunRol(req, res) {
   }
 }
 
+/**
+ * Middleware para logging de auditoría cuando admin accede a funcionalidades de otros roles
+ */
+const logAuditoria = (rolRequerido) => {
+  return (req, res, next) => {
+    try {
+      // Solo registrar si el usuario es admin pero está accediendo a funcionalidades de otro rol
+      if (req.matrizador && req.matrizador.rol === 'admin' && rolRequerido !== 'admin') {
+        console.log(`🔍 AUDITORÍA: Admin ${req.matrizador.nombre} (ID: ${req.matrizador.id}) accedió a funcionalidad de ROL ${rolRequerido.toUpperCase()} en la ruta: ${req.originalUrl} - Método: ${req.method} - IP: ${req.ip || req.connection.remoteAddress} - Timestamp: ${new Date().toISOString()}`);
+        
+        // Opcional: Aquí se podría guardar en base de datos si existe un modelo de AuditoriaAccesos
+        // await AuditoriaAccesos.create({...});
+      }
+      next();
+    } catch (error) {
+      console.error('Error en middleware de auditoría:', error);
+      next(); // Continuar aún si hay error en el logging
+    }
+  };
+};
+
+/**
+ * Middleware combinado que valida acceso por roles Y registra auditoría
+ */
+const validarAccesoConAuditoria = (rolesPermitidos) => {
+  return async (req, res, next) => {
+    try {
+      // Primero verificar autenticación
+      if (!req.matrizador || !req.matrizador.rol) {
+        if (req.path.startsWith('/api/')) {
+          return res.status(401).json({
+            exito: false,
+            mensaje: 'No autorizado - Token no verificado'
+          });
+        }
+        return res.redirect('/login?error=no_autorizado&redirect=' + encodeURIComponent(req.originalUrl));
+      }
+
+      // Verificar si el rol está permitido
+      if (!rolesPermitidos.includes(req.matrizador.rol)) {
+        // Log del intento de acceso no autorizado
+        console.log(`⚠️ ACCESO DENEGADO: Usuario ${req.matrizador.nombre} (ROL: ${req.matrizador.rol}) intentó acceder a ruta que requiere roles: [${rolesPermitidos.join(', ')}] - Ruta: ${req.originalUrl}`);
+        
+        if (req.path.startsWith('/api/')) {
+          return res.status(403).json({
+            exito: false,
+            mensaje: `Acceso denegado. Se requiere uno de estos roles: ${rolesPermitidos.join(', ')}`
+          });
+        }
+
+        // CONTROL ESTRICTO: Si es admin intentando acceder a rutas de otros roles, redirigir con mensaje
+        if (req.matrizador.rol === 'admin') {
+          console.log(`🔐 REDIRECCIÓN: Admin ${req.matrizador.nombre} intentó acceder a ruta de ROL [${rolesPermitidos.join(', ')}] - Redirigiendo a /admin`);
+          req.flash('error', `Acceso restringido. Como administrador, debe usar las funcionalidades desde el panel administrativo. Para acceder a funcionalidades de ${rolesPermitidos.join(' o ')}, debe hacerlo desde su panel correspondiente.`);
+          return res.redirect('/admin');
+        }
+
+        // Para usuarios de otros roles, redirigir a su dashboard correspondiente
+        const dashboardUrl = obtenerDashboardPorRol(req.matrizador.rol);
+        req.flash('error', `No tiene permisos para acceder a esa página. Se requiere rol: ${rolesPermitidos.join(' o ')}`);
+        return res.redirect(dashboardUrl);
+      }
+
+      // Si es admin accediendo a funciones de otros roles, registrar auditoría
+      if (req.matrizador.rol === 'admin' && !rolesPermitidos.includes('admin')) {
+        console.log(`🔍 AUDITORÍA: Admin ${req.matrizador.nombre} (ID: ${req.matrizador.id}) accedió a funcionalidad de ROL [${rolesPermitidos.join(', ')}] en la ruta: ${req.originalUrl} - Método: ${req.method} - IP: ${req.ip || req.connection.remoteAddress} - Timestamp: ${new Date().toISOString()}`);
+      }
+
+      next();
+    } catch (error) {
+      console.error('Error en middleware de validación de acceso:', error);
+      if (req.path.startsWith('/api/')) {
+        return res.status(500).json({
+          exito: false,
+          mensaje: 'Error interno del servidor'
+        });
+      }
+      res.redirect('/login');
+    }
+  };
+};
+
+/**
+ * Función helper para obtener dashboard según rol
+ */
+function obtenerDashboardPorRol(rol) {
+  switch (rol) {
+    case 'admin':
+      return '/admin';
+    case 'matrizador':
+      return '/matrizador';
+    case 'recepcion':
+      return '/recepcion';
+    case 'caja':
+      return '/caja';
+    default:
+      return '/login';
+  }
+}
+
 module.exports = {
   verificarToken,
   esAdmin,
@@ -303,5 +426,8 @@ module.exports = {
   esRecepcion,
   esCaja,
   esConsulta,
-  redirigirSegunRol
+  redirigirSegunRol,
+  logAuditoria,
+  validarAccesoConAuditoria,
+  obtenerDashboardPorRol
 }; 

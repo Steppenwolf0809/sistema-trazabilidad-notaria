@@ -2582,61 +2582,6 @@ const cajaController = {
         message: 'Error interno del servidor'
       });
     }
-  },
-
-  /**
-   * Muestra la página para buscar un documento por código de barras para registrar un pago.
-   */
-  mostrarPaginaBuscarDocumentoParaPago: async (req, res) => {
-    try {
-      // Asegurarse que los mensajes flash se pasan a la vista
-      const errorBusqueda = req.flash('errorBusqueda') || null;
-      const successMessage = req.flash('success') || null;
-      
-      res.render('caja/pagos/buscarDocumento', {
-        layout: 'caja',
-        title: 'Buscar Documento para Registrar Pago',
-        activePagos: true,
-        codigoBusqueda: req.query.codigoBusqueda || '',
-        errorBusqueda: req.query.errorBusqueda || null,
-        userRole: req.matrizador?.rol || req.user?.rol, // Asegurar que el rol se obtiene correctamente
-        userName: req.matrizador?.nombre || req.user?.nombre // Asegurar que el nombre se obtiene correctamente
-      });
-    } catch (error) {
-      console.error('Error al mostrar página de búsqueda de documento para pago:', error);
-      req.flash('error', 'Error al cargar la página de búsqueda.');
-      res.redirect('/caja');
-    }
-  },
-
-  procesarBusquedaDocumentoParaPago: async (req, res) => {
-    const { codigoBarras } = req.body;
-    try {
-      if (!codigoBarras || codigoBarras.trim() === '') {
-        // Usar req.flash para mensajes de error y redirigir para que se muestren con el layout correcto
-        req.flash('errorBusqueda', 'Ingrese un código de barras.');
-        return res.redirect('/caja/pagos/buscar-documento');
-      }
-
-      const documento = await Documento.findOne({ where: { codigoBarras: codigoBarras.trim() } });
-
-      if (documento) {
-        if (documento.estado === 'cancelado') {
-          req.flash('errorBusqueda', `El documento con código ${codigoBarras} se encuentra cancelado.`);
-          return res.redirect(`/caja/pagos/buscar-documento?codigoBusqueda=${encodeURIComponent(codigoBarras)}`);
-        }
-        // Redirigir a la página de detalle del documento, anclando a la sección de pago
-        // Asegúrate que la vista de detalle tenga un elemento con id="seccion-pago"
-        res.redirect(`/caja/documentos/detalle/${documento.id}#seccion-pago`);
-      } else {
-        req.flash('errorBusqueda', `Documento con código ${codigoBarras} no encontrado.`);
-        return res.redirect(`/caja/pagos/buscar-documento?codigoBusqueda=${encodeURIComponent(codigoBarras)}`);
-      }
-    } catch (error) {
-      console.error('Error al procesar búsqueda de documento para pago:', error);
-      req.flash('error', 'Error interno al buscar el documento.');
-      res.redirect(`/caja/pagos/buscar-documento?codigoBusqueda=${encodeURIComponent(codigoBarras)}`);
-    }
   }
 };
 

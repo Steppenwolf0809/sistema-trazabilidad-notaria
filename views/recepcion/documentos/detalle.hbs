@@ -33,7 +33,7 @@
                 <dd class="col-sm-8">{{documento.tipoDocumento}}</dd>
                 
                 <dt class="col-sm-4">Fecha</dt>
-                <dd class="col-sm-8">{{formatDate documento.fechaCreacion}}</dd>
+                <dd class="col-sm-8">{{formatDate documento.fechaFactura}}</dd>
                 
                 <dt class="col-sm-4">Estado</dt>
                 <dd class="col-sm-8">
@@ -45,6 +45,15 @@
                   <span class="badge bg-info">Entregado</span>
                   {{else}}
                   <span class="badge bg-secondary">{{documento.estado}}</span>
+                  {{/if}}
+                </dd>
+                
+                <dt class="col-sm-4">Estado Pago</dt>
+                <dd class="col-sm-8">
+                  {{#if (eq documento.estadoPago "pagado")}}
+                  <span class="badge bg-success"><i class="fas fa-check"></i> Pagado</span>
+                  {{else}}
+                  <span class="badge bg-warning"><i class="fas fa-exclamation-triangle"></i> Pendiente</span>
                   {{/if}}
                 </dd>
                 

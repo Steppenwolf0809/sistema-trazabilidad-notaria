@@ -6,7 +6,7 @@
 const express = require('express');
 const router = express.Router();
 const matrizadorController = require('../controllers/matrizadorController');
-const { verificarToken } = require('../middlewares/auth');
+const { verificarToken, validarAccesoConAuditoria } = require('../middlewares/auth');
 const roleAuth = require('../middlewares/roleAuth');
 const documentoController = require('../controllers/documentoController');
 
@@ -17,34 +17,35 @@ router.get('/verificar/:codigo', matrizadorController.verificarQR);
 // Middleware global para validar token 
 router.use(verificarToken);
 
-// Dashboard del matrizador - Importante: debe definirse antes que las rutas API para evitar conflictos
-router.get('/', roleAuth(['matrizador', 'admin']), matrizadorController.dashboard);
+// Dashboard del matrizador - ESTRICTO: solo matrizadores
+router.get('/', validarAccesoConAuditoria(['matrizador']), matrizadorController.dashboard);
 
-// Rutas de matrizador - Solo para matrizadores y admin
+// Rutas de matrizador - ESTRICTO: solo matrizadores
 // Listado de documentos
-router.get('/documentos', roleAuth(['matrizador', 'admin']), matrizadorController.listarDocumentos);
+router.get('/documentos', validarAccesoConAuditoria(['matrizador']), matrizadorController.listarDocumentos);
+router.get('/documentos/buscar', validarAccesoConAuditoria(['matrizador']), matrizadorController.mostrarBuscarDocumentos);
 
 // Detalle de documento
-router.get('/documentos/detalle/:id', roleAuth(['matrizador', 'admin']), matrizadorController.detalleDocumento);
+router.get('/documentos/detalle/:id', validarAccesoConAuditoria(['matrizador']), matrizadorController.detalleDocumento);
 
 // Registro de documento
-router.get('/documentos/registro', roleAuth(['matrizador', 'admin']), matrizadorController.mostrarFormularioRegistro);
-router.post('/documentos/registro', roleAuth(['matrizador', 'admin']), matrizadorController.registrarDocumento);
+router.get('/documentos/registro', validarAccesoConAuditoria(['matrizador']), matrizadorController.mostrarFormularioRegistro);
+router.post('/documentos/registro', validarAccesoConAuditoria(['matrizador']), matrizadorController.registrarDocumento);
 
-// Rutas para edición de documentos - Solo para matrizadores y admin
-router.get('/documentos/editar/:id', roleAuth(['matrizador', 'admin']), documentoController.mostrarFormularioEdicionMatrizador);
-router.post('/documentos/editar/:id', roleAuth(['matrizador', 'admin']), documentoController.actualizarDocumento);
+// Rutas para edición de documentos - Solo para matrizadores
+router.get('/documentos/editar/:id', validarAccesoConAuditoria(['matrizador']), documentoController.mostrarFormularioEdicionMatrizador);
+router.post('/documentos/editar/:id', validarAccesoConAuditoria(['matrizador']), documentoController.actualizarDocumento);
 
 // Entrega de documento
-router.get('/documentos/entrega', roleAuth(['matrizador', 'admin']), matrizadorController.mostrarEntrega);
-router.get('/documentos/entrega/:id', roleAuth(['matrizador', 'admin']), matrizadorController.mostrarEntrega);
-router.post('/documentos/completar-entrega/:id', roleAuth(['matrizador', 'admin']), matrizadorController.completarEntrega);
+router.get('/documentos/entrega', validarAccesoConAuditoria(['matrizador']), matrizadorController.mostrarEntrega);
+router.get('/documentos/entrega/:id', validarAccesoConAuditoria(['matrizador']), matrizadorController.mostrarEntrega);
+router.post('/documentos/completar-entrega/:id', validarAccesoConAuditoria(['matrizador']), matrizadorController.completarEntrega);
 
 // Marcar documento como listo para entrega
-router.post('/documentos/marcar-listo', roleAuth(['matrizador', 'admin']), matrizadorController.marcarDocumentoListo);
+router.post('/documentos/marcar-listo', validarAccesoConAuditoria(['matrizador']), matrizadorController.marcarDocumentoListo);
 
 // Marcar documento como visto
-router.post('/documentos/marcar-visto/:id', roleAuth(['matrizador', 'admin']), matrizadorController.marcarDocumentoVisto);
+router.post('/documentos/marcar-visto/:id', validarAccesoConAuditoria(['matrizador']), matrizadorController.marcarDocumentoVisto);
 
 // Rutas de logout - Disponible para todos los usuarios
 router.get('/logout', matrizadorController.logout);

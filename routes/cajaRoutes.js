@@ -8,7 +8,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const cajaController = require('../controllers/cajaController');
-const { verificarToken } = require('../middlewares/auth');
+const { verificarToken, validarAccesoConAuditoria } = require('../middlewares/auth');
 const roleAuth = require('../middlewares/roleAuth');
 
 // Configurar multer para subir archivos
@@ -40,8 +40,8 @@ const upload = multer({
 // Middleware global para validar token 
 router.use(verificarToken);
 
-// Middleware para verificar que el usuario tiene rol de caja o admin
-router.use(roleAuth(['caja', 'admin']));
+// Middleware ESTRICTO - Solo usuarios con rol 'caja' pueden acceder
+router.use(validarAccesoConAuditoria(['caja']));
 
 // Dashboard de Caja
 router.get('/', cajaController.dashboard);

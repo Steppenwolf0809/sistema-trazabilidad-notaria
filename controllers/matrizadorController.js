@@ -1628,6 +1628,25 @@ const matrizadorController = {
       });
     }
   },
+
+  /**
+   * Mostrar página de búsqueda de documentos para matrizadores
+   */
+  mostrarBuscarDocumentos: async (req, res) => {
+    try {
+      res.render('matrizadores/documentos/buscar', {
+        layout: 'matrizador',
+        title: 'Buscar Documentos',
+        activeBuscar: true,
+        userRole: req.matrizador?.rol,
+        userName: req.matrizador?.nombre
+      });
+    } catch (error) {
+      console.error('Error al mostrar página de búsqueda:', error);
+      req.flash('error', 'Error al cargar la página de búsqueda');
+      res.redirect('/matrizador');
+    }
+  },
 };
 
 module.exports = matrizadorController; 

@@ -1,0 +1,288 @@
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h4 class="mb-0"><i class="fas fa-search me-2"></i>Buscar Documentos</h4>
+        </div>
+        <div class="card-body">
+          {{#if error}}
+          <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>{{error}}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+          {{/if}}
+          
+          {{#if success}}
+          <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>{{success}}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+          {{/if}}
+
+          <!-- Formulario de búsqueda -->
+          <form id="formBusqueda" class="mb-4">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label for="busquedaTipo" class="form-label">Buscar por:</label>
+                <select class="form-select" id="busquedaTipo" name="tipo">
+                  <option value="codigo">Código de Barras</option>
+                  <option value="cliente">Nombre del Cliente</option>
+                  <option value="tipo">Tipo de Documento</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label for="busquedaTexto" class="form-label">Término de búsqueda:</label>
+                <input type="text" class="form-control" id="busquedaTexto" name="query" 
+                       placeholder="Ingrese el término a buscar..." required>
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <button type="submit" class="btn btn-primary d-block w-100">
+                  <i class="fas fa-search me-1"></i>Buscar
+                </button>
+              </div>
+            </div>
+          </form>
+
+          <!-- Filtros adicionales -->
+          <div class="row g-3 mb-4">
+            <div class="col-md-3">
+              <label for="filtroEstado" class="form-label">Estado:</label>
+              <select class="form-select" id="filtroEstado" name="estado">
+                <option value="">Todos los estados</option>
+                <option value="en_proceso">En Proceso</option>
+                <option value="listo_para_entrega">Listo para Entrega</option>
+                <option value="entregado">Entregado</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label for="filtroTipo" class="form-label">Tipo de Documento:</label>
+              <select class="form-select" id="filtroTipo" name="tipoDocumento">
+                <option value="">Todos los tipos</option>
+                <option value="escritura">Escritura</option>
+                <option value="testamento">Testamento</option>
+                <option value="poder">Poder</option>
+                <option value="reconocimiento_firma">Reconocimiento de Firma</option>
+                <option value="declaracion_extra_juicio">Declaración Extra Juicio</option>
+                <option value="otro">Otro</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label for="filtroFechaDesde" class="form-label">Desde:</label>
+              <input type="date" class="form-control" id="filtroFechaDesde" name="fechaDesde">
+            </div>
+            <div class="col-md-3">
+              <label for="filtroFechaHasta" class="form-label">Hasta:</label>
+              <input type="date" class="form-control" id="filtroFechaHasta" name="fechaHasta">
+            </div>
+          </div>
+
+          <!-- Botón para limpiar filtros -->
+          <div class="row mb-4">
+            <div class="col-12">
+              <button type="button" class="btn btn-outline-secondary" id="limpiarFiltros">
+                <i class="fas fa-eraser me-1"></i>Limpiar Filtros
+              </button>
+            </div>
+          </div>
+
+          <!-- Spinner de carga -->
+          <div id="spinnerCarga" class="text-center d-none">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Buscando...</span>
+            </div>
+            <p class="mt-2">Buscando documentos...</p>
+          </div>
+
+          <!-- Resultados de búsqueda -->
+          <div id="resultadosBusqueda" class="d-none">
+            <hr>
+            <h5><i class="fas fa-list me-2"></i>Resultados de la búsqueda</h5>
+            <div id="tablaResultados"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const formBusqueda = document.getElementById('formBusqueda');
+  const spinnerCarga = document.getElementById('spinnerCarga');
+  const resultadosBusqueda = document.getElementById('resultadosBusqueda');
+  const tablaResultados = document.getElementById('tablaResultados');
+  const limpiarFiltrosBtn = document.getElementById('limpiarFiltros');
+
+  // Función para realizar búsqueda
+  function realizarBusqueda() {
+    const formData = new FormData(formBusqueda);
+    const params = new URLSearchParams();
+    
+    // Agregar parámetros del formulario
+    for (let [key, value] of formData.entries()) {
+      if (value.trim()) {
+        params.append(key, value);
+      }
+    }
+
+    // Agregar filtros adicionales
+    const filtroEstado = document.getElementById('filtroEstado').value;
+    const filtroTipo = document.getElementById('filtroTipo').value;
+    const filtroFechaDesde = document.getElementById('filtroFechaDesde').value;
+    const filtroFechaHasta = document.getElementById('filtroFechaHasta').value;
+
+    if (filtroEstado) params.append('estado', filtroEstado);
+    if (filtroTipo) params.append('tipoDocumento', filtroTipo);
+    if (filtroFechaDesde) params.append('fechaDesde', filtroFechaDesde);
+    if (filtroFechaHasta) params.append('fechaHasta', filtroFechaHasta);
+
+    // Mostrar spinner
+    spinnerCarga.classList.remove('d-none');
+    resultadosBusqueda.classList.add('d-none');
+
+    // Realizar búsqueda
+    fetch(`/api/documentos/buscar?${params.toString()}`)
+      .then(response => response.json())
+      .then(data => {
+        spinnerCarga.classList.add('d-none');
+        
+        if (data.exito) {
+          mostrarResultados(data.datos);
+        } else {
+          mostrarError(data.mensaje || 'Error al buscar documentos');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        spinnerCarga.classList.add('d-none');
+        mostrarError('Error de conexión al buscar documentos');
+      });
+  }
+
+  // Función para mostrar resultados
+  function mostrarResultados(documentos) {
+    if (documentos.length === 0) {
+      tablaResultados.innerHTML = `
+        <div class="alert alert-info">
+          <i class="fas fa-info-circle me-2"></i>
+          No se encontraron documentos que coincidan con los criterios de búsqueda.
+        </div>
+      `;
+    } else {
+      let html = `
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead class="table-light">
+              <tr>
+                <th>Código</th>
+                <th>Tipo</th>
+                <th>Cliente</th>
+                <th>Estado</th>
+                <th>Fecha</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      documentos.forEach(doc => {
+        const estadoBadge = obtenerBadgeEstado(doc.estado);
+        const fechaFormateada = new Date(doc.fechaFactura).toLocaleDateString('es-ES');
+        
+        html += `
+          <tr>
+            <td><small class="font-monospace">${doc.codigoBarras}</small></td>
+            <td>${doc.tipoDocumento}</td>
+            <td>${doc.nombreCliente}</td>
+            <td>${estadoBadge}</td>
+            <td>${fechaFormateada}</td>
+            <td>
+              <div class="btn-group">
+                <a href="/matrizador/documentos/detalle/${doc.id}" class="btn btn-sm btn-primary" title="Ver detalle">
+                  <i class="fas fa-eye"></i>
+                </a>
+                ${doc.estado === 'en_proceso' ? `
+                  <a href="/matrizador/documentos/editar/${doc.id}" class="btn btn-sm btn-warning" title="Editar">
+                    <i class="fas fa-edit"></i>
+                  </a>
+                ` : ''}
+              </div>
+            </td>
+          </tr>
+        `;
+      });
+
+      html += `
+            </tbody>
+          </table>
+        </div>
+        <div class="mt-3">
+          <small class="text-muted">Se encontraron ${documentos.length} documento(s)</small>
+        </div>
+      `;
+
+      tablaResultados.innerHTML = html;
+    }
+
+    resultadosBusqueda.classList.remove('d-none');
+  }
+
+  // Función para obtener badge de estado
+  function obtenerBadgeEstado(estado) {
+    const badges = {
+      'en_proceso': '<span class="badge bg-warning">En Proceso</span>',
+      'listo_para_entrega': '<span class="badge bg-info">Listo para Entrega</span>',
+      'entregado': '<span class="badge bg-success">Entregado</span>',
+      'cancelado': '<span class="badge bg-danger">Cancelado</span>'
+    };
+    
+    return badges[estado] || `<span class="badge bg-secondary">${estado}</span>`;
+  }
+
+  // Función para mostrar errores
+  function mostrarError(mensaje) {
+    tablaResultados.innerHTML = `
+      <div class="alert alert-danger">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        ${mensaje}
+      </div>
+    `;
+    resultadosBusqueda.classList.remove('d-none');
+  }
+
+  // Event listeners
+  formBusqueda.addEventListener('submit', function(e) {
+    e.preventDefault();
+    realizarBusqueda();
+  });
+
+  limpiarFiltrosBtn.addEventListener('click', function() {
+    // Limpiar formulario
+    formBusqueda.reset();
+    document.getElementById('filtroEstado').value = '';
+    document.getElementById('filtroTipo').value = '';
+    document.getElementById('filtroFechaDesde').value = '';
+    document.getElementById('filtroFechaHasta').value = '';
+    
+    // Ocultar resultados
+    resultadosBusqueda.classList.add('d-none');
+  });
+
+  // Auto-búsqueda cuando cambian los filtros
+  document.getElementById('filtroEstado').addEventListener('change', function() {
+    const query = document.getElementById('busquedaTexto').value;
+    if (query.trim()) {
+      realizarBusqueda();
+    }
+  });
+
+  document.getElementById('filtroTipo').addEventListener('change', function() {
+    const query = document.getElementById('busquedaTexto').value;
+    if (query.trim()) {
+      realizarBusqueda();
+    }
+  });
+});
+</script> 

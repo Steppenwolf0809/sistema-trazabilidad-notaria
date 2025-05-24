@@ -15,14 +15,13 @@ const matrizadorController = require('../controllers/matrizadorController');
 const Matrizador = require('../models/Matrizador');
 
 // Middleware de autenticación
-const { verificarToken, esMatrizador, esRecepcion } = require('../middlewares/auth');
-const roleAuth = require('../middlewares/roleAuth');
+const { verificarToken, esMatrizador, esRecepcion, validarAccesoConAuditoria } = require('../middlewares/auth');
 
 // Activar la verificación de token para todas las rutas
 router.use(verificarToken);
 
 // Aplicar control de acceso por rol para todas las rutas - Solo admin tiene acceso
-router.use(roleAuth(['admin']));
+router.use(validarAccesoConAuditoria(['admin']));
 
 // Panel principal (Dashboard) - Accesible solo por administradores
 router.get('/', adminController.dashboard);

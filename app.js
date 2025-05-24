@@ -241,15 +241,17 @@ const matrizadorRoutes = require('./routes/matrizadorRoutes');
 const documentoRelacionRoutes = require('./routes/documentoRelacionRoutes');
 const recepcionRoutes = require('./routes/recepcionRoutes');
 const cajaRoutes = require('./routes/cajaRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+
+// Importar middleware de autenticación
+const { verificarToken } = require('./middlewares/auth');
+
 app.use('/api/documentos', documentoRoutes);
 app.use('/api/matrizadores', matrizadorRoutes);
 app.use('/api/documento-relaciones', documentoRelacionRoutes);
 app.use('/matrizador', matrizadorRoutes);
 app.use('/recepcion', recepcionRoutes);
 app.use('/caja', cajaRoutes);
-
-// Rutas administrativas
-const adminRoutes = require('./routes/adminRoutes');
 app.use('/admin', adminRoutes);
 
 // Ruta de login
@@ -302,11 +304,61 @@ app.get('/logout', (req, res) => {
 });
 
 // Manejo de rutas no encontradas
-app.use((req, res) => {
+app.use(async (req, res) => {
+  // Intentar determinar el usuario autenticado sin redirigir
+  let layout = 'main'; // layout por defecto
+  let userRole = '';
+  let userName = '';
+  
+  try {
+    // Obtener token de cabecera, cookie o query param
+    const token = 
+      req.headers.authorization?.split(' ')[1] || 
+      req.cookies?.token || 
+      req.query?.token;
+    
+    if (token) {
+      const jwt = require('jsonwebtoken');
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'clave_secreta_notaria_2024');
+      
+      if (decoded.id) {
+        const Matrizador = require('./models/Matrizador');
+        const matrizador = await Matrizador.findByPk(decoded.id);
+        
+        if (matrizador && matrizador.activo) {
+          userRole = matrizador.rol;
+          userName = matrizador.nombre;
+          
+          switch (matrizador.rol) {
+            case 'admin':
+              layout = 'admin';
+              break;
+            case 'matrizador':
+              layout = 'matrizador';
+              break;
+            case 'recepcion':
+              layout = 'recepcion';
+              break;
+            case 'caja':
+              layout = 'caja';
+              break;
+            default:
+              layout = 'main';
+          }
+        }
+      }
+    }
+  } catch (error) {
+    // En caso de error, usar layout por defecto
+    console.log('Error al verificar token en 404:', error.message);
+  }
+  
   res.status(404).render('error', {
-    layout: 'admin',
+    layout,
     title: 'Página no encontrada',
-    message: 'La página que buscas no existe'
+    message: 'La página que buscas no existe',
+    userRole,
+    userName
   });
 });
 

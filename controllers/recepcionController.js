@@ -299,6 +299,7 @@ const recepcionController = {
       
       // Parámetros de filtrado
       const estado = req.query.estado || '';
+      const estadoPago = req.query.estadoPago || '';
       const tipoDocumento = req.query.tipoDocumento || '';
       const idMatrizador = req.query.idMatrizador || '';
       const busqueda = req.query.busqueda || '';
@@ -308,6 +309,10 @@ const recepcionController = {
       
       if (estado) {
         where.estado = estado;
+      }
+      
+      if (estadoPago) {
+        where.estadoPago = estadoPago;
       }
       
       if (tipoDocumento) {
@@ -358,6 +363,7 @@ const recepcionController = {
       const queryParams = new URLSearchParams();
       
       if (estado) queryParams.append('estado', estado);
+      if (estadoPago) queryParams.append('estadoPago', estadoPago);
       if (tipoDocumento) queryParams.append('tipoDocumento', tipoDocumento);
       if (idMatrizador) queryParams.append('idMatrizador', idMatrizador);
       if (busqueda) queryParams.append('busqueda', busqueda);
@@ -413,6 +419,7 @@ const recepcionController = {
           estado: {
             [estado]: true
           },
+          estadoPago,
           tipoDocumento,
           idMatrizador,
           busqueda
@@ -588,17 +595,17 @@ const recepcionController = {
       
       // Filtro por fecha
       if (fechaDesde || fechaHasta) {
-        whereClause.fechaCreacion = {};
+        whereClause.fechaFactura = {};
         
         if (fechaDesde) {
-          whereClause.fechaCreacion[Op.gte] = new Date(fechaDesde);
+          whereClause.fechaFactura[Op.gte] = new Date(fechaDesde);
         }
         
         if (fechaHasta) {
           // Sumar un día a la fecha hasta para incluir todo el día seleccionado
           const fechaHastaObj = new Date(fechaHasta);
           fechaHastaObj.setDate(fechaHastaObj.getDate() + 1);
-          whereClause.fechaCreacion[Op.lt] = fechaHastaObj;
+          whereClause.fechaFactura[Op.lt] = fechaHastaObj;
         }
       }
       
