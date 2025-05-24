@@ -706,19 +706,23 @@ exports.mostrarDetalle = async (req, res) => {
         icono: 'fas fa-money-bill-wave',
         color: 'success',
         titulo: 'Pago Registrado',
-        descripcion: `Pago procesado por $${formatearMoneda(documento.valorFactura)} via ${documento.metodoPago}`,
-        usuario: usuarioPago?.nombre || 'Usuario de Caja',
-        fecha: documento.fechaRegistroPago || documento.updatedAt,
-        timestamp: documento.fechaRegistroPago || documento.updatedAt,
-        mostrarEnCaja: true,
+        descripcion: `Pago por $${documento.valorFactura} via ${documento.metodoPago}`,
+        fecha: documento.fechaPago || documento.updatedAt,
+        timestamp: documento.fechaPago || documento.updatedAt,
+        usuario: usuarioPago?.nombre || 'Sistema',
         detalles: {
           valor: documento.valorFactura,
           metodoPago: documento.metodoPago,
           numeroFactura: documento.numeroFactura,
-          usuarioCaja: usuarioPago?.nombre || 'Usuario de Caja'
+          fechaPago: documento.fechaPago || documento.updatedAt
         }
       });
     }
+
+    // Obtener usuario de pago para pasarlo a la vista
+    const usuarioPago = documento.estadoPago === 'pagado' && documento.registradoPor 
+      ? await obtenerUsuarioPago(documento.registradoPor) 
+      : null;
 
     // 4. SIEMPRE agregar eventos de entrega si está entregado
     if (documento.estado === 'entregado' && documento.fechaEntrega) {
@@ -865,7 +869,8 @@ exports.mostrarDetalle = async (req, res) => {
       documentosCliente,
       matrizadores, // Agregar matrizadores para la vista
       userRole,
-      historialCompleto: userRole === 'admin' ? historialCompleto : null // Solo admin ve historial completo
+      historialCompleto: userRole === 'admin' ? historialCompleto : null, // Solo admin ve historial completo
+      usuarioPago
     });
   } catch (error) {
     console.error('Error al mostrar detalle del documento:', error);

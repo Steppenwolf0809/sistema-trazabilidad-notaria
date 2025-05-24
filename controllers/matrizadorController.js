@@ -17,8 +17,11 @@ const { Op } = require('sequelize');
 const moment = require('moment');
 const { 
   inferirTipoDocumentoPorCodigo, 
-  procesarFechaFactura, 
-  formatearValorMonetario 
+  procesarFechaDocumento,
+  formatearValorMonetario,
+  obtenerTimestampEcuador,
+  formatearTimestamp,
+  formatearFechaSinHora
 } = require('../utils/documentoUtils');
 
 // Objeto que contendrá todas las funciones del controlador
@@ -1271,7 +1274,7 @@ const matrizadorController = {
         // Agregar nuevos campos
         numeroFactura: numeroFactura || null,
         valorFactura: valorFactura ? parseFloat(valorFactura) : null,
-        fechaFactura: procesarFechaFactura(fechaFactura),
+        fechaFactura: procesarFechaDocumento(fechaFactura),
         estadoPago: estadoPago || 'pendiente',
         metodoPago: metodoPago || null,
         omitirNotificacion: omitirNotificacion === 'true',

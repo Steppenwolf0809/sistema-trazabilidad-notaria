@@ -5,6 +5,7 @@
 ./controllers/cajaController.js
 ./controllers/documentoController.js
 ./controllers/documentoRelacionController.js
+./controllers/eliminacionController.js
 ./controllers/matrizadorController.js
 ./controllers/recepcionController.js
 ./crear-templates.js
@@ -19,6 +20,7 @@
 ./migrations/20250521204445-update_matrizador_role_enum.js
 ./migrations/20250525000000-update_metodo_pago_enum.js
 ./migrations/20250525010000-add_visto_por_matrizador_column.js
+./models/AuditoriaEliminacion.js
 ./models/AutorizacionEntrega.js
 ./models/CambioMatrizador.js
 ./models/Documento.js
@@ -46,5 +48,3 @@
 ./node_modules/@types/debug/package.json
 ./node_modules/@types/ms/package.json
 ./node_modules/@types/node/package.json
-./node_modules/@types/validator/package.json
-./node_modules/accepts/index.js

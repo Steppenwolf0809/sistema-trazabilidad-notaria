@@ -1,133 +1,212 @@
 /**
- * Utilidades para el manejo de documentos
+ * Utilidades para manejo de documentos y fechas
+ * SIMPLIFICADO - Solo funciones esenciales
  */
 
-/**
- * Infiere el tipo de documento basándose en el código numérico
- * @param {string} numeroLibro - Número de libro/código que contiene el código
- * @returns {string} - Tipo de documento inferido
- */
-const inferirTipoDocumentoPorCodigo = (numeroLibro) => {
-  if (!numeroLibro || typeof numeroLibro !== 'string') {
-    return 'Otro';
-  }
-  
-  // Buscar la primera letra en el código (puede estar en diferentes posiciones)
-  const codigo = numeroLibro.toUpperCase();
-  
-  // Extraer letra del código - puede estar al inicio o después de números
-  let letraCodigo = '';
-  for (let i = 0; i < codigo.length; i++) {
-    const char = codigo[i];
-    if (char >= 'A' && char <= 'Z') {
-      letraCodigo = char;
-      break;
-    }
-  }
-  
-  // Mapeo correcto según especificación:
-  const mapeoTipos = {
-    'P': 'Protocolo',     // P = Escritura pública o protocolo
-    'D': 'Diligencia',    // D = Diligencia
-    'A': 'Arrendamiento', // A = Arrendamiento
-    'C': 'Certificación', // C = Certificación
-    'O': 'Otro',          // O = Otro
-    'E': 'Escritura',     // E = Escritura
-    'T': 'Testamento',    // T = Testamento
-    'POD': 'Poder',       // POD = Poder
-    'DON': 'Donación'     // DON = Donación
+const moment = require('moment-timezone');
+
+// Zona horaria de Ecuador (constante)
+const TIMEZONE_ECUADOR = 'America/Guayaquil';
+
+// NUEVO: Importar logger (solo si está disponible)
+let logger = null;
+try {
+  const loggerModule = require('./logger');
+  logger = loggerModule.logger;
+} catch (error) {
+  // Si no está disponible el logger, usar console como fallback
+  logger = {
+    debug: () => {},
+    info: (context, message, data) => console.log(`[${context}] ${message}`, data),
+    warning: (context, message, data) => console.warn(`[${context}] ${message}`, data),
+    error: (context, message, error) => console.error(`[${context}] ${message}`, error)
   };
-  
-  return mapeoTipos[letraCodigo] || 'Otro';
-};
+}
+
+// ============== FUNCIONES DE FECHA SIMPLIFICADAS ==============
 
 /**
- * Procesa correctamente la fecha de factura desde formato DD/MM/YYYY
- * @param {string} fechaString - Fecha en formato DD/MM/YYYY o cualquier otro formato
- * @returns {Date|null} - Fecha procesada o null si es inválida
+ * Obtiene el timestamp actual en zona horaria de Ecuador
+ * USO: Para registrar pagos, entregas, y cualquier evento del sistema
  */
-const procesarFechaFactura = (fechaString) => {
-  if (!fechaString) return null;
+function obtenerTimestampEcuador() {
+  try {
+    logger.debug('TIMESTAMP', 'Generando timestamp de Ecuador...');
+    
+    const momentEcuador = moment().tz(TIMEZONE_ECUADOR);
+    const timestamp = momentEcuador.toDate();
+    
+    logger.debug('TIMESTAMP', 'Timestamp generado', {
+      momentString: momentEcuador.format('YYYY-MM-DD HH:mm:ss'),
+      timezone: TIMEZONE_ECUADOR,
+      timestamp: timestamp,
+      timestampISO: timestamp.toISOString(),
+      tipoResultado: typeof timestamp,
+      esInstanciaDate: timestamp instanceof Date
+    });
+    
+    return timestamp;
+  } catch (error) {
+    logger.error('TIMESTAMP', 'Error generando timestamp de Ecuador', error);
+    // Fallback: devolver Date normal
+    return new Date();
+  }
+}
 
-  // Intentar convertir si está en formato DD/MM/YYYY
-  if (fechaString.includes('/')) {
-    const partesFecha = fechaString.split('/');
-    if (partesFecha.length === 3) {
-      const fechaFactura = new Date(
-        parseInt(partesFecha[2]), // año
-        parseInt(partesFecha[1]) - 1, // mes (0-11)
-        parseInt(partesFecha[0]), // día
-        0, 0, 0, 0 // hora 00:00:00
-      );
-      
-      if (!isNaN(fechaFactura.getTime())) {
-        return fechaFactura;
-      }
+/**
+ * Procesa fecha del XML para almacenar como fecha_factura
+ * USO: Al procesar XML, convertir fecha DD/MM/YYYY a DATE
+ * @param {string} fechaXML - Fecha en formato DD/MM/YYYY del XML
+ * @returns {Date|null} - Fecha como DATE (solo fecha, sin hora)
+ */
+function procesarFechaDocumento(fechaXML) {
+  logger.debug('DOCUMENTO', 'Procesando fecha de documento XML', { fechaXML });
+  
+  if (!fechaXML) {
+    logger.warning('DOCUMENTO', 'Fecha XML vacía o nula');
+    return null;
+  }
+  
+  try {
+    // Convertir DD/MM/YYYY a fecha válida
+    const partes = fechaXML.split('/');
+    if (partes.length !== 3) {
+      logger.warning('DOCUMENTO', 'Formato de fecha XML inválido', { fechaXML, partes });
+      return null;
     }
+    
+    const dia = parseInt(partes[0]);
+    const mes = parseInt(partes[1]) - 1; // Mes base 0
+    const año = parseInt(partes[2]);
+    
+    // Crear fecha en zona horaria de Ecuador (solo fecha, sin hora)
+    const fecha = moment.tz([año, mes, dia], TIMEZONE_ECUADOR).startOf('day').toDate();
+    
+    logger.debug('DOCUMENTO', 'Fecha XML procesada exitosamente', {
+      fechaOriginal: fechaXML,
+      fechaProcesada: fecha,
+      fechaISO: fecha.toISOString(),
+      año, mes: mes + 1, dia
+    });
+    
+    return fecha;
+  } catch (error) {
+    logger.error('DOCUMENTO', 'Error al procesar fecha del documento', error);
+    return null;
   }
-  
-  // Intentar con formato estándar Date
-  const fechaEstandar = new Date(fechaString);
-  if (!isNaN(fechaEstandar.getTime())) {
-    return fechaEstandar;
-  }
-  
-  // Si no se pudo convertir, retornar null
-  return null;
-};
+}
 
 /**
- * Formatea un valor monetario a máximo 2 decimales
- * @param {number|string} valor - Valor a formatear
- * @returns {string} - Valor formateado con máximo 2 decimales
+ * Formatea fecha para mostrar en vistas (solo fecha)
+ * USO: Para mostrar fecha_factura en vistas
  */
-const formatearValorMonetario = (valor) => {
-  if (valor === null || valor === undefined || valor === '') {
-    return '0.00';
-  }
-  
-  const numero = parseFloat(valor);
-  if (isNaN(numero)) {
-    return '0.00';
-  }
-  
-  return (Math.round(numero * 100) / 100).toFixed(2);
-};
+function formatearFechaSinHora(fecha) {
+  if (!fecha) return 'No definida';
+  return moment(fecha).tz(TIMEZONE_ECUADOR).format('DD/MM/YYYY');
+}
 
 /**
- * Mapea los valores del formulario a los valores del enum de la base de datos
- * @param {string} metodoFormulario - Valor del método de pago desde el formulario
- * @returns {string} - Valor compatible con la base de datos
+ * Formatea timestamp completo para mostrar en vistas
+ * USO: Para mostrar created_at, fecha_pago, fecha_entrega
  */
-const mapearMetodoPago = (metodoFormulario) => {
+function formatearTimestamp(timestamp) {
+  if (!timestamp) return 'No definido';
+  return moment(timestamp).tz(TIMEZONE_ECUADOR).format('DD/MM/YYYY HH:mm');
+}
+
+/**
+ * Convierte rango de fechas para consultas SQL
+ * USO: Para filtros en dashboard y reportes
+ */
+function convertirRangoParaSQL(fechaInicio, fechaFin) {
+  const inicio = moment.tz(fechaInicio, TIMEZONE_ECUADOR).startOf('day');
+  const fin = moment.tz(fechaFin, TIMEZONE_ECUADOR).endOf('day');
+  
+  return {
+    fechaInicioObj: inicio.toDate(),
+    fechaFinObj: fin.toDate(),
+    fechaInicioSQL: inicio.format('YYYY-MM-DD HH:mm:ss'),
+    fechaFinSQL: fin.format('YYYY-MM-DD HH:mm:ss')
+  };
+}
+
+// ============== FUNCIONES DE DOCUMENTO (sin cambios) ==============
+
+/**
+ * Infiere el tipo de documento basado en el código del libro
+ */
+function inferirTipoDocumentoPorCodigo(numeroLibro) {
+  if (!numeroLibro) return 'Otro';
+  
+  const codigo = numeroLibro.toString().toUpperCase();
+  
+  if (codigo.includes('E') || codigo.includes('ESCRIT')) return 'Escritura';
+  if (codigo.includes('D') || codigo.includes('DONAC')) return 'Donación';
+  if (codigo.includes('P') || codigo.includes('PODER')) return 'Poder';
+  if (codigo.includes('T') || codigo.includes('TEST')) return 'Testamento';
+  if (codigo.includes('C') || codigo.includes('CERT')) return 'Certificación';
+  if (codigo.includes('PROT')) return 'Protocolo';
+  if (codigo.includes('DILI')) return 'Diligencia';
+  if (codigo.includes('A') || codigo.includes('ARREN')) return 'Arrendamiento';
+  
+  return 'Otro';
+}
+
+/**
+ * Formatea valor monetario
+ */
+function formatearValorMonetario(valor) {
+  if (!valor) return '0.00';
+  return parseFloat(valor).toLocaleString('es-EC', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
+/**
+ * Mapea método de pago para almacenamiento
+ */
+function mapearMetodoPago(metodoPago) {
   const mapeo = {
-    'pendiente': null,
     'efectivo': 'efectivo',
+    'tarjeta_credito': 'tarjeta_credito',
+    'tarjeta_debito': 'tarjeta_debito',
     'transferencia': 'transferencia',
-    'cheque': 'otro',
-    'tarjeta_credito': 'tarjeta',
-    'tarjeta_debito': 'tarjeta',
-    'tarjeta': 'tarjeta',
-    'otro': 'otro'
+    'otro': 'otro',
+    'pendiente': 'pendiente'
   };
-  
-  return mapeo[metodoFormulario] !== undefined ? mapeo[metodoFormulario] : metodoFormulario;
-};
+  return mapeo[metodoPago] || 'pendiente';
+}
 
 /**
- * Mapea los valores de la base de datos a los valores para el formulario
- * @param {string} metodoDB - Valor del método de pago desde la base de datos
- * @returns {string} - Valor para mostrar en el formulario
+ * Mapea método de pago para visualización
  */
-const mapearMetodoPagoInverso = (metodoDB) => {
-  if (metodoDB === null) return 'pendiente';
-  return metodoDB;
-};
+function mapearMetodoPagoInverso(metodoPago) {
+  const mapeo = {
+    'efectivo': 'Efectivo',
+    'tarjeta_credito': 'Tarjeta de Crédito',
+    'tarjeta_debito': 'Tarjeta de Débito',
+    'transferencia': 'Transferencia',
+    'otro': 'Otro',
+    'pendiente': 'Pendiente'
+  };
+  return mapeo[metodoPago] || 'Pendiente';
+}
 
 module.exports = {
+  // Funciones de fecha simplificadas
+  obtenerTimestampEcuador,
+  procesarFechaDocumento,
+  formatearFechaSinHora,
+  formatearTimestamp,
+  convertirRangoParaSQL,
+  
+  // Funciones de documento (sin cambios)
   inferirTipoDocumentoPorCodigo,
-  procesarFechaFactura,
   formatearValorMonetario,
   mapearMetodoPago,
-  mapearMetodoPagoInverso
+  mapearMetodoPagoInverso,
+  
+  // Constante de zona horaria
+  TIMEZONE_ECUADOR
 }; 

@@ -65,9 +65,18 @@
       
       <div class="col-md-6">
         <div class="mb-3">
-          <label class="fw-bold">Fecha de Creación:</label>
-          <div>{{formatDate documento.fechaFactura}}</div>
+          <label class="fw-bold">Fecha de Registro:</label>
+          <div>{{formatDate documento.createdAt}}</div>
+          <small class="text-muted">Cuándo se registró en el sistema</small>
         </div>
+        
+        {{#if documento.fechaFactura}}
+        <div class="mb-3">
+          <label class="fw-bold">Fecha del Documento:</label>
+          <div>{{formatDate documento.fechaFactura}}</div>
+          <small class="text-muted">Fecha original del documento (XML)</small>
+        </div>
+        {{/if}}
         
         <div class="mb-3">
           <label class="fw-bold">Matrizador:</label>
@@ -187,6 +196,60 @@
           <label class="fw-bold">Fecha de Entrega:</label>
           <div>{{formatDate documento.fechaEntrega}}</div>
         </div>
+      </div>
+    </div>
+    {{/if}}
+    
+    <!-- Información Financiera -->
+    {{#if documento.numeroFactura}}
+    <div class="row mb-4">
+      <div class="col-12">
+        <h5 class="border-bottom pb-2">Información Financiera</h5>
+      </div>
+      
+      <div class="col-md-6">
+        <div class="mb-3">
+          <label class="fw-bold">Número de Factura:</label>
+          <div>{{documento.numeroFactura}}</div>
+        </div>
+        
+        <div class="mb-3">
+          <label class="fw-bold">Valor:</label>
+          <div>${{documento.valorFactura}}</div>
+        </div>
+        
+        <div class="mb-3">
+          <label class="fw-bold">Estado de Pago:</label>
+          <div>
+            {{#if (eq documento.estadoPago "pagado")}}
+            <span class="badge bg-success">Pagado</span>
+            {{else}}
+            <span class="badge bg-warning">Pendiente</span>
+            {{/if}}
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-md-6">
+        {{#if (eq documento.estadoPago "pagado")}}
+        <div class="mb-3">
+          <label class="fw-bold">Fecha de Pago:</label>
+          <div>{{formatDate documento.fechaRegistroPago}}</div>
+        </div>
+        
+        <div class="mb-3">
+          <label class="fw-bold">Método de Pago:</label>
+          <div>{{documento.metodoPago}}</div>
+        </div>
+        
+        {{#if documento.registradoPor}}
+        <div class="mb-3">
+          <label class="fw-bold">Registrado por:</label>
+          <div>{{#if usuarioPago}}{{usuarioPago.nombre}} ({{usuarioPago.rol}}){{else}}Usuario ID: {{documento.registradoPor}}{{/if}}</div>
+          <small class="text-muted">Usuario de caja responsable</small>
+        </div>
+        {{/if}}
+        {{/if}}
       </div>
     </div>
     {{/if}}

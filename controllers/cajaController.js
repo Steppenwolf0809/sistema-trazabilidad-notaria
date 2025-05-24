@@ -1,6 +1,6 @@
 /**
  * Controlador para gestionar operaciones de caja
- * Contiene funciones para registrar pagos, facturación, y reportes
+ * SIMPLIFICADO - Solo funciones esenciales con fechas correctas
  */
 
 const { sequelize } = require('../config/database');
@@ -15,36 +15,31 @@ const xml2js = require('xml2js');
 const moment = require('moment');
 const { 
   inferirTipoDocumentoPorCodigo, 
-  procesarFechaFactura, 
+  procesarFechaDocumento,
   formatearValorMonetario,
   mapearMetodoPago,
-  mapearMetodoPagoInverso 
+  mapearMetodoPagoInverso,
+  obtenerTimestampEcuador,
+  convertirRangoParaSQL,
+  formatearFechaSinHora,
+  formatearTimestamp
 } = require('../utils/documentoUtils');
 
-/**
- * Función auxiliar para crear fechas en zona horaria de Ecuador
- * @returns {Date} Fecha actual ajustada a zona horaria de Ecuador (UTC-5)
- */
-function obtenerFechaEcuador() {
-  // Simplemente usar new Date() que debe funcionar igual que en fecha de creación
-  // Ya que la fecha de creación se ve correctamente
-  return new Date();
-}
+// NUEVO: Importar sistema de logging
+const { logger, logPayment, logTimestamp } = require('../utils/logger');
 
 // Objeto que contendrá todas las funciones del controlador
 const cajaController = {
   
   /**
    * Muestra el dashboard de caja con estadísticas y resúmenes
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
    */
   dashboard: async (req, res) => {
     try {
       console.log('Accediendo al dashboard de caja');
       console.log('Usuario:', req.matrizador?.nombre, 'Rol:', req.matrizador?.rol);
       
-      // Procesar parámetros de período
+      // Procesar parámetros de período usando utilidades centralizadas
       const tipoPeriodo = req.query.tipoPeriodo || 'mes';
       let fechaInicio, fechaFin;
       const hoy = moment().startOf('day');
@@ -80,13 +75,16 @@ const cajaController = {
       const fechaInicioSQL = fechaInicio.format('YYYY-MM-DD HH:mm:ss');
       const fechaFinSQL = fechaFin.format('YYYY-MM-DD HH:mm:ss');
       
-      // Dinero Facturado: Suma de todos los documentos con monto definido, excluyendo eliminados y notas de crédito
+      // ============== MÉTRICAS FINANCIERAS SIMPLIFICADAS ==============
+      // Usar created_at para métricas del período (cuándo se registraron)
+      
+      // Dinero Facturado: Suma de todos los documentos con monto definido
       const [totalFacturadoResult] = await sequelize.query(`
         SELECT COALESCE(SUM(valor_factura), 0) as total
         FROM documentos
         WHERE valor_factura IS NOT NULL
-          AND estado NOT IN ('eliminado', 'nota_credito')  -- Excluir eliminados y notas de crédito
-          AND fecha_factura BETWEEN :fechaInicio AND :fechaFin
+          AND estado NOT IN ('eliminado', 'nota_credito')
+          AND created_at BETWEEN :fechaInicio AND :fechaFin
       `, {
         replacements: { 
           fechaInicio: fechaInicioSQL,
@@ -96,13 +94,13 @@ const cajaController = {
       });
       const totalFacturado = parseFloat(totalFacturadoResult.total);
 
-      // Dinero Cobrado/Recaudado: Solo documentos marcados como "pagado", excluyendo eliminados y notas de crédito
+      // Dinero Cobrado: Solo documentos marcados como "pagado"
       const [totalCobradoResult] = await sequelize.query(`
         SELECT COALESCE(SUM(valor_factura), 0) as total
         FROM documentos
         WHERE estado_pago = 'pagado'
-          AND estado NOT IN ('eliminado', 'nota_credito')  -- Excluir eliminados y notas de crédito
-          AND fecha_factura BETWEEN :fechaInicio AND :fechaFin
+          AND estado NOT IN ('eliminado', 'nota_credito')
+          AND created_at BETWEEN :fechaInicio AND :fechaFin
       `, {
         replacements: { 
           fechaInicio: fechaInicioSQL,
@@ -112,30 +110,16 @@ const cajaController = {
       });
       const totalCobrado = parseFloat(totalCobradoResult.total);
 
-      // Dinero Pendiente: Documentos no pagados que no estén eliminados o con nota de crédito
-      const [totalPendienteResult] = await sequelize.query(`
-        SELECT COALESCE(SUM(valor_factura), 0) as total
-        FROM documentos
-        WHERE estado_pago = 'pendiente'
-          AND estado NOT IN ('eliminado', 'nota_credito') -- Excluir eliminados y notas de crédito
-          AND valor_factura IS NOT NULL
-          AND fecha_factura BETWEEN :fechaInicio AND :fechaFin
-      `, {
-        replacements: {
-          fechaInicio: fechaInicioSQL,
-          fechaFin: fechaFinSQL
-        },
-        type: sequelize.QueryTypes.SELECT
-      });
-      const totalPendiente = parseFloat(totalPendienteResult.total);
+      // Dinero Pendiente
+      const totalPendiente = totalFacturado - totalCobrado;
       
-      // Obtener cantidad de documentos facturados (excluyendo eliminados y notas de crédito)
+      // Obtener cantidad de documentos facturados
       const [documentosFacturadosResult] = await sequelize.query(`
         SELECT COUNT(*) as total
         FROM documentos
         WHERE numero_factura IS NOT NULL
-          AND estado NOT IN ('eliminado', 'nota_credito') -- Excluir eliminados y notas de crédito
-          AND fecha_factura BETWEEN :fechaInicio AND :fechaFin
+          AND estado NOT IN ('eliminado', 'nota_credito')
+          AND created_at BETWEEN :fechaInicio AND :fechaFin
       `, {
         replacements: { 
           fechaInicio: fechaInicioSQL,
@@ -145,14 +129,14 @@ const cajaController = {
       });
       const documentosFacturados = parseInt(documentosFacturadosResult.total);
       
-      // Obtener cantidad de documentos pendientes de pago (excluyendo eliminados y notas de crédito)
+      // Obtener cantidad de documentos pendientes de pago
       const [documentosPendientesPagoResult] = await sequelize.query(`
         SELECT COUNT(*) as total
         FROM documentos
         WHERE estado_pago = 'pendiente'
           AND numero_factura IS NOT NULL
-          AND estado NOT IN ('eliminado', 'nota_credito') -- Excluir eliminados y notas de crédito
-          AND fecha_factura BETWEEN :fechaInicio AND :fechaFin 
+          AND estado NOT IN ('eliminado', 'nota_credito')
+          AND created_at BETWEEN :fechaInicio AND :fechaFin 
       `, {
         replacements: {
             fechaInicio: fechaInicioSQL,
@@ -162,109 +146,28 @@ const cajaController = {
       });
       const documentosPendientesPago = parseInt(documentosPendientesPagoResult.total);
 
-      // Documentos pendientes de pago para la lista (excluyendo eliminados y notas de crédito)
+      // Documentos pendientes de pago para la lista
       const documentosPendientesLista = await Documento.findAll({
         where: {
           estadoPago: 'pendiente',
           numeroFactura: { [Op.not]: null },
-          estado: { [Op.notIn]: ['eliminado', 'nota_credito'] } // Excluir eliminados y notas de crédito
+          estado: { [Op.notIn]: ['eliminado', 'nota_credito'] }
         },
-        order: [['fechaFactura', 'ASC']],
+        order: [['created_at', 'DESC']], // Usar created_at
         limit: 10
       });
       
-      // Documentos pagados recientemente (excluyendo eliminados y notas de crédito)
+      // Documentos pagados recientemente
+      // Usar fecha_pago para ordenar por cuándo se pagaron realmente
       const documentosPagadosRecientesLista = await Documento.findAll({
         where: {
           estadoPago: 'pagado',
           numeroFactura: { [Op.not]: null },
-          estado: { [Op.notIn]: ['eliminado', 'nota_credito'] } // Excluir eliminados y notas de crédito
+          estado: { [Op.notIn]: ['eliminado', 'nota_credito'] }
         },
-        order: [['updated_at', 'DESC']],
+        order: [['fecha_pago', 'DESC']], // Usar fecha_pago
         limit: 10
       });
-      
-      // Obtener estadísticas por tipo de documento (excluyendo eliminados y notas de crédito)
-      const estadisticasPorTipo = await sequelize.query(`
-        SELECT 
-          tipo_documento, 
-          COUNT(*) as cantidad, 
-          COALESCE(SUM(CASE WHEN estado_pago = 'pagado' THEN valor_factura ELSE 0 END), 0) as total_cobrado,
-          COALESCE(SUM(valor_factura), 0) as total_facturado,
-          CASE 
-            WHEN COUNT(*) > 0 THEN COALESCE(AVG(valor_factura), 0)
-            ELSE 0
-          END as promedio_facturado
-        FROM documentos
-        WHERE estado NOT IN ('eliminado', 'nota_credito') -- Excluir eliminados y notas de crédito
-          AND fecha_factura BETWEEN :fechaInicio AND :fechaFin
-        GROUP BY tipo_documento
-        ORDER BY total_facturado DESC
-      `, {
-        replacements: { 
-          fechaInicio: fechaInicioSQL,
-          fechaFin: fechaFinSQL
-        },
-        type: sequelize.QueryTypes.SELECT
-      });
-      
-      // Obtener estadísticas por matrizador
-      const estadisticasPorMatrizador = await sequelize.query(`
-        SELECT 
-          m.id, 
-          m.nombre, 
-          COUNT(d.id) as cantidad, 
-          COALESCE(SUM(d.valor_factura), 0) as total_facturado
-        FROM matrizadores m
-        LEFT JOIN documentos d ON m.id = d.id_matrizador
-          AND d.fecha_factura BETWEEN :fechaInicio AND :fechaFin
-        WHERE m.rol = 'matrizador'
-        GROUP BY m.id, m.nombre
-        ORDER BY total_facturado DESC
-      `, {
-        replacements: { 
-          fechaInicio: fechaInicioSQL,
-          fechaFin: fechaFinSQL
-        },
-        type: sequelize.QueryTypes.SELECT
-      });
-      
-      // Gráfico de facturación diaria
-      const facturacionDiaria = await sequelize.query(`
-        SELECT 
-          TO_CHAR(fecha_factura, 'YYYY-MM-DD') as fecha, 
-          COUNT(*) as cantidad, 
-          COALESCE(SUM(valor_factura), 0) as total
-        FROM documentos
-        WHERE fecha_factura BETWEEN :fechaInicio AND :fechaFin
-        GROUP BY TO_CHAR(fecha_factura, 'YYYY-MM-DD')
-        ORDER BY fecha
-      `, {
-        replacements: { 
-          fechaInicio: fechaInicioSQL,
-          fechaFin: fechaFinSQL
-        },
-        type: sequelize.QueryTypes.SELECT
-      });
-      
-      // Preparar datos para gráficos
-      const datosGraficos = {
-        facturacionDiaria: {
-          fechas: facturacionDiaria.map(d => d.fecha),
-          cantidades: facturacionDiaria.map(d => d.cantidad),
-          totales: facturacionDiaria.map(d => d.total)
-        },
-        porTipoDocumento: {
-          tipos: estadisticasPorTipo.map(e => e.tipo_documento),
-          cantidades: estadisticasPorTipo.map(e => e.cantidad),
-          totales: estadisticasPorTipo.map(e => e.total_facturado)
-        },
-        porMatrizador: {
-          nombres: estadisticasPorMatrizador.map(e => e.nombre),
-          cantidades: estadisticasPorMatrizador.map(e => e.cantidad),
-          totales: estadisticasPorMatrizador.map(e => e.total_facturado)
-        }
-      };
       
       // Preparar datos de período para la plantilla
       const periodoData = {
@@ -288,14 +191,11 @@ const cajaController = {
           totalCobrado: formatearValorMonetario(totalCobrado),
           totalPendiente: formatearValorMonetario(totalPendiente),
           documentosFacturados: documentosFacturados,
-          documentosPendientesPago: documentosPendientesPago // Cantidad de docs pendientes
+          documentosPendientesPago: documentosPendientesPago
         },
-        documentosPendientes: documentosPendientesLista, // Lista para la tabla
-        documentosPagadosRecientes: documentosPagadosRecientesLista, // Lista para la tabla
-        estadisticasPorTipo,
-        estadisticasPorMatrizador,
-        periodo: periodoData,
-        datosGraficos
+        documentosPendientes: documentosPendientesLista,
+        documentosPagadosRecientes: documentosPagadosRecientesLista,
+        periodo: periodoData
       });
     } catch (error) {
       console.error('Error al cargar dashboard de caja:', error);
@@ -305,6 +205,166 @@ const cajaController = {
         message: 'Error al cargar el dashboard de caja',
         error
       });
+    }
+  },
+  
+  /**
+   * Registra un nuevo pago para un documento
+   * SIMPLIFICADO - Solo usar fecha_pago
+   */
+  registrarPago: async (req, res) => {
+    const documentoId = req.body.documentoId;
+    
+    // 🔍 INICIO DE DEBUGGING - Logging detallado
+    logger.separator('PAYMENT', 'REGISTRO DE PAGO');
+    logger.start('PAYMENT', 'registrarPago', {
+      documentoId,
+      usuario: req.matrizador?.nombre,
+      datosRecibidos: req.body
+    });
+    
+    try {
+      // Iniciar transacción
+      const transaction = await sequelize.transaction();
+      
+      try {
+        const { 
+          numeroFactura, 
+          valorFactura, 
+          metodoPago, 
+          observaciones 
+        } = req.body;
+        
+        logPayment('VALIDACION_INICIAL', documentoId, {
+          numeroFactura,
+          valorFactura,
+          metodoPago,
+          observaciones
+        });
+        
+        // Validar que el documento existe
+        const documento = await Documento.findByPk(documentoId, { transaction });
+        
+        if (!documento) {
+          await transaction.rollback();
+          logger.error('PAYMENT', 'Documento no encontrado', { documentoId });
+          req.flash('error', 'El documento no existe');
+          return res.redirect('/caja/documentos');
+        }
+        
+        logger.info('PAYMENT', 'Documento encontrado', {
+          documentoId,
+          estadoActual: documento.estado,
+          estadoPagoActual: documento.estadoPago,
+          fechaPagoActual: documento.fechaPago
+        });
+        
+        // Validaciones de seguridad
+        if (documento.estado === 'eliminado') {
+          await transaction.rollback();
+          logger.warning('PAYMENT', 'Intento de pago en documento eliminado', { documentoId });
+          req.flash('error', 'No se puede procesar pago - el documento ha sido eliminado definitivamente');
+          return res.redirect('/caja/documentos');
+        }
+        
+        if (documento.estado === 'nota_credito') {
+          await transaction.rollback();
+          logger.warning('PAYMENT', 'Intento de pago en documento con nota de crédito', { documentoId });
+          req.flash('error', 'No se puede procesar pago - el documento tiene una nota de crédito asociada');
+          return res.redirect('/caja/documentos');
+        }
+        
+        if (documento.estadoPago === 'pagado') {
+          await transaction.rollback();
+          logger.warning('PAYMENT', 'Intento de pago en documento ya pagado', { documentoId });
+          req.flash('error', 'El documento ya está marcado como pagado');
+          return res.redirect(`/caja/documentos/detalle/${documentoId}`);
+        }
+        
+        // 🔍 PUNTO CRÍTICO: Generar timestamp de Ecuador
+        logger.info('PAYMENT', 'Generando timestamp de Ecuador...');
+        const timestampPago = obtenerTimestampEcuador();
+        
+        logTimestamp('GENERAR_TIMESTAMP_PAGO', timestampPago, {
+          funcion: 'obtenerTimestampEcuador',
+          resultado: timestampPago,
+          tipo: typeof timestampPago,
+          esDate: timestampPago instanceof Date,
+          iso: timestampPago ? timestampPago.toISOString() : 'null'
+        });
+        
+        // 🔍 PUNTO CRÍTICO: Preparar datos para actualización
+        const datosActualizacion = {
+          numeroFactura,
+          valorFactura,
+          fechaFactura: documento.fechaFactura || procesarFechaDocumento(new Date().toLocaleDateString('es-EC')),
+          estadoPago: 'pagado',
+          metodoPago: mapearMetodoPago(metodoPago),
+          registradoPor: req.matrizador.id,
+          fechaPago: timestampPago // 🔍 CAMPO CRÍTICO
+        };
+        
+        logger.info('PAYMENT', 'Datos preparados para actualización', {
+          datosActualizacion,
+          timestampPagoType: typeof timestampPago,
+          timestampPagoValue: timestampPago
+        });
+        
+        // 🔍 PUNTO CRÍTICO: Actualizar documento
+        logger.info('PAYMENT', 'Iniciando actualización de documento...');
+        await documento.update(datosActualizacion, { transaction });
+        
+        // 🔍 VERIFICACIÓN INMEDIATA: Recargar documento para verificar
+        logger.info('PAYMENT', 'Verificando actualización...');
+        await documento.reload({ transaction });
+        
+        logPayment('VERIFICACION_ACTUALIZACION', documentoId, {
+          fechaPagoGuardada: documento.fechaPago,
+          estadoPagoGuardado: documento.estadoPago,
+          registradoPorGuardado: documento.registradoPor,
+          fechaPagoTipo: typeof documento.fechaPago,
+          fechaPagoISO: documento.fechaPago ? documento.fechaPago.toISOString() : 'null'
+        });
+        
+        // Registrar evento de pago
+        await EventoDocumento.create({
+          idDocumento: documentoId,
+          tipo: 'pago',
+          detalles: `Pago registrado por ${req.matrizador.nombre}. Método: ${metodoPago}. Factura: ${numeroFactura}. Valor: ${valorFactura}`,
+          usuario: req.matrizador.nombre,
+          metadatos: JSON.stringify({
+            numeroFactura,
+            valorFactura,
+            metodoPago,
+            observaciones,
+            registradoPor: req.matrizador.id,
+            timestampPago: timestampPago.toISOString()
+          })
+        }, { transaction });
+        
+        logger.info('PAYMENT', 'Evento de pago registrado');
+        
+        // 🔍 PUNTO CRÍTICO: Confirmar transacción
+        logger.info('PAYMENT', 'Confirmando transacción...');
+        await transaction.commit();
+        
+        logger.end('PAYMENT', 'registrarPago', {
+          documentoId,
+          exitoso: true,
+          fechaPagoFinal: documento.fechaPago
+        });
+        
+        req.flash('success', 'Pago registrado correctamente');
+        return res.redirect(`/caja/documentos/detalle/${documentoId}`);
+      } catch (error) {
+        await transaction.rollback();
+        logger.error('PAYMENT', 'Error en transacción de pago', error);
+        throw error;
+      }
+    } catch (error) {
+      logger.error('PAYMENT', 'Error general en registro de pago', error);
+      req.flash('error', 'Error al registrar el pago: ' + error.message);
+      return res.redirect('/caja/documentos');
     }
   },
   
@@ -358,7 +418,7 @@ const cajaController = {
         ];
       }
       
-      // Filtro de rango de fechas
+      // Filtro de rango de fechas (usar fecha_factura para fechas de documento)
       if (fechaDesde && fechaHasta) {
         where.fechaFactura = {
           [Op.between]: [moment(fechaDesde).startOf('day').toDate(), moment(fechaHasta).endOf('day').toDate()]
@@ -559,7 +619,7 @@ const cajaController = {
           categoria: 'pago',
           titulo: 'Pago Registrado',
           descripcion: `Pago por $${documento.valorFactura} via ${documento.metodoPago}`,
-          fecha: documento.fechaRegistroPago || documento.updatedAt,
+          fecha: documento.fechaPago || documento.updatedAt, // CORREGIDO: usar fechaPago
           usuario: usuarioPago?.nombre || 'Usuario de Caja',
           color: 'success',
           detalles: {
@@ -567,7 +627,7 @@ const cajaController = {
             metodoPago: documento.metodoPago,
             numeroFactura: documento.numeroFactura,
             usuarioCaja: usuarioPago?.nombre || 'Usuario de Caja',
-            fechaPago: documento.fechaRegistroPago || documento.updatedAt
+            fechaPago: documento.fechaPago || documento.updatedAt // CORREGIDO: usar fechaPago
           }
         });
       }
@@ -661,7 +721,7 @@ const cajaController = {
       });
     }
   },
-
+  
   /**
    * Muestra el listado de pagos registrados
    * @param {Object} req - Objeto de solicitud Express
@@ -683,9 +743,10 @@ const cajaController = {
       const busqueda = req.query.busqueda || '';
       
       // Construir condiciones de filtrado
+      // Para listado de pagos, usar fecha_pago (cuándo se procesaron)
       const where = {
         estadoPago: 'pagado',
-        updated_at: {
+        fechaPago: { // CORREGIDO: usar fechaPago
           [Op.between]: [fechaInicio.toDate(), fechaFin.toDate()]
         }
       };
@@ -712,17 +773,17 @@ const cajaController = {
             attributes: ['id', 'nombre', 'email']
           }
         ],
-        order: [['updated_at', 'DESC']],
+        order: [['fechaPago', 'DESC']], // CORREGIDO: Ordenar por cuándo se registró el pago
         limit,
         offset
       });
       
-      // Calcular total recaudado
+      // Calcular total recaudado usando fecha_pago
       const [totalRecaudado] = await sequelize.query(`
         SELECT COALESCE(SUM(valor_factura), 0) as total
         FROM documentos
         WHERE estado_pago = 'pagado'
-        AND updated_at BETWEEN :fechaInicio AND :fechaFin
+        AND fecha_pago BETWEEN :fechaInicio AND :fechaFin
         ${metodoPago ? "AND metodo_pago = :metodoPago" : ""}
       `, {
         replacements: { 
@@ -844,97 +905,6 @@ const cajaController = {
   },
   
   /**
-   * Registra un nuevo pago para un documento
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
-   */
-  registrarPago: async (req, res) => {
-    try {
-      // Iniciar transacción
-      const transaction = await sequelize.transaction();
-      
-      try {
-        const { 
-          documentoId, 
-          numeroFactura, 
-          valorFactura, 
-          metodoPago, 
-          observaciones 
-        } = req.body;
-        
-        // Validar que el documento existe
-        const documento = await Documento.findByPk(documentoId, { transaction });
-        
-        if (!documento) {
-          await transaction.rollback();
-          req.flash('error', 'El documento no existe');
-          return res.redirect('/caja/documentos');
-        }
-        
-        // VALIDACIÓN CRÍTICA FINANCIERA: Impedir pagos a documentos eliminados o notas de crédito
-        if (documento.estado === 'eliminado') {
-          await transaction.rollback();
-          req.flash('error', 'No se puede procesar pago - el documento ha sido eliminado definitivamente');
-          return res.redirect('/caja/documentos');
-        }
-        
-        if (documento.estado === 'nota_credito') {
-          await transaction.rollback();
-          req.flash('error', 'No se puede procesar pago - el documento tiene una nota de crédito asociada');
-          return res.redirect('/caja/documentos');
-        }
-        
-        // Validar que el documento no esté ya pagado
-        if (documento.estadoPago === 'pagado') {
-          await transaction.rollback();
-          req.flash('error', 'El documento ya está marcado como pagado');
-          return res.redirect(`/caja/documentos/detalle/${documentoId}`);
-        }
-        
-        // Actualizar información del documento
-        await documento.update({
-          numeroFactura,
-          valorFactura,
-          fechaFactura: obtenerFechaEcuador(),
-          estadoPago: 'pagado',
-          metodoPago: mapearMetodoPago(metodoPago),
-          registradoPor: req.matrizador.id, // Auditoría: quién procesó el pago
-          fechaRegistroPago: obtenerFechaEcuador() // Auditoría: cuándo se procesó en zona horaria de Ecuador
-        }, { transaction });
-        
-        // Registrar evento de pago
-        await EventoDocumento.create({
-          idDocumento: documentoId,
-          tipo: 'pago',
-          detalles: `Pago registrado por ${req.matrizador.nombre}. Método: ${metodoPago}. Factura: ${numeroFactura}. Valor: ${valorFactura}`,
-          usuario: req.matrizador.nombre,
-          metadatos: JSON.stringify({
-            numeroFactura,
-            valorFactura,
-            metodoPago,
-            observaciones,
-            registradoPor: req.matrizador.id
-          })
-        }, { transaction });
-        
-        // Confirmar la transacción
-        await transaction.commit();
-        
-        req.flash('success', 'Pago registrado correctamente');
-        return res.redirect(`/caja/documentos/detalle/${documentoId}`);
-      } catch (error) {
-        // Revertir la transacción en caso de error
-        await transaction.rollback();
-        throw error;
-      }
-    } catch (error) {
-      console.error('Error al registrar pago:', error);
-      req.flash('error', 'Error al registrar el pago: ' + error.message);
-      return res.redirect('/caja/documentos');
-    }
-  },
-  
-  /**
    * Confirma un pago previamente registrado
    * @param {Object} req - Objeto de solicitud Express
    * @param {Object} res - Objeto de respuesta Express
@@ -977,11 +947,14 @@ const cajaController = {
           return res.redirect(`/caja/documentos/detalle/${id}`);
         }
         
+        // Usar timestamp de Ecuador para la confirmación
+        const timestampConfirmacion = obtenerTimestampEcuador();
+        
         // Actualizar el estado de pago
         await documento.update({
           estadoPago: 'pagado',
           registradoPor: req.matrizador.id, // Auditoría: quién confirmó el pago
-          fechaRegistroPago: obtenerFechaEcuador() // Auditoría: cuándo se confirmó en zona horaria de Ecuador
+          fechaPago: timestampConfirmacion // CORREGIDO: Auditoría cuándo se confirmó en zona horaria de Ecuador
         }, { transaction });
         
         // Registrar evento de confirmación de pago
@@ -1122,7 +1095,7 @@ const cajaController = {
           matrizadorAnteriorId,
           matrizadorNuevoId: matrizadorId,
           usuarioId: req.matrizador.id,
-          fechaCambio: obtenerFechaEcuador(),
+          fechaCambio: obtenerTimestampEcuador(),
           justificacion
         }, { transaction });
         
@@ -2768,7 +2741,7 @@ const cajaController = {
       await documento.update({
         estadoPago: 'pagado',
         registradoPor: req.matrizador.id, // Auditoría: quién marcó como pagado
-        fechaRegistroPago: new Date(), // Auditoría: cuándo se marcó
+        fechaPago: obtenerTimestampEcuador(), // CORREGIDO: Auditoría cuándo se marcó y consistencia de timezone
         observacionesPago: 'Marcado como pagado manualmente desde reportes'
       });
       

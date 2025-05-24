@@ -1,6 +1,6 @@
 /**
  * Controlador para la interfaz administrativa del sistema
- * Gestiona el dashboard y funciones centrales
+ * SIMPLIFICADO - Solo consultas que funcionan con campos reales
  */
 
 const Documento = require('../models/Documento');
@@ -9,67 +9,101 @@ const EventoDocumento = require('../models/EventoDocumento');
 const RegistroAuditoria = require('../models/RegistroAuditoria');
 const { sequelize } = require('../config/database');
 const { Op } = require('sequelize');
+const { 
+  obtenerTimestampEcuador,
+  convertirRangoParaSQL,
+  formatearTimestamp,
+  formatearFechaSinHora
+} = require('../utils/documentoUtils');
+
+// NUEVO: Importar sistema de logging
+const { logger, logDashboard, logQuery } = require('../utils/logger');
 
 /**
  * Muestra el dashboard administrativo con estadísticas y documentos recientes
  */
 exports.dashboard = async (req, res) => {
   try {
-    // Procesar parámetros de período
+    // 🔍 INICIO DE DEBUGGING - Dashboard
+    logger.separator('DASHBOARD', 'CARGA DE DASHBOARD ADMIN');
+    logger.start('DASHBOARD', 'cargarDashboard', {
+      tipoPeriodo: req.query.tipoPeriodo,
+      fechaInicio: req.query.fechaInicio,
+      fechaFin: req.query.fechaFin,
+      usuario: req.matrizador?.nombre || 'admin'
+    });
+    
+    // Procesar parámetros de período usando utilidades centralizadas
     const tipoPeriodo = req.query.tipoPeriodo || 'hoy';
     let fechaInicio, fechaFin;
-    const ahora = new Date();
+    const ahora = obtenerTimestampEcuador();
     
+    logDashboard('PROCESAR_PERIODO', tipoPeriodo, {
+      tipoPeriodo,
+      timestampEcuador: ahora
+    });
+    
+    // Configurar fechas según el período seleccionado
     switch (tipoPeriodo) {
       case 'hoy':
-        fechaInicio = new Date(ahora);
-        fechaInicio.setHours(0, 0, 0, 0);
-        fechaFin = new Date(ahora);
-        fechaFin.setHours(23, 59, 59, 999);
+        const rango = convertirRangoParaSQL(
+          ahora.toISOString().split('T')[0], 
+          ahora.toISOString().split('T')[0]
+        );
+        fechaInicio = rango.fechaInicioObj;
+        fechaFin = rango.fechaFinObj;
         break;
       case 'semana':
-        fechaInicio = new Date(ahora);
-        fechaInicio.setDate(fechaInicio.getDate() - fechaInicio.getDay()); // Inicio de semana (domingo)
-        fechaInicio.setHours(0, 0, 0, 0);
-        fechaFin = new Date(ahora);
-        fechaFin.setHours(23, 59, 59, 999);
+        const inicioSemana = new Date(ahora);
+        inicioSemana.setDate(inicioSemana.getDate() - inicioSemana.getDay());
+        const rangoSemana = convertirRangoParaSQL(
+          inicioSemana.toISOString().split('T')[0],
+          ahora.toISOString().split('T')[0]
+        );
+        fechaInicio = rangoSemana.fechaInicioObj;
+        fechaFin = rangoSemana.fechaFinObj;
         break;
       case 'mes':
-        fechaInicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1); // Primer día del mes
-        fechaInicio.setHours(0, 0, 0, 0);
-        fechaFin = new Date(ahora);
-        fechaFin.setHours(23, 59, 59, 999);
+        const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+        const rangoMes = convertirRangoParaSQL(
+          inicioMes.toISOString().split('T')[0],
+          ahora.toISOString().split('T')[0]
+        );
+        fechaInicio = rangoMes.fechaInicioObj;
+        fechaFin = rangoMes.fechaFinObj;
         break;
       case 'ultimo_mes':
-        fechaInicio = new Date(ahora);
-        fechaInicio.setMonth(fechaInicio.getMonth() - 1);
-        fechaInicio.setHours(0, 0, 0, 0);
-        fechaFin = new Date(ahora);
-        fechaFin.setHours(23, 59, 59, 999);
+        const hace30Dias = new Date(ahora);
+        hace30Dias.setDate(hace30Dias.getDate() - 30);
+        const rangoUltimoMes = convertirRangoParaSQL(
+          hace30Dias.toISOString().split('T')[0],
+          ahora.toISOString().split('T')[0]
+        );
+        fechaInicio = rangoUltimoMes.fechaInicioObj;
+        fechaFin = rangoUltimoMes.fechaFinObj;
         break;
       case 'personalizado':
-        if (req.query.fechaInicio) {
-          fechaInicio = new Date(req.query.fechaInicio);
-          fechaInicio.setHours(0, 0, 0, 0);
-        } else {
-          fechaInicio = new Date(ahora);
-          fechaInicio.setDate(fechaInicio.getDate() - 30); // Por defecto 30 días atrás
-          fechaInicio.setHours(0, 0, 0, 0);
-        }
-        if (req.query.fechaFin) {
-          fechaFin = new Date(req.query.fechaFin);
-          fechaFin.setHours(23, 59, 59, 999);
-        } else {
-          fechaFin = new Date(ahora);
-          fechaFin.setHours(23, 59, 59, 999);
-        }
+        const fechaInicioCustom = req.query.fechaInicio || hace30Dias.toISOString().split('T')[0];
+        const fechaFinCustom = req.query.fechaFin || ahora.toISOString().split('T')[0];
+        const rangoPersonalizado = convertirRangoParaSQL(fechaInicioCustom, fechaFinCustom);
+        fechaInicio = rangoPersonalizado.fechaInicioObj;
+        fechaFin = rangoPersonalizado.fechaFinObj;
         break;
       default:
-        fechaInicio = new Date(ahora);
-        fechaInicio.setHours(0, 0, 0, 0);
-        fechaFin = new Date(ahora);
-        fechaFin.setHours(23, 59, 59, 999);
+        const rangoDefault = convertirRangoParaSQL(
+          ahora.toISOString().split('T')[0], 
+          ahora.toISOString().split('T')[0]
+        );
+        fechaInicio = rangoDefault.fechaInicioObj;
+        fechaFin = rangoDefault.fechaFinObj;
     }
+    
+    // 🔍 LOGGING: Fechas calculadas
+    logDashboard('FECHAS_CALCULADAS', tipoPeriodo, {
+      fechaInicio: fechaInicio.toISOString(),
+      fechaFin: fechaFin.toISOString(),
+      diferenciaDias: Math.ceil((fechaFin - fechaInicio) / (1000 * 60 * 60 * 24))
+    });
     
     // Formatear fechas para el frontend
     const fechaInicioStr = fechaInicio.toISOString().split('T')[0];
@@ -87,11 +121,12 @@ exports.dashboard = async (req, res) => {
       esPersonalizado: tipoPeriodo === 'personalizado'
     };
     
-    // Obtener estadísticas de documentos totales (independiente del período)
-    // Excluir documentos eliminados y notas de crédito de las estadísticas financieras
-    // Estados operativos normales: en_proceso, listo_para_entrega, entregado
-    const estadosExcluidos = ['eliminado', 'nota_credito', 'cancelado'];
+    // Estados operativos normales para estadísticas
     const estadosOperativos = ['en_proceso', 'listo_para_entrega', 'entregado'];
+    
+    // ============== ESTADÍSTICAS GENERALES (independientes del período) ==============
+    
+    logger.info('DASHBOARD', 'Obteniendo estadísticas generales...');
     
     const total = await Documento.count({
       where: {
@@ -100,21 +135,28 @@ exports.dashboard = async (req, res) => {
         }
       }
     });
+    logQuery('DOCUMENTOS_TOTALES', { estados: estadosOperativos }, total);
+    
     const enProceso = await Documento.count({ 
       where: { 
         estado: 'en_proceso'
       } 
     });
+    logQuery('DOCUMENTOS_EN_PROCESO', { estado: 'en_proceso' }, enProceso);
+    
     const listoParaEntrega = await Documento.count({ 
       where: { 
         estado: 'listo_para_entrega' 
       } 
     });
+    logQuery('DOCUMENTOS_LISTOS', { estado: 'listo_para_entrega' }, listoParaEntrega);
+    
     const entregados = await Documento.count({ 
       where: { 
         estado: 'entregado' 
       } 
     });
+    logQuery('DOCUMENTOS_ENTREGADOS', { estado: 'entregado' }, entregados);
     
     // Estadísticas de documentos especiales (solo para auditoría de admin)
     const eliminados = await Documento.count({ 
@@ -122,13 +164,20 @@ exports.dashboard = async (req, res) => {
         estado: 'eliminado' 
       } 
     });
+    logQuery('DOCUMENTOS_ELIMINADOS', { estado: 'eliminado' }, eliminados);
+    
     const notasCredito = await Documento.count({ 
       where: { 
         estado: 'nota_credito' 
       } 
     });
+    logQuery('NOTAS_CREDITO', { estado: 'nota_credito' }, notasCredito);
     
-    // Obtener estadísticas del período seleccionado
+    // ============== ESTADÍSTICAS DEL PERÍODO SELECCIONADO ==============
+    // Usar created_at para métricas del sistema (cuándo se registraron)
+    
+    logger.info('DASHBOARD', 'Obteniendo estadísticas del período...');
+    
     const condicionesPeriodo = {
       created_at: {
         [Op.between]: [fechaInicio, fechaFin]
@@ -138,10 +187,13 @@ exports.dashboard = async (req, res) => {
       }
     };
     
-    // Documentos nuevos (creados en el período, excluyendo eliminados)
+    logQuery('CONDICIONES_PERIODO', condicionesPeriodo, null);
+    
+    // Documentos nuevos (registrados en el sistema en el período)
     const nuevos = await Documento.count({
       where: condicionesPeriodo
     });
+    logQuery('DOCUMENTOS_NUEVOS_PERIODO', condicionesPeriodo, nuevos);
     
     // Documentos procesados (cambiados a "listo para entrega" en el período)
     const procesadosEventos = await EventoDocumento.count({
@@ -155,8 +207,13 @@ exports.dashboard = async (req, res) => {
         }
       }
     });
+    logQuery('DOCUMENTOS_PROCESADOS_PERIODO', {
+      tipo: 'cambio_estado',
+      detalles: 'listo_para_entrega',
+      rango: [fechaInicio, fechaFin]
+    }, procesadosEventos);
     
-    // Documentos entregados en el período
+    // Documentos entregados en el período (usar fecha_entrega para esto)
     const entregadosPeriodo = await Documento.count({
       where: {
         estado: 'entregado',
@@ -165,46 +222,86 @@ exports.dashboard = async (req, res) => {
         }
       }
     });
+    logQuery('DOCUMENTOS_ENTREGADOS_PERIODO', {
+      estado: 'entregado',
+      rango_fecha_entrega: [fechaInicio, fechaFin]
+    }, entregadosPeriodo);
     
-    // Calcular tiempo promedio de procesamiento (desde creación hasta listo_para_entrega)
-    // Solo incluir documentos con estados operativos normales
-    const tiempoProcesamientoQuery = await sequelize.query(`
-      SELECT AVG(EXTRACT(EPOCH FROM (e.created_at - d.created_at)) / 86400) as promedio_dias
-      FROM "eventos_documentos" e
-      JOIN "documentos" d ON e.id_documento = d.id
-      WHERE e.tipo = 'cambio_estado'
-      AND e.detalles LIKE '%listo_para_entrega%'
-      AND e.created_at BETWEEN :fechaInicio AND :fechaFin
-      AND d.estado IN ('en_proceso', 'listo_para_entrega', 'entregado')
-    `, {
-      replacements: { fechaInicio, fechaFin },
-      type: sequelize.QueryTypes.SELECT
-    });
+    // ============== LOGGING DE RESULTADOS PRINCIPALES ==============
     
-    const tiempoPromedioProcesamiento = tiempoProcesamientoQuery[0]?.promedio_dias 
-      ? parseFloat(tiempoProcesamientoQuery[0].promedio_dias).toFixed(1) 
-      : 'N/A';
+    const statsResumen = {
+      totales: { total, enProceso, listoParaEntrega, entregados, eliminados, notasCredito },
+      periodo: { nuevos, procesadosEventos, entregadosPeriodo },
+      fechas: { fechaInicio: fechaInicioStr, fechaFin: fechaFinStr }
+    };
     
-    // Calcular tiempo promedio de entrega (desde listo_para_entrega hasta entregado)
-    // Solo incluir documentos con estados operativos normales
-    const tiempoEntregaQuery = await sequelize.query(`
-      SELECT AVG(EXTRACT(EPOCH FROM (d.fecha_entrega - e.created_at)) / 86400) as promedio_dias
-      FROM "documentos" d
-      JOIN "eventos_documentos" e ON d.id = e.id_documento
-      WHERE d.estado = 'entregado'
-      AND e.tipo = 'cambio_estado'
-      AND e.detalles LIKE '%listo_para_entrega%'
-      AND d.fecha_entrega BETWEEN :fechaInicio AND :fechaFin
-    `, {
-      replacements: { fechaInicio, fechaFin },
-      type: sequelize.QueryTypes.SELECT
-    });
+    logDashboard('ESTADISTICAS_OBTENIDAS', tipoPeriodo, statsResumen);
     
-    const tiempoPromedioEntrega = tiempoEntregaQuery[0]?.promedio_dias 
-      ? parseFloat(tiempoEntregaQuery[0].promedio_dias).toFixed(1) 
-      : 'N/A';
+    // ============== TIEMPOS PROMEDIO SIMPLIFICADOS ==============
+    // Solo calcular si hay datos suficientes, sino mostrar "N/A"
     
-    // Obtener documentos pendientes de entrega (excluir eliminados)
+    let tiempoPromedioProcesamiento = 'N/A';
+    let tiempoPromedioEntrega = 'N/A';
+    
+    logger.info('DASHBOARD', 'Calculando tiempos promedio...');
+    
+    // Solo calcular si hay documentos procesados en el período
+    if (procesadosEventos > 0) {
+      try {
+        const tiempoProcesamientoQuery = await sequelize.query(`
+          SELECT AVG(EXTRACT(EPOCH FROM (e.created_at - d.created_at)) / 86400) as promedio_dias
+          FROM eventos_documentos e
+          JOIN documentos d ON e.id_documento = d.id
+          WHERE e.tipo = 'cambio_estado'
+          AND e.detalles LIKE '%listo_para_entrega%'
+          AND e.created_at BETWEEN :fechaInicio AND :fechaFin
+          AND d.estado IN ('en_proceso', 'listo_para_entrega', 'entregado')
+        `, {
+          replacements: { fechaInicio, fechaFin },
+          type: sequelize.QueryTypes.SELECT
+        });
+        
+        logQuery('TIEMPO_PROCESAMIENTO', { fechaInicio, fechaFin }, tiempoProcesamientoQuery);
+        
+        if (tiempoProcesamientoQuery[0]?.promedio_dias) {
+          tiempoPromedioProcesamiento = parseFloat(tiempoProcesamientoQuery[0].promedio_dias).toFixed(1);
+        }
+      } catch (error) {
+        logger.error('DASHBOARD', 'Error calculando tiempo de procesamiento', error);
+      }
+    }
+    
+    // Solo calcular si hay documentos entregados en el período
+    if (entregadosPeriodo > 0) {
+      try {
+        const tiempoEntregaQuery = await sequelize.query(`
+          SELECT AVG(EXTRACT(EPOCH FROM (d.fecha_entrega - e.created_at)) / 86400) as promedio_dias
+          FROM documentos d
+          JOIN eventos_documentos e ON d.id = e.id_documento
+          WHERE d.estado = 'entregado'
+          AND e.tipo = 'cambio_estado'
+          AND e.detalles LIKE '%listo_para_entrega%'
+          AND d.fecha_entrega BETWEEN :fechaInicio AND :fechaFin
+        `, {
+          replacements: { fechaInicio, fechaFin },
+          type: sequelize.QueryTypes.SELECT
+        });
+        
+        logQuery('TIEMPO_ENTREGA', { fechaInicio, fechaFin }, tiempoEntregaQuery);
+        
+        if (tiempoEntregaQuery[0]?.promedio_dias) {
+          tiempoPromedioEntrega = parseFloat(tiempoEntregaQuery[0].promedio_dias).toFixed(1);
+        }
+      } catch (error) {
+        logger.error('DASHBOARD', 'Error calculando tiempo de entrega', error);
+      }
+    }
+    
+    // ============== LISTADOS PARA EL DASHBOARD ==============
+    
+    logger.info('DASHBOARD', 'Obteniendo listados para dashboard...');
+    
+    // Obtener documentos pendientes de entrega (independiente del período)
     const documentosPendientes = await Documento.findAll({
       where: { 
         estado: 'listo_para_entrega'
@@ -217,8 +314,9 @@ exports.dashboard = async (req, res) => {
         attributes: ['id', 'nombre']
       }]
     });
+    logQuery('DOCUMENTOS_PENDIENTES_LISTADO', { estado: 'listo_para_entrega', limit: 5 }, documentosPendientes);
     
-    // Obtener últimos documentos registrados (solo estados operativos)
+    // Obtener últimos documentos registrados (usar created_at)
     const documentosRecientes = await Documento.findAll({
       where: {
         estado: {
@@ -233,6 +331,7 @@ exports.dashboard = async (req, res) => {
         attributes: ['id', 'nombre']
       }]
     });
+    logQuery('DOCUMENTOS_RECIENTES_LISTADO', { estados: estadosOperativos, limit: 5 }, documentosRecientes);
     
     // Obtener actividades recientes
     const actividades = await EventoDocumento.findAll({
@@ -243,6 +342,7 @@ exports.dashboard = async (req, res) => {
         as: 'documento'
       }]
     });
+    logQuery('ACTIVIDADES_RECIENTES', { limit: 5 }, actividades);
     
     // Formatear actividades para el dashboard
     const actividadesFormateadas = actividades.map(actividad => {
@@ -276,6 +376,7 @@ exports.dashboard = async (req, res) => {
     });
     
     // Datos para los gráficos estadísticos
+    logger.info('DASHBOARD', 'Obteniendo datos para gráficos...');
     const estadisticas = {
       volumen: await obtenerDatosVolumen(fechaInicio, fechaFin),
       matrizador: await obtenerDatosMatrizador(fechaInicio, fechaFin),
@@ -287,24 +388,42 @@ exports.dashboard = async (req, res) => {
       attributes: ['id', 'nombre'],
       order: [['nombre', 'ASC']]
     });
+    logQuery('MATRIZADORES_FILTROS', { activos: true }, matrizadores);
+    
+    // 🔍 LOGGING FINAL: Resumen completo
+    const statsFinales = {
+      total,
+      enProceso,
+      listoParaEntrega,
+      entregados,
+      entregadosPeriodo,
+      eliminados,
+      notasCredito,
+      nuevos,
+      procesados: procesadosEventos,
+      tiempoPromedioProcesamiento,
+      tiempoPromedioEntrega
+    };
+    
+    logDashboard('STATS_FINALES', tipoPeriodo, {
+      stats: statsFinales,
+      documentosPendientes: documentosPendientes.length,
+      documentosRecientes: documentosRecientes.length,
+      actividades: actividadesFormateadas.length,
+      matrizadores: matrizadores.length
+    });
+    
+    logger.end('DASHBOARD', 'cargarDashboard', {
+      exitoso: true,
+      statsCalculadas: Object.keys(statsFinales).length,
+      listadosObtenidos: 4
+    });
     
     res.render('admin/dashboard', {
       layout: 'admin',
       title: 'Panel de Control',
       activeDashboard: true,
-      stats: {
-        total,
-        enProceso,
-        listoParaEntrega,
-        entregados,
-        entregadosPeriodo,
-        eliminados,
-        notasCredito,
-        nuevos,
-        procesados: procesadosEventos,
-        tiempoPromedioProcesamiento,
-        tiempoPromedioEntrega
-      },
+      stats: statsFinales,
       documentosPendientes,
       documentosRecientes,
       actividades: actividadesFormateadas,
@@ -313,7 +432,7 @@ exports.dashboard = async (req, res) => {
       matrizadores
     });
   } catch (error) {
-    console.error('Error al cargar el dashboard:', error);
+    logger.error('DASHBOARD', 'Error al cargar el dashboard', error);
     res.status(500).render('error', {
       layout: 'admin',
       title: 'Error',
@@ -325,6 +444,7 @@ exports.dashboard = async (req, res) => {
 
 /**
  * Función auxiliar para obtener datos de volumen de documentos para gráfico
+ * SIMPLIFICADA - Solo usar created_at
  */
 async function obtenerDatosVolumen(fechaInicio, fechaFin) {
   // Determinar unidad de tiempo según rango de fechas
@@ -349,7 +469,7 @@ async function obtenerDatosVolumen(fechaInicio, fechaFin) {
     formatoFecha = "YYYY-MM";
   }
   
-  // Consulta SQL para nuevos documentos por día/semana/mes (excluir eliminados)
+  // Consulta SQL para nuevos documentos por período (usar created_at = cuando se registraron)
   const datosNuevos = await sequelize.query(`
     SELECT 
       to_char(${formatoAgrupacion}, '${formatoFecha}') as fecha,
@@ -364,34 +484,16 @@ async function obtenerDatosVolumen(fechaInicio, fechaFin) {
     type: sequelize.QueryTypes.SELECT
   });
   
-  // Consulta SQL para documentos procesados por día/semana/mes (excluir eliminados)
-  const datosProcesados = await sequelize.query(`
-    SELECT 
-      to_char(${formatoAgrupacion.replace('created_at', 'e.created_at')}, '${formatoFecha}') as fecha,
-      COUNT(*) as total
-    FROM eventos_documentos e
-    JOIN documentos d ON e.id_documento = d.id
-    WHERE e.tipo = 'cambio_estado'
-      AND e.detalles LIKE '%listo_para_entrega%'
-      AND e.created_at BETWEEN :fechaInicio AND :fechaFin
-      AND d.estado IN ('en_proceso', 'listo_para_entrega', 'entregado')
-    GROUP BY ${formatoAgrupacion.replace('created_at', 'e.created_at')}
-    ORDER BY ${formatoAgrupacion.replace('created_at', 'e.created_at')}
-  `, {
-    replacements: { fechaInicio, fechaFin },
-    type: sequelize.QueryTypes.SELECT
-  });
-  
-  // Consulta SQL para documentos entregados por día/semana/mes (excluir eliminados)
+  // Consulta SQL para documentos entregados por período (usar fecha_entrega)
   const datosEntregados = await sequelize.query(`
     SELECT 
-      to_char(${formatoAgrupacion}, '${formatoFecha}') as fecha,
+      to_char(${formatoAgrupacion.replace('created_at', 'fecha_entrega')}, '${formatoFecha}') as fecha,
       COUNT(*) as total
     FROM documentos
     WHERE estado = 'entregado'
       AND fecha_entrega BETWEEN :fechaInicio AND :fechaFin
-    GROUP BY ${formatoAgrupacion}
-    ORDER BY ${formatoAgrupacion}
+    GROUP BY ${formatoAgrupacion.replace('created_at', 'fecha_entrega')}
+    ORDER BY ${formatoAgrupacion.replace('created_at', 'fecha_entrega')}
   `, {
     replacements: { fechaInicio, fechaFin },
     type: sequelize.QueryTypes.SELECT
@@ -400,10 +502,9 @@ async function obtenerDatosVolumen(fechaInicio, fechaFin) {
   // Generar lista completa de fechas en el rango
   const fechas = [];
   const nuevos = [];
-  const procesados = [];
   const entregados = [];
   
-  // Obtener series completas de fechas con valores para el gráfico
+  // Generar series de fechas según la unidad de tiempo
   let fechaActual = new Date(fechaInicio);
   while (fechaActual <= fechaFin) {
     let fecha;
@@ -429,9 +530,6 @@ async function obtenerDatosVolumen(fechaInicio, fechaFin) {
     const nuevoItem = datosNuevos.find(item => item.fecha === fecha);
     nuevos.push(nuevoItem ? parseInt(nuevoItem.total) : 0);
     
-    const procesadoItem = datosProcesados.find(item => item.fecha === fecha);
-    procesados.push(procesadoItem ? parseInt(procesadoItem.total) : 0);
-    
     const entregadoItem = datosEntregados.find(item => item.fecha === fecha);
     entregados.push(entregadoItem ? parseInt(entregadoItem.total) : 0);
   }
@@ -439,7 +537,6 @@ async function obtenerDatosVolumen(fechaInicio, fechaFin) {
   return {
     fechas,
     nuevos,
-    procesados,
     entregados,
     unidadTiempo
   };
@@ -447,9 +544,10 @@ async function obtenerDatosVolumen(fechaInicio, fechaFin) {
 
 /**
  * Función auxiliar para obtener datos de documentos por matrizador
+ * SIMPLIFICADA - Solo usar created_at
  */
 async function obtenerDatosMatrizador(fechaInicio, fechaFin) {
-  // Consulta SQL para documentos por matrizador (solo estados operativos)
+  // Consulta SQL para documentos por matrizador (usar created_at para consistencia)
   const datos = await sequelize.query(`
     SELECT 
       m.id as id_matrizador,
@@ -479,9 +577,10 @@ async function obtenerDatosMatrizador(fechaInicio, fechaFin) {
 
 /**
  * Función auxiliar para obtener datos de documentos por tipo
+ * SIMPLIFICADA - Solo usar created_at
  */
 async function obtenerDatosTipoDocumento(fechaInicio, fechaFin) {
-  // Consulta SQL para documentos por tipo (solo estados operativos)
+  // Consulta SQL para documentos por tipo (usar created_at para consistencia)
   const datos = await sequelize.query(`
     SELECT 
       tipo_documento,
@@ -519,7 +618,7 @@ exports.reportes = async (req, res) => {
     const estado = req.query.estado || '';
     const formato = req.query.formato || 'web'; // web o excel
     
-    // Condiciones base para consultas
+    // Condiciones base para consultas (usar created_at para reportes del sistema)
     const condiciones = {
       created_at: {
         [Op.between]: [fechaInicio, fechaFin]
@@ -607,7 +706,7 @@ exports.reportes = async (req, res) => {
       case 'fecha':
         reporteTitulo = 'Reporte de Documentos por Fecha';
         
-        // Obtener datos para el reporte por fecha
+        // Obtener datos para el reporte por fecha (usar created_at)
         const documentosPorFecha = await Documento.findAll({
           where: condiciones,
           attributes: [
@@ -722,7 +821,7 @@ exports.reportes = async (req, res) => {
  */
 exports.verRegistrosAuditoria = async (req, res) => {
   try {
-    // Parámetros de filtrado
+    // Parámetros de filtrado con fechas correctas
     const fechaInicio = req.query.fechaInicio ? new Date(req.query.fechaInicio) : new Date(new Date().setDate(new Date().getDate() - 7));
     const fechaFin = req.query.fechaFin ? new Date(req.query.fechaFin + 'T23:59:59') : new Date();
     const accion = req.query.accion || '';
@@ -836,59 +935,62 @@ exports.descargarReporte = async (req, res) => {
     const contenidos = Array.isArray(req.query.contenido) ? req.query.contenido : [req.query.contenido];
     const tipoPeriodo = req.query.tipoPeriodo || 'hoy';
     
-    // Procesar fechas según el período seleccionado
+    // Procesar fechas usando utilidades centralizadas
+    const ahora = obtenerTimestampEcuador();
     let fechaInicio, fechaFin;
-    const ahora = new Date();
     
     switch (tipoPeriodo) {
       case 'hoy':
-        fechaInicio = new Date(ahora);
-        fechaInicio.setHours(0, 0, 0, 0);
-        fechaFin = new Date(ahora);
-        fechaFin.setHours(23, 59, 59, 999);
+        const rango = convertirRangoParaSQL(
+          ahora.toISOString().split('T')[0], 
+          ahora.toISOString().split('T')[0]
+        );
+        fechaInicio = rango.fechaInicioObj;
+        fechaFin = rango.fechaFinObj;
         break;
       case 'semana':
-        fechaInicio = new Date(ahora);
-        fechaInicio.setDate(fechaInicio.getDate() - fechaInicio.getDay());
-        fechaInicio.setHours(0, 0, 0, 0);
-        fechaFin = new Date(ahora);
-        fechaFin.setHours(23, 59, 59, 999);
+        const inicioSemana = new Date(ahora);
+        inicioSemana.setDate(inicioSemana.getDate() - inicioSemana.getDay());
+        const rangoSemana = convertirRangoParaSQL(
+          inicioSemana.toISOString().split('T')[0],
+          ahora.toISOString().split('T')[0]
+        );
+        fechaInicio = rangoSemana.fechaInicioObj;
+        fechaFin = rangoSemana.fechaFinObj;
         break;
       case 'mes':
-        fechaInicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
-        fechaInicio.setHours(0, 0, 0, 0);
-        fechaFin = new Date(ahora);
-        fechaFin.setHours(23, 59, 59, 999);
+        const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+        const rangoMes = convertirRangoParaSQL(
+          inicioMes.toISOString().split('T')[0],
+          ahora.toISOString().split('T')[0]
+        );
+        fechaInicio = rangoMes.fechaInicioObj;
+        fechaFin = rangoMes.fechaFinObj;
         break;
       case 'ultimo_mes':
-        fechaInicio = new Date(ahora);
-        fechaInicio.setMonth(fechaInicio.getMonth() - 1);
-        fechaInicio.setHours(0, 0, 0, 0);
-        fechaFin = new Date(ahora);
-        fechaFin.setHours(23, 59, 59, 999);
+        const hace30Dias = new Date(ahora);
+        hace30Dias.setDate(hace30Dias.getDate() - 30);
+        const rangoUltimoMes = convertirRangoParaSQL(
+          hace30Dias.toISOString().split('T')[0],
+          ahora.toISOString().split('T')[0]
+        );
+        fechaInicio = rangoUltimoMes.fechaInicioObj;
+        fechaFin = rangoUltimoMes.fechaFinObj;
         break;
       case 'personalizado':
-        if (req.query.fechaInicio) {
-          fechaInicio = new Date(req.query.fechaInicio);
-          fechaInicio.setHours(0, 0, 0, 0);
-        } else {
-          fechaInicio = new Date(ahora);
-          fechaInicio.setDate(fechaInicio.getDate() - 30);
-          fechaInicio.setHours(0, 0, 0, 0);
-        }
-        if (req.query.fechaFin) {
-          fechaFin = new Date(req.query.fechaFin);
-          fechaFin.setHours(23, 59, 59, 999);
-        } else {
-          fechaFin = new Date(ahora);
-          fechaFin.setHours(23, 59, 59, 999);
-        }
+        const fechaInicioCustom = req.query.fechaInicio || hace30Dias.toISOString().split('T')[0];
+        const fechaFinCustom = req.query.fechaFin || ahora.toISOString().split('T')[0];
+        const rangoPersonalizado = convertirRangoParaSQL(fechaInicioCustom, fechaFinCustom);
+        fechaInicio = rangoPersonalizado.fechaInicioObj;
+        fechaFin = rangoPersonalizado.fechaFinObj;
         break;
       default:
-        fechaInicio = new Date(ahora);
-        fechaInicio.setHours(0, 0, 0, 0);
-        fechaFin = new Date(ahora);
-        fechaFin.setHours(23, 59, 59, 999);
+        const rangoDefault = convertirRangoParaSQL(
+          ahora.toISOString().split('T')[0], 
+          ahora.toISOString().split('T')[0]
+        );
+        fechaInicio = rangoDefault.fechaInicioObj;
+        fechaFin = rangoDefault.fechaFinObj;
     }
     
     // Formatear fechas para el nombre del archivo
@@ -919,7 +1021,7 @@ exports.descargarReporte = async (req, res) => {
       const listoParaEntrega = await Documento.count({ where: { estado: 'listo_para_entrega' } });
       const entregados = await Documento.count({ where: { estado: 'entregado' } });
       
-      // Estadísticas del período
+      // Estadísticas del período (usar created_at)
       const nuevos = await Documento.count({
         where: {
           created_at: {
@@ -959,7 +1061,7 @@ exports.descargarReporte = async (req, res) => {
         entregadosPeriodo
       };
       
-      // Tiempos promedio
+      // Tiempos promedio (usar campos correctos)
       const tiempoProcesamientoQuery = await sequelize.query(`
         SELECT AVG(EXTRACT(EPOCH FROM (e.created_at - d.created_at)) / 86400) as promedio_dias
         FROM "eventos_documentos" e
@@ -996,7 +1098,7 @@ exports.descargarReporte = async (req, res) => {
     }
     
     if (datos.listado) {
-      // Listado detallado de documentos
+      // Listado detallado de documentos (usar created_at)
       datos.documentos = await Documento.findAll({
         where: {
           created_at: {
