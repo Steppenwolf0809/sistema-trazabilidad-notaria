@@ -225,11 +225,35 @@ exports.listarDocumentos = async (req, res) => {
     const idMatrizador = req.query.idMatrizador || '';
     const busqueda = req.query.busqueda || '';
     
+    // Estados operativos normales (excluir eliminados de listados normales)
+    const estadosOperativos = ['en_proceso', 'listo_para_entrega', 'entregado'];
+    const estadosEspeciales = ['nota_credito']; // Solo admin puede ver estos
+    
     // Construir condiciones de filtrado
     const where = {};
     
+    // Determinar qué estados mostrar según el rol
+    const userRole = req.matrizador?.rol || req.usuario?.rol;
+    let estadosPermitidos = [...estadosOperativos];
+    
+    // Solo admin puede ver estados especiales
+    if (userRole === 'admin') {
+      estadosPermitidos = [...estadosOperativos, ...estadosEspeciales];
+    }
+    
     if (estado) {
-      where.estado = estado;
+      // Si se especifica un estado, verificar que esté permitido
+      if (estadosPermitidos.includes(estado)) {
+        where.estado = estado;
+      } else {
+        // Si el estado no está permitido, no mostrar resultados
+        where.estado = 'estado_inexistente';
+      }
+    } else {
+      // Sin filtro específico, mostrar solo estados permitidos
+      where.estado = {
+        [Op.in]: estadosPermitidos
+      };
     }
     
     if (tipoDocumento) {
@@ -590,50 +614,6 @@ exports.completarEntrega = async (req, res) => {
     console.error('Error al completar entrega:', error);
     req.flash('error', error.message);
     res.redirect(getBasePath(req) + '/entrega/' + req.params.id);
-  }
-};
-
-/**
- * Cancela un documento
- */
-exports.cancelarDocumento = async (req, res) => {
-  const transaction = await sequelize.transaction();
-  
-  try {
-    const { documentoId, motivo } = req.body;
-    
-    // Buscar el documento
-    const documento = await Documento.findByPk(documentoId, { transaction });
-    
-    if (!documento) {
-      throw new Error('Documento no encontrado');
-    }
-    
-    if (documento.estado === 'entregado') {
-      throw new Error('No se puede cancelar un documento ya entregado');
-    }
-    
-    // Actualizar estado
-    documento.estado = 'cancelado';
-    await documento.save({ transaction });
-    
-    // Registrar evento
-    await EventoDocumento.create({
-      idDocumento: documento.id,
-      tipo: 'cancelacion',
-      detalles: `Cancelado: ${motivo}`,
-      usuario: 'Sistema' // Aquí se podría usar el usuario autenticado
-    }, { transaction });
-    
-    await transaction.commit();
-    
-    req.flash('success', 'El documento ha sido cancelado');
-    res.redirect(getBasePath(req) + '/listado');
-  } catch (error) {
-    await transaction.rollback();
-    console.error('Error al cancelar documento:', error);
-    req.flash('error', error.message);
-    res.redirect(getBasePath(req) + '/listado');
   }
 };
 

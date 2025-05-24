@@ -713,6 +713,49 @@ const cajaController = {
   },
   
   /**
+   * Muestra el formulario para registrar un nuevo pago
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  mostrarFormularioRegistrarPago: async (req, res) => {
+    try {
+      // Obtener documentos pendientes de pago para el dropdown
+      const documentosPendientes = await Documento.findAll({
+        where: {
+          estadoPago: 'pendiente'
+        },
+        include: [
+          {
+            model: Matrizador,
+            as: 'matrizador',
+            attributes: ['id', 'nombre']
+          }
+        ],
+        order: [['updated_at', 'DESC']],
+        limit: 100 // Limitar para no sobrecargar la vista
+      });
+      
+      // Renderizar la vista del formulario
+      res.render('caja/pagos/registrar', {
+        layout: 'caja',
+        title: 'Registrar Pago',
+        activeRegistrarPago: true,
+        documentosPendientes,
+        userRole: req.matrizador?.rol,
+        userName: req.matrizador?.nombre
+      });
+    } catch (error) {
+      console.error('Error al mostrar formulario de registrar pago:', error);
+      return res.status(500).render('error', {
+        layout: 'caja',
+        title: 'Error',
+        message: 'Error al cargar el formulario de registro de pago',
+        error
+      });
+    }
+  },
+  
+  /**
    * Registra un nuevo pago para un documento
    * @param {Object} req - Objeto de solicitud Express
    * @param {Object} res - Objeto de respuesta Express

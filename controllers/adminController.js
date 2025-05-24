@@ -88,20 +88,57 @@ exports.dashboard = async (req, res) => {
     };
     
     // Obtener estadísticas de documentos totales (independiente del período)
-    const total = await Documento.count();
-    const enProceso = await Documento.count({ where: { estado: 'en_proceso' } });
-    const listoParaEntrega = await Documento.count({ where: { estado: 'listo_para_entrega' } });
-    const entregados = await Documento.count({ where: { estado: 'entregado' } });
-    const cancelados = await Documento.count({ where: { estado: 'cancelado' } });
+    // Excluir documentos eliminados y notas de crédito de las estadísticas financieras
+    // Estados operativos normales: en_proceso, listo_para_entrega, entregado
+    const estadosExcluidos = ['eliminado', 'nota_credito', 'cancelado'];
+    const estadosOperativos = ['en_proceso', 'listo_para_entrega', 'entregado'];
+    
+    const total = await Documento.count({
+      where: {
+        estado: {
+          [Op.in]: estadosOperativos
+        }
+      }
+    });
+    const enProceso = await Documento.count({ 
+      where: { 
+        estado: 'en_proceso'
+      } 
+    });
+    const listoParaEntrega = await Documento.count({ 
+      where: { 
+        estado: 'listo_para_entrega' 
+      } 
+    });
+    const entregados = await Documento.count({ 
+      where: { 
+        estado: 'entregado' 
+      } 
+    });
+    
+    // Estadísticas de documentos especiales (solo para auditoría de admin)
+    const eliminados = await Documento.count({ 
+      where: { 
+        estado: 'eliminado' 
+      } 
+    });
+    const notasCredito = await Documento.count({ 
+      where: { 
+        estado: 'nota_credito' 
+      } 
+    });
     
     // Obtener estadísticas del período seleccionado
     const condicionesPeriodo = {
       created_at: {
         [Op.between]: [fechaInicio, fechaFin]
+      },
+      estado: {
+        [Op.in]: estadosOperativos // Solo estados operativos
       }
     };
     
-    // Documentos nuevos (creados en el período)
+    // Documentos nuevos (creados en el período, excluyendo eliminados)
     const nuevos = await Documento.count({
       where: condicionesPeriodo
     });
@@ -130,6 +167,7 @@ exports.dashboard = async (req, res) => {
     });
     
     // Calcular tiempo promedio de procesamiento (desde creación hasta listo_para_entrega)
+    // Solo incluir documentos con estados operativos normales
     const tiempoProcesamientoQuery = await sequelize.query(`
       SELECT AVG(EXTRACT(EPOCH FROM (e.created_at - d.created_at)) / 86400) as promedio_dias
       FROM "eventos_documentos" e
@@ -137,6 +175,7 @@ exports.dashboard = async (req, res) => {
       WHERE e.tipo = 'cambio_estado'
       AND e.detalles LIKE '%listo_para_entrega%'
       AND e.created_at BETWEEN :fechaInicio AND :fechaFin
+      AND d.estado IN ('en_proceso', 'listo_para_entrega', 'entregado')
     `, {
       replacements: { fechaInicio, fechaFin },
       type: sequelize.QueryTypes.SELECT
@@ -147,6 +186,7 @@ exports.dashboard = async (req, res) => {
       : 'N/A';
     
     // Calcular tiempo promedio de entrega (desde listo_para_entrega hasta entregado)
+    // Solo incluir documentos con estados operativos normales
     const tiempoEntregaQuery = await sequelize.query(`
       SELECT AVG(EXTRACT(EPOCH FROM (d.fecha_entrega - e.created_at)) / 86400) as promedio_dias
       FROM "documentos" d
@@ -164,10 +204,10 @@ exports.dashboard = async (req, res) => {
       ? parseFloat(tiempoEntregaQuery[0].promedio_dias).toFixed(1) 
       : 'N/A';
     
-    // Obtener documentos pendientes de entrega
+    // Obtener documentos pendientes de entrega (excluir eliminados)
     const documentosPendientes = await Documento.findAll({
       where: { 
-        estado: 'listo_para_entrega' 
+        estado: 'listo_para_entrega'
       },
       order: [['updated_at', 'DESC']],
       limit: 5,
@@ -178,8 +218,13 @@ exports.dashboard = async (req, res) => {
       }]
     });
     
-    // Obtener últimos documentos registrados
+    // Obtener últimos documentos registrados (solo estados operativos)
     const documentosRecientes = await Documento.findAll({
+      where: {
+        estado: {
+          [Op.in]: estadosOperativos
+        }
+      },
       order: [['created_at', 'DESC']],
       limit: 5,
       include: [{
@@ -253,7 +298,8 @@ exports.dashboard = async (req, res) => {
         listoParaEntrega,
         entregados,
         entregadosPeriodo,
-        cancelados,
+        eliminados,
+        notasCredito,
         nuevos,
         procesados: procesadosEventos,
         tiempoPromedioProcesamiento,
@@ -303,13 +349,14 @@ async function obtenerDatosVolumen(fechaInicio, fechaFin) {
     formatoFecha = "YYYY-MM";
   }
   
-  // Consulta SQL para nuevos documentos por día/semana/mes
+  // Consulta SQL para nuevos documentos por día/semana/mes (excluir eliminados)
   const datosNuevos = await sequelize.query(`
     SELECT 
       to_char(${formatoAgrupacion}, '${formatoFecha}') as fecha,
       COUNT(*) as total
     FROM documentos
     WHERE created_at BETWEEN :fechaInicio AND :fechaFin
+    AND estado IN ('en_proceso', 'listo_para_entrega', 'entregado')
     GROUP BY ${formatoAgrupacion}
     ORDER BY ${formatoAgrupacion}
   `, {
@@ -317,23 +364,25 @@ async function obtenerDatosVolumen(fechaInicio, fechaFin) {
     type: sequelize.QueryTypes.SELECT
   });
   
-  // Consulta SQL para documentos procesados por día/semana/mes
+  // Consulta SQL para documentos procesados por día/semana/mes (excluir eliminados)
   const datosProcesados = await sequelize.query(`
     SELECT 
-      to_char(${formatoAgrupacion}, '${formatoFecha}') as fecha,
+      to_char(${formatoAgrupacion.replace('created_at', 'e.created_at')}, '${formatoFecha}') as fecha,
       COUNT(*) as total
-    FROM eventos_documentos
-    WHERE tipo = 'cambio_estado'
-      AND detalles LIKE '%listo_para_entrega%'
-      AND created_at BETWEEN :fechaInicio AND :fechaFin
-    GROUP BY ${formatoAgrupacion}
-    ORDER BY ${formatoAgrupacion}
+    FROM eventos_documentos e
+    JOIN documentos d ON e.id_documento = d.id
+    WHERE e.tipo = 'cambio_estado'
+      AND e.detalles LIKE '%listo_para_entrega%'
+      AND e.created_at BETWEEN :fechaInicio AND :fechaFin
+      AND d.estado IN ('en_proceso', 'listo_para_entrega', 'entregado')
+    GROUP BY ${formatoAgrupacion.replace('created_at', 'e.created_at')}
+    ORDER BY ${formatoAgrupacion.replace('created_at', 'e.created_at')}
   `, {
     replacements: { fechaInicio, fechaFin },
     type: sequelize.QueryTypes.SELECT
   });
   
-  // Consulta SQL para documentos entregados por día/semana/mes
+  // Consulta SQL para documentos entregados por día/semana/mes (excluir eliminados)
   const datosEntregados = await sequelize.query(`
     SELECT 
       to_char(${formatoAgrupacion}, '${formatoFecha}') as fecha,
@@ -400,7 +449,7 @@ async function obtenerDatosVolumen(fechaInicio, fechaFin) {
  * Función auxiliar para obtener datos de documentos por matrizador
  */
 async function obtenerDatosMatrizador(fechaInicio, fechaFin) {
-  // Consulta SQL para documentos por matrizador
+  // Consulta SQL para documentos por matrizador (solo estados operativos)
   const datos = await sequelize.query(`
     SELECT 
       m.id as id_matrizador,
@@ -409,6 +458,7 @@ async function obtenerDatosMatrizador(fechaInicio, fechaFin) {
     FROM documentos d
     LEFT JOIN matrizadores m ON d.id_matrizador = m.id
     WHERE d.created_at BETWEEN :fechaInicio AND :fechaFin
+    AND d.estado IN ('en_proceso', 'listo_para_entrega', 'entregado')
     GROUP BY m.id, m.nombre
     ORDER BY total_documentos DESC
     LIMIT 10
@@ -431,13 +481,14 @@ async function obtenerDatosMatrizador(fechaInicio, fechaFin) {
  * Función auxiliar para obtener datos de documentos por tipo
  */
 async function obtenerDatosTipoDocumento(fechaInicio, fechaFin) {
-  // Consulta SQL para documentos por tipo
+  // Consulta SQL para documentos por tipo (solo estados operativos)
   const datos = await sequelize.query(`
     SELECT 
       tipo_documento,
       COUNT(*) as total
     FROM documentos
     WHERE created_at BETWEEN :fechaInicio AND :fechaFin
+    AND estado IN ('en_proceso', 'listo_para_entrega', 'entregado')
     GROUP BY tipo_documento
     ORDER BY total DESC
   `, {
@@ -867,7 +918,6 @@ exports.descargarReporte = async (req, res) => {
       const enProceso = await Documento.count({ where: { estado: 'en_proceso' } });
       const listoParaEntrega = await Documento.count({ where: { estado: 'listo_para_entrega' } });
       const entregados = await Documento.count({ where: { estado: 'entregado' } });
-      const cancelados = await Documento.count({ where: { estado: 'cancelado' } });
       
       // Estadísticas del período
       const nuevos = await Documento.count({
@@ -904,7 +954,6 @@ exports.descargarReporte = async (req, res) => {
         enProceso,
         listoParaEntrega,
         entregados,
-        cancelados,
         nuevos,
         procesados,
         entregadosPeriodo
@@ -918,6 +967,7 @@ exports.descargarReporte = async (req, res) => {
         WHERE e.tipo = 'cambio_estado'
         AND e.detalles LIKE '%listo_para_entrega%'
         AND e.created_at BETWEEN :fechaInicio AND :fechaFin
+        AND d.estado IN ('en_proceso', 'listo_para_entrega', 'entregado')
       `, {
         replacements: { fechaInicio, fechaFin },
         type: sequelize.QueryTypes.SELECT

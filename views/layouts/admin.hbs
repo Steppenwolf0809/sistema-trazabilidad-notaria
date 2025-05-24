@@ -193,6 +193,15 @@
         </a>
       </li>
       
+      <div class="sidebar-heading">Auditoría</div>
+      
+      <!-- Auditoría de eliminaciones - solo para administradores -->
+      <li class="nav-item">
+        <a class="nav-link {{#if activeAuditoriaEliminaciones}}active{{/if}}" href="/admin/auditoria-eliminaciones">
+          <i class="fas fa-trash-alt text-danger"></i> Eliminaciones
+        </a>
+      </li>
+      
       <!-- Aquí se encuentran las opciones con restricciones por rol que temporalmente están comentadas -->
       {{!-- 
       {{#unless (eq userRole "consulta")}}

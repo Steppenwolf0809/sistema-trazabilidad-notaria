@@ -123,7 +123,8 @@ const hbs = engine({
         'en_proceso': 'En Proceso',
         'listo_para_entrega': 'Listo para Entrega',
         'entregado': 'Entregado',
-        'cancelado': 'Cancelado'
+        'nota_credito': 'Nota de Crédito',
+        'eliminado': 'Eliminado (Solo Auditoría)'
       };
       return traducciones[estado] || estado;
     },
@@ -242,6 +243,7 @@ const documentoRelacionRoutes = require('./routes/documentoRelacionRoutes');
 const recepcionRoutes = require('./routes/recepcionRoutes');
 const cajaRoutes = require('./routes/cajaRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const eliminacionRoutes = require('./routes/eliminacionRoutes');
 
 // Importar middleware de autenticación
 const { verificarToken } = require('./middlewares/auth');
@@ -253,6 +255,8 @@ app.use('/matrizador', matrizadorRoutes);
 app.use('/recepcion', recepcionRoutes);
 app.use('/caja', cajaRoutes);
 app.use('/admin', adminRoutes);
+// Rutas de eliminación definitiva (solo para administradores)
+app.use('/api/admin', verificarToken, eliminacionRoutes);
 
 // Ruta de login
 app.get('/login', (req, res) => {

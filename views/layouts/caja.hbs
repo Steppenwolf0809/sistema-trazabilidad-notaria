@@ -176,6 +176,12 @@
       <div class="sidebar-heading">Gestión</div>
       
       <li class="nav-item">
+        <a class="nav-link {{#if activeRegistrarPago}}active{{/if}}" href="/caja/documentos?estadoPago=pendiente">
+          <i class="fas fa-credit-card"></i> Registrar Pago
+        </a>
+      </li>
+      
+      <li class="nav-item">
         <a class="nav-link {{#if activePagos}}active{{/if}}" href="/caja/pagos">
           <i class="fas fa-money-bill-wave"></i> Pagos
         </a>

@@ -1,0 +1,352 @@
+{{!-- Modal para eliminación definitiva de documentos --}}
+<div class="modal fade" id="modalEliminarDocumento" tabindex="-1" aria-labelledby="modalEliminarDocumentoLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="modalEliminarDocumentoLabel">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          Eliminación Definitiva de Documento
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="alert alert-danger d-flex align-items-center" role="alert">
+          <i class="fas fa-exclamation-triangle me-3 fs-4"></i>
+          <div>
+            <strong>⚠️ ADVERTENCIA CRÍTICA</strong><br>
+            Esta acción es <strong>IRREVERSIBLE</strong> y afectará las estadísticas financieras del sistema.
+            El documento será eliminado definitivamente de la base de datos.
+          </div>
+        </div>
+        
+        <!-- Información del documento -->
+        <div class="card mb-4">
+          <div class="card-header bg-light">
+            <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Información del Documento</h6>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6">
+                <p><strong>Código:</strong> <span id="eliminar-codigo-barras"></span></p>
+                <p><strong>Tipo:</strong> <span id="eliminar-tipo-documento"></span></p>
+                <p><strong>Cliente:</strong> <span id="eliminar-nombre-cliente"></span></p>
+              </div>
+              <div class="col-md-6">
+                <p><strong>Estado:</strong> <span id="eliminar-estado"></span></p>
+                <p><strong>Valor:</strong> $<span id="eliminar-valor-factura">0</span></p>
+                <p><strong>Estado Pago:</strong> <span id="eliminar-estado-pago"></span></p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Formulario de eliminación -->
+        <form id="formEliminarDocumento">
+          <input type="hidden" id="eliminar-documento-id" name="documentoId">
+          
+          <!-- Motivo de eliminación -->
+          <div class="mb-3">
+            <label for="motivoEliminacion" class="form-label">
+              <i class="fas fa-list-ul me-2"></i>Motivo de la Eliminación *
+            </label>
+            <select class="form-select" id="motivoEliminacion" name="motivo" required>
+              <option value="">Seleccione un motivo...</option>
+              <option value="documento_duplicado">Documento duplicado por error</option>
+              <option value="error_critico">Error en datos críticos no corregible</option>
+              <option value="nota_credito">Nota de crédito - devolución de dinero</option>
+              <option value="cancelacion_cliente">Cliente canceló antes de procesar</option>
+              <option value="otro">Otro - especificar en justificación</option>
+            </select>
+            <div class="invalid-feedback">
+              Debe seleccionar un motivo para la eliminación.
+            </div>
+          </div>
+          
+          <!-- Justificación detallada -->
+          <div class="mb-3">
+            <label for="justificacionEliminacion" class="form-label">
+              <i class="fas fa-edit me-2"></i>Justificación Detallada *
+            </label>
+            <textarea 
+              class="form-control" 
+              id="justificacionEliminacion" 
+              name="justificacion" 
+              rows="4" 
+              placeholder="Explique detalladamente las razones para eliminar este documento. Mínimo 10 caracteres."
+              required
+              minlength="10"
+            ></textarea>
+            <div class="form-text">
+              <span id="contador-caracteres">0</span>/10 caracteres mínimos
+            </div>
+            <div class="invalid-feedback">
+              La justificación debe tener al menos 10 caracteres.
+            </div>
+          </div>
+          
+          <!-- Impacto financiero -->
+          <div class="card mb-3 border-warning">
+            <div class="card-header bg-warning text-dark">
+              <h6 class="mb-0"><i class="fas fa-calculator me-2"></i>Impacto Financiero</h6>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-6">
+                  <p class="mb-2">
+                    <strong>Valor a descontar de Total Facturado:</strong><br>
+                    <span class="text-danger fs-5">$<span id="impacto-facturado">0</span></span>
+                  </p>
+                </div>
+                <div class="col-md-6">
+                  <p class="mb-2" id="impacto-cobrado-container" style="display: none;">
+                    <strong>Valor a descontar de Total Cobrado:</strong><br>
+                    <span class="text-danger fs-5">$<span id="impacto-cobrado">0</span></span>
+                  </p>
+                </div>
+              </div>
+              <small class="text-muted">
+                Los valores serán automáticamente descontados de las estadísticas del sistema.
+              </small>
+            </div>
+          </div>
+          
+          <!-- Confirmación doble -->
+          <div class="mb-4">
+            <div class="form-check">
+              <input 
+                class="form-check-input" 
+                type="checkbox" 
+                id="confirmarEliminacion" 
+                name="confirmarEliminacion" 
+                required
+              >
+              <label class="form-check-label text-danger fw-bold" for="confirmarEliminacion">
+                ✓ Confirmo que entiendo las consecuencias de esta acción y que es IRREVERSIBLE
+              </label>
+              <div class="invalid-feedback">
+                Debe confirmar que entiende las consecuencias.
+              </div>
+            </div>
+          </div>
+          
+          <!-- Información de auditoría -->
+          <div class="alert alert-info">
+            <i class="fas fa-shield-alt me-2"></i>
+            <strong>Registro de Auditoría:</strong>
+            Esta eliminación quedará registrada permanentemente en los logs de auditoría 
+            con su usuario, IP, fecha/hora y toda la información del documento.
+          </div>
+        </form>
+      </div>
+      
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-2"></i>Cancelar
+        </button>
+        <button type="button" class="btn btn-danger" id="btnConfirmarEliminacion" disabled>
+          <i class="fas fa-trash-alt me-2"></i>
+          <span class="btn-text">Eliminar Definitivamente</span>
+          <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{{!-- Styles específicos del modal --}}
+<style>
+#modalEliminarDocumento .alert-danger {
+  border-left: 5px solid #dc3545;
+}
+
+#modalEliminarDocumento .card {
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+#modalEliminarDocumento .form-control:invalid {
+  border-color: #dc3545;
+}
+
+#modalEliminarDocumento .form-control:valid {
+  border-color: #198754;
+}
+
+#modalEliminarDocumento .btn-danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.contador-caracteres-ok {
+  color: #198754 !important;
+}
+
+.contador-caracteres-error {
+  color: #dc3545 !important;
+}
+</style>
+
+{{!-- JavaScript del modal --}}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const modal = document.getElementById('modalEliminarDocumento');
+  const form = document.getElementById('formEliminarDocumento');
+  const btnConfirmar = document.getElementById('btnConfirmarEliminacion');
+  const justificacion = document.getElementById('justificacionEliminacion');
+  const contadorCaracteres = document.getElementById('contador-caracteres');
+  const confirmarCheckbox = document.getElementById('confirmarEliminacion');
+  const motivoSelect = document.getElementById('motivoEliminacion');
+  
+  // Variables para almacenar datos del documento
+  let documentoActual = null;
+  
+  // Función para abrir el modal con datos del documento
+  window.abrirModalEliminar = function(documento) {
+    documentoActual = documento;
+    
+    // Llenar información del documento
+    document.getElementById('eliminar-codigo-barras').textContent = documento.codigoBarras;
+    document.getElementById('eliminar-tipo-documento').textContent = documento.tipoDocumento;
+    document.getElementById('eliminar-nombre-cliente').textContent = documento.nombreCliente;
+    document.getElementById('eliminar-estado').textContent = documento.estado;
+    document.getElementById('eliminar-valor-factura').textContent = (documento.valorFactura || 0).toLocaleString();
+    document.getElementById('eliminar-estado-pago').textContent = documento.estadoPago || 'pendiente';
+    document.getElementById('eliminar-documento-id').value = documento.id;
+    
+    // Calcular impacto financiero
+    const valorFactura = parseFloat(documento.valorFactura) || 0;
+    document.getElementById('impacto-facturado').textContent = valorFactura.toLocaleString();
+    
+    // Mostrar impacto en cobrado solo si está pagado
+    const impactoCobradoContainer = document.getElementById('impacto-cobrado-container');
+    if (documento.estadoPago === 'pagado') {
+      document.getElementById('impacto-cobrado').textContent = valorFactura.toLocaleString();
+      impactoCobradoContainer.style.display = 'block';
+    } else {
+      impactoCobradoContainer.style.display = 'none';
+    }
+    
+    // Limpiar formulario
+    form.reset();
+    form.classList.remove('was-validated');
+    btnConfirmar.disabled = true;
+    actualizarContadorCaracteres();
+    
+    // Mostrar modal
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
+  };
+  
+  // Contador de caracteres en justificación
+  function actualizarContadorCaracteres() {
+    const texto = justificacion.value.trim();
+    const longitud = texto.length;
+    contadorCaracteres.textContent = longitud;
+    
+    if (longitud >= 10) {
+      contadorCaracteres.className = 'contador-caracteres-ok';
+    } else {
+      contadorCaracteres.className = 'contador-caracteres-error';
+    }
+    
+    validarFormulario();
+  }
+  
+  // Validar formulario completo
+  function validarFormulario() {
+    const motivo = motivoSelect.value;
+    const justificacionTexto = justificacion.value.trim();
+    const confirmado = confirmarCheckbox.checked;
+    
+    const esValido = motivo && justificacionTexto.length >= 10 && confirmado;
+    btnConfirmar.disabled = !esValido;
+  }
+  
+  // Event listeners
+  justificacion.addEventListener('input', actualizarContadorCaracteres);
+  motivoSelect.addEventListener('change', validarFormulario);
+  confirmarCheckbox.addEventListener('change', validarFormulario);
+  
+  // Manejar envío del formulario
+  btnConfirmar.addEventListener('click', async function() {
+    if (!form.checkValidity()) {
+      form.classList.add('was-validated');
+      return;
+    }
+    
+    // Mostrar spinner
+    const spinner = btnConfirmar.querySelector('.spinner-border');
+    const btnText = btnConfirmar.querySelector('.btn-text');
+    spinner.classList.remove('d-none');
+    btnText.textContent = 'Eliminando...';
+    btnConfirmar.disabled = true;
+    
+    try {
+      const formData = new FormData(form);
+      const response = await fetch(`/api/admin/documentos/${documentoActual.id}/eliminar`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+          motivo: formData.get('motivo'),
+          justificacion: formData.get('justificacion'),
+          confirmarEliminacion: formData.get('confirmarEliminacion') === 'on'
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        // Éxito
+        mostrarNotificacion('Documento eliminado exitosamente', 'success');
+        
+        // Cerrar modal
+        const bsModal = bootstrap.Modal.getInstance(modal);
+        bsModal.hide();
+        
+        // Recargar lista de documentos o redireccionar
+        if (typeof recargarListaDocumentos === 'function') {
+          recargarListaDocumentos();
+        } else {
+          // Fallback: recargar página
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
+        }
+        
+      } else {
+        // Error del servidor
+        mostrarNotificacion(result.message || 'Error al eliminar el documento', 'error');
+      }
+      
+    } catch (error) {
+      console.error('Error al eliminar documento:', error);
+      mostrarNotificacion('Error de conexión al eliminar el documento', 'error');
+    } finally {
+      // Ocultar spinner
+      spinner.classList.add('d-none');
+      btnText.textContent = 'Eliminar Definitivamente';
+      btnConfirmar.disabled = false;
+    }
+  });
+  
+  // Función auxiliar para mostrar notificaciones
+  function mostrarNotificacion(mensaje, tipo) {
+    // Implementar según el sistema de notificaciones que uses
+    // Por ejemplo, con Toastr, SweetAlert, o un sistema personalizado
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        title: tipo === 'success' ? '¡Éxito!' : 'Error',
+        text: mensaje,
+        icon: tipo === 'success' ? 'success' : 'error',
+        timer: 3000,
+        showConfirmButton: false
+      });
+    } else {
+      alert(mensaje); // Fallback básico
+    }
+  }
+});
+</script> 

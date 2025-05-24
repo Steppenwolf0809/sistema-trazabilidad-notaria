@@ -1,0 +1,534 @@
+{{!-- Página de auditoría de documentos eliminados --}}
+<div class="container-fluid">
+  <!-- Header de la página -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h1 class="h3 mb-0">
+            <i class="fas fa-trash-alt text-danger me-2"></i>
+            Auditoría de Eliminaciones
+          </h1>
+          <p class="text-muted mb-0">Registro completo de documentos eliminados del sistema</p>
+        </div>
+        <div>
+          <button class="btn btn-outline-secondary" onclick="exportarAuditoria()">
+            <i class="fas fa-download me-2"></i>Exportar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="mb-0">
+        <i class="fas fa-filter me-2"></i>Filtros de Búsqueda
+      </h5>
+    </div>
+    <div class="card-body">
+      <form id="formFiltros" class="row g-3">
+        <div class="col-md-3">
+          <label for="filtroMotivo" class="form-label">Motivo</label>
+          <select class="form-select" id="filtroMotivo" name="motivo">
+            <option value="">Todos los motivos</option>
+            <option value="documento_duplicado">Documento duplicado</option>
+            <option value="error_critico">Error crítico</option>
+            <option value="nota_credito">Nota de crédito</option>
+            <option value="cancelacion_cliente">Cancelación cliente</option>
+            <option value="otro">Otro</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label for="filtroFechaInicio" class="form-label">Fecha Inicio</label>
+          <input type="date" class="form-control" id="filtroFechaInicio" name="fechaInicio">
+        </div>
+        <div class="col-md-3">
+          <label for="filtroFechaFin" class="form-label">Fecha Fin</label>
+          <input type="date" class="form-control" id="filtroFechaFin" name="fechaFin">
+        </div>
+        <div class="col-md-3">
+          <label for="filtroAdmin" class="form-label">Administrador</label>
+          <input type="text" class="form-control" id="filtroAdmin" name="administrador" 
+                 placeholder="Buscar por administrador...">
+        </div>
+        <div class="col-12">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-search me-2"></i>Buscar
+          </button>
+          <button type="button" class="btn btn-outline-secondary ms-2" onclick="limpiarFiltros()">
+            <i class="fas fa-times me-2"></i>Limpiar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Estadísticas resumidas -->
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <div class="card bg-danger text-white">
+        <div class="card-body text-center">
+          <i class="fas fa-trash-alt fa-2x mb-2"></i>
+          <h4 class="mb-0" id="totalEliminados">-</h4>
+          <small>Total Eliminados</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-warning text-dark">
+        <div class="card-body text-center">
+          <i class="fas fa-dollar-sign fa-2x mb-2"></i>
+          <h4 class="mb-0" id="valorImpacto">$-</h4>
+          <small>Valor Impacto</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-info text-white">
+        <div class="card-body text-center">
+          <i class="fas fa-calendar fa-2x mb-2"></i>
+          <h4 class="mb-0" id="eliminacionesHoy">-</h4>
+          <small>Eliminaciones Hoy</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-secondary text-white">
+        <div class="card-body text-center">
+          <i class="fas fa-chart-pie fa-2x mb-2"></i>
+          <h4 class="mb-0" id="motivoPrincipal">-</h4>
+          <small>Motivo Principal</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabla de eliminaciones -->
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">
+        <i class="fas fa-list me-2"></i>Registro de Eliminaciones
+      </h5>
+      <div class="d-flex align-items-center">
+        <label class="form-label me-2 mb-0">Mostrar:</label>
+        <select class="form-select form-select-sm" id="limitePagina" style="width: auto;">
+          <option value="20">20</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+      </div>
+    </div>
+    
+    <div class="card-body">
+      <!-- Loader -->
+      <div id="loader" class="text-center py-4">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Cargando...</span>
+        </div>
+        <p class="mt-2">Cargando registros de eliminaciones...</p>
+      </div>
+
+      <!-- Tabla -->
+      <div id="tablaContainer" style="display: none;">
+        <div class="table-responsive">
+          <table class="table table-striped table-hover">
+            <thead class="table-dark">
+              <tr>
+                <th>Fecha/Hora</th>
+                <th>Código Documento</th>
+                <th>Tipo Documento</th>
+                <th>Cliente</th>
+                <th>Motivo</th>
+                <th>Valor Impacto</th>
+                <th>Administrador</th>
+                <th>Estado Pago</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tablaEliminaciones">
+              <!-- Contenido dinámico -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Paginación -->
+        <nav aria-label="Paginación de eliminaciones">
+          <ul class="pagination justify-content-center" id="paginacion">
+            <!-- Contenido dinámico -->
+          </ul>
+        </nav>
+
+        <!-- Mensaje sin resultados -->
+        <div id="sinResultados" class="text-center py-4" style="display: none;">
+          <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+          <h5 class="text-muted">No se encontraron eliminaciones</h5>
+          <p class="text-muted">No hay registros que coincidan con los filtros aplicados.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para ver detalles de eliminación -->
+<div class="modal fade" id="modalDetalleEliminacion" tabindex="-1" aria-labelledby="modalDetalleEliminacionLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="modalDetalleEliminacionLabel">
+          <i class="fas fa-info-circle me-2"></i>Detalles de Eliminación
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="detalleEliminacion">
+          <!-- Contenido dinámico -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.badge-motivo {
+  font-size: 0.85em;
+}
+
+.badge-documento_duplicado { background-color: #6c757d; }
+.badge-error_critico { background-color: #dc3545; }
+.badge-nota_credito { background-color: #fd7e14; }
+.badge-cancelacion_cliente { background-color: #0dcaf0; }
+.badge-otro { background-color: #6f42c1; }
+
+.table th {
+  border-top: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.table td {
+  vertical-align: middle;
+  font-size: 0.9rem;
+}
+
+.pagination .page-link {
+  color: #6c757d;
+}
+
+.pagination .page-item.active .page-link {
+  background-color: #dc3545;
+  border-color: #dc3545;
+}
+
+.card {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  border: 1px solid rgba(0, 0, 0, 0.125);
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  let paginaActual = 1;
+  let filtrosActuales = {};
+  
+  // Inicializar página
+  cargarEstadisticas();
+  cargarEliminaciones();
+  
+  // Event listeners
+  document.getElementById('formFiltros').addEventListener('submit', function(e) {
+    e.preventDefault();
+    paginaActual = 1;
+    aplicarFiltros();
+  });
+  
+  document.getElementById('limitePagina').addEventListener('change', function() {
+    paginaActual = 1;
+    cargarEliminaciones();
+  });
+  
+  // Función para cargar estadísticas
+  async function cargarEstadisticas() {
+    try {
+      const response = await fetch('/api/admin/eliminaciones/estadisticas');
+      const result = await response.json();
+      
+      if (result.success) {
+        const data = result.data;
+        
+        document.getElementById('totalEliminados').textContent = 
+          data.resumen.totalEliminaciones.toLocaleString();
+        
+        document.getElementById('valorImpacto').textContent = 
+          '$' + data.resumen.valorImpactoTotal.toLocaleString();
+        
+        // Calcular eliminaciones de hoy
+        const hoy = new Date().toISOString().split('T')[0];
+        const eliminacionesHoy = data.evolucionTemporal
+          .filter(item => item.fecha === hoy)
+          .reduce((sum, item) => sum + parseInt(item.eliminaciones), 0);
+        
+        document.getElementById('eliminacionesHoy').textContent = eliminacionesHoy;
+        
+        // Motivo principal
+        const motivoPrincipal = data.porMotivo
+          .sort((a, b) => parseInt(b.count) - parseInt(a.count))[0];
+        
+        document.getElementById('motivoPrincipal').textContent = 
+          motivoPrincipal ? formatearMotivo(motivoPrincipal.motivo) : 'N/A';
+      }
+    } catch (error) {
+      console.error('Error al cargar estadísticas:', error);
+    }
+  }
+  
+  // Función para cargar eliminaciones
+  async function cargarEliminaciones() {
+    const loader = document.getElementById('loader');
+    const tablaContainer = document.getElementById('tablaContainer');
+    const sinResultados = document.getElementById('sinResultados');
+    
+    loader.style.display = 'block';
+    tablaContainer.style.display = 'none';
+    sinResultados.style.display = 'none';
+    
+    try {
+      const params = new URLSearchParams({
+        page: paginaActual,
+        limit: document.getElementById('limitePagina').value,
+        ...filtrosActuales
+      });
+      
+      const response = await fetch(`/api/admin/eliminaciones?${params}`);
+      const result = await response.json();
+      
+      if (result.success) {
+        const data = result.data;
+        
+        if (data.registros.length === 0) {
+          sinResultados.style.display = 'block';
+        } else {
+          renderizarTabla(data.registros);
+          renderizarPaginacion(data.pagination);
+          tablaContainer.style.display = 'block';
+        }
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error) {
+      console.error('Error al cargar eliminaciones:', error);
+      sinResultados.style.display = 'block';
+    } finally {
+      loader.style.display = 'none';
+    }
+  }
+  
+  // Función para renderizar tabla
+  function renderizarTabla(registros) {
+    const tbody = document.getElementById('tablaEliminaciones');
+    tbody.innerHTML = '';
+    
+    registros.forEach(registro => {
+      const datos = registro.datosDocumento;
+      const tr = document.createElement('tr');
+      
+      tr.innerHTML = `
+        <td>
+          <small class="text-muted">
+            ${new Date(registro.fechaEliminacion).toLocaleDateString('es-ES')}
+          </small><br>
+          <small>${new Date(registro.fechaEliminacion).toLocaleTimeString('es-ES')}</small>
+        </td>
+        <td>
+          <code>${registro.codigoDocumento}</code>
+        </td>
+        <td>
+          <span class="badge bg-secondary">${datos.tipoDocumento || 'N/A'}</span>
+        </td>
+        <td>
+          <strong>${datos.nombreCliente || 'N/A'}</strong><br>
+          <small class="text-muted">${datos.identificacionCliente || ''}</small>
+        </td>
+        <td>
+          <span class="badge badge-motivo badge-${registro.motivo}">
+            ${formatearMotivo(registro.motivo)}
+          </span>
+        </td>
+        <td>
+          <strong class="text-danger">$${(registro.valorImpacto || 0).toLocaleString()}</strong>
+          ${registro.estabaPagado ? '<br><small class="text-success">✓ Pagado</small>' : '<br><small class="text-warning">◯ Pendiente</small>'}
+        </td>
+        <td>
+          <strong>${registro.nombreAdministrador}</strong><br>
+          <small class="text-muted">ID: ${registro.eliminadoPor}</small>
+        </td>
+        <td>
+          <span class="badge ${registro.estabaPagado ? 'bg-success' : 'bg-warning'}">
+            ${registro.estabaPagado ? 'Pagado' : 'Pendiente'}
+          </span>
+        </td>
+        <td>
+          <button class="btn btn-sm btn-outline-info" onclick="verDetalle(${registro.id})">
+            <i class="fas fa-eye"></i>
+          </button>
+        </td>
+      `;
+      
+      tbody.appendChild(tr);
+    });
+  }
+  
+  // Función para renderizar paginación
+  function renderizarPaginacion(pagination) {
+    const paginacionContainer = document.getElementById('paginacion');
+    paginacionContainer.innerHTML = '';
+    
+    // Botón anterior
+    const prevLi = document.createElement('li');
+    prevLi.className = `page-item ${!pagination.hasPrev ? 'disabled' : ''}`;
+    prevLi.innerHTML = `
+      <a class="page-link" href="#" onclick="cambiarPagina(${pagination.page - 1})">
+        <i class="fas fa-chevron-left"></i>
+      </a>
+    `;
+    paginacionContainer.appendChild(prevLi);
+    
+    // Números de página
+    for (let i = 1; i <= pagination.totalPages; i++) {
+      const li = document.createElement('li');
+      li.className = `page-item ${i === pagination.page ? 'active' : ''}`;
+      li.innerHTML = `
+        <a class="page-link" href="#" onclick="cambiarPagina(${i})">${i}</a>
+      `;
+      paginacionContainer.appendChild(li);
+    }
+    
+    // Botón siguiente
+    const nextLi = document.createElement('li');
+    nextLi.className = `page-item ${!pagination.hasNext ? 'disabled' : ''}`;
+    nextLi.innerHTML = `
+      <a class="page-link" href="#" onclick="cambiarPagina(${pagination.page + 1})">
+        <i class="fas fa-chevron-right"></i>
+      </a>
+    `;
+    paginacionContainer.appendChild(nextLi);
+    
+    // Información de paginación
+    const info = document.createElement('li');
+    info.className = 'page-item disabled';
+    info.innerHTML = `
+      <span class="page-link">
+        ${pagination.total} registros
+      </span>
+    `;
+    paginacionContainer.appendChild(info);
+  }
+  
+  // Función para aplicar filtros
+  function aplicarFiltros() {
+    const form = document.getElementById('formFiltros');
+    const formData = new FormData(form);
+    
+    filtrosActuales = {};
+    for (let [key, value] of formData.entries()) {
+      if (value.trim()) {
+        filtrosActuales[key] = value.trim();
+      }
+    }
+    
+    cargarEliminaciones();
+  }
+  
+  // Función para limpiar filtros
+  window.limpiarFiltros = function() {
+    document.getElementById('formFiltros').reset();
+    filtrosActuales = {};
+    paginaActual = 1;
+    cargarEliminaciones();
+  };
+  
+  // Función para cambiar página
+  window.cambiarPagina = function(nuevaPagina) {
+    if (nuevaPagina < 1) return;
+    paginaActual = nuevaPagina;
+    cargarEliminaciones();
+  };
+  
+  // Función para formatear motivos
+  function formatearMotivo(motivo) {
+    const motivos = {
+      'documento_duplicado': 'Duplicado',
+      'error_critico': 'Error Crítico',
+      'nota_credito': 'Nota Crédito',
+      'cancelacion_cliente': 'Cancelación',
+      'otro': 'Otro'
+    };
+    return motivos[motivo] || motivo;
+  }
+  
+  // Función para ver detalle de eliminación
+  window.verDetalle = async function(id) {
+    try {
+      const response = await fetch(`/api/admin/eliminaciones/${id}`);
+      const result = await response.json();
+      
+      if (result.success) {
+        renderizarDetalle(result.data);
+        const modal = new bootstrap.Modal(document.getElementById('modalDetalleEliminacion'));
+        modal.show();
+      }
+    } catch (error) {
+      console.error('Error al cargar detalle:', error);
+    }
+  };
+  
+  // Función para renderizar detalle
+  function renderizarDetalle(registro) {
+    const container = document.getElementById('detalleEliminacion');
+    const datos = registro.datosDocumento;
+    
+    container.innerHTML = `
+      <div class="row">
+        <div class="col-md-6">
+          <h6 class="border-bottom pb-2 mb-3">Información de la Eliminación</h6>
+          <p><strong>Fecha/Hora:</strong> ${new Date(registro.fechaEliminacion).toLocaleString('es-ES')}</p>
+          <p><strong>Motivo:</strong> <span class="badge badge-${registro.motivo}">${formatearMotivo(registro.motivo)}</span></p>
+          <p><strong>Administrador:</strong> ${registro.nombreAdministrador} (ID: ${registro.eliminadoPor})</p>
+          <p><strong>IP:</strong> ${registro.ip || 'N/A'}</p>
+          <p><strong>Justificación:</strong></p>
+          <div class="alert alert-light">${registro.justificacion}</div>
+        </div>
+        <div class="col-md-6">
+          <h6 class="border-bottom pb-2 mb-3">Datos del Documento</h6>
+          <p><strong>Código:</strong> <code>${registro.codigoDocumento}</code></p>
+          <p><strong>Tipo:</strong> ${datos.tipoDocumento}</p>
+          <p><strong>Cliente:</strong> ${datos.nombreCliente}</p>
+          <p><strong>Identificación:</strong> ${datos.identificacionCliente}</p>
+          <p><strong>Estado:</strong> ${datos.estado}</p>
+          <p><strong>Valor Factura:</strong> $${(datos.valorFactura || 0).toLocaleString()}</p>
+          <p><strong>Estado Pago:</strong> ${datos.estadoPago}</p>
+          <p><strong>Fecha Creación:</strong> ${new Date(datos.created_at).toLocaleString('es-ES')}</p>
+        </div>
+      </div>
+      
+      <div class="mt-4">
+        <h6 class="border-bottom pb-2 mb-3">Datos Completos del Documento (JSON)</h6>
+        <pre class="bg-light p-3" style="max-height: 300px; overflow-y: auto; font-size: 0.8rem;">
+${JSON.stringify(datos, null, 2)}
+        </pre>
+      </div>
+    `;
+  }
+  
+  // Función para exportar auditoría
+  window.exportarAuditoria = function() {
+    const params = new URLSearchParams(filtrosActuales);
+    params.set('formato', 'excel');
+    window.open(`/api/admin/eliminaciones/exportar?${params}`);
+  };
+});
+</script> 

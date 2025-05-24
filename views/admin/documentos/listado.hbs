@@ -20,7 +20,10 @@
                     <option value="en_proceso" {{#if filtros.estado.en_proceso}}selected{{/if}}>En Proceso</option>
                     <option value="listo_para_entrega" {{#if filtros.estado.listo_para_entrega}}selected{{/if}}>Listos para Entrega</option>
                     <option value="entregado" {{#if filtros.estado.entregado}}selected{{/if}}>Entregados</option>
-                    <option value="cancelado" {{#if filtros.estado.cancelado}}selected{{/if}}>Cancelados</option>
+                    <!-- Solo admin puede ver estados especiales -->
+                    {{#if (eq userRole "admin")}}
+                    <option value="nota_credito" {{#if filtros.estado.nota_credito}}selected{{/if}}>Notas de Crédito</option>
+                    {{/if}}
                   </select>
                 </div>
                 
@@ -96,6 +99,8 @@
               <span class="badge bg-success">Listo</span>
               {{else if (eq this.estado "entregado")}}
               <span class="badge bg-info">Entregado</span>
+              {{else if (eq this.estado "nota_credito")}}
+              <span class="badge bg-danger">Nota Crédito</span>
               {{else}}
               <span class="badge bg-secondary">{{this.estado}}</span>
               {{/if}}
@@ -124,11 +129,22 @@
                 </a>
                 {{/if}}
                 
+                <!-- Solo administradores pueden eliminar definitivamente -->
+                {{#if (eq ../userRole "admin")}}
                 {{#unless (eq this.estado "entregado")}}
-                <button type="button" class="btn btn-sm btn-danger" onclick="cancelarDocumento({{this.id}})" title="Cancelar Documento">
-                  <i class="fas fa-times"></i>
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="abrirModalEliminar({
+                  id: {{this.id}},
+                  codigoBarras: '{{this.codigoBarras}}',
+                  tipoDocumento: '{{this.tipoDocumento}}',
+                  nombreCliente: '{{this.nombreCliente}}',
+                  estado: '{{this.estado}}',
+                  valorFactura: {{this.valorFactura}},
+                  estadoPago: '{{this.estadoPago}}'
+                })" title="Eliminar Definitivamente">
+                  <i class="fas fa-trash-alt"></i>
                 </button>
                 {{/unless}}
+                {{/if}}
               </div>
             </td>
           </tr>
@@ -201,66 +217,14 @@
   </div>
 </div>
 
-<!-- Modal de confirmación para cancelar documento -->
-<div class="modal fade" id="cancelarDocumentoModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Cancelar documento</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <p>¿Está seguro de que desea cancelar este documento?</p>
-        <p class="text-danger">Esta acción no se puede deshacer.</p>
-        
-        <div class="mb-3">
-          <label for="motivoCancelacion" class="form-label">Motivo de cancelación</label>
-          <textarea class="form-control" id="motivoCancelacion" name="motivoCancelacion" rows="2" required></textarea>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-        <form id="cancelarDocumentoForm" action="/admin/documentos/cancelar" method="POST">
-          <input type="hidden" id="cancelarDocumentoId" name="documentoId">
-          <input type="hidden" id="motivoCancelacionHidden" name="motivo">
-          <button type="submit" class="btn btn-danger">Confirmar Cancelación</button>
-        </form>
-      </div>
-    </div>
-  </div>
-</div>
+<!-- Modal de eliminación definitiva -->
+{{> admin/modal-eliminar-documento}}
 
 <script>
-  // Funciones para los modales
+  // Función para marcar documento como listo
   function marcarListo(id) {
     document.getElementById('documentoId').value = id;
     const modal = new bootstrap.Modal(document.getElementById('marcarListoModal'));
     modal.show();
   }
-  
-  function cancelarDocumento(id) {
-    document.getElementById('cancelarDocumentoId').value = id;
-    const modal = new bootstrap.Modal(document.getElementById('cancelarDocumentoModal'));
-    modal.show();
-  }
-  
-  document.addEventListener('DOMContentLoaded', function() {
-    // Transferir motivo al campo oculto antes de enviar
-    const cancelarForm = document.getElementById('cancelarDocumentoForm');
-    const motivoCancelacion = document.getElementById('motivoCancelacion');
-    const motivoCancelacionHidden = document.getElementById('motivoCancelacionHidden');
-    
-    if (cancelarForm) {
-      cancelarForm.addEventListener('submit', function(event) {
-        if (!motivoCancelacion.value.trim()) {
-          event.preventDefault();
-          alert('Por favor, indique el motivo de la cancelación');
-          motivoCancelacion.focus();
-          return false;
-        }
-        
-        motivoCancelacionHidden.value = motivoCancelacion.value;
-      });
-    }
-  });
 </script> 

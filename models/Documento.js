@@ -76,7 +76,7 @@ const Documento = sequelize.define('Documento', {
   
   // Estado actual del documento (en_proceso, listo, entregado, etc.)
   estado: {
-    type: DataTypes.ENUM('en_proceso', 'listo_para_entrega', 'entregado', 'cancelado'),
+    type: DataTypes.ENUM('en_proceso', 'listo_para_entrega', 'entregado', 'cancelado', 'eliminado', 'nota_credito'),
     defaultValue: 'en_proceso'
   },
   
@@ -223,6 +223,40 @@ const Documento = sequelize.define('Documento', {
   rolUsuarioCreador: {
     type: DataTypes.ENUM('admin', 'matrizador', 'recepcion', 'caja'),
     field: 'rol_usuario_creador',
+    allowNull: true
+  },
+  
+  // ============== CAMPOS DE ELIMINACIÓN ==============
+  
+  // Motivo de la eliminación del documento
+  motivoEliminacion: {
+    type: DataTypes.ENUM('documento_duplicado', 'error_critico', 'nota_credito', 'cancelacion_cliente', 'otro'),
+    field: 'motivo_eliminacion',
+    allowNull: true
+  },
+  
+  // ID del usuario administrador que eliminó el documento
+  eliminadoPor: {
+    type: DataTypes.INTEGER,
+    field: 'eliminado_por',
+    allowNull: true,
+    references: {
+      model: 'matrizadores',
+      key: 'id'
+    }
+  },
+  
+  // Fecha y hora de eliminación del documento
+  fechaEliminacion: {
+    type: DataTypes.DATE,
+    field: 'fecha_eliminacion',
+    allowNull: true
+  },
+  
+  // Justificación detallada de la eliminación
+  justificacionEliminacion: {
+    type: DataTypes.TEXT,
+    field: 'justificacion_eliminacion',
     allowNull: true
   }
 }, {

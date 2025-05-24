@@ -31,12 +31,22 @@ router.get('/reportes', adminController.reportes);
 router.get('/reportes/descargar', adminController.descargarReporte);
 router.get('/auditoria', adminController.verRegistrosAuditoria);
 
+// Auditoría de eliminaciones - Solo para administradores
+router.get('/auditoria-eliminaciones', (req, res) => {
+  res.render('admin/auditoria-eliminaciones', {
+    layout: 'admin',
+    title: 'Auditoría de Eliminaciones',
+    activeAuditoriaEliminaciones: true,
+    userRole: req.matrizador?.rol,
+    userName: req.matrizador?.nombre
+  });
+});
+
 // Rutas de gestión de documentos - Solo para administradores
 router.get('/documentos/registro', documentoController.mostrarFormularioRegistro);
 router.post('/documentos/registrar', documentoController.registrarDocumento);
 router.get('/documentos/listado', documentoController.listarDocumentos);
 router.post('/documentos/marcar-listo', documentoController.marcarComoListo);
-router.post('/documentos/cancelar', documentoController.cancelarDocumento);
 router.get('/documentos/detalle/:id', documentoController.mostrarDetalle);
 
 // Rutas para edición de documentos - Solo para administradores
@@ -50,8 +60,8 @@ router.post('/documentos/eliminar-relacion', documentoController.eliminarRelacio
 
 // Rutas para el proceso de entrega - Solo para administradores
 router.get('/documentos/entrega', documentoController.mostrarEntrega);
-router.get('/documentos/entrega/:id', documentoController.mostrarEntrega);
-router.post('/documentos/completar-entrega/:id', documentoController.completarEntrega);
+router.get('/documentos/entrega/:id?', documentoController.mostrarEntrega);
+router.post('/documentos/entrega/:id', documentoController.completarEntrega);
 
 // Rutas de gestión de matrizadores - Solo para administradores
 router.get('/matrizadores', matrizadorController.obtenerTodos);

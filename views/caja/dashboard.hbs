@@ -1,4 +1,4 @@
-<!-- Dashboard Caja --><div class="row">  <div class="col-md-12 mb-4">    <div class="alert alert-info d-flex justify-content-between align-items-center">      <span><i class="fas fa-info-circle me-2"></i> Bienvenido al panel de Caja. Desde aquí podrás gestionar pagos, facturas y documentos.</span>      <button type="button" class="btn btn-sm btn-outline-secondary" id="toggleValores">        <i class="fas fa-eye-slash me-1"></i> <span id="toggleText">Ocultar Valores</span>      </button>    </div>  </div>    <!-- Filtros de Fecha -->  <div class="col-md-12 mb-4">    <div class="card">      <div class="card-header">        <i class="fas fa-filter me-2"></i> Filtros de Período      </div>      <div class="card-body">        <div class="row align-items-end">          <div class="col-md-3">            <label for="fechaDesde" class="form-label">Desde</label>            <input type="date" class="form-control" id="fechaDesde" name="fechaDesde">          </div>          <div class="col-md-3">            <label for="fechaHasta" class="form-label">Hasta</label>            <input type="date" class="form-control" id="fechaHasta" name="fechaHasta">          </div>          <div class="col-md-6">            <div class="btn-group mb-2" role="group">              <button type="button" class="btn btn-outline-primary btn-sm" data-periodo="hoy">Hoy</button>              <button type="button" class="btn btn-outline-primary btn-sm" data-periodo="semana">Esta Semana</button>              <button type="button" class="btn btn-outline-primary btn-sm" data-periodo="mes">Este Mes</button>              <button type="button" class="btn btn-outline-primary btn-sm" data-periodo="ano">Año Actual</button>            </div>            <div class="d-flex">              <button type="button" class="btn btn-primary me-2" id="aplicarFiltros">                <i class="fas fa-search me-1"></i>Aplicar Filtros              </button>              <button type="button" class="btn btn-outline-secondary" id="limpiarFiltros">                <i class="fas fa-times me-1"></i>Limpiar              </button>            </div>          </div>        </div>      </div>    </div>  </div>
+<!-- Dashboard Caja --><div class="row">  <div class="col-md-12 mb-4">    <div class="alert alert-info d-flex justify-content-between align-items-center">      <span><i class="fas fa-info-circle me-2"></i> Bienvenido al panel de Caja. Desde aquí podrás gestionar pagos, facturas y documentos.</span>      <button type="button" class="btn btn-sm btn-outline-secondary" id="toggleValores">        <i class="fas fa-eye me-1"></i> <span id="toggleText">Mostrar Valores</span>      </button>    </div>  </div>    <!-- Filtros de Fecha -->  <div class="col-md-12 mb-4">    <div class="card">      <div class="card-header">        <i class="fas fa-filter me-2"></i> Filtros de Período      </div>      <div class="card-body">        <div class="row align-items-end">          <div class="col-md-3">            <label for="fechaDesde" class="form-label">Desde</label>            <input type="date" class="form-control" id="fechaDesde" name="fechaDesde">          </div>          <div class="col-md-3">            <label for="fechaHasta" class="form-label">Hasta</label>            <input type="date" class="form-control" id="fechaHasta" name="fechaHasta">          </div>          <div class="col-md-6">            <div class="btn-group mb-2" role="group">              <button type="button" class="btn btn-outline-primary btn-sm" data-periodo="hoy">Hoy</button>              <button type="button" class="btn btn-outline-primary btn-sm" data-periodo="semana">Esta Semana</button>              <button type="button" class="btn btn-outline-primary btn-sm" data-periodo="mes">Este Mes</button>              <button type="button" class="btn btn-outline-primary btn-sm" data-periodo="ano">Año Actual</button>            </div>            <div class="d-flex">              <button type="button" class="btn btn-primary me-2" id="aplicarFiltros">                <i class="fas fa-search me-1"></i>Aplicar Filtros              </button>              <button type="button" class="btn btn-outline-secondary" id="limpiarFiltros">                <i class="fas fa-times me-1"></i>Limpiar              </button>            </div>          </div>        </div>      </div>    </div>  </div>
   
   <!-- Tarjetas de estadísticas -->
   <div class="col-md-3 mb-4">
@@ -7,7 +7,7 @@
         <div class="d-flex justify-content-between align-items-center">
           <div>
             <h6 class="card-title mb-0">Total Facturado</h6>
-            <h2 class="display-6 mt-2 mb-0 valor-financiero" id="totalFacturado">${{formatMoney stats.totalFacturado}}</h2>
+            <h2 class="display-6 mt-2 mb-0 valor-financiero" id="totalFacturado">***</h2>
           </div>
           <i class="fas fa-dollar-sign fa-3x opacity-50"></i>
         </div>
@@ -35,7 +35,7 @@
         <div class="d-flex justify-content-between align-items-center">
           <div>
             <h6 class="card-title mb-0">Total Pendiente</h6>
-            <h2 class="display-6 mt-2 mb-0 valor-financiero" id="totalPendiente">${{formatMoney stats.totalPendiente}}</h2>
+            <h2 class="display-6 mt-2 mb-0 valor-financiero" id="totalPendiente">***</h2>
           </div>
           <i class="fas fa-clock fa-3x opacity-50"></i>
         </div>
@@ -49,7 +49,7 @@
         <div class="d-flex justify-content-between align-items-center">
           <div>
             <h6 class="card-title mb-0">Total Cobrado</h6>
-            <h2 class="display-6 mt-2 mb-0 valor-financiero" id="totalCobrado">${{formatMoney stats.totalCobrado}}</h2>
+            <h2 class="display-6 mt-2 mb-0 valor-financiero" id="totalCobrado">***</h2>
           </div>
           <i class="fas fa-hand-holding-usd fa-3x opacity-50"></i>
         </div>
@@ -121,7 +121,7 @@
                     <td>{{this.codigoBarras}}</td>
                     <td>{{this.nombreCliente}}</td>
                     <td>{{this.numeroFactura}}</td>
-                    <td class="valor-financiero">${{formatMoney this.valorFactura}}</td>
+                    <td class="valor-financiero">***</td>
                     <td>
                       <a href="/caja/documentos/detalle/{{this.id}}" class="btn btn-sm btn-primary">
                         <i class="fas fa-edit"></i>
@@ -167,7 +167,7 @@
                   <tr>
                     <td>{{this.codigoBarras}}</td>
                     <td>{{this.nombreCliente}}</td>
-                    <td class="valor-financiero">${{formatMoney this.valorFactura}}</td>
+                    <td class="valor-financiero">***</td>
                     <td>{{this.metodoPago}}</td>
                     <td>{{formatDate this.updatedAt}}</td>
                   </tr>
@@ -188,26 +188,62 @@
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
+    // ============ FUNCIÓN AUXILIAR PARA FORMATEAR DINERO ============
+    function formatMoney(amount) {
+      if (!amount) return '0.00';
+      const num = parseFloat(amount);
+      if (isNaN(num)) return '0.00';
+      return num.toLocaleString('es-ES', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+    }
+    
     // ============ FUNCIONALIDAD OCULTAR/MOSTRAR VALORES ============
     const toggleBtn = document.getElementById('toggleValores');
     const toggleText = document.getElementById('toggleText');
     const toggleIcon = toggleBtn.querySelector('i');
-    let valoresOcultos = false;
+    let valoresOcultos = true; // EMPEZAR CON VALORES OCULTOS
+    
+    // Guardar valores originales en atributos data al cargar la página
+    document.querySelectorAll('.valor-financiero').forEach(element => {
+      // Si ya tiene contenido visible, guardarlo
+      if (element.textContent !== '***') {
+        element.setAttribute('data-valor-original', element.textContent);
+      } else {
+        // Si ya está con ***, necesitamos obtener el valor del servidor
+        const id = element.id;
+        if (id) {
+          let valorOriginal = '';
+          switch (id) {
+            case 'totalFacturado':
+              valorOriginal = '${{formatMoney stats.totalFacturado}}';
+              break;
+            case 'totalCobrado':
+              valorOriginal = '${{formatMoney stats.totalCobrado}}';
+              break;
+            case 'totalPendiente':
+              valorOriginal = '${{formatMoney stats.totalPendiente}}';
+              break;
+          }
+          element.setAttribute('data-valor-original', valorOriginal);
+        }
+      }
+    });
+    
+    // Guardar valores de las tablas
+    {{#each documentosPendientes}}
+    document.querySelector(`td.valor-financiero[data-doc-id="{{this.id}}"]`)?.setAttribute('data-valor-original', '${{formatMoney this.valorFactura}}');
+    {{/each}}
+    
+    {{#each documentosPagadosRecientes}}
+    document.querySelector(`td.valor-financiero[data-doc-reciente-id="{{this.id}}"]`)?.setAttribute('data-valor-original', '${{formatMoney this.valorFactura}}');
+    {{/each}}
     
     toggleBtn.addEventListener('click', function() {
       const valoresFinancieros = document.querySelectorAll('.valor-financiero');
       
-      if (!valoresOcultos) {
-        // Ocultar valores
-        valoresFinancieros.forEach(element => {
-          element.setAttribute('data-valor-original', element.textContent);
-          element.textContent = '***';
-        });
-        
-        toggleText.textContent = 'Mostrar Valores';
-        toggleIcon.className = 'fas fa-eye me-1';
-        valoresOcultos = true;
-      } else {
+      if (valoresOcultos) {
         // Mostrar valores
         valoresFinancieros.forEach(element => {
           const valorOriginal = element.getAttribute('data-valor-original');
@@ -219,6 +255,15 @@
         toggleText.textContent = 'Ocultar Valores';
         toggleIcon.className = 'fas fa-eye-slash me-1';
         valoresOcultos = false;
+      } else {
+        // Ocultar valores
+        valoresFinancieros.forEach(element => {
+          element.textContent = '***';
+        });
+        
+        toggleText.textContent = 'Mostrar Valores';
+        toggleIcon.className = 'fas fa-eye me-1';
+        valoresOcultos = true;
       }
     });
     
@@ -360,10 +405,11 @@
     
     // Actualizar métricas en la interfaz
     function actualizarMetricas(datos) {
-      // Actualizar tarjetas principales
-      document.getElementById('totalFacturado').textContent = '$' + datos.stats.totalFacturado;
-      document.getElementById('totalCobrado').textContent = '$' + datos.stats.totalCobrado;
-      document.getElementById('totalPendiente').textContent = '$' + datos.stats.totalPendiente;
+      // Actualizar tarjetas principales (guardando valores originales)
+      document.getElementById('totalFacturado').setAttribute('data-valor-original', '$' + formatMoney(datos.stats.totalFacturado));
+      document.getElementById('totalCobrado').setAttribute('data-valor-original', '$' + formatMoney(datos.stats.totalCobrado));
+      document.getElementById('totalPendiente').setAttribute('data-valor-original', '$' + formatMoney(datos.stats.totalPendiente));
+      
       document.getElementById('documentosFacturados').textContent = datos.stats.documentosFacturados;
       document.getElementById('cantidadPendientes').textContent = datos.stats.documentosPendientesPago;
       
@@ -376,8 +422,14 @@
       // Aplicar filtro de ocultar valores si está activo
       if (valoresOcultos) {
         document.querySelectorAll('.valor-financiero').forEach(element => {
-          element.setAttribute('data-valor-original', element.textContent);
           element.textContent = '***';
+        });
+      } else {
+        document.querySelectorAll('.valor-financiero').forEach(element => {
+          const valorOriginal = element.getAttribute('data-valor-original');
+          if (valorOriginal) {
+            element.textContent = valorOriginal;
+          }
         });
       }
     }
@@ -412,12 +464,13 @@
       `;
       
       documentos.forEach(doc => {
+        const valorFormateado = '$' + formatMoney(doc.valorFactura || '0.00');
         html += `
           <tr>
             <td>${doc.codigoBarras}</td>
             <td>${doc.nombreCliente}</td>
             <td>${doc.numeroFactura || 'N/A'}</td>
-            <td class="valor-financiero">$${formatMoney doc.valorFactura || '0.00'}</td>
+            <td class="valor-financiero" data-valor-original="${valorFormateado}">${valoresOcultos ? '***' : valorFormateado}</td>
             <td>
               <a href="/caja/documentos/detalle/${doc.id}" class="btn btn-sm btn-primary">
                 <i class="fas fa-edit"></i>
@@ -467,11 +520,12 @@
       
       documentos.forEach(doc => {
         const fecha = new Date(doc.updated_at).toLocaleDateString('es-ES');
+        const valorFormateado = '$' + formatMoney(doc.valorFactura || '0.00');
         html += `
           <tr>
             <td>${doc.codigoBarras}</td>
             <td>${doc.nombreCliente}</td>
-            <td class="valor-financiero">$${formatMoney doc.valorFactura || '0.00'}</td>
+            <td class="valor-financiero" data-valor-original="${valorFormateado}">${valoresOcultos ? '***' : valorFormateado}</td>
             <td>${doc.metodoPago || 'N/A'}</td>
             <td>${fecha}</td>
           </tr>

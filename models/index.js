@@ -10,6 +10,7 @@ const DocumentoRelacion = require('./DocumentoRelacion');
 const CambioMatrizador = require('./CambioMatrizador');
 const AutorizacionEntrega = require('./AutorizacionEntrega');
 const DocumentosRelacionados = require('./DocumentosRelacionados');
+const AuditoriaEliminacion = require('./AuditoriaEliminacion');
 
 // Relaciones entre modelos
 
@@ -164,6 +165,15 @@ DocumentosRelacionados.belongsTo(Matrizador, {
   as: 'usuario'
 });
 
+Matrizador.hasMany(AuditoriaEliminacion, {
+  foreignKey: 'eliminadoPor',
+  as: 'auditoriasEliminacion'
+});
+AuditoriaEliminacion.belongsTo(Matrizador, {
+  foreignKey: 'eliminadoPor',
+  as: 'administrador'
+});
+
 module.exports = {
   Documento,
   Matrizador,
@@ -172,5 +182,6 @@ module.exports = {
   DocumentoRelacion,
   CambioMatrizador,
   AutorizacionEntrega,
-  DocumentosRelacionados
+  DocumentosRelacionados,
+  AuditoriaEliminacion
 }; 

@@ -419,6 +419,54 @@ function obtenerDashboardPorRol(rol) {
   }
 }
 
+/**
+ * Middleware requerido por las rutas de eliminación
+ * Alias para esAdmin pero con compatibilidad para req.user
+ */
+const requireAdmin = (req, res, next) => {
+  // Si existe req.matrizador, copiarlo a req.user para compatibilidad
+  if (req.matrizador) {
+    req.user = { ...req.matrizador };
+  }
+  
+  // Verificar que req.user existe (debería haber sido establecido por verificarToken)
+  if (!req.user) {
+    if (req.path.startsWith('/api/')) {
+      return res.status(401).json({
+        success: false,
+        message: 'No autorizado - Token no verificado'
+      });
+    }
+    
+    return res.redirect('/login?error=no_autorizado&redirect=' + encodeURIComponent(req.originalUrl));
+  }
+  
+  // Verificar que el rol sea 'admin'
+  if (req.user.rol !== 'admin') {
+    if (req.path.startsWith('/api/')) {
+      return res.status(403).json({
+        success: false,
+        message: 'Acceso denegado. Solo administradores.'
+      });
+    }
+    
+    // Determinar layout correcto según el rol del usuario actual
+    const layout = req.user.rol === 'matrizador' ? 'matrizador' : 
+                   req.user.rol === 'recepcion' ? 'recepcion' : 
+                   req.user.rol === 'caja' ? 'caja' : 'admin';
+    
+    return res.render('error', {
+      layout,
+      title: 'Acceso denegado',
+      message: 'No tiene permisos para acceder a esta página. Se requieren privilegios de administrador.',
+      userRole: req.user.rol,
+      userName: req.user.nombre
+    });
+  }
+  
+  next();
+};
+
 module.exports = {
   verificarToken,
   esAdmin,
@@ -429,5 +477,6 @@ module.exports = {
   redirigirSegunRol,
   logAuditoria,
   validarAccesoConAuditoria,
-  obtenerDashboardPorRol
+  obtenerDashboardPorRol,
+  requireAdmin
 }; 

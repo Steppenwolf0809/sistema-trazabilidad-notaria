@@ -42,7 +42,7 @@ const RegistroAuditoria = sequelize.define('RegistroAuditoria', {
     type: DataTypes.STRING,
     allowNull: false,
     validate: {
-      isIn: [['consulta_codigo', 'verificacion_codigo', 'verificacion_llamada', 'edicion_codigo', 'ACTUALIZACION_DOCUMENTO']]
+      isIn: [['consulta_codigo', 'verificacion_codigo', 'verificacion_llamada', 'edicion_codigo', 'ACTUALIZACION_DOCUMENTO', 'ELIMINACION_DOCUMENTO']]
     }
   },
   
