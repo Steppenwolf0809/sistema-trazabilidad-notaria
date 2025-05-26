@@ -31,13 +31,17 @@ router.get('/', adminController.dashboard);
 router.get('/dashboard/:periodo?', adminController.dashboard);
 router.get('/dashboard-util', adminController.dashboard);
 
+// Página de alertas
+router.get('/alertas', adminController.mostrarAlertas);
+
 // Reportes - Solo para administradores
 // RUTAS INDIVIDUALES DE REPORTES - Deben ir ANTES de la ruta general
 router.get('/reportes/documentos', adminController.reporteDocumentos);
-router.get('/reportes/pendientes', adminController.reportePendientesAdmin);
+router.get('/reportes/pendientes', adminController.reportePendientes);
+router.get('/reportes/cobros-matrizador', adminController.reporteCobrosMatrizador);
 router.get('/reportes/matrizadores', adminController.reporteMatrizadores);
 router.get('/reportes/financiero', adminController.reporteFinanciero);
-router.get('/reportes/cobros-matrizador', adminController.reporteCobrosMatrizador);
+router.get('/reportes/productividad-matrizadores', adminController.reporteProductividadMatrizadores);
 
 // RUTA GENERAL - Debe ir DESPUÉS de las rutas específicas
 router.get('/reportes/:tipo?', adminController.reportes);

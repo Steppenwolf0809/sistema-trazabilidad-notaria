@@ -1,413 +1,436 @@
-<div class="row">
-  <div class="col-md-12 mb-4">
-    <div class="card">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="fas fa-chart-bar me-2"></i> Reportes y Estadísticas</span>
-        <div>
-          <button class="btn btn-sm btn-outline-primary me-2" id="btnImprimir">
-            <i class="fas fa-print me-1"></i> Imprimir
-          </button>
-          <button class="btn btn-sm btn-outline-success" id="btnExportar">
-            <i class="fas fa-file-excel me-1"></i> Exportar Excel
-          </button>
-        </div>
-      </div>
-    </div>
+{{!-- 
+  SISTEMA HÍBRIDO DE REPORTES - DOCUMENTACIÓN
+  ==========================================
+  
+  Este archivo maneja dos tipos de reportes:
+  
+  1. VISTAS COMPLETAS (rutas específicas):
+     - /admin/reportes/financiero → views/admin/reportes/financiero.hbs
+     - /admin/reportes/pendientes → views/admin/reportes/pendientes.hbs
+     - /admin/reportes/cobros-matrizador → views/admin/reportes/cobros-matrizador.hbs
+     - /admin/reportes/productividad-matrizadores → views/admin/reportes/productividad-matrizadores.hbs
+     - /admin/reportes/registros-auditoria → views/admin/reportes/registros-auditoria.hbs
+     
+     Características:
+     - Tienen su propia vista completa con layout
+     - Incluyen breadcrumbs propios
+     - Funcionalidad compleja y específica
+     - Rutas directas en adminRoutes.js
+  
+  2. PARTIALS DINÁMICOS (parámetro ?tipo=):
+     - /admin/reportes?tipo=estado → partial: views/partials/admin/reportes/partials/estado.hbs
+     - /admin/reportes?tipo=sin_pago → partial: views/partials/admin/reportes/partials/sin_pago.hbs
+     - /admin/reportes?tipo=sin_procesar → partial: views/partials/admin/reportes/partials/sin_procesar.hbs
+     - /admin/reportes?tipo=fecha → partial: views/partials/admin/reportes/partials/fecha.hbs
+     - /admin/reportes?tipo=matrizador → partial: views/partials/admin/reportes/partials/matrizador.hbs
+     - /admin/reportes?tipo=tipoDocumento → partial: views/partials/admin/reportes/partials/tipoDocumento.hbs
+     
+     Características:
+     - Se renderizan dentro de esta vista principal
+     - Usan breadcrumb dinámico de esta vista
+     - Reportes más simples y estandarizados
+     - Manejados por la función exports.reportes en adminController.js
+  
+  3. GRID PRINCIPAL (sin parámetros):
+     - /admin/reportes → Muestra grid con 8 reportes útiles
+     
+  REGLAS PARA FUTUROS REPORTES:
+  - Reportes simples con filtros estándar → Usar partials dinámicos
+  - Reportes complejos con funcionalidad específica → Crear vista completa
+  - Siempre mantener navegación consistente con breadcrumbs
+  - Documentar cualquier cambio en esta sección
+--}}
+
+{{!-- Página Principal de Reportes - Grid Simplificado con 8 Reportes Útiles --}}
+
+{{!-- BREADCRUMB DINÁMICO --}}
+<div class="row mb-3">
+  <div class="col-12">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item">
+          <a href="/admin/dashboard">
+            <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+          </a>
+        </li>
+        <li class="breadcrumb-item">
+          <a href="/admin/reportes">
+            <i class="fas fa-chart-bar me-1"></i>Reportes
+          </a>
+        </li>
+        {{!-- Breadcrumb específico según el tipo de reporte --}}
+        {{#if filtros.tipo}}
+          <li class="breadcrumb-item active" aria-current="page">
+            {{#if (eq filtros.tipo "estado")}}
+              <i class="fas fa-tasks me-1"></i>Reporte por Estado
+            {{else if (eq filtros.tipo "sin_pago")}}
+              <i class="fas fa-exclamation-triangle me-1"></i>Documentos Sin Pago
+            {{else if (eq filtros.tipo "sin_procesar")}}
+              <i class="fas fa-clock me-1"></i>Documentos Sin Procesar
+            {{else if (eq filtros.tipo "fecha")}}
+              <i class="fas fa-calendar me-1"></i>Reporte por Fecha
+            {{else if (eq filtros.tipo "matrizador")}}
+              <i class="fas fa-user me-1"></i>Reporte por Matrizador
+            {{else if (eq filtros.tipo "tipoDocumento")}}
+              <i class="fas fa-file me-1"></i>Reporte por Tipo
+            {{else}}
+              <i class="fas fa-chart-line me-1"></i>{{title}}
+            {{/if}}
+          </li>
+        {{/if}}
+      </ol>
+    </nav>
   </div>
 </div>
 
-<div class="row">
-  <!-- Filtros de reportes -->
-  <div class="col-md-3">
-    <div class="card mb-4">
-      <div class="card-header">
-        Filtros
-      </div>
-      <div class="card-body">
-        <form id="reportForm" action="/admin/reportes" method="GET">
-          <div class="mb-3">
-            <label for="tipoReporte" class="form-label">Tipo de Reporte</label>
-            <select class="form-select" id="tipoReporte" name="tipo" required>
-              <option value="estado" {{#if (eq filtros.tipo "estado")}}selected{{/if}}>Por Estado</option>
-              <option value="fecha" {{#if (eq filtros.tipo "fecha")}}selected{{/if}}>Por Fecha</option>
-              <option value="tipoDocumento" {{#if (eq filtros.tipo "tipoDocumento")}}selected{{/if}}>Por Tipo de Documento</option>
-            </select>
-          </div>
-          
-          <div class="mb-3">
-            <label for="fechaInicio" class="form-label">Fecha Inicial</label>
-            <input type="date" class="form-control" id="fechaInicio" name="fechaInicio" value="{{filtros.fechaInicio}}">
-          </div>
-          
-          <div class="mb-3">
-            <label for="fechaFin" class="form-label">Fecha Final</label>
-            <input type="date" class="form-control" id="fechaFin" name="fechaFin" value="{{filtros.fechaFin}}">
-          </div>
-          
-          <div class="mb-3" id="filtroMatrizadorDiv">
-            <label for="idMatrizador" class="form-label">Matrizador</label>
-            <select class="form-select" id="idMatrizador" name="idMatrizador">
-              <option value="">Todos</option>
-              {{#each matrizadores}}
-              <option value="{{this.id}}" {{#if (eq ../filtros.idMatrizador this.id)}}selected{{/if}}>{{this.nombre}}</option>
-              {{/each}}
-            </select>
-          </div>
-          
-          <div class="mb-3" id="filtroEstadoDiv">
-            <label for="estado" class="form-label">Estado</label>
-            <select class="form-select" id="estado" name="estado">
-              <option value="">Todos</option>
-              <option value="en_proceso" {{#if (eq filtros.estado "en_proceso")}}selected{{/if}}>En Proceso</option>
-              <option value="listo_para_entrega" {{#if (eq filtros.estado "listo_para_entrega")}}selected{{/if}}>Listos para Entrega</option>
-              <option value="entregado" {{#if (eq filtros.estado "entregado")}}selected{{/if}}>Entregados</option>
-              <option value="cancelado" {{#if (eq filtros.estado "cancelado")}}selected{{/if}}>Cancelados</option>
-            </select>
-          </div>
-          
-          <div class="d-grid">
-            <button type="submit" class="btn btn-primary">
-              <i class="fas fa-search me-1"></i> Generar Reporte
+{{!-- CONTENIDO PRINCIPAL: Grid o Partial Dinámico --}}
+{{#if filtros.tipo}}
+  {{!-- VISTA DE REPORTE ESPECÍFICO CON PARTIAL DINÁMICO --}}
+  <div class="row">
+    <div class="col-md-12 mb-4">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span>
+            <i class="fas fa-chart-bar me-2"></i>
+            {{#if (eq filtros.tipo "estado")}}Reporte por Estado
+            {{else if (eq filtros.tipo "sin_pago")}}Documentos Sin Pago
+            {{else if (eq filtros.tipo "sin_procesar")}}Documentos Sin Procesar
+            {{else if (eq filtros.tipo "fecha")}}Reporte por Fecha
+            {{else if (eq filtros.tipo "matrizador")}}Reporte por Matrizador
+            {{else if (eq filtros.tipo "tipoDocumento")}}Reporte por Tipo
+            {{else}}{{title}}{{/if}}
+          </span>
+          <div>
+            <a href="/admin/reportes" class="btn btn-sm btn-outline-secondary me-2">
+              <i class="fas fa-arrow-left me-1"></i> Volver al Grid
+            </a>
+            <button class="btn btn-sm btn-outline-primary me-2" onclick="window.print()">
+              <i class="fas fa-print me-1"></i> Imprimir
+            </button>
+            <button class="btn btn-sm btn-outline-success" onclick="exportarReporte()">
+              <i class="fas fa-file-excel me-1"></i> Exportar Excel
             </button>
           </div>
-        </form>
-      </div>
-    </div>
-  </div>
-  
-  <!-- Resultados del reporte -->
-  <div class="col-md-9">
-    <div class="card mb-4">
-      <div class="card-header">
-        <span id="reporteTitulo">{{reporteTitulo}}</span>
-      </div>
-      <div class="card-body">
-        {{#if tipoReporte}}
-          {{#if (eq tipoReporte "estado")}}
-            <!-- Reporte por Estado -->
-            <div class="row">
-              <div class="col-md-5">
-                <canvas id="estadoChart" height="250"></canvas>
-              </div>
-              <div class="col-md-7">
-                <div class="table-responsive">
-                  <table class="table table-bordered">
-                    <thead class="table-light">
-                      <tr>
-                        <th>Estado</th>
-                        <th>Cantidad</th>
-                        <th>Porcentaje</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {{#each resultados}}
-                      <tr>
-                        <td>
-                          {{#if (eq this._id "en_proceso")}}
-                          <span class="badge bg-warning">En Proceso</span>
-                          {{else if (eq this._id "listo_para_entrega")}}
-                          <span class="badge bg-success">Listo para Entrega</span>
-                          {{else if (eq this._id "entregado")}}
-                          <span class="badge bg-info">Entregado</span>
-                          {{else}}
-                          <span class="badge bg-secondary">{{this._id}}</span>
-                          {{/if}}
-                        </td>
-                        <td class="text-center">{{this.count}}</td>
-                        <td class="text-center">{{this.porcentaje}}%</td>
-                      </tr>
-                      {{/each}}
-                    </tbody>
-                    <tfoot class="table-light">
-                      <tr>
-                        <th>Total</th>
-                        <th class="text-center">{{totales.count}}</th>
-                        <th class="text-center">100%</th>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
-              </div>
-            </div>
-          
-          {{else if (eq tipoReporte "fecha")}}
-            <!-- Reporte por Fecha -->
-            <div class="row">
-              <div class="col-md-12 mb-4">
-                <canvas id="fechaChart" height="100"></canvas>
-              </div>
-              <div class="col-md-12">
-                <div class="table-responsive">
-                  <table class="table table-bordered">
-                    <thead class="table-light">
-                      <tr>
-                        <th>Fecha</th>
-                        <th>Registrados</th>
-                        <th>Listos</th>
-                        <th>Entregados</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {{#each resultados}}
-                      <tr>
-                        <td>{{formatDate this._id}}</td>
-                        <td class="text-center">{{this.registrados}}</td>
-                        <td class="text-center">{{this.listos}}</td>
-                        <td class="text-center">{{this.entregados}}</td>
-                      </tr>
-                      {{/each}}
-                    </tbody>
-                    <tfoot class="table-light">
-                      <tr>
-                        <th>Total</th>
-                        <th class="text-center">{{totales.registrados}}</th>
-                        <th class="text-center">{{totales.listos}}</th>
-                        <th class="text-center">{{totales.entregados}}</th>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
-              </div>
-            </div>
-          {{else if (eq tipoReporte "tipoDocumento")}}
-            <!-- Reporte por Tipo de Documento -->
-            <div class="row">
-              <div class="col-md-5">
-                <canvas id="tipoDocumentoChart" height="250"></canvas>
-              </div>
-              <div class="col-md-7">
-                <div class="table-responsive">
-                  <table class="table table-bordered">
-                    <thead class="table-light">
-                      <tr>
-                        <th>Tipo de Documento</th>
-                        <th>Cantidad</th>
-                        <th>Porcentaje</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {{#each resultados}}
-                      <tr>
-                        <td>{{this._id}}</td>
-                        <td class="text-center">{{this.count}}</td>
-                        <td class="text-center">{{this.porcentaje}}%</td>
-                      </tr>
-                      {{/each}}
-                    </tbody>
-                    <tfoot class="table-light">
-                      <tr>
-                        <th>Total</th>
-                        <th class="text-center">{{totales.count}}</th>
-                        <th class="text-center">100%</th>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
-              </div>
-            </div>
-          {{/if}}
-        {{else}}
-          <div class="text-center py-5">
-            <i class="fas fa-chart-bar fa-4x text-muted mb-3"></i>
-            <h5>Seleccione un tipo de reporte</h5>
-            <p class="text-muted">Utilice los filtros de la izquierda para generar un reporte.</p>
-          </div>
-        {{/if}}
-      </div>
-    </div>
-    
-    <!-- Lista de documentos en el reporte -->
-    {{#if documentos}}
-    <div class="card">
-      <div class="card-header">
-        Listado de Documentos
-      </div>
-      <div class="card-body">
-        <div class="table-responsive">
-          <table class="table table-striped table-sm">
-            <thead>
-              <tr>
-                <th>Código</th>
-                <th>Tipo</th>
-                <th>Cliente</th>
-                <th>Fecha</th>
-                <th>Estado</th>
-                <th>Matrizador</th>
-              </tr>
-            </thead>
-            <tbody>
-              {{#each documentos}}
-              <tr>
-                <td><small>{{this.codigoBarras}}</small></td>
-                <td>{{this.tipoDocumento}}</td>
-                <td>{{this.nombreCliente}}</td>
-                <td>{{formatDate this.fechaFactura}}</td>
-                <td>
-                  {{#if (eq this.estado "en_proceso")}}
-                  <span class="badge bg-warning">En Proceso</span>
-                  {{else if (eq this.estado "listo_para_entrega")}}
-                  <span class="badge bg-success">Listo</span>
-                  {{else if (eq this.estado "entregado")}}
-                  <span class="badge bg-info">Entregado</span>
-                  {{else}}
-                  <span class="badge bg-secondary">{{this.estado}}</span>
-                  {{/if}}
-                </td>
-                <td>{{this.matrizador.nombre}}</td>
-              </tr>
-              {{/each}}
-            </tbody>
-          </table>
         </div>
       </div>
     </div>
-    {{/if}}
   </div>
-</div>
 
+  {{!-- FILTROS Y CONTENIDO DEL REPORTE --}}
+  <div class="row">
+    <div class="col-md-3">
+      <div class="card mb-4">
+        <div class="card-header">
+          <i class="fas fa-filter me-2"></i>Filtros
+        </div>
+        <div class="card-body">
+          <form id="reportForm" action="/admin/reportes" method="GET">
+            <input type="hidden" name="tipo" value="{{filtros.tipo}}">
+            
+            <div class="mb-3">
+              <label for="fechaInicio" class="form-label">Fecha Inicial</label>
+              <input type="date" class="form-control" id="fechaInicio" name="fechaInicio" value="{{filtros.fechaInicio}}">
+            </div>
+            
+            <div class="mb-3">
+              <label for="fechaFin" class="form-label">Fecha Final</label>
+              <input type="date" class="form-control" id="fechaFin" name="fechaFin" value="{{filtros.fechaFin}}">
+            </div>
+            
+            {{#if matrizadores}}
+            <div class="mb-3">
+              <label for="idMatrizador" class="form-label">Matrizador</label>
+              <select class="form-select" id="idMatrizador" name="idMatrizador">
+                <option value="">Todos</option>
+                {{#each matrizadores}}
+                <option value="{{this.id}}" {{#if (eq ../filtros.idMatrizador this.id)}}selected{{/if}}>{{this.nombre}}</option>
+                {{/each}}
+              </select>
+            </div>
+            {{/if}}
+            
+            <div class="d-grid">
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-search me-1"></i> Actualizar Reporte
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-9">
+      {{!-- INCLUIR PARTIAL DINÁMICO SEGÚN EL TIPO --}}
+      {{#if (eq filtros.tipo "estado")}}
+        {{> admin/reportes/partials/estado}}
+      {{else if (eq filtros.tipo "sin_pago")}}
+        {{> admin/reportes/partials/sin_pago}}
+      {{else if (eq filtros.tipo "sin_procesar")}}
+        {{> admin/reportes/partials/sin_procesar}}
+      {{else if (eq filtros.tipo "fecha")}}
+        {{> admin/reportes/partials/fecha}}
+      {{else if (eq filtros.tipo "matrizador")}}
+        {{> admin/reportes/partials/matrizador}}
+      {{else if (eq filtros.tipo "tipoDocumento")}}
+        {{> admin/reportes/partials/tipoDocumento}}
+      {{else}}
+        <div class="alert alert-warning">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          Tipo de reporte no reconocido: {{filtros.tipo}}
+        </div>
+      {{/if}}
+    </div>
+  </div>
+
+{{else}}
+  {{!-- VISTA DEL GRID PRINCIPAL (sin tipo específico) --}}
+  <div class="row">
+    <div class="col-md-12 mb-4">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="fas fa-chart-bar me-2"></i> Reportes y Estadísticas</span>
+          <div>
+            <button class="btn btn-sm btn-outline-primary me-2" onclick="window.print()">
+              <i class="fas fa-print me-1"></i> Imprimir
+            </button>
+            <button class="btn btn-sm btn-outline-success" onclick="exportarReportes()">
+              <i class="fas fa-file-excel me-1"></i> Exportar Excel
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <p class="text-muted mb-0">
+            <i class="fas fa-info-circle me-1"></i>
+            Selecciona un reporte para ver análisis detallados y estadísticas del sistema.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {{!-- Grid de Reportes Simplificado - Exactamente 8 Reportes Útiles --}}
+  <div class="row">
+    {{!-- 1. Reporte por Estado --}}
+    <div class="col-md-6 col-lg-4 mb-4">
+      <div class="card h-100 border-primary">
+        <div class="card-body text-center">
+          <div class="mb-3">
+            <i class="fas fa-tasks fa-3x text-primary"></i>
+          </div>
+          <h5 class="card-title">Reporte por Estado</h5>
+          <p class="card-text text-muted">Documentos agrupados por estado de procesamiento</p>
+          <a href="/admin/reportes?tipo=estado" class="btn btn-primary">
+            <i class="fas fa-chart-pie me-1"></i> Ver Reporte
+          </a>
+        </div>
+      </div>
+    </div>
+
+    {{!-- 2. Reporte Financiero --}}
+    <div class="col-md-6 col-lg-4 mb-4">
+      <div class="card h-100 border-success">
+        <div class="card-body text-center">
+          <div class="mb-3">
+            <i class="fas fa-dollar-sign fa-3x text-success"></i>
+          </div>
+          <h5 class="card-title">Reporte Financiero</h5>
+          <p class="card-text text-muted">Análisis de ingresos y facturación</p>
+          <a href="/admin/reportes/financiero" class="btn btn-success">
+            <i class="fas fa-chart-line me-1"></i> Ver Reporte
+          </a>
+        </div>
+      </div>
+    </div>
+
+    {{!-- 3. Documentos Sin Pago --}}
+    <div class="col-md-6 col-lg-4 mb-4">
+      <div class="card h-100 border-warning">
+        <div class="card-body text-center">
+          <div class="mb-3">
+            <i class="fas fa-exclamation-triangle fa-3x text-warning"></i>
+          </div>
+          <h5 class="card-title">Documentos Sin Pago</h5>
+          <p class="card-text text-muted">Documentos pendientes de pago</p>
+          <a href="/admin/reportes?tipo=sin_pago" class="btn btn-warning">
+            <i class="fas fa-credit-card me-1"></i> Ver Reporte
+          </a>
+        </div>
+      </div>
+    </div>
+
+    {{!-- 4. Documentos Sin Procesar --}}
+    <div class="col-md-6 col-lg-4 mb-4">
+      <div class="card h-100 border-danger">
+        <div class="card-body text-center">
+          <div class="mb-3">
+            <i class="fas fa-clock fa-3x text-danger"></i>
+          </div>
+          <h5 class="card-title">Documentos Sin Procesar</h5>
+          <p class="card-text text-muted">Documentos pendientes de procesamiento</p>
+          <a href="/admin/reportes?tipo=sin_procesar" class="btn btn-danger">
+            <i class="fas fa-hourglass-half me-1"></i> Ver Reporte
+          </a>
+        </div>
+      </div>
+    </div>
+
+    {{!-- 5. Pagos Atrasados --}}
+    <div class="col-md-6 col-lg-4 mb-4">
+      <div class="card h-100 border-info">
+        <div class="card-body text-center">
+          <div class="mb-3">
+            <i class="fas fa-calendar-times fa-3x text-info"></i>
+          </div>
+          <h5 class="card-title">Pagos Atrasados</h5>
+          <p class="card-text text-muted">Documentos con pagos vencidos por antigüedad</p>
+          <a href="/admin/reportes/pendientes" class="btn btn-info">
+            <i class="fas fa-bell me-1"></i> Ver Reporte
+          </a>
+        </div>
+      </div>
+    </div>
+
+    {{!-- 6. Cobros por Matrizador --}}
+    <div class="col-md-6 col-lg-4 mb-4">
+      <div class="card h-100 border-secondary">
+        <div class="card-body text-center">
+          <div class="mb-3">
+            <i class="fas fa-users fa-3x text-secondary"></i>
+          </div>
+          <h5 class="card-title">Cobros por Matrizador</h5>
+          <p class="card-text text-muted">Análisis de cobros por cada matrizador</p>
+          <a href="/admin/reportes/cobros-matrizador" class="btn btn-secondary">
+            <i class="fas fa-user-tie me-1"></i> Ver Reporte
+          </a>
+        </div>
+      </div>
+    </div>
+
+    {{!-- 7. Productividad Matrizadores --}}
+    <div class="col-md-6 col-lg-4 mb-4">
+      <div class="card h-100 border-dark">
+        <div class="card-body text-center">
+          <div class="mb-3">
+            <i class="fas fa-chart-bar fa-3x text-dark"></i>
+          </div>
+          <h5 class="card-title">Productividad Matrizadores</h5>
+          <p class="card-text text-muted">Métricas de rendimiento por matrizador</p>
+          <a href="/admin/reportes/productividad-matrizadores" class="btn btn-dark">
+            <i class="fas fa-tachometer-alt me-1"></i> Ver Reporte
+          </a>
+        </div>
+      </div>
+    </div>
+
+    {{!-- 8. Reporte de Matrizadores --}}
+    <div class="col-md-6 col-lg-4 mb-4">
+      <div class="card h-100 border-purple">
+        <div class="card-body text-center">
+          <div class="mb-3">
+            <i class="fas fa-users-cog fa-3x" style="color: #6f42c1;"></i>
+          </div>
+          <h5 class="card-title">Reporte de Matrizadores</h5>
+          <p class="card-text text-muted">Análisis de productividad y facturación por matrizador</p>
+          <a href="/admin/reportes/matrizadores" class="btn" style="background-color: #6f42c1; color: white;">
+            <i class="fas fa-users me-1"></i> Ver Reporte
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {{!-- Información adicional --}}
+  <div class="row mt-4">
+    <div class="col-md-12">
+      <div class="alert alert-info">
+        <h6><i class="fas fa-lightbulb me-2"></i>Información sobre los Reportes</h6>
+        <div class="row">
+          <div class="col-md-6">
+            <ul class="mb-0">
+              <li><strong>Reporte por Estado:</strong> Muestra la distribución de documentos según su estado actual</li>
+              <li><strong>Reporte Financiero:</strong> Análisis completo de ingresos, facturación y cobros</li>
+              <li><strong>Documentos Sin Pago:</strong> Identifica documentos facturados pero no pagados</li>
+              <li><strong>Documentos Sin Procesar:</strong> Documentos que requieren atención inmediata</li>
+            </ul>
+          </div>
+          <div class="col-md-6">
+            <ul class="mb-0">
+              <li><strong>Pagos Atrasados:</strong> Documentos con pagos vencidos organizados por antigüedad</li>
+              <li><strong>Cobros por Matrizador:</strong> Rendimiento financiero de cada matrizador</li>
+              <li><strong>Productividad Matrizadores:</strong> Métricas de eficiencia y rendimiento detalladas</li>
+              <li><strong>Reporte de Matrizadores:</strong> Análisis de productividad y facturación por matrizador</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{{/if}}
+
+{{!-- Scripts para funcionalidad básica --}}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-  document.addEventListener('DOMContentLoaded', function() {
-    // Mostrar/ocultar filtros según el tipo de reporte
-    const tipoReporte = document.getElementById('tipoReporte');
-    const filtroMatrizadorDiv = document.getElementById('filtroMatrizadorDiv');
-    const filtroEstadoDiv = document.getElementById('filtroEstadoDiv');
+function exportarReportes() {
+  alert('Funcionalidad de exportación en desarrollo.\nCada reporte individual tiene su propia opción de exportación.');
+}
+
+function exportarReporte() {
+  alert('Funcionalidad de exportación específica en desarrollo.');
+}
+
+// Mejorar la experiencia visual
+document.addEventListener('DOMContentLoaded', function() {
+  // Agregar efecto hover a las tarjetas del grid
+  const cards = document.querySelectorAll('.card');
+  cards.forEach(card => {
+    card.addEventListener('mouseenter', function() {
+      this.style.transform = 'translateY(-5px)';
+      this.style.transition = 'transform 0.3s ease';
+    });
     
-    function actualizarFiltrosVisibles() {
-      switch(tipoReporte.value) {
-        case 'estado':
-          filtroMatrizadorDiv.style.display = 'block';
-          filtroEstadoDiv.style.display = 'none';
-          break;
-        default:
-          filtroMatrizadorDiv.style.display = 'block';
-          filtroEstadoDiv.style.display = 'block';
-      }
-    }
-    
-    if (tipoReporte) {
-      actualizarFiltrosVisibles();
-      tipoReporte.addEventListener('change', actualizarFiltrosVisibles);
-    }
-    
-    // Botón de imprimir
-    const btnImprimir = document.getElementById('btnImprimir');
-    if (btnImprimir) {
-      btnImprimir.addEventListener('click', function() {
-        window.print();
-      });
-    }
-    
-    // Botón de exportar
-    const btnExportar = document.getElementById('btnExportar');
-    if (btnExportar) {
-      btnExportar.addEventListener('click', function() {
-        window.location.href = window.location.href + '&formato=excel';
-      });
-    }
-    
-    // Inicializar gráficos si hay datos
-    {{#if tipoReporte}}
-      {{#if (eq tipoReporte "estado")}}
-        const estadoCtx = document.getElementById('estadoChart').getContext('2d');
-        new Chart(estadoCtx, {
-          type: 'pie',
-          data: {
-            labels: [{{#each resultados}}'{{translateEstado this._id}}',{{/each}}],
-            datasets: [{
-              data: [{{#each resultados}}{{this.count}},{{/each}}],
-              backgroundColor: [
-                '#ffc107', // En Proceso
-                '#28a745', // Listo para Entrega
-                '#17a2b8', // Entregado
-                '#6c757d'  // Cancelado
-              ]
-            }]
-          },
-          options: {
-            responsive: true,
-            plugins: {
-              legend: {
-                position: 'bottom'
-              }
-            }
-          }
-        });
-      {{/if}}
-      
-      
-      
-      {{#if (eq tipoReporte "fecha")}}
-        const fechaCtx = document.getElementById('fechaChart').getContext('2d');
-        new Chart(fechaCtx, {
-          type: 'line',
-          data: {
-            labels: [{{#each resultados}}'{{formatDate this._id}}',{{/each}}],
-            datasets: [
-              {
-                label: 'Registrados',
-                data: [{{#each resultados}}{{this.registrados}},{{/each}}],
-                borderColor: '#ffc107',
-                backgroundColor: '#ffc10720'
-              },
-              {
-                label: 'Listos',
-                data: [{{#each resultados}}{{this.listos}},{{/each}}],
-                borderColor: '#28a745',
-                backgroundColor: '#28a74520'
-              },
-              {
-                label: 'Entregados',
-                data: [{{#each resultados}}{{this.entregados}},{{/each}}],
-                borderColor: '#17a2b8',
-                backgroundColor: '#17a2b820'
-              }
-            ]
-          },
-          options: {
-            responsive: true,
-            plugins: {
-              legend: {
-                position: 'top'
-              }
-            },
-            scales: {
-              y: {
-                beginAtZero: true
-              }
-            }
-          }
-        });
-      {{/if}}
-      
-      {{#if (eq tipoReporte "tipoDocumento")}}
-        const tipoDocumentoCtx = document.getElementById('tipoDocumentoChart').getContext('2d');
-        new Chart(tipoDocumentoCtx, {
-          type: 'doughnut',
-          data: {
-            labels: [{{#each resultados}}'{{this._id}}',{{/each}}],
-            datasets: [{
-              data: [{{#each resultados}}{{this.count}},{{/each}}],
-              backgroundColor: [
-                '#3498db',
-                '#9b59b6',
-                '#e74c3c',
-                '#f39c12',
-                '#1abc9c',
-                '#34495e'
-              ]
-            }]
-          },
-          options: {
-            responsive: true,
-            plugins: {
-              legend: {
-                position: 'bottom'
-              }
-            }
-          }
-        });
-      {{/if}}
-    {{/if}}
+    card.addEventListener('mouseleave', function() {
+      this.style.transform = 'translateY(0)';
+    });
   });
-</script> 
+});
+</script>
+
+{{!-- Estilos adicionales --}}
+<style>
+.card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.fa-3x {
+  margin-bottom: 1rem;
+}
+
+.btn {
+  transition: all 0.3s ease;
+}
+
+.alert-info {
+  background-color: #f8f9fa;
+  border-color: #dee2e6;
+  color: #495057;
+}
+
+.breadcrumb {
+  background-color: #f8f9fa;
+  border-radius: 0.375rem;
+  padding: 0.75rem 1rem;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+  content: ">";
+  color: #6c757d;
+}
+
+.border-purple {
+  border-color: #6f42c1 !important;
+}
+</style> 

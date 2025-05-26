@@ -1,0 +1,238 @@
+<!-- Centro de Alertas Administrativo -->
+
+<!-- Encabezado -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card border-{{estadoGeneral}}">
+      <div class="card-header bg-{{estadoGeneral}} text-white">
+        <div class="d-flex align-items-center">
+          <div class="me-3">
+            {{#if (eq estadoGeneral "danger")}}
+            <i class="fas fa-exclamation-triangle fa-2x"></i>
+            {{else if (eq estadoGeneral "warning")}}
+            <i class="fas fa-exclamation-circle fa-2x"></i>
+            {{else}}
+            <i class="fas fa-check-circle fa-2x"></i>
+            {{/if}}
+          </div>
+          <div class="flex-grow-1">
+            <h4 class="mb-1">
+              <i class="fas fa-bell me-2"></i>
+              Centro de Alertas
+            </h4>
+            <p class="mb-0">{{mensajeEstado}}</p>
+          </div>
+          <div class="text-end">
+            <a href="/admin/dashboard" class="btn btn-light btn-sm">
+              <i class="fas fa-arrow-left me-1"></i> Volver al Dashboard
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Estadísticas de Alertas -->
+<div class="row mb-4">
+  <div class="col-md-3">
+    <div class="card bg-primary text-white">
+      <div class="card-body text-center">
+        <i class="fas fa-bell fa-2x mb-2"></i>
+        <h3 class="mb-0">{{stats.totalAlertas}}</h3>
+        <small>Total de Alertas</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card bg-danger text-white">
+      <div class="card-body text-center">
+        <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+        <h3 class="mb-0">{{stats.alertasAltas}}</h3>
+        <small>Urgencia Alta</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card bg-warning text-white">
+      <div class="card-body text-center">
+        <i class="fas fa-exclamation-circle fa-2x mb-2"></i>
+        <h3 class="mb-0">{{stats.alertasMedias}}</h3>
+        <small>Urgencia Media</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card bg-info text-white">
+      <div class="card-body text-center">
+        <i class="fas fa-info-circle fa-2x mb-2"></i>
+        <h3 class="mb-0">{{stats.alertasBajas}}</h3>
+        <small>Urgencia Baja</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Lista de Alertas -->
+{{#if alertasCriticas.length}}
+<div class="row">
+  {{#each alertasCriticas}}
+  <div class="col-md-6 mb-4">
+    <div class="card border-{{this.tipo}} h-100">
+      <div class="card-header bg-{{this.tipo}} text-white">
+        <div class="d-flex align-items-center">
+          <i class="{{this.icono}} fa-lg me-2"></i>
+          <div class="flex-grow-1">
+            <h6 class="mb-0">{{this.titulo}}</h6>
+            <small class="opacity-75">
+              Urgencia: 
+              {{#if (eq this.urgencia "alta")}}
+              <span class="badge bg-light text-dark">ALTA</span>
+              {{else if (eq this.urgencia "media")}}
+              <span class="badge bg-light text-dark">MEDIA</span>
+              {{else}}
+              <span class="badge bg-light text-dark">BAJA</span>
+              {{/if}}
+            </small>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="card-text">{{this.descripcion}}</p>
+        {{#if this.detalles}}
+        <div class="alert alert-light border-0 mb-3">
+          <small><strong>Detalles:</strong> {{this.detalles}}</small>
+        </div>
+        {{/if}}
+        
+        <div class="d-flex justify-content-between align-items-center">
+          <a href="{{this.accion}}" class="btn btn-{{this.tipo}}">
+            <i class="fas fa-arrow-right me-1"></i> Ver y Resolver
+          </a>
+          
+          {{#if (eq this.urgencia "alta")}}
+          <span class="badge bg-danger">
+            <i class="fas fa-exclamation-triangle me-1"></i> URGENTE
+          </span>
+          {{else if (eq this.urgencia "media")}}
+          <span class="badge bg-warning">
+            <i class="fas fa-clock me-1"></i> PRIORIDAD
+          </span>
+          {{else}}
+          <span class="badge bg-info">
+            <i class="fas fa-info-circle me-1"></i> INFORMACIÓN
+          </span>
+          {{/if}}
+        </div>
+      </div>
+      
+      {{#if (eq this.urgencia "alta")}}
+      <div class="card-footer bg-danger text-white">
+        <small>
+          <i class="fas fa-clock me-1"></i>
+          <strong>Acción requerida inmediatamente</strong>
+        </small>
+      </div>
+      {{/if}}
+    </div>
+  </div>
+  {{/each}}
+</div>
+
+<!-- Acciones Rápidas -->
+<div class="row mt-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">
+          <i class="fas fa-tools me-2"></i>
+          Acciones Rápidas
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-3 mb-2">
+            <a href="/admin/documentos/listado" class="btn btn-outline-primary w-100">
+              <i class="fas fa-list me-1"></i> Ver Todos los Documentos
+            </a>
+          </div>
+          <div class="col-md-3 mb-2">
+            <a href="/admin/reportes/pendientes" class="btn btn-outline-warning w-100">
+              <i class="fas fa-clock me-1"></i> Pagos Pendientes
+            </a>
+          </div>
+          <div class="col-md-3 mb-2">
+            <a href="/admin/reportes" class="btn btn-outline-info w-100">
+              <i class="fas fa-chart-bar me-1"></i> Ver Reportes
+            </a>
+          </div>
+          <div class="col-md-3 mb-2">
+            <a href="/admin/dashboard" class="btn btn-outline-success w-100">
+              <i class="fas fa-tachometer-alt me-1"></i> Dashboard
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{{else}}
+<!-- Sin Alertas -->
+<div class="row">
+  <div class="col-12">
+    <div class="card border-success">
+      <div class="card-body text-center py-5">
+        <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+        <h3 class="text-success">¡Excelente!</h3>
+        <p class="lead">No hay situaciones que requieran atención inmediata.</p>
+        <p class="text-muted">El sistema está funcionando correctamente y todos los procesos están al día.</p>
+        
+        <div class="mt-4">
+          <a href="/admin/dashboard" class="btn btn-success me-2">
+            <i class="fas fa-tachometer-alt me-1"></i> Volver al Dashboard
+          </a>
+          <a href="/admin/reportes" class="btn btn-outline-primary">
+            <i class="fas fa-chart-bar me-1"></i> Ver Reportes
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{{/if}}
+
+<!-- Información Adicional -->
+<div class="row mt-4">
+  <div class="col-12">
+    <div class="alert alert-info">
+      <h6><i class="fas fa-lightbulb me-2"></i>Información sobre las Alertas</h6>
+      <ul class="mb-0">
+        <li><strong>Urgencia Alta:</strong> Requieren acción inmediata para evitar problemas mayores</li>
+        <li><strong>Urgencia Media:</strong> Deben ser atendidas en las próximas horas o días</li>
+        <li><strong>Urgencia Baja:</strong> Pueden ser atendidas cuando sea conveniente</li>
+        <li><strong>Actualización:</strong> Las alertas se actualizan automáticamente cada vez que accedes a esta página</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<style>
+.card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.badge {
+  font-size: 0.75em;
+}
+
+.alert-light {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+}
+</style> 

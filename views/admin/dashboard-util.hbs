@@ -63,23 +63,28 @@
 {{#if alertasCriticas.length}}
 <div class="row mb-4">
   <div class="col-12">
-    <div class="alert alert-{{estadoGeneral}} border-0 shadow-sm">
-      <div class="d-flex align-items-center">
-        <div class="me-3">
-          {{#if (eq estadoGeneral "danger")}}
-          <i class="fas fa-exclamation-triangle fa-2x"></i>
-          {{else if (eq estadoGeneral "warning")}}
-          <i class="fas fa-exclamation-circle fa-2x"></i>
-          {{else}}
-          <i class="fas fa-check-circle fa-2x"></i>
-          {{/if}}
-        </div>
-        <div class="flex-grow-1">
-          <h5 class="alert-heading mb-1">{{mensajeEstado}}</h5>
-          <p class="mb-0">Se encontraron {{alertasCriticas.length}} situaciones que requieren atención.</p>
+    <a href="/admin/alertas" class="text-decoration-none">
+      <div class="alert alert-{{estadoGeneral}} border-0 shadow-sm alert-clickeable">
+        <div class="d-flex align-items-center">
+          <div class="me-3">
+            {{#if (eq estadoGeneral "danger")}}
+            <i class="fas fa-exclamation-triangle fa-2x"></i>
+            {{else if (eq estadoGeneral "warning")}}
+            <i class="fas fa-exclamation-circle fa-2x"></i>
+            {{else}}
+            <i class="fas fa-check-circle fa-2x"></i>
+            {{/if}}
+          </div>
+          <div class="flex-grow-1">
+            <h5 class="alert-heading mb-1">{{mensajeEstado}}</h5>
+            <p class="mb-0">Se encontraron {{alertasCriticas.length}} situaciones que requieren atención.</p>
+          </div>
+          <div class="me-2">
+            <i class="fas fa-arrow-right fa-lg"></i>
+          </div>
         </div>
       </div>
-    </div>
+    </a>
   </div>
 </div>
 
@@ -281,7 +286,7 @@
           <i class="fas fa-hand-holding text-info me-2"></i>
           Listos para Entrega
         </h5>
-        <a href="/admin/documentos?estado=listo_para_entrega" class="btn btn-sm btn-outline-info">Ver Todos</a>
+        <a href="/admin/documentos/listado?estado=listo_para_entrega" class="btn btn-sm btn-outline-info">Ver Todos</a>
       </div>
       <div class="card-body">
         {{#if documentosListos.length}}
@@ -428,7 +433,7 @@
             </a>
           </div>
           <div class="col-md-3 mb-2">
-            <a href="/admin/documentos?estado=listo_para_entrega" class="btn btn-outline-info w-100">
+            <a href="/admin/documentos/listado?estado=listo_para_entrega" class="btn btn-outline-info w-100">
               <i class="fas fa-hand-holding me-2"></i>Listos Entrega
             </a>
           </div>
@@ -549,6 +554,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
 .font-monospace {
   font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+/* Estilos para alerta clickeable */
+.alert-clickeable {
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.alert-clickeable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15);
 }
 
 /* Animaciones sutiles */

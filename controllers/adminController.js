@@ -127,7 +127,7 @@ exports.dashboard = async (req, res) => {
         icono: 'fas fa-clock',
         titulo: `${documentosListosViejos} documentos listos sin entregar`,
         descripcion: 'Más de 3 días esperando entrega',
-        accion: '/admin/documentos?estado=listo_para_entrega',
+        accion: '/admin/documentos/listado?estado=listo_para_entrega',
         urgencia: 'media'
       });
     }
@@ -146,7 +146,7 @@ exports.dashboard = async (req, res) => {
         icono: 'fas fa-user-slash',
         titulo: `${documentosSinMatrizador} documentos sin asignar`,
         descripcion: 'Necesitan matrizador responsable',
-        accion: '/admin/documentos?sin_matrizador=1',
+        accion: '/admin/documentos/listado?idMatrizador=',
         urgencia: 'baja'
       });
     }
@@ -616,7 +616,7 @@ exports.reportes = async (req, res) => {
     
     // NUEVO: Si no hay tipo específico, mostrar página de índice de reportes
     if (!tipo) {
-      return res.render('admin/reportes/index', {
+      return res.render('admin/reportes', {
         layout: 'admin',
         title: 'Reportes y Estadísticas',
         activeReportes: true,
@@ -912,7 +912,7 @@ exports.reportes = async (req, res) => {
     }
     
     // Renderizar la vista principal de reportes, pasando los datos específicos
-    res.render('admin/reportes/index', { // Renderizar la vista principal
+    res.render('admin/reportes', { // CORREGIDO: Usar vista principal unificada
       layout: 'admin',
       title: reporteTitulo, // Usar el título del reporte actual
       activeReportes: true,
@@ -1502,8 +1502,10 @@ exports.reportePendientesAdmin = async (req, res) => {
     // Renderizar la vista con los datos
     res.render('admin/reportes/pendientes', {
       layout: 'admin',
-      title: 'Documentos Pendientes de Pago',
+      title: 'Reporte de Pagos Atrasados',
       activeReportes: true,
+      userRole: req.matrizador?.rol,
+      userName: req.matrizador?.nombre,
       documentosPendientes: documentosConDatos,
       stats: {
         rango1_7: parseInt(statsResult.rango1_7) || 0,
@@ -1586,6 +1588,8 @@ exports.reporteMatrizadores = async (req, res) => {
       layout: 'admin',
       title: 'Productividad por Matrizador',
       activeReportes: true,
+      userRole: req.matrizador?.rol,
+      userName: req.matrizador?.nombre,
       fechaInicio: fechaInicio.format('YYYY-MM-DD'),
       fechaFin: fechaFin.format('YYYY-MM-DD'),
       datosMatrizadores
@@ -1943,6 +1947,678 @@ exports.reporteCobrosMatrizador = async (req, res) => {
       layout: 'admin',
       title: 'Error',
       message: 'Error al generar el reporte de cobros por matrizador',
+      error
+    });
+  }
+};
+
+/**
+ * IMPORTADO DE CAJA: Reporte de Documentos Pendientes de Pago
+ * Muestra documentos con pagos atrasados organizados por antigüedad
+ * @param {Object} req - Objeto de solicitud Express
+ * @param {Object} res - Objeto de respuesta Express
+ */
+exports.reportePendientes = async (req, res) => {
+  try {
+    // Obtener parámetros de filtrado
+    const { antiguedad, matrizador, ordenar, page = 1 } = req.query;
+    const limit = 50;
+    const offset = (page - 1) * limit;
+    
+    // Construir condiciones de filtrado
+    const whereConditions = {
+      estadoPago: 'pendiente',
+      numeroFactura: { [Op.not]: null }, // Solo documentos con factura
+      estado: { [Op.notIn]: ['eliminado', 'nota_credito'] } // Excluir estados especiales
+    };
+    
+    if (matrizador) {
+      whereConditions.id_matrizador = matrizador;
+    }
+    
+    // Construir ORDER BY según el filtro
+    let order = [['created_at', 'ASC']]; // Por defecto más antiguos (cuándo se registraron)
+    if (ordenar === 'monto') {
+      order = [['valorFactura', 'DESC']];
+    } else if (ordenar === 'fecha') {
+      order = [['created_at', 'DESC']];
+    }
+    
+    // Obtener documentos pendientes
+    const { count, rows: documentosPendientes } = await Documento.findAndCountAll({
+      where: whereConditions,
+      include: [{
+        model: Matrizador,
+        as: 'matrizador',
+        attributes: ['id', 'nombre']
+      }],
+      order,
+      limit,
+      offset
+    });
+    
+    // Calcular estadísticas por rangos de antigüedad usando created_at
+    const statsQuery = `
+      SELECT 
+        COUNT(CASE WHEN EXTRACT(DAY FROM NOW() - created_at) BETWEEN 1 AND 7 THEN 1 END) as rango1_7,
+        COUNT(CASE WHEN EXTRACT(DAY FROM NOW() - created_at) BETWEEN 8 AND 15 THEN 1 END) as rango8_15,
+        COUNT(CASE WHEN EXTRACT(DAY FROM NOW() - created_at) BETWEEN 16 AND 60 THEN 1 END) as rango16_60,
+        COUNT(CASE WHEN EXTRACT(DAY FROM NOW() - created_at) > 60 THEN 1 END) as rango60,
+        SUM(CASE WHEN EXTRACT(DAY FROM NOW() - created_at) BETWEEN 1 AND 7 THEN valor_factura ELSE 0 END) as monto1_7,
+        SUM(CASE WHEN EXTRACT(DAY FROM NOW() - created_at) BETWEEN 8 AND 15 THEN valor_factura ELSE 0 END) as monto8_15,
+        SUM(CASE WHEN EXTRACT(DAY FROM NOW() - created_at) BETWEEN 16 AND 60 THEN valor_factura ELSE 0 END) as monto16_60,
+        SUM(CASE WHEN EXTRACT(DAY FROM NOW() - created_at) > 60 THEN valor_factura ELSE 0 END) as monto60,
+        COUNT(*) as totalPendientes
+      FROM documentos
+      WHERE estado_pago = 'pendiente'
+      AND numero_factura IS NOT NULL
+      AND estado NOT IN ('eliminado', 'nota_credito')
+      ${matrizador ? `AND id_matrizador = ${matrizador}` : ''}
+    `;
+    
+    const stats = await sequelize.query(statsQuery, {
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    const statsResult = stats[0];
+    
+    // Obtener lista de matrizadores para filtros
+    const matrizadores = await Matrizador.findAll({
+      where: {
+        rol: 'matrizador',
+        activo: true
+      },
+      attributes: ['id', 'nombre'],
+      order: [['nombre', 'ASC']]
+    });
+    
+    // Agregar días de antigüedad basado en created_at
+    const documentosConDatos = documentosPendientes.map(doc => {
+      const diasAntiguedad = moment().diff(moment(doc.created_at), 'days');
+      return {
+        ...doc.toJSON(),
+        diasAntiguedad,
+        matrizador: doc.matrizador?.nombre || 'Sin asignar'
+      };
+    });
+    
+    // Filtrar por antigüedad si se especifica
+    let documentosFiltrados = documentosConDatos;
+    if (antiguedad) {
+      documentosFiltrados = documentosConDatos.filter(doc => {
+        const dias = doc.diasAntiguedad;
+        switch (antiguedad) {
+          case '1-7': return dias >= 1 && dias <= 7;
+          case '8-15': return dias >= 8 && dias <= 15;
+          case '16-60': return dias >= 16 && dias <= 60;
+          case '60+': return dias > 60;
+          default: return true;
+        }
+      });
+    }
+    
+    // Preparar paginación
+    const totalPages = Math.ceil(count / limit);
+    const pagination = {
+      currentPage: parseInt(page),
+      totalPages,
+      hasNext: page < totalPages,
+      hasPrev: page > 1,
+      next: page < totalPages ? parseInt(page) + 1 : null,
+      prev: page > 1 ? parseInt(page) - 1 : null,
+      pages: []
+    };
+    
+    // Generar números de página para mostrar
+    for (let i = Math.max(1, page - 2); i <= Math.min(totalPages, parseInt(page) + 2); i++) {
+      pagination.pages.push({
+        page: i,
+        active: i === parseInt(page)
+      });
+    }
+    
+    // Renderizar la vista con los datos
+    res.render('admin/reportes/pendientes', {
+      layout: 'admin',
+      title: 'Reporte de Pagos Atrasados',
+      activeReportes: true,
+      userRole: req.matrizador?.rol,
+      userName: req.matrizador?.nombre,
+      documentosPendientes: documentosFiltrados,
+      stats: {
+        rango1_7: parseInt(statsResult.rango1_7) || 0,
+        rango8_15: parseInt(statsResult.rango8_15) || 0,
+        rango16_60: parseInt(statsResult.rango16_60) || 0,
+        rango60: parseInt(statsResult.rango60) || 0,
+        monto1_7: parseFloat(statsResult.monto1_7) || 0,
+        monto8_15: parseFloat(statsResult.monto8_15) || 0,
+        monto16_60: parseFloat(statsResult.monto16_60) || 0,
+        monto60: parseFloat(statsResult.monto60) || 0,
+        totalPendientes: parseInt(statsResult.totalPendientes) || 0
+      },
+      matrizadores,
+      filtros: {
+        antiguedad,
+        matrizador,
+        ordenar
+      },
+      pagination: totalPages > 1 ? pagination : null
+    });
+  } catch (error) {
+    console.error('Error al generar reporte de documentos pendientes:', error);
+    return res.status(500).render('error', {
+      layout: 'admin',
+      title: 'Error',
+      message: 'Error al generar el reporte de documentos pendientes',
+      error
+    });
+  }
+};
+
+/**
+ * Reporte de Productividad de Matrizadores
+ * Muestra métricas de rendimiento y productividad por matrizador
+ */
+exports.reporteProductividadMatrizadores = async (req, res) => {
+  try {
+    // Procesar parámetros de filtrado
+    const fechaInicio = req.query.fechaInicio ? moment(req.query.fechaInicio).startOf('day') : moment().subtract(30, 'days').startOf('day');
+    const fechaFin = req.query.fechaFin ? moment(req.query.fechaFin).endOf('day') : moment().endOf('day');
+    const idMatrizador = req.query.idMatrizador;
+    
+    // Formatear fechas para SQL
+    const fechaInicioSQL = fechaInicio.format('YYYY-MM-DD HH:mm:ss');
+    const fechaFinSQL = fechaFin.format('YYYY-MM-DD HH:mm:ss');
+    
+    // Construir filtro de matrizador
+    let whereMatrizador = '';
+    if (idMatrizador && idMatrizador !== 'todos' && idMatrizador !== '') {
+      whereMatrizador = `AND m.id = ${parseInt(idMatrizador)}`;
+    }
+    
+    // Consulta principal de productividad
+    const productividadQuery = `
+      SELECT 
+        m.id,
+        m.nombre,
+        m.email,
+        m.created_at as fecha_ingreso,
+        -- Documentos procesados
+        COUNT(d.id) as documentos_totales,
+        COUNT(CASE WHEN d.estado = 'listo_para_entrega' THEN 1 END) as documentos_completados,
+        COUNT(CASE WHEN d.estado = 'en_proceso' THEN 1 END) as documentos_en_proceso,
+        COUNT(CASE WHEN d.estado = 'entregado' THEN 1 END) as documentos_entregados,
+        
+        -- Métricas financieras
+        COALESCE(SUM(d.valor_factura), 0) as facturacion_total,
+        COALESCE(SUM(CASE WHEN d.estado_pago = 'pagado' THEN d.valor_factura ELSE 0 END), 0) as ingresos_cobrados,
+        COALESCE(AVG(d.valor_factura), 0) as factura_promedio,
+        
+        -- Métricas de tiempo
+        AVG(CASE 
+          WHEN d.estado IN ('listo_para_entrega', 'entregado') AND d.updated_at IS NOT NULL 
+          THEN EXTRACT(DAY FROM d.updated_at - d.created_at) 
+        END) as tiempo_promedio_procesamiento,
+        
+        -- Eficiencia de cobro
+        COUNT(CASE WHEN d.estado_pago = 'pagado' THEN 1 END) as documentos_pagados,
+        COUNT(CASE WHEN d.estado_pago = 'pendiente' THEN 1 END) as documentos_pendientes
+        
+      FROM matrizadores m
+      LEFT JOIN documentos d ON m.id = d.id_matrizador
+        AND d.created_at BETWEEN :fechaInicio AND :fechaFin
+        AND d.estado NOT IN ('eliminado', 'nota_credito')
+      WHERE m.rol = 'matrizador'
+      AND m.activo = true
+      ${whereMatrizador}
+      GROUP BY m.id, m.nombre, m.email, m.created_at
+      ORDER BY documentos_totales DESC, facturacion_total DESC
+    `;
+    
+    const productividad = await sequelize.query(productividadQuery, {
+      replacements: { fechaInicio: fechaInicioSQL, fechaFin: fechaFinSQL },
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    // Calcular métricas adicionales
+    productividad.forEach(item => {
+      // Porcentajes de eficiencia
+      item.porcentaje_completados = item.documentos_totales > 0 ? 
+        (item.documentos_completados / item.documentos_totales * 100).toFixed(1) : 0;
+      
+      item.porcentaje_pagados = item.documentos_totales > 0 ? 
+        (item.documentos_pagados / item.documentos_totales * 100).toFixed(1) : 0;
+      
+      // Productividad diaria (documentos por día en el período)
+      const diasPeriodo = fechaFin.diff(fechaInicio, 'days') + 1;
+      item.documentos_por_dia = diasPeriodo > 0 ? 
+        (item.documentos_totales / diasPeriodo).toFixed(1) : 0;
+      
+      // Ingresos por día
+      item.ingresos_por_dia = diasPeriodo > 0 ? 
+        (item.facturacion_total / diasPeriodo).toFixed(2) : 0;
+      
+      // Tiempo de experiencia (meses desde ingreso)
+      item.meses_experiencia = moment().diff(moment(item.fecha_ingreso), 'months');
+      
+      // Pendiente de cobro
+      item.pendiente_cobro = (item.facturacion_total - item.ingresos_cobrados).toFixed(2);
+      
+      // CORREGIDO: Formatear factura_promedio a 2 decimales
+      item.factura_promedio = parseFloat(item.factura_promedio || 0).toFixed(2);
+      
+      // Tiempo promedio de procesamiento (redondeado)
+      item.tiempo_promedio_procesamiento = item.tiempo_promedio_procesamiento ? 
+        parseFloat(item.tiempo_promedio_procesamiento).toFixed(1) : 'N/A';
+    });
+    
+    // Estadísticas generales del período
+    const totalDocumentos = productividad.reduce((sum, item) => sum + parseInt(item.documentos_totales || 0), 0);
+    const totalFacturacion = productividad.reduce((sum, item) => sum + parseFloat(item.facturacion_total || 0), 0);
+    const totalCobrado = productividad.reduce((sum, item) => sum + parseFloat(item.ingresos_cobrados || 0), 0);
+    const matrizadoresActivos = productividad.filter(m => parseInt(m.documentos_totales) > 0).length;
+    
+    // Obtener todos los matrizadores para el filtro
+    const matrizadores = await Matrizador.findAll({
+      attributes: ['id', 'nombre'],
+      where: { activo: true, rol: 'matrizador' },
+      order: [['nombre', 'ASC']],
+      raw: true
+    });
+    
+    // Preparar datos para gráficos
+    const datosGrafico = {
+      nombres: productividad.slice(0, 10).map(item => item.nombre), // Top 10
+      documentos: productividad.slice(0, 10).map(item => parseInt(item.documentos_totales || 0)),
+      facturacion: productividad.slice(0, 10).map(item => parseFloat(item.facturacion_total || 0)),
+      eficiencia: productividad.slice(0, 10).map(item => parseFloat(item.porcentaje_completados || 0))
+    };
+    
+    res.render('admin/reportes/productividad-matrizadores', {
+      layout: 'admin',
+      title: 'Productividad de Matrizadores',
+      activeReportes: true,
+      userRole: req.matrizador?.rol,
+      userName: req.matrizador?.nombre,
+      productividad,
+      matrizadores,
+      stats: {
+        totalDocumentos,
+        totalFacturacion: formatearValorMonetario(totalFacturacion),
+        totalCobrado: formatearValorMonetario(totalCobrado),
+        matrizadoresActivos,
+        promedioDocumentos: matrizadoresActivos > 0 ? (totalDocumentos / matrizadoresActivos).toFixed(1) : 0,
+        promedioFacturacion: matrizadoresActivos > 0 ? formatearValorMonetario(totalFacturacion / matrizadoresActivos) : '$0'
+      },
+      datosGrafico,
+      filtros: {
+        fechaInicio: fechaInicio.format('YYYY-MM-DD'),
+        fechaFin: fechaFin.format('YYYY-MM-DD'),
+        idMatrizador: idMatrizador || 'todos'
+      },
+      periodoTexto: `Del ${fechaInicio.format('DD/MM/YYYY')} al ${fechaFin.format('DD/MM/YYYY')}`
+    });
+  } catch (error) {
+    console.error('Error al generar reporte de productividad:', error);
+    return res.status(500).render('error', {
+      layout: 'admin',
+      title: 'Error',
+      message: 'Error al generar el reporte de productividad',
+      error
+    });
+  }
+};
+
+/**
+ * Reporte de Registros de Auditoría
+ * Muestra el historial de acciones importantes del sistema
+ */
+exports.reporteRegistrosAuditoria = async (req, res) => {
+  try {
+    // Procesar parámetros de filtrado
+    const fechaInicio = req.query.fechaInicio ? moment(req.query.fechaInicio).startOf('day') : moment().subtract(7, 'days').startOf('day');
+    const fechaFin = req.query.fechaFin ? moment(req.query.fechaFin).endOf('day') : moment().endOf('day');
+    const tipoAccion = req.query.tipoAccion;
+    const usuario = req.query.usuario;
+    const page = parseInt(req.query.page) || 1;
+    const limit = 50;
+    const offset = (page - 1) * limit;
+    
+    // Formatear fechas para SQL
+    const fechaInicioSQL = fechaInicio.format('YYYY-MM-DD HH:mm:ss');
+    const fechaFinSQL = fechaFin.format('YYYY-MM-DD HH:mm:ss');
+    
+    // Construir filtros adicionales
+    let whereFilters = '';
+    const replacements = { fechaInicio: fechaInicioSQL, fechaFin: fechaFinSQL };
+    
+    if (tipoAccion && tipoAccion !== 'todos') {
+      whereFilters += ' AND accion LIKE :tipoAccion';
+      replacements.tipoAccion = `%${tipoAccion}%`;
+    }
+    
+    if (usuario && usuario !== 'todos') {
+      whereFilters += ' AND usuario_nombre LIKE :usuario';
+      replacements.usuario = `%${usuario}%`;
+    }
+    
+    // Consulta principal de auditoría (simulada con datos de documentos)
+    const auditoriaQuery = `
+      SELECT 
+        d.id,
+        d.codigo_barras,
+        d.tipo_documento,
+        d.nombre_cliente,
+        d.estado,
+        d.estado_pago,
+        d.created_at as fecha_accion,
+        d.updated_at as fecha_modificacion,
+        m.nombre as usuario_nombre,
+        m.rol as usuario_rol,
+        CASE 
+          WHEN d.created_at = d.updated_at THEN 'CREACIÓN'
+          WHEN d.estado = 'listo_para_entrega' THEN 'PROCESAMIENTO_COMPLETADO'
+          WHEN d.estado = 'entregado' THEN 'ENTREGA'
+          WHEN d.estado_pago = 'pagado' THEN 'PAGO_REGISTRADO'
+          WHEN d.estado = 'cancelado' THEN 'CANCELACIÓN'
+          ELSE 'MODIFICACIÓN'
+        END as accion,
+        d.valor_factura,
+        d.numero_factura
+      FROM documentos d
+      JOIN matrizadores m ON d.id_matrizador = m.id
+      WHERE d.updated_at BETWEEN :fechaInicio AND :fechaFin
+      AND d.estado NOT IN ('eliminado')
+      ${whereFilters}
+      
+      UNION ALL
+      
+      SELECT 
+        NULL as id,
+        NULL as codigo_barras,
+        'SISTEMA' as tipo_documento,
+        'Acceso al sistema' as nombre_cliente,
+        'activo' as estado,
+        NULL as estado_pago,
+        m.last_login as fecha_accion,
+        m.last_login as fecha_modificacion,
+        m.nombre as usuario_nombre,
+        m.rol as usuario_rol,
+        'LOGIN' as accion,
+        NULL as valor_factura,
+        NULL as numero_factura
+      FROM matrizadores m
+      WHERE m.last_login BETWEEN :fechaInicio AND :fechaFin
+      AND m.last_login IS NOT NULL
+      ${whereFilters.replace('d.', 'm.')}
+      
+      ORDER BY fecha_accion DESC
+      LIMIT :limit OFFSET :offset
+    `;
+    
+    // Agregar limit y offset a replacements
+    replacements.limit = limit;
+    replacements.offset = offset;
+    
+    const registrosAuditoria = await sequelize.query(auditoriaQuery, {
+      replacements,
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    // Consulta para contar total de registros
+    const countQuery = `
+      SELECT COUNT(*) as total FROM (
+        SELECT d.id
+        FROM documentos d
+        JOIN matrizadores m ON d.id_matrizador = m.id
+        WHERE d.updated_at BETWEEN :fechaInicio AND :fechaFin
+        AND d.estado NOT IN ('eliminado')
+        ${whereFilters}
+        
+        UNION ALL
+        
+        SELECT NULL as id
+        FROM matrizadores m
+        WHERE m.last_login BETWEEN :fechaInicio AND :fechaFin
+        AND m.last_login IS NOT NULL
+        ${whereFilters.replace('d.', 'm.')}
+      ) as total_registros
+    `;
+    
+    const countResult = await sequelize.query(countQuery, {
+      replacements: { fechaInicio: fechaInicioSQL, fechaFin: fechaFinSQL, tipoAccion: replacements.tipoAccion, usuario: replacements.usuario },
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    const totalRegistros = parseInt(countResult[0]?.total || 0);
+    const totalPages = Math.ceil(totalRegistros / limit);
+    
+    // Estadísticas por tipo de acción
+    const statsQuery = `
+      SELECT 
+        accion,
+        COUNT(*) as cantidad
+      FROM (
+        SELECT 
+          CASE 
+            WHEN d.created_at = d.updated_at THEN 'CREACIÓN'
+            WHEN d.estado = 'listo_para_entrega' THEN 'PROCESAMIENTO_COMPLETADO'
+            WHEN d.estado = 'entregado' THEN 'ENTREGA'
+            WHEN d.estado_pago = 'pagado' THEN 'PAGO_REGISTRADO'
+            WHEN d.estado = 'cancelado' THEN 'CANCELACIÓN'
+            ELSE 'MODIFICACIÓN'
+          END as accion
+        FROM documentos d
+        JOIN matrizadores m ON d.id_matrizador = m.id
+        WHERE d.updated_at BETWEEN :fechaInicio AND :fechaFin
+        AND d.estado NOT IN ('eliminado')
+        
+        UNION ALL
+        
+        SELECT 'LOGIN' as accion
+        FROM matrizadores m
+        WHERE m.last_login BETWEEN :fechaInicio AND :fechaFin
+        AND m.last_login IS NOT NULL
+      ) as acciones
+      GROUP BY accion
+      ORDER BY cantidad DESC
+    `;
+    
+    const statsAcciones = await sequelize.query(statsQuery, {
+      replacements: { fechaInicio: fechaInicioSQL, fechaFin: fechaFinSQL },
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    // Obtener usuarios únicos para filtro
+    const usuariosQuery = `
+      SELECT DISTINCT m.nombre, m.rol
+      FROM matrizadores m
+      WHERE m.activo = true
+      ORDER BY m.nombre ASC
+    `;
+    
+    const usuarios = await sequelize.query(usuariosQuery, {
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    // Preparar paginación
+    const pagination = {
+      currentPage: page,
+      totalPages,
+      totalItems: totalRegistros,
+      hasNext: page < totalPages,
+      hasPrev: page > 1,
+      nextPage: page + 1,
+      prevPage: page - 1
+    };
+    
+    // Preparar datos para gráfico
+    const datosGrafico = {
+      acciones: statsAcciones.map(item => item.accion),
+      cantidades: statsAcciones.map(item => parseInt(item.cantidad))
+    };
+    
+    res.render('admin/reportes/registros-auditoria', {
+      layout: 'admin',
+      title: 'Registros de Auditoría',
+      activeReportes: true,
+      userRole: req.matrizador?.rol,
+      userName: req.matrizador?.nombre,
+      registrosAuditoria,
+      usuarios,
+      statsAcciones,
+      datosGrafico,
+      stats: {
+        totalRegistros,
+        totalAcciones: statsAcciones.length,
+        usuariosActivos: usuarios.length,
+        periodoTexto: `Del ${fechaInicio.format('DD/MM/YYYY')} al ${fechaFin.format('DD/MM/YYYY')}`
+      },
+      filtros: {
+        fechaInicio: fechaInicio.format('YYYY-MM-DD'),
+        fechaFin: fechaFin.format('DD/MM/YYYY'),
+        tipoAccion: tipoAccion || 'todos',
+        usuario: usuario || 'todos'
+      },
+      pagination: totalPages > 1 ? pagination : null
+    });
+  } catch (error) {
+    console.error('Error al generar reporte de auditoría:', error);
+    return res.status(500).render('error', {
+      layout: 'admin',
+      title: 'Error',
+      message: 'Error al generar el reporte de auditoría',
+      error
+    });
+  }
+};
+
+/**
+ * Página de Alertas Detallada
+ * Muestra todas las situaciones que requieren atención con detalles y acciones
+ */
+exports.mostrarAlertas = async (req, res) => {
+  try {
+    // Reutilizar la lógica de alertas del dashboard
+    const alertasCriticas = [];
+    
+    // Documentos atrasados más de 30 días sin pagar
+    const documentosAtrasados = await Documento.count({
+      where: {
+        estado_pago: 'pendiente',
+        numero_factura: { [Op.not]: null },
+        estado: { [Op.notIn]: ['eliminado', 'nota_credito'] },
+        created_at: { [Op.lt]: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
+      }
+    });
+    
+    if (documentosAtrasados > 0) {
+      alertasCriticas.push({
+        tipo: 'danger',
+        icono: 'fas fa-exclamation-triangle',
+        titulo: `${documentosAtrasados} documentos atrasados +30 días`,
+        descripcion: 'Requieren gestión de cobranza urgente',
+        accion: '/admin/reportes/pendientes?antiguedad=30%2B',
+        urgencia: 'alta',
+        detalles: 'Estos documentos tienen más de 30 días sin pago y requieren seguimiento inmediato de cobranza.'
+      });
+    }
+    
+    // Documentos listos para entrega hace más de 3 días
+    const documentosListosViejos = await Documento.count({
+      where: {
+        estado: 'listo_para_entrega',
+        updated_at: { [Op.lt]: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) }
+      }
+    });
+    
+    if (documentosListosViejos > 0) {
+      alertasCriticas.push({
+        tipo: 'warning',
+        icono: 'fas fa-clock',
+        titulo: `${documentosListosViejos} documentos listos sin entregar`,
+        descripcion: 'Más de 3 días esperando entrega',
+        accion: '/admin/documentos/listado?estado=listo_para_entrega',
+        urgencia: 'media',
+        detalles: 'Estos documentos están listos pero no han sido entregados. Contactar a los clientes para coordinar la entrega.'
+      });
+    }
+    
+    // Documentos sin matrizador asignado
+    const documentosSinMatrizador = await Documento.count({
+      where: {
+        id_matrizador: null,
+        estado: { [Op.in]: ['en_proceso', 'listo_para_entrega'] }
+      }
+    });
+    
+    if (documentosSinMatrizador > 0) {
+      alertasCriticas.push({
+        tipo: 'info',
+        icono: 'fas fa-user-slash',
+        titulo: `${documentosSinMatrizador} documentos sin asignar`,
+        descripcion: 'Necesitan matrizador responsable',
+        accion: '/admin/documentos/listado?idMatrizador=',
+        urgencia: 'baja',
+        detalles: 'Estos documentos no tienen un matrizador asignado. Asignar responsable para su procesamiento.'
+      });
+    }
+    
+    // Documentos con problemas de facturación (sin número de factura pero con valor)
+    const documentosSinFactura = await Documento.count({
+      where: {
+        numero_factura: null,
+        valor_factura: { [Op.not]: null },
+        estado: { [Op.notIn]: ['eliminado', 'nota_credito'] }
+      }
+    });
+    
+    if (documentosSinFactura > 0) {
+      alertasCriticas.push({
+        tipo: 'warning',
+        icono: 'fas fa-file-invoice',
+        titulo: `${documentosSinFactura} documentos sin número de factura`,
+        descripcion: 'Tienen valor pero falta número de factura',
+        accion: '/admin/documentos/listado?busqueda=',
+        urgencia: 'media',
+        detalles: 'Estos documentos tienen valor asignado pero no tienen número de factura. Completar la información de facturación.'
+      });
+    }
+    
+    // Determinar estado general
+    let estadoGeneral = 'success';
+    let mensajeEstado = 'Todo funcionando correctamente';
+    
+    if (documentosAtrasados > 10 || documentosListosViejos > 5) {
+      estadoGeneral = 'danger';
+      mensajeEstado = 'Atención requerida urgente';
+    } else if (alertasCriticas.length > 0) {
+      estadoGeneral = 'warning';
+      mensajeEstado = 'Algunos problemas requieren atención';
+    }
+    
+    res.render('admin/alertas', {
+      layout: 'admin',
+      title: 'Centro de Alertas',
+      activeAlertas: true,
+      userRole: req.matrizador?.rol,
+      userName: req.matrizador?.nombre,
+      alertasCriticas,
+      estadoGeneral,
+      mensajeEstado,
+      stats: {
+        totalAlertas: alertasCriticas.length,
+        alertasAltas: alertasCriticas.filter(a => a.urgencia === 'alta').length,
+        alertasMedias: alertasCriticas.filter(a => a.urgencia === 'media').length,
+        alertasBajas: alertasCriticas.filter(a => a.urgencia === 'baja').length
+      }
+    });
+  } catch (error) {
+    console.error('Error al cargar alertas:', error);
+    res.status(500).render('error', {
+      layout: 'admin',
+      title: 'Error',
+      message: 'Ha ocurrido un error al cargar las alertas',
       error
     });
   }

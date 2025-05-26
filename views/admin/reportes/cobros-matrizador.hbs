@@ -201,16 +201,15 @@
         </div>
         {{else}}
         <div class="text-center py-5">
-          <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
-          <h5>No hay datos para mostrar</h5>
-          <p>No se encontraron cobros en el período seleccionado.</p>
+          <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+          <h5>Sin datos</h5>
+          <p class="text-muted">No hay cobros registrados en el período seleccionado.</p>
         </div>
         {{/if}}
       </div>
     </div>
   </div>
   
-  <!-- Cobros Recientes -->
   <div class="col-md-4">
     <div class="card">
       <div class="card-header">
@@ -220,19 +219,17 @@
         {{#if cobrosRecientes.length}}
         <div class="list-group list-group-flush">
           {{#each cobrosRecientes}}
-          <div class="list-group-item border-0 px-0">
-            <div class="d-flex w-100 justify-content-between align-items-start">
+          <div class="list-group-item px-0">
+            <div class="d-flex justify-content-between align-items-start">
               <div class="flex-grow-1">
                 <h6 class="mb-1">{{this.nombre_cliente}}</h6>
-                <p class="mb-1">
-                  <small class="text-muted">{{this.tipo_documento}}</small><br>
-                  <code class="small">{{this.codigo_barras}}</code>
-                </p>
-                <small class="text-muted">{{this.matrizador_nombre}} • {{formatDateTime this.fecha_pago}}</small>
+                <p class="mb-1 small text-muted">{{this.tipo_documento}} - {{this.codigo_barras}}</p>
+                <small class="text-muted">{{this.matrizador_nombre}}</small>
               </div>
               <div class="text-end">
-                <strong class="text-success">${{formatMoney this.valor_factura}}</strong><br>
-                <small class="text-muted">{{this.metodo_pago}}</small>
+                <span class="badge bg-success">${{formatMoney this.valor_factura}}</span>
+                <br>
+                <small class="text-muted">{{formatDate this.fecha_pago}}</small>
               </div>
             </div>
           </div>
@@ -240,9 +237,8 @@
         </div>
         {{else}}
         <div class="text-center py-3">
-          <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-          <h6>Sin cobros recientes</h6>
-          <p class="text-muted mb-0">No hay cobros en el período seleccionado</p>
+          <i class="fas fa-clock fa-2x text-muted mb-2"></i>
+          <p class="text-muted mb-0">No hay cobros recientes</p>
         </div>
         {{/if}}
       </div>
@@ -253,13 +249,13 @@
 <!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-// Función para mostrar/ocultar fechas personalizadas
+// Función para mostrar/ocultar campos de fecha personalizada
 function toggleFechasPersonalizadas() {
-  const rangoSelect = document.getElementById('rango');
+  const rango = document.getElementById('rango').value;
   const fechaInicioContainer = document.getElementById('fechaInicioContainer');
   const fechaFinContainer = document.getElementById('fechaFinContainer');
   
-  if (rangoSelect.value === 'personalizado') {
+  if (rango === 'personalizado') {
     fechaInicioContainer.style.display = 'block';
     fechaFinContainer.style.display = 'block';
   } else {
@@ -268,102 +264,77 @@ function toggleFechasPersonalizadas() {
   }
 }
 
-// Función para exportar reporte
-function exportarReporte() {
-  const form = document.querySelector('form');
-  const formData = new FormData(form);
-  const params = new URLSearchParams(formData);
-  params.append('formato', 'excel');
-  
-  window.location.href = '/admin/reportes/cobros-matrizador/exportar?' + params.toString();
-}
-
-// Inicializar gráfico si hay datos
-document.addEventListener('DOMContentLoaded', function() {
-  {{#if datosGrafico.nombres.length}}
-  const ctx = document.getElementById('cobrosChart').getContext('2d');
-  
-  const datosGrafico = {
+// Gráfico de cobros por matrizador
+{{#if datosGrafico.nombres.length}}
+const ctx = document.getElementById('cobrosChart').getContext('2d');
+new Chart(ctx, {
+  type: 'bar',
+  data: {
     labels: {{{json datosGrafico.nombres}}},
-    datasets: [
-      {
-        label: 'Total Cobrado ($)',
-        data: {{{json datosGrafico.montos}}},
-        backgroundColor: 'rgba(40, 167, 69, 0.8)',
-        borderColor: 'rgba(40, 167, 69, 1)',
-        borderWidth: 1,
-        yAxisID: 'y'
+    datasets: [{
+      label: 'Total Cobrado ($)',
+      data: {{{json datosGrafico.montos}}},
+      backgroundColor: 'rgba(54, 162, 235, 0.8)',
+      borderColor: 'rgba(54, 162, 235, 1)',
+      borderWidth: 1
+    }, {
+      label: 'Documentos Cobrados',
+      data: {{{json datosGrafico.documentos}}},
+      type: 'line',
+      yAxisID: 'y1',
+      borderColor: 'rgba(255, 99, 132, 1)',
+      backgroundColor: 'rgba(255, 99, 132, 0.2)',
+      tension: 0.1
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: {
+      mode: 'index',
+      intersect: false,
+    },
+    scales: {
+      y: {
+        type: 'linear',
+        display: true,
+        position: 'left',
+        beginAtZero: true,
+        ticks: {
+          callback: function(value) {
+            return '$' + value.toFixed(2);
+          }
+        }
       },
-      {
-        label: 'Documentos Cobrados',
-        data: {{{json datosGrafico.documentos}}},
-        backgroundColor: 'rgba(255, 193, 7, 0.8)',
-        borderColor: 'rgba(255, 193, 7, 1)',
-        borderWidth: 1,
-        type: 'line',
-        yAxisID: 'y1'
+      y1: {
+        type: 'linear',
+        display: true,
+        position: 'right',
+        beginAtZero: true,
+        grid: {
+          drawOnChartArea: false,
+        },
       }
-    ]
-  };
-  
-  new Chart(ctx, {
-    type: 'bar',
-    data: datosGrafico,
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: {
-        mode: 'index',
-        intersect: false,
+    },
+    plugins: {
+      legend: {
+        position: 'top',
       },
-      plugins: {
-        title: {
-          display: true,
-          text: 'Cobros por Matrizador - {{periodoTexto}}'
-        },
-        legend: {
-          position: 'top'
-        }
-      },
-      scales: {
-        x: {
-          display: true,
-          title: {
-            display: true,
-            text: 'Matrizadores'
-          }
-        },
-        y: {
-          type: 'linear',
-          display: true,
-          position: 'left',
-          title: {
-            display: true,
-            text: 'Total Cobrado ($)'
-          },
-          ticks: {
-            callback: function(value) {
-              return '$' + value.toLocaleString();
-            }
-          }
-        },
-        y1: {
-          type: 'linear',
-          display: true,
-          position: 'right',
-          title: {
-            display: true,
-            text: 'Número de Documentos'
-          },
-          grid: {
-            drawOnChartArea: false,
-          },
-        }
+      title: {
+        display: true,
+        text: 'Cobros por Matrizador - {{periodoTexto}}'
       }
     }
-  });
-  {{/if}}
+  }
 });
+{{/if}}
+
+// Función para exportar reporte
+function exportarReporte() {
+  const params = new URLSearchParams(window.location.search);
+  params.append('formato', 'excel');
+  window.open('/admin/reportes/cobros-matrizador?' + params.toString(), '_blank');
+}
 </script>
 
 <style>
