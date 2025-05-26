@@ -67,7 +67,7 @@
               <th>Tipo</th>
               <th>Cliente</th>
               <th>Matrizador</th>
-              <th>Fecha</th>
+              <th>Fecha Registro Sistema</th>
               <th>Estado</th>
               <th>Estado Pago</th>
               <th>Acciones</th>
@@ -89,7 +89,7 @@
                 <span class="text-muted">No asignado</span>
                 {{/if}}
               </td>
-              <td>{{formatDate this.fechaFactura}}</td>
+              <td>{{formatDateDocument this.created_at}}</td>
               <td>
                 {{#if (eq this.estado "en_proceso")}}
                 <span class="badge bg-warning">En Proceso</span>

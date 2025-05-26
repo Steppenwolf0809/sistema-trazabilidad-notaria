@@ -1,0 +1,202 @@
+<!-- Reporte: Documentos Sin Procesar (Supervisión) -->
+<div class="card">
+  <div class="card-header bg-warning text-dark">
+    <h5 class="mb-0">
+      <i class="fas fa-tasks me-2"></i>
+      Documentos Sin Procesar - Supervisión de Productividad
+    </h5>
+    <p class="mb-0 small">
+      Documentos que NO han llegado a "listo para entrega" o "entregado" - Para supervisión de matrizadores
+    </p>
+  </div>
+  <div class="card-body">
+    
+    <!-- Resumen Ejecutivo -->
+    <div class="row mb-4">
+      <div class="col-md-3">
+        <div class="card bg-warning text-dark h-100">
+          <div class="card-body text-center">
+            <i class="fas fa-clock fa-3x mb-3 opacity-75"></i>
+            <h6 class="card-title">Total Sin Procesar</h6>
+            <h2 class="mb-0">{{totales.totalDocumentos}}</h2>
+            <small>Documentos pendientes</small>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-md-9">
+        <div class="card">
+          <div class="card-header">
+            <h6 class="mb-0">Resumen por Matrizador</h6>
+          </div>
+          <div class="card-body">
+            {{#if statsMatrizador.length}}
+            <div class="table-responsive">
+              <table class="table table-sm table-hover">
+                <thead>
+                  <tr>
+                    <th>Matrizador</th>
+                    <th class="text-center">Cantidad Pendiente</th>
+                    <th class="text-center">Promedio Días</th>
+                    <th class="text-center">Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {{#each statsMatrizador}}
+                  <tr>
+                    <td><strong>{{this.nombre}}</strong></td>
+                    <td class="text-center">
+                      <span class="badge {{#if (gt this.cantidad 10)}}bg-danger{{else if (gt this.cantidad 5)}}bg-warning{{else}}bg-success{{/if}}">
+                        {{this.cantidad}}
+                      </span>
+                    </td>
+                    <td class="text-center">{{this.promedio_dias}} días</td>
+                    <td class="text-center">
+                      {{#if (gt this.promedio_dias 7)}}
+                      <i class="fas fa-exclamation-triangle text-danger" title="Atención: Más de 7 días promedio"></i>
+                      {{else if (gt this.promedio_dias 3)}}
+                      <i class="fas fa-clock text-warning" title="Cuidado: Más de 3 días promedio"></i>
+                      {{else}}
+                      <i class="fas fa-check-circle text-success" title="Bien: Menos de 3 días promedio"></i>
+                      {{/if}}
+                    </td>
+                  </tr>
+                  {{/each}}
+                </tbody>
+              </table>
+            </div>
+            {{else}}
+            <div class="text-center py-3">
+              <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+              <h5>¡Excelente!</h5>
+              <p>No hay documentos sin procesar en este período.</p>
+            </div>
+            {{/if}}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Listado Detallado -->
+    {{#if documentos.length}}
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="mb-0">
+          <i class="fas fa-list me-2"></i>
+          Documentos Sin Procesar ({{documentos.length}})
+        </h6>
+        <div>
+          <button class="btn btn-sm btn-outline-danger" onclick="verSoloAtrasados()">
+            <i class="fas fa-exclamation-triangle me-1"></i> Solo Atrasados (>7 días)
+          </button>
+          <button class="btn btn-sm btn-outline-primary" onclick="verTodos()">
+            <i class="fas fa-list me-1"></i> Ver Todos
+          </button>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0" id="tablaSinProcesar">
+            <thead class="table-light">
+              <tr>
+                <th>Código</th>
+                <th>Tipo Documento</th>
+                <th>Cliente</th>
+                <th>Matrizador</th>
+                <th>Estado</th>
+                <th class="text-center">Días desde Registro</th>
+                <th class="text-center">Urgencia</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each documentos}}
+              <tr data-dias="{{this.diasDesdeRegistro}}" class="{{#if (gt this.diasDesdeRegistro 7)}}table-danger{{else if (gt this.diasDesdeRegistro 3)}}table-warning{{/if}}">
+                <td>
+                  <code>{{this.codigo_barras}}</code>
+                </td>
+                <td>{{this.tipo_documento}}</td>
+                <td>
+                  <strong>{{this.nombre_cliente}}</strong>
+                </td>
+                <td>
+                  {{#if this.matrizadorNombre}}
+                  <span class="badge bg-primary">{{this.matrizadorNombre}}</span>
+                  {{else}}
+                  <span class="badge bg-secondary">Sin asignar</span>
+                  {{/if}}
+                </td>
+                <td>
+                  {{#if (eq this.estado "en_proceso")}}
+                  <span class="badge bg-warning">En Proceso</span>
+                  {{else}}
+                  <span class="badge bg-secondary">{{this.estado}}</span>
+                  {{/if}}
+                </td>
+                <td class="text-center">
+                  <span class="badge {{#if (gt this.diasDesdeRegistro 7)}}bg-danger{{else if (gt this.diasDesdeRegistro 3)}}bg-warning{{else}}bg-success{{/if}}">
+                    {{this.diasDesdeRegistro}} días
+                  </span>
+                </td>
+                <td class="text-center">
+                  {{#if (gt this.diasDesdeRegistro 7)}}
+                  <i class="fas fa-exclamation-triangle text-danger" title="URGENTE: Más de 7 días"></i>
+                  {{else if (gt this.diasDesdeRegistro 3)}}
+                  <i class="fas fa-clock text-warning" title="Atención: Más de 3 días"></i>
+                  {{else}}
+                  <i class="fas fa-check text-success" title="Normal: Menos de 3 días"></i>
+                  {{/if}}
+                </td>
+                <td>
+                  <a href="/admin/documentos/detalle/{{this.id}}" class="btn btn-sm btn-outline-primary" title="Ver Detalle">
+                    <i class="fas fa-eye"></i>
+                  </a>
+                  {{#if (not this.matrizadorNombre)}}
+                  <button class="btn btn-sm btn-outline-warning" onclick="asignarMatrizador({{this.id}})" title="Asignar Matrizador">
+                    <i class="fas fa-user-plus"></i>
+                  </button>
+                  {{/if}}
+                </td>
+              </tr>
+              {{/each}}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {{else}}
+    <div class="text-center py-5">
+      <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+      <h4>¡Todo está procesado!</h4>
+      <p class="text-muted">No hay documentos sin procesar en el período seleccionado.</p>
+    </div>
+    {{/if}}
+
+  </div>
+</div>
+
+<script>
+function verSoloAtrasados() {
+  const filas = document.querySelectorAll('#tablaSinProcesar tbody tr');
+  filas.forEach(fila => {
+    const dias = parseInt(fila.dataset.dias);
+    if (dias > 7) {
+      fila.style.display = '';
+    } else {
+      fila.style.display = 'none';
+    }
+  });
+}
+
+function verTodos() {
+  const filas = document.querySelectorAll('#tablaSinProcesar tbody tr');
+  filas.forEach(fila => {
+    fila.style.display = '';
+  });
+}
+
+function asignarMatrizador(documentoId) {
+  // Abrir modal para asignar matrizador (implementar según sea necesario)
+  alert('Función de asignación de matrizador por implementar para documento ID: ' + documentoId);
+}
+</script> 

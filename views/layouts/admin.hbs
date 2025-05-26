@@ -147,11 +147,12 @@
     </div>
     
     <ul class="nav flex-column">
-      <li class="nav-item">
+      {{!-- ELIMINADO: Dashboard duplicado de la sección principal --}}
+      {{!-- <li class="nav-item">
         <a class="nav-link {{#if activeDashboard}}active{{/if}}" href="/admin">
           <i class="fas fa-tachometer-alt"></i> Dashboard
         </a>
-      </li>
+      </li> --}}
       
       <div class="sidebar-heading">Documentos</div>
       
@@ -184,76 +185,34 @@
         </a>
       </li>
       
-      <div class="sidebar-heading">Reportes</div>
+      <div class="sidebar-heading">Reportes y Estadísticas</div>
       
-      <!-- Opción visible para todos (temporalmente) -->
+      <!-- Dashboard y estadísticas generales -->
+      <li class="nav-item">
+        <a class="nav-link {{#if activeDashboard}}active{{/if}}" href="/admin/dashboard">
+          <i class="fas fa-tachometer-alt"></i> Dashboard
+        </a>
+      </li>
+      
       <li class="nav-item">
         <a class="nav-link {{#if activeReportes}}active{{/if}}" href="/admin/reportes">
-          <i class="fas fa-chart-bar"></i> Reportes y Estadísticas
+          <i class="fas fa-chart-bar"></i> Reportes
         </a>
       </li>
       
       <div class="sidebar-heading">Auditoría</div>
       
-      <!-- Auditoría de eliminaciones - solo para administradores -->
       <li class="nav-item">
-        <a class="nav-link {{#if activeAuditoriaEliminaciones}}active{{/if}}" href="/admin/auditoria-eliminaciones">
-          <i class="fas fa-trash-alt text-danger"></i> Eliminaciones
+        <a class="nav-link {{#if activeAuditoria}}active{{/if}}" href="/admin/auditoria">
+          <i class="fas fa-clipboard-list"></i> Registros de Auditoría
         </a>
       </li>
       
-      <!-- Aquí se encuentran las opciones con restricciones por rol que temporalmente están comentadas -->
-      {{!-- 
-      {{#unless (eq userRole "consulta")}}
-        {{#if (eq userRole "admin")}}
-          <li class="nav-item">
-            <a class="nav-link {{#if activeRegistro}}active{{/if}}" href="/admin/documentos/registro">
-              <i class="fas fa-file-alt"></i> Registrar Documento
-            </a>
-          </li>
-        {{else if (eq userRole "matrizador")}}
-          <li class="nav-item">
-            <a class="nav-link {{#if activeRegistro}}active{{/if}}" href="/admin/documentos/registro">
-              <i class="fas fa-file-alt"></i> Registrar Documento
-            </a>
-          </li>
-        {{/if}}
-      {{/unless}}
-      
-      {{#unless (eq userRole "consulta")}}
-        {{#if (eq userRole "admin")}}
-          <li class="nav-item">
-            <a class="nav-link {{#if activeEntrega}}active{{/if}}" href="/admin/documentos/entrega">
-              <i class="fas fa-hand-holding"></i> Entrega de Documentos
-            </a>
-          </li>
-        {{else if (eq userRole "recepcion")}}
-          <li class="nav-item">
-            <a class="nav-link {{#if activeEntrega}}active{{/if}}" href="/admin/documentos/entrega">
-              <i class="fas fa-hand-holding"></i> Entrega de Documentos
-            </a>
-          </li>
-        {{/if}}
-      {{/unless}}
-      
-      {{#if (eq userRole "admin")}}
-        <div class="sidebar-heading">Matrizadores</div>
-        
-        <li class="nav-item">
-          <a class="nav-link {{#if activeMatrizadores}}active{{/if}}" href="/admin/matrizadores">
-            <i class="fas fa-users"></i> Gestionar Matrizadores
-          </a>
-        </li>
-        
-        <div class="sidebar-heading">Reportes</div>
-        
-        <li class="nav-item">
-          <a class="nav-link {{#if activeReportes}}active{{/if}}" href="/admin/reportes">
-            <i class="fas fa-chart-bar"></i> Reportes y Estadísticas
-          </a>
-        </li>
-      {{/if}}
-      --}}
+       <li class="nav-item">
+        <a class="nav-link {{#if activeAuditoriaEliminaciones}}active{{/if}}" href="/admin/auditoria-eliminaciones">
+          <i class="fas fa-trash-alt"></i> Auditoría Eliminaciones
+        </a>
+      </li>
     </ul>
   </div>
 

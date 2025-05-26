@@ -69,7 +69,7 @@
             <th class="ordenable" data-columna="codigo" data-tipo="texto">Código</th>
             <th class="ordenable" data-columna="tipo" data-tipo="texto">Tipo</th>
             <th class="ordenable" data-columna="cliente" data-tipo="texto">Cliente</th>
-            <th class="ordenable" data-columna="fecha" data-tipo="fecha">Fecha</th>
+            <th class="ordenable" data-columna="fecha" data-tipo="fecha">Fecha Registro Sistema</th>
             <th class="ordenable" data-columna="estado" data-tipo="estado">Estado</th>
             <th>Código Entrega</th>
             <th>Acciones</th>
@@ -89,7 +89,7 @@
               {{this.nombreCliente}}
               <div class="small text-muted">{{this.identificacionCliente}}</div>
             </td>
-            <td data-sort-value="{{this.createdAt}}">{{formatDate this.createdAt}}</td>
+            <td data-sort-value="{{this.created_at}}">{{formatDateDocument this.created_at}}</td>
             <td>
               {{#if (eq this.estado "en_proceso")}}
               <span class="badge bg-warning">En Proceso</span>

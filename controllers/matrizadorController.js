@@ -808,9 +808,7 @@ const matrizadorController = {
             sequelize.literal(`EXTRACT(EPOCH FROM (NOW() - created_at))/86400 >= 7`)
           ]
         },
-        order: [
-          [sequelize.literal(`EXTRACT(EPOCH FROM (NOW() - created_at))/86400`), 'DESC']
-        ],
+        order: [['created_at', 'DESC']],
         limit: 10
       });
       
@@ -849,13 +847,13 @@ const matrizadorController = {
           idMatrizador: req.matrizador.id,
           estado: 'listo_para_entrega'
         },
-        order: [['updated_at', 'DESC']],
+        order: [['created_at', 'DESC']],
         limit: 10
       });
       
       // Añadir días sin retirar a cada documento
       const documentosListos = docsListos.map(doc => {
-        const fechaListo = doc.updated_at; // La fecha en que se actualizó al estado 'listo_para_entrega'
+        const fechaListo = doc.created_at; // La fecha en que se actualizó al estado 'listo_para_entrega'
         const diasSinRetirar = moment().diff(moment(fechaListo), 'days');
         return {
           ...doc.toJSON(),
@@ -867,16 +865,16 @@ const matrizadorController = {
       // Datos para gráficos de productividad
       const datosProductividad = await sequelize.query(`
         SELECT 
-          TO_CHAR(updated_at, 'YYYY-MM-DD') as fecha,
+          TO_CHAR(created_at, 'YYYY-MM-DD') as fecha,
           COUNT(*) as total
         FROM documentos
         WHERE id_matrizador = :idMatrizador
-        AND updated_at BETWEEN :fechaInicio AND :fechaFin
+        AND created_at BETWEEN :fechaInicio AND :fechaFin
         AND (
           (estado = 'listo_para_entrega') OR
-          (estado = 'entregado' AND updated_at BETWEEN :fechaInicio AND :fechaFin)
+          (estado = 'entregado' AND created_at BETWEEN :fechaInicio AND :fechaFin)
         )
-        GROUP BY TO_CHAR(updated_at, 'YYYY-MM-DD')
+        GROUP BY TO_CHAR(created_at, 'YYYY-MM-DD')
         ORDER BY fecha
       `, {
         replacements: { 
@@ -1025,7 +1023,7 @@ const matrizadorController = {
       // Obtener documentos con paginación
       const { count, rows: documentos } = await Documento.findAndCountAll({
         where,
-        order: [['updated_at', 'DESC']],
+        order: [['created_at', 'DESC']],
         limit,
         offset
       });
@@ -1398,7 +1396,7 @@ const matrizadorController = {
           idMatrizador: req.matrizador.id,
           estado: 'listo_para_entrega'
         },
-        order: [['updated_at', 'DESC']],
+        order: [['created_at', 'DESC']],
         limit: 10
       });
       

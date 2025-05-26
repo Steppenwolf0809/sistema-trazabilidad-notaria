@@ -1,0 +1,487 @@
+<!-- Navegación -->
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/admin">Dashboard</a></li>
+    <li class="breadcrumb-item"><a href="/admin/reportes">Reportes</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Reporte Financiero</li>
+  </ol>
+</nav>
+
+<!-- Filtros y Controles -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card border-success">
+      <div class="card-header bg-success text-white">
+        <h5 class="mb-0">
+          <i class="fas fa-chart-line me-2"></i>
+          Reporte Financiero - {{periodoTexto}}
+        </h5>
+      </div>
+      <div class="card-body">
+        <form method="GET" action="/admin/reportes/financiero" class="row align-items-end">
+          <div class="col-md-2">
+            <label for="rango" class="form-label fw-bold">Período</label>
+            <select name="rango" id="rango" class="form-select">
+              <option value="hoy" {{#if (eq filtros.rango "hoy")}}selected{{/if}}>Hoy</option>
+              <option value="ayer" {{#if (eq filtros.rango "ayer")}}selected{{/if}}>Ayer</option>
+              <option value="semana" {{#if (eq filtros.rango "semana")}}selected{{/if}}>Esta semana</option>
+              <option value="mes" {{#if (eq filtros.rango "mes")}}selected{{/if}}>Este mes</option>
+              <option value="ultimo_mes" {{#if (eq filtros.rango "ultimo_mes")}}selected{{/if}}>Últimos 30 días</option>
+              <option value="personalizado" {{#if (eq filtros.rango "personalizado")}}selected{{/if}}>Personalizado</option>
+            </select>
+          </div>
+          
+          <div id="fechasPersonalizadas" class="col-md-4 row" style="{{#unless (eq filtros.rango "personalizado")}}display: none;{{/unless}}">
+            <div class="col-md-6">
+              <label for="fechaInicio" class="form-label fw-bold">Desde</label>
+              <input type="date" name="fechaInicio" id="fechaInicio" class="form-control" value="{{filtros.fechaInicio}}">
+            </div>
+            <div class="col-md-6">
+              <label for="fechaFin" class="form-label fw-bold">Hasta</label>
+              <input type="date" name="fechaFin" id="fechaFin" class="form-control" value="{{filtros.fechaFin}}">
+            </div>
+          </div>
+          
+          <div class="col-md-3">
+            <label for="idMatrizador" class="form-label fw-bold">Matrizador</label>
+            <select name="idMatrizador" id="idMatrizador" class="form-select">
+              <option value="todos" {{#unless idMatrizadorSeleccionado}}selected{{/unless}}>Todos los matrizadores</option>
+              {{#each matrizadores}}
+              <option value="{{this.id}}" {{#if (eq this.id ../idMatrizadorSeleccionado)}}selected{{/if}}>{{this.nombre}}</option>
+              {{/each}}
+            </select>
+          </div>
+          
+          <div class="col-md-3">
+            <button type="submit" class="btn btn-success me-2">
+              <i class="fas fa-sync-alt me-1"></i> Actualizar
+            </button>
+            <button type="button" class="btn btn-outline-primary" onclick="exportarReporte()">
+              <i class="fas fa-download me-1"></i> Exportar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Resumen Ejecutivo -->
+<div class="row mb-4">
+  <div class="col-md-3">
+    <div class="card bg-primary text-white h-100">
+      <div class="card-body text-center">
+        <i class="fas fa-file-invoice-dollar fa-3x mb-3 opacity-75"></i>
+        <h6 class="card-title">Total Facturado</h6>
+        <h2 class="mb-0">${{stats.totalFacturado}}</h2>
+        <small class="text-white-50">En el período</small>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3">
+    <div class="card bg-success text-white h-100">
+      <div class="card-body text-center">
+        <i class="fas fa-dollar-sign fa-3x mb-3 opacity-75"></i>
+        <h6 class="card-title">Total Cobrado</h6>
+        <h2 class="mb-0">${{stats.totalCobrado}}</h2>
+        <small class="text-white-50">Efectivamente recibido</small>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3">
+    <div class="card bg-warning text-white h-100">
+      <div class="card-body text-center">
+        <i class="fas fa-clock fa-3x mb-3 opacity-75"></i>
+        <h6 class="card-title">Pendiente de Cobro</h6>
+        <h2 class="mb-0">${{stats.totalPendiente}}</h2>
+        <small class="text-white-50">Por recuperar</small>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3">
+    <div class="card bg-info text-white h-100">
+      <div class="card-body text-center">
+        <i class="fas fa-percentage fa-3x mb-3 opacity-75"></i>
+        <h6 class="card-title">% Recuperación</h6>
+        <h2 class="mb-0">{{stats.porcentajeRecuperacion}}%</h2>
+        <small class="text-white-50">Eficiencia de cobro</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Gráfico de Tendencia Financiera -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="mb-0">
+          <i class="fas fa-chart-area me-2"></i>
+          Evolución Financiera - {{periodoTexto}}
+        </h6>
+        <div class="btn-group" role="group">
+          <button type="button" class="btn btn-sm btn-outline-primary active" id="btnLineas">
+            <i class="fas fa-chart-line me-1"></i> Líneas
+          </button>
+          <button type="button" class="btn btn-sm btn-outline-primary" id="btnBarras">
+            <i class="fas fa-chart-bar me-1"></i> Barras
+          </button>
+        </div>
+      </div>
+      <div class="card-body">
+        <canvas id="graficoFinanciero" height="400"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Análisis Detallado por Día -->
+{{#if datosTabla.length}}
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h6 class="mb-0">
+          <i class="fas fa-table me-2"></i>
+          Análisis Detallado por Día
+        </h6>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Fecha</th>
+                <th class="text-end">Facturado</th>
+                <th class="text-end">Cobrado</th>
+                <th class="text-end">Pendiente</th>
+                <th class="text-center">% Recuperación</th>
+                <th class="text-center">Rendimiento</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each datosTabla}}
+              <tr>
+                <td>
+                  <strong>{{this.fecha}}</strong>
+                </td>
+                <td class="text-end">
+                  <span class="text-primary fw-bold">${{this.facturado}}</span>
+                </td>
+                <td class="text-end">
+                  <span class="text-success fw-bold">${{this.cobrado}}</span>
+                </td>
+                <td class="text-end">
+                  <span class="text-warning fw-bold">${{this.pendiente}}</span>
+                </td>
+                <td class="text-center">
+                  {{#if (gt this.porcentaje 80)}}
+                  <span class="badge bg-success">{{this.porcentaje}}%</span>
+                  {{else if (gt this.porcentaje 60)}}
+                  <span class="badge bg-warning">{{this.porcentaje}}%</span>
+                  {{else}}
+                  <span class="badge bg-danger">{{this.porcentaje}}%</span>
+                  {{/if}}
+                </td>
+                <td class="text-center">
+                  {{#if (gt this.porcentaje 80)}}
+                  <i class="fas fa-arrow-up text-success" title="Excelente"></i>
+                  {{else if (gt this.porcentaje 60)}}
+                  <i class="fas fa-arrow-right text-warning" title="Regular"></i>
+                  {{else}}
+                  <i class="fas fa-arrow-down text-danger" title="Bajo"></i>
+                  {{/if}}
+                </td>
+              </tr>
+              {{/each}}
+            </tbody>
+            <tfoot class="table-light">
+              <tr>
+                <th>TOTALES</th>
+                <th class="text-end text-primary">${{stats.totalFacturado}}</th>
+                <th class="text-end text-success">${{stats.totalCobrado}}</th>
+                <th class="text-end text-warning">${{stats.totalPendiente}}</th>
+                <th class="text-center">
+                  <span class="badge bg-info">{{stats.porcentajeRecuperacion}}%</span>
+                </th>
+                <th class="text-center">
+                  {{#if (gt stats.porcentajeRecuperacion 80)}}
+                  <i class="fas fa-trophy text-warning" title="Excelente período"></i>
+                  {{else if (gt stats.porcentajeRecuperacion 60)}}
+                  <i class="fas fa-thumbs-up text-info" title="Buen período"></i>
+                  {{else}}
+                  <i class="fas fa-exclamation-triangle text-danger" title="Período bajo"></i>
+                  {{/if}}
+                </th>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{{else}}
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="alert alert-info text-center">
+      <i class="fas fa-info-circle fa-2x mb-3"></i>
+      <h5>No hay datos financieros para el período seleccionado</h5>
+      <p class="mb-0">Intenta seleccionar un rango de fechas diferente o verifica que haya documentos facturados en este período.</p>
+    </div>
+  </div>
+</div>
+{{/if}}
+
+<!-- Acciones Rápidas -->
+<div class="row">
+  <div class="col-12">
+    <div class="card border-info">
+      <div class="card-header bg-info text-white">
+        <h6 class="mb-0">
+          <i class="fas fa-bolt me-2"></i>
+          Acciones Rápidas
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-3">
+            <a href="/admin/reportes/pendientes" class="btn btn-outline-danger w-100 mb-2">
+              <i class="fas fa-exclamation-triangle me-2"></i>
+              Ver Documentos Atrasados
+            </a>
+          </div>
+          <div class="col-md-3">
+            <a href="/admin/dashboard?rango={{filtros.rango}}" class="btn btn-outline-primary w-100 mb-2">
+              <i class="fas fa-tachometer-alt me-2"></i>
+              Volver al Dashboard
+            </a>
+          </div>
+          <div class="col-md-3">
+            <button type="button" class="btn btn-outline-success w-100 mb-2" onclick="imprimirReporte()">
+              <i class="fas fa-print me-2"></i>
+              Imprimir Reporte
+            </button>
+          </div>
+          <div class="col-md-3">
+            <button type="button" class="btn btn-outline-info w-100 mb-2" onclick="compartirReporte()">
+              <i class="fas fa-share-alt me-2"></i>
+              Compartir Enlace
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts para gráficos y funcionalidad -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Inicializar gráfico financiero
+  initGraficoFinanciero();
+  
+  // Inicializar controles
+  initControles();
+});
+
+function initGraficoFinanciero() {
+  const ctx = document.getElementById('graficoFinanciero').getContext('2d');
+  
+  // Datos del gráfico
+  const datos = {
+    labels: {{{json graficoTendencia.fechas}}},
+    datasets: [
+      {
+        label: 'Facturado',
+        data: {{{json graficoTendencia.facturado}}},
+        borderColor: '#007bff',
+        backgroundColor: 'rgba(0, 123, 255, 0.1)',
+        fill: true,
+        tension: 0.4
+      },
+      {
+        label: 'Cobrado',
+        data: {{{json graficoTendencia.cobrado}}},
+        borderColor: '#28a745',
+        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+        fill: true,
+        tension: 0.4
+      },
+      {
+        label: 'Pendiente',
+        data: {{{json graficoTendencia.pendiente}}},
+        borderColor: '#ffc107',
+        backgroundColor: 'rgba(255, 193, 7, 0.1)',
+        fill: true,
+        tension: 0.4
+      }
+    ]
+  };
+  
+  // Configuración del gráfico
+  const config = {
+    type: 'line',
+    data: datos,
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        title: {
+          display: true,
+          text: 'Evolución Financiera Diaria'
+        },
+        legend: {
+          position: 'top'
+        },
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          callbacks: {
+            label: function(context) {
+              return context.dataset.label + ': $' + context.parsed.y.toFixed(2);
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          display: true,
+          title: {
+            display: true,
+            text: 'Fecha'
+          }
+        },
+        y: {
+          display: true,
+          title: {
+            display: true,
+            text: 'Monto ($)'
+          },
+          beginAtZero: true,
+          ticks: {
+            callback: function(value) {
+              return '$' + value.toFixed(0);
+            }
+          }
+        }
+      },
+      interaction: {
+        mode: 'nearest',
+        axis: 'x',
+        intersect: false
+      }
+    }
+  };
+  
+  // Crear gráfico
+  window.graficoFinanciero = new Chart(ctx, config);
+  
+  // Manejo de cambio de tipo de gráfico
+  document.getElementById('btnLineas').addEventListener('click', function() {
+    window.graficoFinanciero.config.type = 'line';
+    window.graficoFinanciero.update();
+    
+    document.getElementById('btnLineas').classList.add('active');
+    document.getElementById('btnBarras').classList.remove('active');
+  });
+  
+  document.getElementById('btnBarras').addEventListener('click', function() {
+    window.graficoFinanciero.config.type = 'bar';
+    window.graficoFinanciero.update();
+    
+    document.getElementById('btnBarras').classList.add('active');
+    document.getElementById('btnLineas').classList.remove('active');
+  });
+}
+
+function initControles() {
+  // Manejo del selector de período
+  const rangoSelect = document.getElementById('rango');
+  const fechasPersonalizadas = document.getElementById('fechasPersonalizadas');
+  
+  rangoSelect.addEventListener('change', function() {
+    if (this.value === 'personalizado') {
+      fechasPersonalizadas.style.display = 'flex';
+    } else {
+      fechasPersonalizadas.style.display = 'none';
+    }
+  });
+}
+
+function exportarReporte() {
+  // Construir URL de exportación
+  const form = document.querySelector('form');
+  const formData = new FormData(form);
+  const params = new URLSearchParams(formData);
+  
+  // Agregar parámetro de formato
+  params.append('formato', 'excel');
+  
+  // Redirigir a la URL de exportación
+  window.location.href = '/admin/reportes/financiero/exportar?' + params.toString();
+}
+
+function imprimirReporte() {
+  window.print();
+}
+
+function compartirReporte() {
+  // Copiar URL actual al portapapeles
+  navigator.clipboard.writeText(window.location.href).then(function() {
+    alert('Enlace copiado al portapapeles');
+  }).catch(function() {
+    // Fallback para navegadores que no soportan clipboard API
+    const textArea = document.createElement('textarea');
+    textArea.value = window.location.href;
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textArea);
+    alert('Enlace copiado al portapapeles');
+  });
+}
+</script>
+
+<!-- Estilos adicionales -->
+<style>
+@media print {
+  .btn, .card-header, .no-print {
+    display: none !important;
+  }
+  
+  .card {
+    border: none !important;
+    box-shadow: none !important;
+  }
+  
+  .table {
+    font-size: 12px;
+  }
+}
+
+.opacity-75 {
+  opacity: 0.75;
+}
+
+.text-white-50 {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  transition: transform 0.2s;
+}
+
+.table th {
+  border-top: none;
+}
+
+.badge {
+  font-size: 0.75em;
+}
+</style> 

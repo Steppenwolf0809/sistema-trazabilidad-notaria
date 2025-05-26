@@ -79,8 +79,9 @@ function procesarFechaDocumento(fechaXML) {
     const mes = parseInt(partes[1]) - 1; // Mes base 0
     const año = parseInt(partes[2]);
     
-    // Crear fecha en zona horaria de Ecuador (solo fecha, sin hora)
-    const fecha = moment.tz([año, mes, dia], TIMEZONE_ECUADOR).startOf('day').toDate();
+    // CORREGIDO: Crear fecha SIN zona horaria para mantener la fecha exacta del XML
+    // Usar UTC para evitar conversiones de zona horaria que cambien el día
+    const fecha = new Date(Date.UTC(año, mes, dia, 0, 0, 0, 0));
     
     logger.debug('DOCUMENTO', 'Fecha XML procesada exitosamente', {
       fechaOriginal: fechaXML,

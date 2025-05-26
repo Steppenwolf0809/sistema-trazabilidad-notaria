@@ -153,7 +153,7 @@ const recepcionController = {
             attributes: ['id', 'nombre']
           }
         ],
-        order: [['updated_at', 'DESC']],
+        order: [['created_at', 'DESC']],
         limit: 10
       });
       
@@ -162,7 +162,7 @@ const recepcionController = {
         where: {
           estado: 'entregado'
         },
-        order: [['fecha_entrega', 'DESC']],
+        order: [['created_at', 'DESC']],
         limit: 10
       });
       
@@ -342,7 +342,7 @@ const recepcionController = {
             attributes: ['id', 'nombre']
           }
         ],
-        order: [['updated_at', 'DESC']],
+        order: [['created_at', 'DESC']],
         limit,
         offset
       });
@@ -492,7 +492,7 @@ const recepcionController = {
       // Obtener historial del documento
       const historial = await EventoDocumento.findAll({
         where: { idDocumento: documento.id },
-        order: [['createdAt', 'DESC']]
+        order: [['created_at', 'DESC']]
       });
       
       res.render('recepcion/documentos/detalle', {
@@ -628,7 +628,7 @@ const recepcionController = {
         include: [
           matrizadorInclude
         ],
-        order: [['updated_at', 'DESC']],
+        order: [['created_at', 'DESC']],
         limit: 50
       });
       

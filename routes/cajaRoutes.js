@@ -72,6 +72,7 @@ router.get('/reportes/financiero', cajaController.reporteFinanciero);
 router.get('/reportes/matrizadores', cajaController.reporteMatrizadores);
 router.get('/reportes/documentos', cajaController.reporteDocumentos);
 router.get('/reportes/pendientes', cajaController.reportePendientes);
+router.get('/reportes/cobros-matrizador', cajaController.reporteCobrosMatrizador);
 
 // Rutas para funcionalidades adicionales de reportes
 router.post('/reportes/recordar-pago/:id', cajaController.recordarPagoIndividual);

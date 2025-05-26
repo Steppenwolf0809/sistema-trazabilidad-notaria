@@ -280,7 +280,7 @@ exports.listarDocumentos = async (req, res) => {
           as: 'matrizador'
         }
       ],
-      order: [['updated_at', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit,
       offset
     });
@@ -488,7 +488,7 @@ exports.mostrarEntrega = async (req, res) => {
       where: {
         estado: 'listo_para_entrega'
       },
-      order: [['updated_at', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: 10
     });
     
@@ -641,14 +641,14 @@ exports.mostrarDetalle = async (req, res) => {
     // Buscar eventos del documento con ordenamiento cronológico (más reciente primero)
     const eventos = await EventoDocumento.findAll({
       where: { idDocumento: id },
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
 
     // Crear historial completo combinando diferentes fuentes de eventos
     let historialCompleto = [];
     
     // 1. SOLO para ADMIN: agregar eventos de creación del documento 
-    if (userRole === 'admin' && documento.createdAt) {
+    if (userRole === 'admin' && documento.created_at) {
       historialCompleto.push({
         tipo: 'creacion',
         categoria: 'creacion',
@@ -657,8 +657,8 @@ exports.mostrarDetalle = async (req, res) => {
         titulo: 'Documento Creado',
         descripcion: `Documento ${documento.tipoDocumento} registrado en el sistema`,
         usuario: 'Sistema XML',
-        fecha: documento.createdAt,
-        timestamp: documento.createdAt,
+        fecha: documento.created_at,
+        timestamp: documento.created_at,
         mostrarEnCaja: false, // No mostrar en caja
         detalles: {
           tipoDocumento: documento.tipoDocumento,
@@ -684,8 +684,8 @@ exports.mostrarDetalle = async (req, res) => {
           titulo: traducirTipoEvento(evento.tipo),
           descripcion: evento.detalles || 'Sin descripción',
           usuario: evento.usuario || 'Sistema',
-          fecha: evento.createdAt,
-          timestamp: evento.createdAt,
+          fecha: evento.created_at,
+          timestamp: evento.created_at,
           mostrarEnCaja: esRelevanteCaja,
           detalles: {
             eventoId: evento.id,
@@ -707,14 +707,14 @@ exports.mostrarDetalle = async (req, res) => {
         color: 'success',
         titulo: 'Pago Registrado',
         descripcion: `Pago por $${documento.valorFactura} via ${documento.metodoPago}`,
-        fecha: documento.fechaPago || documento.updatedAt,
-        timestamp: documento.fechaPago || documento.updatedAt,
+        fecha: documento.fechaPago || documento.updated_at,
+        timestamp: documento.fechaPago || documento.updated_at,
         usuario: usuarioPago?.nombre || 'Sistema',
         detalles: {
           valor: documento.valorFactura,
           metodoPago: documento.metodoPago,
           numeroFactura: documento.numeroFactura,
-          fechaPago: documento.fechaPago || documento.updatedAt
+          fechaPago: documento.fechaPago || documento.updated_at
         }
       });
     }
@@ -1085,8 +1085,8 @@ exports.buscarDocumentos = async (req, res) => {
     const documentos = await Documento.findAll({
       where,
       limit: 10,
-      order: [['createdAt', 'DESC']],
-      attributes: ['id', 'codigoBarras', 'tipoDocumento', 'estado', 'nombreCliente', 'createdAt']
+      order: [['created_at', 'DESC']],
+      attributes: ['id', 'codigoBarras', 'tipoDocumento', 'estado', 'nombreCliente', 'created_at']
     });
 
     res.json({
@@ -1284,7 +1284,7 @@ exports.obtenerDocumentoConRelaciones = async (req, res) => {
     // Obtener eventos del documento
     const eventos = await EventoDocumento.findAll({
       where: { idDocumento: id },
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
 
     const { layout, viewBase } = getLayoutAndViewBase(req);

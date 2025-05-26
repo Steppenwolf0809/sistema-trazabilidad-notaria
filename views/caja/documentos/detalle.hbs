@@ -32,13 +32,14 @@
             <span class="badge bg-secondary">{{translateEstado documento.estado}}</span>
             {{/if}}
           </p>
-          <p><strong>Fecha Creación:</strong> {{formatDate documento.createdAt}}</p>
+          <p><strong>📅 Fecha Registro Sistema:</strong> {{formatDate documento.created_at}}</p>
+          <small class="text-muted">Cuándo se subió al sistema</small>
           {{#if documento.fechaFactura}}
-          <p><strong>Fecha Documento:</strong> {{formatDate documento.fechaFactura}}</p>
+          <p><strong>📄 Fecha Documento:</strong> {{formatDateDocument documento.fechaFactura}}</p>
           <small class="text-muted">Fecha original del documento (XML)</small>
           {{/if}}
           {{#if documento.fechaEntrega}}
-          <p><strong>Fecha Entrega:</strong> {{formatDate documento.fechaEntrega}}</p>
+          <p><strong>🚀 Fecha Entrega:</strong> {{formatDate documento.fechaEntrega}}</p>
           {{/if}}
         </div>
       </div>
@@ -116,7 +117,7 @@
               </div>
               {{#if documento.fechaFactura}}
               <div class="col-md-6">
-                <p><strong>Fecha de Factura:</strong> {{formatDate documento.fechaFactura}}</p>
+                <p><strong>Fecha de Factura:</strong> {{formatDateDocument documento.fechaFactura}}</p>
               </div>
               {{/if}}
               {{#if (eq documento.estadoPago "pagado")}}

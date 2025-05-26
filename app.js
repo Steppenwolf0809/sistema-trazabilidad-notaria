@@ -18,6 +18,9 @@ const jwt = require('jsonwebtoken');
 // Importación de configuración de base de datos
 const { testConnection, syncModels } = require('./config/database');
 
+// Importar helpers personalizados de Handlebars
+const customHelpers = require('./utils/handlebarsHelpers');
+
 // Creación de la aplicación Express
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -66,6 +69,20 @@ const hbs = engine({
     allowProtoMethodsByDefault: true
   },
   helpers: {
+    // Combinar helpers existentes con los nuevos
+    ...customHelpers,
+    
+    // Helper para switch/case
+    switch: function(value, options) {
+      this.switch_value = value;
+      return options.fn(this);
+    },
+    case: function(value, options) {
+      if (value == this.switch_value) {
+        return options.fn(this);
+      }
+    },
+    // Mantener helpers específicos existentes
     eq: (v1, v2) => v1 === v2,
     neq: (v1, v2) => v1 !== v2,
     // Helpers de comparación
@@ -73,6 +90,8 @@ const hbs = engine({
     gte: (v1, v2) => v1 >= v2,
     lt: (v1, v2) => v1 < v2,
     lte: (v1, v2) => v1 <= v2,
+    // AGREGADO: Helper "not" para negación lógica
+    not: (value) => !value,
     hasRole: (userRole, roles) => {
       if (!userRole) return false;
       if (typeof roles === 'string') {
@@ -150,6 +169,32 @@ const hbs = engine({
     // Helper para sumar números
     add: function(a, b) {
       return parseInt(a) + parseInt(b);
+    },
+    // Helper para dividir números (para cálculos de porcentajes)
+    divide: function(a, b) {
+      const num1 = parseFloat(a) || 0;
+      const num2 = parseFloat(b) || 0;
+      if (num2 === 0) return 0;
+      return num1 / num2;
+    },
+    // Helpers de comparación para las vistas
+    eq: function(a, b) {
+      return a === b;
+    },
+    ne: function(a, b) {
+      return a !== b;
+    },
+    gt: function(a, b) {
+      return parseFloat(a) > parseFloat(b);
+    },
+    lt: function(a, b) {
+      return parseFloat(a) < parseFloat(b);
+    },
+    gte: function(a, b) {
+      return parseFloat(a) >= parseFloat(b);
+    },
+    lte: function(a, b) {
+      return parseFloat(a) <= parseFloat(b);
     },
     // Helper para convertir objeto a JSON string
     json: (context) => {
@@ -292,6 +337,114 @@ const hbs = engine({
     or: function() {
       const args = Array.prototype.slice.call(arguments, 0, -1);
       return args.some(Boolean);
+    },
+    // AGREGADO: Helper "map" para mapear arrays
+    map: function(array, property) {
+      if (!Array.isArray(array)) return [];
+      return array.map(item => {
+        if (typeof property === 'string') {
+          return item[property];
+        }
+        return item;
+      });
+    },
+    // AGREGADO: Helper para formatear solo fechas (sin hora)
+    formatDateOnly: (date) => {
+      if (!date) return '';
+      return new Date(date).toLocaleDateString('es-ES', {
+        timeZone: 'America/Guayaquil',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    },
+    // AGREGADO: Helper para calcular días transcurridos desde una fecha
+    daysSince: (date) => {
+      if (!date) return 0;
+      const now = new Date();
+      const targetDate = new Date(date);
+      const diffTime = Math.abs(now - targetDate);
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays;
+    },
+    // Helper específico para fechas de documentos (sin conversión de zona horaria)
+    formatDateDocument: (date) => {
+      if (!date) return '';
+      // Para fechas de documentos, usar la fecha tal como está almacenada
+      // sin conversión de zona horaria para evitar cambios de día
+      const dateObj = new Date(date);
+      const day = String(dateObj.getUTCDate()).padStart(2, '0');
+      const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+      const year = dateObj.getUTCFullYear();
+      return `${day}/${month}/${year}`;
+    },
+    
+    // === ESTRATEGIA DE FECHAS PARA NOTARÍA ===
+    
+    // Helper para fecha operacional (cuándo se procesó en el sistema)
+    formatDateOperacional: (date) => {
+      if (!date) return '';
+      const dateObj = new Date(date);
+      const day = String(dateObj.getUTCDate()).padStart(2, '0');
+      const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+      const year = dateObj.getUTCFullYear();
+      return `${day}/${month}/${year}`;
+    },
+    
+    // Helper para fecha contable (fecha real del acto notarial)
+    formatDateContable: (date) => {
+      if (!date) return '';
+      const dateObj = new Date(date);
+      const day = String(dateObj.getUTCDate()).padStart(2, '0');
+      const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+      const year = dateObj.getUTCFullYear();
+      return `${day}/${month}/${year}`;
+    },
+    
+    // Helper para calcular días de atraso (desde fecha del documento hasta hoy)
+    diasAtraso: (fechaDocumento) => {
+      if (!fechaDocumento) return 0;
+      const hoy = new Date();
+      const fechaDoc = new Date(fechaDocumento);
+      const diffTime = hoy - fechaDoc;
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      return Math.max(0, diffDays); // No negativos
+    },
+    
+    // Helper para calcular días desde registro (productividad)
+    diasDesdeRegistro: (fechaRegistro) => {
+      if (!fechaRegistro) return 0;
+      const hoy = new Date();
+      const fechaReg = new Date(fechaRegistro);
+      const diffTime = hoy - fechaReg;
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      return Math.max(0, diffDays); // No negativos
+    },
+    
+    // Helper para determinar qué fecha mostrar según contexto
+    fechaSegunContexto: (documento, contexto) => {
+      if (!documento) return '';
+      
+      switch (contexto) {
+        case 'operacional':
+        case 'productividad':
+        case 'workflow':
+          // Usar fecha de registro del sistema
+          return documento.created_at ? 
+            new Date(documento.created_at).toLocaleDateString('es-ES') : '';
+            
+        case 'contable':
+        case 'financiero':
+        case 'legal':
+          // Usar fecha del documento original
+          return documento.fechaFactura ? 
+            new Date(documento.fechaFactura).toLocaleDateString('es-ES') : '';
+            
+        default:
+          // Por defecto, operacional
+          return documento.created_at ? 
+            new Date(documento.created_at).toLocaleDateString('es-ES') : '';
+      }
     },
   }
 });

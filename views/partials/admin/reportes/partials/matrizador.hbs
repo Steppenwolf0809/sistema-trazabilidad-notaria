@@ -1,0 +1,161 @@
+<!-- Reporte de Documentos por Matrizador -->
+<div class="card">
+  <div class="card-header bg-primary text-white">
+    <h5 class="mb-0">
+      <i class="fas fa-users me-2"></i>
+      Reporte de Documentos por Matrizador
+    </h5>
+    <p class="mb-0 small">
+      Distribución de documentos según el matrizador asignado
+    </p>
+  </div>
+  <div class="card-body">
+    
+    <!-- Resumen Ejecutivo -->
+    <div class="row mb-4">
+      <div class="col-md-3">
+        <div class="card bg-light">
+          <div class="card-body text-center">
+            <i class="fas fa-file-alt fa-3x mb-3 text-primary opacity-75"></i>
+            <h6 class="card-title">Total Documentos</h6>
+            <h2 class="mb-0">{{totales.count}}</h2>
+            <small class="text-muted">En el período seleccionado</small>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-md-9">
+        <div class="card">
+          <div class="card-body">
+            <canvas id="graficoMatrizadores" height="200"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Tabla Detallada -->
+    <div class="card">
+      <div class="card-header">
+        <h6 class="mb-0">
+          <i class="fas fa-table me-2"></i>
+          Distribución por Matrizador
+        </h6>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Matrizador</th>
+                <th class="text-center">Cantidad</th>
+                <th class="text-center">Porcentaje</th>
+                <th>Distribución</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each resultados}}
+              <tr>
+                <td>
+                  <strong>{{this.nombre}}</strong>
+                </td>
+                <td class="text-center">{{this.count}}</td>
+                <td class="text-center">{{this.porcentaje}}%</td>
+                <td>
+                  <div class="progress">
+                    <div class="progress-bar bg-primary" 
+                      role="progressbar" style="width: {{this.porcentaje}}%"
+                      aria-valuenow="{{this.porcentaje}}" aria-valuemin="0" aria-valuemax="100">
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <a href="/admin/documentos/listado?idMatrizador={{this._id}}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-eye me-1"></i> Ver Documentos
+                  </a>
+                </td>
+              </tr>
+              {{/each}}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    
+  </div>
+</div>
+
+<!-- Scripts para Gráfico -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  initGraficoMatrizadores();
+});
+
+function initGraficoMatrizadores() {
+  const ctx = document.getElementById('graficoMatrizadores').getContext('2d');
+  
+  // Preparar datos para el gráfico
+  const datos = {
+    labels: [],
+    data: [],
+    backgroundColor: []
+  };
+  
+  // Colores para el gráfico
+  const colores = [
+    '#007bff', '#28a745', '#ffc107', '#17a2b8', '#dc3545',
+    '#6610f2', '#fd7e14', '#20c997', '#e83e8c', '#6c757d'
+  ];
+  
+  // Extraer datos de la tabla
+  {{#each resultados}}
+    datos.labels.push("{{this.nombre}}");
+    datos.data.push({{this.count}});
+    
+    // Asignar color según índice
+    const colorIndex = {{@index}} % colores.length;
+    datos.backgroundColor.push(colores[colorIndex]);
+  {{/each}}
+  
+  // Crear gráfico
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: datos.labels,
+      datasets: [{
+        label: 'Documentos procesados',
+        data: datos.data,
+        backgroundColor: datos.backgroundColor,
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: 'Cantidad de documentos'
+          },
+          ticks: {
+            precision: 0
+          }
+        },
+        x: {
+          title: {
+            display: true,
+            text: 'Matrizador'
+          }
+        }
+      },
+      plugins: {
+        legend: {
+          display: false
+        }
+      }
+    }
+  });
+}
+</script> 

@@ -76,7 +76,8 @@
             <th class="ordenable" data-columna="tipo" data-tipo="texto">Tipo</th>
             <th class="ordenable" data-columna="cliente" data-tipo="texto">Cliente</th>
             <th class="ordenable" data-columna="matrizador" data-tipo="texto">Matrizador</th>
-            <th class="ordenable" data-columna="fecha" data-tipo="fecha">Fecha Registro</th>
+            <th class="ordenable" data-columna="fecha" data-tipo="fecha">Fecha Registro Sistema</th>
+            <th class="ordenable" data-columna="fecha_factura" data-tipo="fecha">Fecha Factura</th>
             <th class="ordenable" data-columna="estado" data-tipo="estado">Estado</th>
             <th>Pago</th>
             <th>Acciones</th>
@@ -92,7 +93,14 @@
               <div class="small text-muted">{{this.identificacionCliente}}</div>
             </td>
             <td>{{this.matrizador.nombre}}</td>
-            <td>{{formatDate this.createdAt}}</td>
+            <td>{{formatDateDocument this.created_at}}</td>
+            <td>
+              {{#if this.fechaFactura}}
+              {{formatDateOnly this.fechaFactura}}
+              {{else}}
+              <span class="text-muted">-</span>
+              {{/if}}
+            </td>
             <td>
               {{#if (eq this.estado "en_proceso")}}
               <span class="badge bg-warning">En Proceso</span>
@@ -162,7 +170,7 @@
           </tr>
           {{else}}
           <tr>
-            <td colspan="8" class="text-center py-4">
+            <td colspan="9" class="text-center py-4">
               <i class="fas fa-search me-2"></i> No se encontraron documentos con los filtros actuales
             </td>
           </tr>

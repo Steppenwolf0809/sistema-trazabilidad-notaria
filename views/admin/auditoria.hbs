@@ -1,0 +1,236 @@
+<!-- Vista de Auditoría de Seguridad -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+          <i class="fas fa-shield-alt me-2"></i>
+          Registros de Auditoría de Seguridad
+        </h5>
+        <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#filtrosCollapse">
+          <i class="fas fa-filter me-1"></i> Filtros
+        </button>
+      </div>
+      <div class="collapse" id="filtrosCollapse">
+        <div class="card-body">
+          <form id="filtroForm" method="GET" action="/admin/auditoria">
+            <div class="row g-3">
+              <div class="col-md-3">
+                <label for="fechaInicio" class="form-label">Desde</label>
+                <input type="date" class="form-control" id="fechaInicio" name="fechaInicio" value="{{filtros.fechaInicio}}">
+              </div>
+              <div class="col-md-3">
+                <label for="fechaFin" class="form-label">Hasta</label>
+                <input type="date" class="form-control" id="fechaFin" name="fechaFin" value="{{filtros.fechaFin}}">
+              </div>
+              <div class="col-md-3">
+                <label for="accion" class="form-label">Tipo de Acción</label>
+                <select class="form-select" id="accion" name="accion">
+                  <option value="">Todas las acciones</option>
+                  {{#each tiposAccion}}
+                    <option value="{{this.id}}" {{#if (eq ../filtros.accion this.id)}}selected{{/if}}>{{this.nombre}}</option>
+                  {{/each}}
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label for="resultado" class="form-label">Resultado</label>
+                <select class="form-select" id="resultado" name="resultado">
+                  <option value="">Todos los resultados</option>
+                  <option value="exitoso" {{#if (eq filtros.resultado "exitoso")}}selected{{/if}}>Exitoso</option>
+                  <option value="fallido" {{#if (eq filtros.resultado "fallido")}}selected{{/if}}>Fallido</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label for="idMatrizador" class="form-label">Usuario</label>
+                <select class="form-select" id="idMatrizador" name="idMatrizador">
+                  <option value="">Todos los usuarios</option>
+                  {{#each matrizadores}}
+                    <option value="{{this.id}}" {{#if (eq ../filtros.idMatrizador this.id)}}selected{{/if}}>{{this.nombre}}</option>
+                  {{/each}}
+                </select>
+              </div>
+              <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary">
+                  <i class="fas fa-search me-1"></i> Buscar
+                </button>
+                <a href="/admin/auditoria" class="btn btn-outline-secondary ms-2">Limpiar</a>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Fecha y Hora</th>
+                <th>Usuario</th>
+                <th>Acción</th>
+                <th>Documento</th>
+                <th>IP</th>
+                <th>Resultado</th>
+                <th>Detalles</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each registros}}
+                <tr>
+                  <td>{{formatDate this.created_at}}</td>
+                  <td>
+                    {{#if this.matrizador}}
+                      <span class="badge bg-info text-white">{{this.matrizador.rol}}</span>
+                      {{this.matrizador.nombre}}
+                    {{else}}
+                      <span class="text-muted">Sistema</span>
+                    {{/if}}
+                  </td>
+                  <td>
+                    {{#switch this.accion}}
+                      {{#case "consulta_codigo"}}
+                        <span class="badge bg-primary">Consulta</span>
+                      {{/case}}
+                      {{#case "verificacion_codigo"}}
+                        <span class="badge bg-success">Verificación</span>
+                      {{/case}}
+                      {{#case "verificacion_llamada"}}
+                        <span class="badge bg-warning">Verificación por llamada</span>
+                      {{/case}}
+                      {{#case "edicion_codigo"}}
+                        <span class="badge bg-danger">Edición de código</span>
+                      {{/case}}
+                      {{#default}}
+                        <span class="badge bg-secondary">{{this.accion}}</span>
+                      {{/default}}
+                    {{/switch}}
+                  </td>
+                  <td>
+                    {{#if this.documento}}
+                      <a href="/admin/documentos/detalle/{{this.documento.id}}" class="text-decoration-none">
+                        {{this.documento.codigo_barras}}
+                        <small class="d-block text-muted">{{this.documento.nombre_cliente}}</small>
+                      </a>
+                    {{else}}
+                      <span class="text-muted">N/A</span>
+                    {{/if}}
+                  </td>
+                  <td>{{this.ip_origen}}</td>
+                  <td>
+                    {{#if (eq this.resultado "exitoso")}}
+                      <span class="text-success"><i class="fas fa-check-circle me-1"></i> Exitoso</span>
+                    {{else}}
+                      <span class="text-danger"><i class="fas fa-times-circle me-1"></i> Fallido</span>
+                    {{/if}}
+                  </td>
+                  <td>
+                    <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#detalleModal{{this.id}}">
+                      <i class="fas fa-info-circle"></i>
+                    </button>
+                    
+                    <!-- Modal de Detalles -->
+                    <div class="modal fade" id="detalleModal{{this.id}}" tabindex="-1" aria-hidden="true">
+                      <div class="modal-dialog">
+                        <div class="modal-content">
+                          <div class="modal-header">
+                            <h5 class="modal-title">Detalles del Registro</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                          </div>
+                          <div class="modal-body">
+                            <div class="mb-3">
+                              <strong>Fecha y Hora:</strong> {{formatDate this.created_at}}
+                            </div>
+                            <div class="mb-3">
+                              <strong>Usuario:</strong> {{this.matrizador.nombre}} ({{this.matrizador.rol}})
+                            </div>
+                            <div class="mb-3">
+                              <strong>Acción:</strong> {{this.accion}}
+                            </div>
+                            <div class="mb-3">
+                              <strong>Resultado:</strong> {{this.resultado}}
+                            </div>
+                            <div class="mb-3">
+                              <strong>IP de Origen:</strong> {{this.ip_origen}}
+                            </div>
+                            <div class="mb-3">
+                              <strong>Navegador/Dispositivo:</strong> {{this.user_agent}}
+                            </div>
+                            {{#if this.detalles}}
+                              <div class="mb-3">
+                                <strong>Detalles:</strong>
+                                <pre class="border rounded p-2 bg-light mt-2">{{this.detalles}}</pre>
+                              </div>
+                            {{/if}}
+                          </div>
+                          <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              {{else}}
+                <tr>
+                  <td colspan="7" class="text-center py-3">No se encontraron registros que coincidan con los criterios de búsqueda</td>
+                </tr>
+              {{/each}}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {{#if pagination.pages.length}}
+        <div class="card-footer">
+          <nav>
+            <ul class="pagination justify-content-center mb-0">
+              {{#unless (eq pagination.currentPage 1)}}
+                <li class="page-item">
+                  <a class="page-link" href="?page=1{{#if filtros.fechaInicio}}&fechaInicio={{filtros.fechaInicio}}{{/if}}{{#if filtros.fechaFin}}&fechaFin={{filtros.fechaFin}}{{/if}}{{#if filtros.accion}}&accion={{filtros.accion}}{{/if}}{{#if filtros.resultado}}&resultado={{filtros.resultado}}{{/if}}{{#if filtros.idMatrizador}}&idMatrizador={{filtros.idMatrizador}}{{/if}}">
+                    <i class="fas fa-angle-double-left"></i>
+                  </a>
+                </li>
+              {{/unless}}
+              
+              {{#each pagination.pages}}
+                <li class="page-item {{#if this.active}}active{{/if}}">
+                  <a class="page-link" href="?page={{this.num}}{{#if ../filtros.fechaInicio}}&fechaInicio={{../filtros.fechaInicio}}{{/if}}{{#if ../filtros.fechaFin}}&fechaFin={{../filtros.fechaFin}}{{/if}}{{#if ../filtros.accion}}&accion={{../filtros.accion}}{{/if}}{{#if ../filtros.resultado}}&resultado={{../filtros.resultado}}{{/if}}{{#if ../filtros.idMatrizador}}&idMatrizador={{../filtros.idMatrizador}}{{/if}}">
+                    {{this.num}}
+                  </a>
+                </li>
+              {{/each}}
+              
+              {{#unless (eq pagination.currentPage pagination.totalPages)}}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{pagination.totalPages}}{{#if filtros.fechaInicio}}&fechaInicio={{filtros.fechaInicio}}{{/if}}{{#if filtros.fechaFin}}&fechaFin={{filtros.fechaFin}}{{/if}}{{#if filtros.accion}}&accion={{filtros.accion}}{{/if}}{{#if filtros.resultado}}&resultado={{filtros.resultado}}{{/if}}{{#if filtros.idMatrizador}}&idMatrizador={{filtros.idMatrizador}}{{/if}}">
+                    <i class="fas fa-angle-double-right"></i>
+                  </a>
+                </li>
+              {{/unless}}
+            </ul>
+          </nav>
+        </div>
+      {{/if}}
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Mostrar automáticamente el panel de filtros si hay algún filtro aplicado
+    const tienesFiltros = "{{filtros.fechaInicio}}" || "{{filtros.fechaFin}}" || 
+                          "{{filtros.accion}}" || "{{filtros.resultado}}" || 
+                          "{{filtros.idMatrizador}}";
+    
+    if (tienesFiltros) {
+      const bsCollapse = new bootstrap.Collapse(document.getElementById('filtrosCollapse'), {
+        toggle: true
+      });
+    }
+  });
+</script> 

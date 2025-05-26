@@ -1,0 +1,456 @@
+<!-- Navegación -->
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/admin">Dashboard</a></li>
+    <li class="breadcrumb-item"><a href="/admin/reportes">Reportes</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Productividad por Matrizador</li>
+  </ol>
+</nav>
+
+<!-- Filtros del Reporte -->
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0">
+      <i class="fas fa-filter me-2"></i>
+      Filtros - Productividad por Matrizador
+    </h5>
+  </div>
+  <div class="card-body">
+    <form method="GET" action="/admin/reportes/matrizadores">
+      <div class="row">
+        <div class="col-md-4">
+          <label for="fechaInicio" class="form-label">Fecha Inicio</label>
+          <input type="date" class="form-control" id="fechaInicio" name="fechaInicio" value="{{fechaInicio}}">
+        </div>
+        
+        <div class="col-md-4">
+          <label for="fechaFin" class="form-label">Fecha Fin</label>
+          <input type="date" class="form-control" id="fechaFin" name="fechaFin" value="{{fechaFin}}">
+        </div>
+        
+        <div class="col-md-4">
+          <label for="submit" class="form-label">&nbsp;</label>
+          <div>
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-search me-1"></i> Actualizar Reporte
+            </button>
+            <button type="button" class="btn btn-outline-success ms-2" onclick="exportarReporte()">
+              <i class="fas fa-download me-1"></i> Exportar
+            </button>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Período del Reporte -->
+<div class="alert alert-info mb-4">
+  <i class="fas fa-calendar-alt me-2"></i>
+  <strong>Período del Reporte:</strong> Del {{formatDate fechaInicio}} al {{formatDate fechaFin}}
+</div>
+
+<!-- Tabla de Productividad por Matrizador -->
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">
+          <i class="fas fa-users me-2"></i>
+          Productividad por Matrizador
+        </h5>
+      </div>
+      <div class="card-body">
+        {{#if datosMatrizadores.length}}
+        <div class="table-responsive">
+          <table class="table table-striped table-hover">
+            <thead class="table-dark">
+              <tr>
+                <th>Matrizador</th>
+                <th class="text-center">Documentos Totales</th>
+                <th class="text-center">Documentos Pagados</th>
+                <th class="text-center">Documentos Pendientes</th>
+                <th class="text-end">Facturación Total</th>
+                <th class="text-end">Ingresos Cobrados</th>
+                <th class="text-end">Pendiente de Cobro</th>
+                <th class="text-center">% Pagados</th>
+                <th class="text-end">Promedio por Doc.</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each datosMatrizadores}}
+              <tr>
+                <td>
+                  <div class="d-flex align-items-center">
+                    <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                      {{substring this.nombre 0 2}}
+                    </div>
+                    <div>
+                      <strong>{{this.nombre}}</strong>
+                      {{#if (gt this.documentos_totales 0)}}
+                      <br><small class="text-success">Activo</small>
+                      {{else}}
+                      <br><small class="text-muted">Sin actividad</small>
+                      {{/if}}
+                    </div>
+                  </div>
+                </td>
+                <td class="text-center">
+                  <span class="badge bg-primary fs-6">{{this.documentos_totales}}</span>
+                </td>
+                <td class="text-center">
+                  {{#if (gt this.documentos_pagados 0)}}
+                  <span class="badge bg-success fs-6">{{this.documentos_pagados}}</span>
+                  {{else}}
+                  <span class="text-muted">0</span>
+                  {{/if}}
+                </td>
+                <td class="text-center">
+                  {{#if (gt this.documentos_pendientes 0)}}
+                  <span class="badge bg-warning fs-6">{{this.documentos_pendientes}}</span>
+                  {{else}}
+                  <span class="text-muted">0</span>
+                  {{/if}}
+                </td>
+                <td class="text-end">
+                  {{#if (gt this.facturacion_total 0)}}
+                  <strong class="text-primary">${{formatMoney this.facturacion_total}}</strong>
+                  {{else}}
+                  <span class="text-muted">$0.00</span>
+                  {{/if}}
+                </td>
+                <td class="text-end">
+                  {{#if (gt this.ingresos_cobrados 0)}}
+                  <strong class="text-success">${{formatMoney this.ingresos_cobrados}}</strong>
+                  {{else}}
+                  <span class="text-muted">$0.00</span>
+                  {{/if}}
+                </td>
+                <td class="text-end">
+                  {{#if (gt this.pendiente_cobro 0)}}
+                  <strong class="text-warning">${{formatMoney this.pendiente_cobro}}</strong>
+                  {{else}}
+                  <span class="text-muted">$0.00</span>
+                  {{/if}}
+                </td>
+                <td class="text-center">
+                  {{#if (gt this.documentos_totales 0)}}
+                  <div class="progress" style="height: 20px;">
+                    <div class="progress-bar bg-success" role="progressbar" 
+                         style="width: {{this.porcentaje_pagados}}%"
+                         aria-valuenow="{{this.porcentaje_pagados}}" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100">
+                      {{this.porcentaje_pagados}}%
+                    </div>
+                  </div>
+                  {{else}}
+                  <span class="text-muted">N/A</span>
+                  {{/if}}
+                </td>
+                <td class="text-end">
+                  {{#if (gt this.documentos_totales 0)}}
+                  ${{formatMoney this.factura_promedio}}
+                  {{else}}
+                  <span class="text-muted">$0.00</span>
+                  {{/if}}
+                </td>
+              </tr>
+              {{/each}}
+            </tbody>
+            <tfoot class="table-light">
+              <tr>
+                <th>TOTALES</th>
+                <th class="text-center">
+                  {{sum (map datosMatrizadores 'documentos_totales')}}
+                </th>
+                <th class="text-center">
+                  {{sum (map datosMatrizadores 'documentos_pagados')}}
+                </th>
+                <th class="text-center">
+                  {{sum (map datosMatrizadores 'documentos_pendientes')}}
+                </th>
+                <th class="text-end">
+                  <strong>${{formatMoney (sum (map datosMatrizadores 'facturacion_total'))}}</strong>
+                </th>
+                <th class="text-end">
+                  <strong>${{formatMoney (sum (map datosMatrizadores 'ingresos_cobrados'))}}</strong>
+                </th>
+                <th class="text-end">
+                  <strong>${{formatMoney (sum (map datosMatrizadores 'pendiente_cobro'))}}</strong>
+                </th>
+                <th class="text-center">
+                  {{percentage (sum (map datosMatrizadores 'documentos_pagados')) (sum (map datosMatrizadores 'documentos_totales'))}}%
+                </th>
+                <th class="text-end">
+                  ${{average (map datosMatrizadores 'factura_promedio')}}
+                </th>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        {{else}}
+        <div class="text-center py-5">
+          <i class="fas fa-users-slash fa-4x text-muted mb-3"></i>
+          <h5>No hay datos de matrizadores</h5>
+          <p class="text-muted">No se encontraron matrizadores activos en el período seleccionado.</p>
+        </div>
+        {{/if}}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Gráfico de Productividad -->
+{{#if datosMatrizadores.length}}
+<div class="row mt-4">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">
+          <i class="fas fa-chart-bar me-2"></i>
+          Documentos por Matrizador
+        </h5>
+      </div>
+      <div class="card-body">
+        <canvas id="documentosChart" height="300"></canvas>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">
+          <i class="fas fa-chart-line me-2"></i>
+          Facturación por Matrizador
+        </h5>
+      </div>
+      <div class="card-body">
+        <canvas id="facturacionChart" height="300"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+{{/if}}
+
+<!-- Acciones Rápidas -->
+<div class="row mt-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">
+          <i class="fas fa-bolt me-2"></i>
+          Acciones Rápidas
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-3 mb-2">
+            <a href="/admin/reportes/documentos" class="btn btn-outline-primary w-100">
+              <i class="fas fa-file-alt me-2"></i>Reporte Documentos
+            </a>
+          </div>
+          <div class="col-md-3 mb-2">
+            <a href="/admin/reportes/pendientes" class="btn btn-outline-warning w-100">
+              <i class="fas fa-exclamation-triangle me-2"></i>Documentos Pendientes
+            </a>
+          </div>
+          <div class="col-md-3 mb-2">
+            <a href="/admin/matrizadores" class="btn btn-outline-info w-100">
+              <i class="fas fa-users-cog me-2"></i>Gestionar Matrizadores
+            </a>
+          </div>
+          <div class="col-md-3 mb-2">
+            <a href="/admin" class="btn btn-outline-secondary w-100">
+              <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Función para exportar reporte
+function exportarReporte() {
+  const fechaInicio = document.getElementById('fechaInicio').value;
+  const fechaFin = document.getElementById('fechaFin').value;
+  
+  const params = new URLSearchParams({
+    fechaInicio,
+    fechaFin,
+    formato: 'excel'
+  });
+  
+  window.location.href = '/admin/reportes/matrizadores/exportar?' + params.toString();
+}
+
+// Inicializar gráficos si hay datos
+document.addEventListener('DOMContentLoaded', function() {
+  {{#if datosMatrizadores.length}}
+  
+  // Preparar datos
+  const nombres = {{{json (map datosMatrizadores 'nombre')}}};
+  const documentosTotales = {{{json (map datosMatrizadores 'documentos_totales')}}};
+  const documentosPagados = {{{json (map datosMatrizadores 'documentos_pagados')}}};
+  const documentosPendientes = {{{json (map datosMatrizadores 'documentos_pendientes')}}};
+  const facturacionTotal = {{{json (map datosMatrizadores 'facturacion_total')}}};
+  const ingresosCobrados = {{{json (map datosMatrizadores 'ingresos_cobrados')}}};
+  
+  // Gráfico de documentos
+  const ctxDocumentos = document.getElementById('documentosChart').getContext('2d');
+  new Chart(ctxDocumentos, {
+    type: 'bar',
+    data: {
+      labels: nombres,
+      datasets: [
+        {
+          label: 'Documentos Totales',
+          data: documentosTotales,
+          backgroundColor: 'rgba(54, 162, 235, 0.7)',
+          borderColor: 'rgba(54, 162, 235, 1)',
+          borderWidth: 1
+        },
+        {
+          label: 'Documentos Pagados',
+          data: documentosPagados,
+          backgroundColor: 'rgba(40, 167, 69, 0.7)',
+          borderColor: 'rgba(40, 167, 69, 1)',
+          borderWidth: 1
+        },
+        {
+          label: 'Documentos Pendientes',
+          data: documentosPendientes,
+          backgroundColor: 'rgba(255, 193, 7, 0.7)',
+          borderColor: 'rgba(255, 193, 7, 1)',
+          borderWidth: 1
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: 'Cantidad de Documentos'
+          }
+        }
+      },
+      plugins: {
+        legend: {
+          position: 'top'
+        }
+      }
+    }
+  });
+  
+  // Gráfico de facturación
+  const ctxFacturacion = document.getElementById('facturacionChart').getContext('2d');
+  new Chart(ctxFacturacion, {
+    type: 'bar',
+    data: {
+      labels: nombres,
+      datasets: [
+        {
+          label: 'Facturación Total ($)',
+          data: facturacionTotal,
+          backgroundColor: 'rgba(54, 162, 235, 0.7)',
+          borderColor: 'rgba(54, 162, 235, 1)',
+          borderWidth: 1
+        },
+        {
+          label: 'Ingresos Cobrados ($)',
+          data: ingresosCobrados,
+          backgroundColor: 'rgba(40, 167, 69, 0.7)',
+          borderColor: 'rgba(40, 167, 69, 1)',
+          borderWidth: 1
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: 'Monto ($)'
+          },
+          ticks: {
+            callback: function(value) {
+              return '$' + value.toLocaleString();
+            }
+          }
+        }
+      },
+      plugins: {
+        legend: {
+          position: 'top'
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return context.dataset.label + ': $' + context.parsed.y.toLocaleString();
+            }
+          }
+        }
+      }
+    }
+  });
+  
+  {{/if}}
+});
+</script>
+
+<style>
+.avatar-sm {
+  width: 40px;
+  height: 40px;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.progress {
+  position: relative;
+}
+
+.progress .progress-bar {
+  color: white;
+  font-weight: bold;
+  text-align: center;
+  line-height: 20px;
+}
+
+.card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+@media (max-width: 768px) {
+  .card {
+    margin-bottom: 1rem;
+  }
+  
+  .table-responsive {
+    font-size: 0.875rem;
+  }
+  
+  .avatar-sm {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+  }
+}
+</style> 

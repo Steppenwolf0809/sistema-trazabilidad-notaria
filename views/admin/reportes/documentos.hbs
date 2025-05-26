@@ -1,0 +1,295 @@
+<!-- Navegación -->
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/admin">Dashboard</a></li>
+    <li class="breadcrumb-item"><a href="/admin/reportes">Reportes</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Reporte de Documentos</li>
+  </ol>
+</nav>
+
+<!-- Filtros del Reporte -->
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0">
+      <i class="fas fa-filter me-2"></i>
+      Filtros - Reporte de Documentos
+    </h5>
+  </div>
+  <div class="card-body">
+    <form method="GET" action="/admin/reportes/documentos">
+      <div class="row">
+        <div class="col-md-3">
+          <label for="rango" class="form-label">Período</label>
+          <select class="form-select" id="rango" name="rango" onchange="toggleFechasPersonalizadas()">
+            <option value="hoy" {{#eq filtros.rango 'hoy'}}selected{{/eq}}>Hoy</option>
+            <option value="ayer" {{#eq filtros.rango 'ayer'}}selected{{/eq}}>Ayer</option>
+            <option value="semana" {{#eq filtros.rango 'semana'}}selected{{/eq}}>Esta Semana</option>
+            <option value="mes" {{#eq filtros.rango 'mes'}}selected{{/eq}}>Este Mes</option>
+            <option value="ultimo_mes" {{#eq filtros.rango 'ultimo_mes'}}selected{{/eq}}>Últimos 30 Días</option>
+            <option value="personalizado" {{#eq filtros.rango 'personalizado'}}selected{{/eq}}>Personalizado</option>
+          </select>
+        </div>
+        
+        <div class="col-md-3" id="fechaInicioContainer" style="{{#unless (eq filtros.rango 'personalizado')}}display: none;{{/unless}}">
+          <label for="fechaInicio" class="form-label">Fecha Inicio</label>
+          <input type="date" class="form-control" id="fechaInicio" name="fechaInicio" value="{{filtros.fechaInicio}}">
+        </div>
+        
+        <div class="col-md-3" id="fechaFinContainer" style="{{#unless (eq filtros.rango 'personalizado')}}display: none;{{/unless}}">
+          <label for="fechaFin" class="form-label">Fecha Fin</label>
+          <input type="date" class="form-control" id="fechaFin" name="fechaFin" value="{{filtros.fechaFin}}">
+        </div>
+        
+        <div class="col-md-3">
+          <label for="submit" class="form-label">&nbsp;</label>
+          <div>
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-search me-1"></i> Actualizar Reporte
+            </button>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Estadísticas Principales -->
+<div class="row mb-4">
+  <div class="col-md-3">
+    <div class="card text-white bg-primary">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-white mb-1">Total Documentos</h6>
+            <h3 class="mb-0">{{stats.totalDocumentos}}</h3>
+            <small class="text-white-50">{{periodoTexto}}</small>
+          </div>
+          <i class="fas fa-file-alt fa-3x opacity-50"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3">
+    <div class="card text-white bg-success">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-white mb-1">Con Factura</h6>
+            <h3 class="mb-0">{{stats.conFactura}}</h3>
+            <small class="text-white-50">{{stats.porcentajeFacturados}}% del total</small>
+          </div>
+          <i class="fas fa-receipt fa-3x opacity-50"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3">
+    <div class="card text-white bg-warning">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-white mb-1">Pendientes Pago</h6>
+            <h3 class="mb-0">{{stats.pendientes}}</h3>
+            <small class="text-white-50">{{stats.porcentajePendientes}}% facturados</small>
+          </div>
+          <i class="fas fa-clock fa-3x opacity-50"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3">
+    <div class="card text-white bg-info">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-white mb-1">Pagados</h6>
+            <h3 class="mb-0">{{stats.pagados}}</h3>
+            <small class="text-white-50">{{stats.porcentajePagados}}% facturados</small>
+          </div>
+          <i class="fas fa-check-circle fa-3x opacity-50"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Métricas Financieras -->
+<div class="row mb-4">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-muted mb-1">Total Facturado</h6>
+            <h4 class="mb-0 text-primary">${{stats.totalFacturado}}</h4>
+            <small class="text-muted">{{periodoTexto}}</small>
+          </div>
+          <i class="fas fa-dollar-sign fa-3x text-primary opacity-50"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-muted mb-1">Promedio por Documento</h6>
+            <h4 class="mb-0 text-info">${{stats.promedioFacturado}}</h4>
+            <small class="text-muted">Con factura</small>
+          </div>
+          <i class="fas fa-calculator fa-3x text-info opacity-50"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Estadísticas por Tipo de Documento -->
+{{#if estadisticasPorTipo.length}}
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">
+          <i class="fas fa-chart-pie me-2"></i>
+          Distribución por Tipo de Documento
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>Tipo de Documento</th>
+                <th class="text-center">Cantidad</th>
+                <th class="text-end">Total Facturado</th>
+                <th class="text-end">Promedio</th>
+                <th class="text-center">% del Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each estadisticasPorTipo}}
+              <tr>
+                <td>
+                  <i class="{{getTipoDocumentoIcon this.tipoDocumento}} me-2"></i>
+                  <strong>{{this.tipoDocumento}}</strong>
+                </td>
+                <td class="text-center">
+                  <span class="badge bg-primary">{{this.cantidad}}</span>
+                </td>
+                <td class="text-end">
+                  <strong class="text-success">${{formatMoney this.totalFacturado}}</strong>
+                </td>
+                <td class="text-end">
+                  ${{formatMoney this.promedio}}
+                </td>
+                <td class="text-center">
+                  {{percentage this.cantidad ../stats.totalDocumentos}}%
+                </td>
+              </tr>
+              {{/each}}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{{/if}}
+
+<!-- Acciones Rápidas -->
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">
+          <i class="fas fa-bolt me-2"></i>
+          Acciones Rápidas
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-3 mb-2">
+            <a href="/admin/reportes/pendientes" class="btn btn-outline-warning w-100">
+              <i class="fas fa-exclamation-triangle me-2"></i>Ver Pendientes
+            </a>
+          </div>
+          <div class="col-md-3 mb-2">
+            <a href="/admin/reportes/matrizadores" class="btn btn-outline-info w-100">
+              <i class="fas fa-users me-2"></i>Por Matrizador
+            </a>
+          </div>
+          <div class="col-md-3 mb-2">
+            <a href="/admin/documentos" class="btn btn-outline-primary w-100">
+              <i class="fas fa-list me-2"></i>Listado Completo
+            </a>
+          </div>
+          <div class="col-md-3 mb-2">
+            <button type="button" class="btn btn-outline-success w-100" onclick="exportarReporte()">
+              <i class="fas fa-download me-2"></i>Exportar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script>
+// Función para mostrar/ocultar fechas personalizadas
+function toggleFechasPersonalizadas() {
+  const rangoSelect = document.getElementById('rango');
+  const fechaInicioContainer = document.getElementById('fechaInicioContainer');
+  const fechaFinContainer = document.getElementById('fechaFinContainer');
+  
+  if (rangoSelect.value === 'personalizado') {
+    fechaInicioContainer.style.display = 'block';
+    fechaFinContainer.style.display = 'block';
+  } else {
+    fechaInicioContainer.style.display = 'none';
+    fechaFinContainer.style.display = 'none';
+  }
+}
+
+// Función para exportar reporte
+function exportarReporte() {
+  const form = document.querySelector('form');
+  const formData = new FormData(form);
+  const params = new URLSearchParams(formData);
+  params.append('formato', 'excel');
+  
+  window.location.href = '/admin/reportes/documentos/exportar?' + params.toString();
+}
+
+// Inicializar al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+  toggleFechasPersonalizadas();
+});
+</script>
+
+<style>
+.card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+@media (max-width: 768px) {
+  .card {
+    margin-bottom: 1rem;
+  }
+  
+  .table-responsive {
+    font-size: 0.875rem;
+  }
+}
+</style> 

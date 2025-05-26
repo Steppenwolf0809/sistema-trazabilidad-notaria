@@ -26,9 +26,22 @@ router.use(validarAccesoConAuditoria(['admin']));
 // Panel principal (Dashboard) - Accesible solo por administradores
 router.get('/', adminController.dashboard);
 
+// NUEVO: Dashboard útil (predeterminado)
+// CORREGIDO: Aceptar parámetro opcional de período
+router.get('/dashboard/:periodo?', adminController.dashboard);
+router.get('/dashboard-util', adminController.dashboard);
+
 // Reportes - Solo para administradores
-router.get('/reportes', adminController.reportes);
-router.get('/reportes/descargar', adminController.descargarReporte);
+// RUTAS INDIVIDUALES DE REPORTES - Deben ir ANTES de la ruta general
+router.get('/reportes/documentos', adminController.reporteDocumentos);
+router.get('/reportes/pendientes', adminController.reportePendientesAdmin);
+router.get('/reportes/matrizadores', adminController.reporteMatrizadores);
+router.get('/reportes/financiero', adminController.reporteFinanciero);
+router.get('/reportes/cobros-matrizador', adminController.reporteCobrosMatrizador);
+
+// RUTA GENERAL - Debe ir DESPUÉS de las rutas específicas
+router.get('/reportes/:tipo?', adminController.reportes);
+
 router.get('/auditoria', adminController.verRegistrosAuditoria);
 
 // Auditoría de eliminaciones - Solo para administradores

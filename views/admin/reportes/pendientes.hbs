@@ -1,0 +1,443 @@
+<!-- Navegación -->
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/admin">Dashboard</a></li>
+    <li class="breadcrumb-item"><a href="/admin/reportes">Reportes</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Documentos Pendientes</li>
+  </ol>
+</nav>
+
+<!-- Filtros del Reporte -->
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0">
+      <i class="fas fa-filter me-2"></i>
+      Filtros - Documentos Pendientes de Pago
+    </h5>
+  </div>
+  <div class="card-body">
+    <form method="GET" action="/admin/reportes/pendientes">
+      <div class="row">
+        <div class="col-md-3">
+          <label for="antiguedad" class="form-label">Antigüedad</label>
+          <select class="form-select" id="antiguedad" name="antiguedad">
+            <option value="" {{#unless filtros.antiguedad}}selected{{/unless}}>Todos</option>
+            <option value="1-7" {{#eq filtros.antiguedad '1-7'}}selected{{/eq}}>1-7 días</option>
+            <option value="8-15" {{#eq filtros.antiguedad '8-15'}}selected{{/eq}}>8-15 días</option>
+            <option value="16-30" {{#eq filtros.antiguedad '16-30'}}selected{{/eq}}>16-30 días</option>
+            <option value="30+" {{#eq filtros.antiguedad '30+'}}selected{{/eq}}>Más de 30 días</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label for="matrizador" class="form-label">Matrizador</label>
+          <select class="form-select" id="matrizador" name="matrizador">
+            <option value="" {{#unless filtros.matrizador}}selected{{/unless}}>Todos</option>
+            {{#each matrizadores}}
+            <option value="{{this.id}}" {{#eq ../filtros.matrizador this.id}}selected{{/eq}}>{{this.nombre}}</option>
+            {{/each}}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label for="ordenar" class="form-label">Ordenar por</label>
+          <select class="form-select" id="ordenar" name="ordenar">
+            <option value="" {{#unless filtros.ordenar}}selected{{/unless}}>Más antiguos primero</option>
+            <option value="monto" {{#eq filtros.ordenar 'monto'}}selected{{/eq}}>Mayor monto</option>
+            <option value="fecha" {{#eq filtros.ordenar 'fecha'}}selected{{/eq}}>Más recientes</option>
+          </select>
+        </div>
+        <div class="col-md-3 d-flex align-items-end">
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="fas fa-search me-1"></i> Aplicar Filtros
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Estadísticas por Rangos de Antigüedad -->
+<div class="row mb-4">
+  <div class="col-md-3">
+    <div class="card text-white bg-info">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-white mb-1">1-7 días</h6>
+            <h3 class="mb-0">{{stats.rango1_7}}</h3>
+            <small class="text-white-50">${{formatMoney stats.monto1_7}}</small>
+          </div>
+          <i class="fas fa-clock fa-2x opacity-50"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3">
+    <div class="card text-white bg-warning">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-white mb-1">8-15 días</h6>
+            <h3 class="mb-0">{{stats.rango8_15}}</h3>
+            <small class="text-white-50">${{formatMoney stats.monto8_15}}</small>
+          </div>
+          <i class="fas fa-exclamation-triangle fa-2x opacity-50"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3">
+    <div class="card text-white bg-danger">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-white mb-1">16-60 días</h6>
+            <h3 class="mb-0">{{stats.rango16_60}}</h3>
+            <small class="text-white-50">${{formatMoney stats.monto16_60}}</small>
+          </div>
+          <i class="fas fa-fire fa-2x opacity-50"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3">
+    <div class="card text-white bg-dark">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-white mb-1">+60 días</h6>
+            <h3 class="mb-0">{{stats.rango60}}</h3>
+            <small class="text-white-50">${{formatMoney stats.monto60}}</small>
+          </div>
+          <i class="fas fa-skull fa-2x opacity-50"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Acciones Masivas -->
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0">
+      <i class="fas fa-tools me-2"></i>
+      Acciones de Gestión (Solo Administradores)
+    </h5>
+  </div>
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-4">
+        <button type="button" class="btn btn-outline-warning w-100 mb-2" onclick="notificarPagosPendientes()">
+          <i class="fas fa-bell me-2"></i>
+          Notificar Pagos Pendientes
+        </button>
+      </div>
+      <div class="col-md-4">
+        <button type="button" class="btn btn-outline-info w-100 mb-2" onclick="generarReporteCobranza()">
+          <i class="fas fa-file-pdf me-2"></i>
+          Reporte para Cobranza
+        </button>
+      </div>
+      <div class="col-md-4">
+        <button type="button" class="btn btn-outline-success w-100 mb-2" onclick="exportarExcel()">
+          <i class="fas fa-file-excel me-2"></i>
+          Exportar a Excel
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tabla de Documentos Pendientes -->
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h5 class="mb-0">
+      <i class="fas fa-table me-2"></i>
+      Documentos Pendientes ({{stats.totalPendientes}} total)
+    </h5>
+    <div>
+      <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectAll()">
+        <i class="fas fa-check-square me-1"></i> Seleccionar Todo
+      </button>
+      <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="clearSelection()">
+        <i class="fas fa-square me-1"></i> Limpiar Selección
+      </button>
+    </div>
+  </div>
+  <div class="card-body">
+    {{#if documentosPendientes.length}}
+    <div class="table-responsive">
+      <table class="table table-striped table-hover">
+        <thead class="table-light">
+          <tr>
+            <th width="50">
+              <input type="checkbox" id="selectAllCheck" onchange="toggleSelectAll()">
+            </th>
+            <th>Código</th>
+            <th>Cliente</th>
+            <th>Tipo</th>
+            <th>Matrizador</th>
+            <th class="text-center">Antigüedad</th>
+            <th class="text-end">Valor</th>
+            <th>Contacto</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each documentosPendientes}}
+          <tr data-documento-id="{{this.id}}">
+            <td>
+              <input type="checkbox" class="documento-checkbox" value="{{this.id}}">
+            </td>
+            <td>
+              <code class="small">{{this.codigoBarras}}</code>
+            </td>
+            <td>
+              <strong>{{this.nombreCliente}}</strong><br>
+              <small class="text-muted">{{this.identificacionCliente}}</small>
+            </td>
+            <td>{{this.tipoDocumento}}</td>
+            <td>
+              {{#if this.matrizador}}
+              {{this.matrizador.nombre}}
+              {{else}}
+              <em class="text-muted">Sin asignar</em>
+              {{/if}}
+            </td>
+            <td class="text-center">
+              <span class="badge {{getUrgenciaClass this.diasAntiguedad}}">
+                {{this.diasAntiguedad}} días
+              </span>
+            </td>
+            <td class="text-end">
+              <strong class="text-success">${{formatMoney this.valorFactura}}</strong>
+            </td>
+            <td>
+              {{#if this.telefonoCliente}}
+              <a href="tel:{{this.telefonoCliente}}" class="btn btn-sm btn-outline-primary">
+                <i class="fas fa-phone"></i>
+              </a>
+              {{/if}}
+              {{#if this.emailCliente}}
+              <a href="mailto:{{this.emailCliente}}" class="btn btn-sm btn-outline-info ms-1">
+                <i class="fas fa-envelope"></i>
+              </a>
+              {{/if}}
+            </td>
+            <td>
+              <div class="btn-group" role="group">
+                <a href="/admin/documentos/{{this.id}}" class="btn btn-sm btn-outline-primary">
+                  <i class="fas fa-eye"></i>
+                </a>
+                <button type="button" class="btn btn-sm btn-outline-warning" onclick="recordarPago({{this.id}})">
+                  <i class="fas fa-bell"></i>
+                </button>
+                {{#if (gt this.diasAntiguedad 30)}}
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="gestionCobranza({{this.id}})">
+                  <i class="fas fa-gavel"></i>
+                </button>
+                {{/if}}
+              </div>
+            </td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+    
+    <!-- Acciones para Documentos Seleccionados -->
+    <div class="mt-3 pt-3 border-top">
+      <div class="row align-items-center">
+        <div class="col-md-6">
+          <span id="selectionCount" class="text-muted">0 documentos seleccionados</span>
+        </div>
+        <div class="col-md-6 text-end">
+          <button type="button" class="btn btn-outline-warning" onclick="notificarSeleccionados()" disabled id="btnNotificar">
+            <i class="fas fa-bell me-1"></i> Notificar Seleccionados
+          </button>
+          <button type="button" class="btn btn-outline-info ms-2" onclick="exportarSeleccionados()" disabled id="btnExportar">
+            <i class="fas fa-download me-1"></i> Exportar Seleccionados
+          </button>
+        </div>
+      </div>
+    </div>
+    {{else}}
+    <div class="text-center py-5">
+      <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+      <h5>¡Excelente!</h5>
+      <p class="text-muted">No hay documentos pendientes de pago con los filtros aplicados.</p>
+      <a href="/admin/reportes/pendientes" class="btn btn-outline-primary">
+        <i class="fas fa-refresh me-1"></i> Ver Todos
+      </a>
+    </div>
+    {{/if}}
+  </div>
+</div>
+
+<!-- Scripts -->
+<script>
+// Variables globales
+let documentosSeleccionados = [];
+
+// Función para alternar selección de todos
+function toggleSelectAll() {
+  const selectAllCheck = document.getElementById('selectAllCheck');
+  const checkboxes = document.querySelectorAll('.documento-checkbox');
+  
+  checkboxes.forEach(checkbox => {
+    checkbox.checked = selectAllCheck.checked;
+  });
+  
+  actualizarSeleccion();
+}
+
+// Función para seleccionar todos
+function selectAll() {
+  const checkboxes = document.querySelectorAll('.documento-checkbox');
+  checkboxes.forEach(checkbox => {
+    checkbox.checked = true;
+  });
+  document.getElementById('selectAllCheck').checked = true;
+  actualizarSeleccion();
+}
+
+// Función para limpiar selección
+function clearSelection() {
+  const checkboxes = document.querySelectorAll('.documento-checkbox');
+  checkboxes.forEach(checkbox => {
+    checkbox.checked = false;
+  });
+  document.getElementById('selectAllCheck').checked = false;
+  actualizarSeleccion();
+}
+
+// Función para actualizar contador de selección
+function actualizarSeleccion() {
+  const checkboxes = document.querySelectorAll('.documento-checkbox:checked');
+  const count = checkboxes.length;
+  
+  document.getElementById('selectionCount').textContent = `${count} documentos seleccionados`;
+  
+  // Habilitar/deshabilitar botones según selección
+  const btnNotificar = document.getElementById('btnNotificar');
+  const btnExportar = document.getElementById('btnExportar');
+  
+  btnNotificar.disabled = count === 0;
+  btnExportar.disabled = count === 0;
+  
+  // Actualizar array de documentos seleccionados
+  documentosSeleccionados = Array.from(checkboxes).map(cb => cb.value);
+}
+
+// Función para recordar pago individual
+function recordarPago(documentoId) {
+  if (confirm('¿Enviar recordatorio de pago para este documento?')) {
+    fetch(`/admin/reportes/recordar-pago/${documentoId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert('Recordatorio enviado exitosamente');
+      } else {
+        alert('Error al enviar recordatorio: ' + data.message);
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error al enviar recordatorio');
+    });
+  }
+}
+
+// Función para gestión de cobranza
+function gestionCobranza(documentoId) {
+  if (confirm('¿Marcar este documento para gestión de cobranza especial?')) {
+    // Aquí se implementaría la lógica de gestión de cobranza
+    alert('Funcionalidad de gestión de cobranza en desarrollo');
+  }
+}
+
+// Función para notificar documentos seleccionados
+function notificarSeleccionados() {
+  if (documentosSeleccionados.length === 0) return;
+  
+  if (confirm(`¿Enviar recordatorios de pago para ${documentosSeleccionados.length} documentos seleccionados?`)) {
+    fetch('/admin/reportes/recordar-masivo', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        documentos: documentosSeleccionados
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert(`Recordatorios enviados exitosamente para ${data.enviados} documentos`);
+        clearSelection();
+      } else {
+        alert('Error al enviar recordatorios: ' + data.message);
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error al enviar recordatorios');
+    });
+  }
+}
+
+// Función para exportar documentos seleccionados
+function exportarSeleccionados() {
+  if (documentosSeleccionados.length === 0) return;
+  
+  const params = new URLSearchParams({
+    documentos: documentosSeleccionados.join(','),
+    formato: 'excel'
+  });
+  
+  window.location.href = '/admin/reportes/exportar-pendientes?' + params.toString();
+}
+
+// Función para notificar todos los pendientes
+function notificarPagosPendientes() {
+  if (confirm('¿Enviar recordatorios de pago a TODOS los clientes con documentos pendientes?')) {
+    // Implementar lógica de notificación masiva
+    alert('Funcionalidad de notificación masiva en desarrollo');
+  }
+}
+
+// Función para generar reporte de cobranza
+function generarReporteCobranza() {
+  const filtros = new URLSearchParams(window.location.search);
+  filtros.append('formato', 'pdf');
+  filtros.append('tipo', 'cobranza');
+  
+  window.location.href = '/admin/reportes/pendientes-pdf?' + filtros.toString();
+}
+
+// Función para exportar a Excel
+function exportarExcel() {
+  const filtros = new URLSearchParams(window.location.search);
+  filtros.append('formato', 'excel');
+  
+  window.location.href = '/admin/reportes/exportar-pendientes?' + filtros.toString();
+}
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', function() {
+  // Agregar listeners a checkboxes individuales
+  document.querySelectorAll('.documento-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', actualizarSeleccion);
+  });
+  
+  // Actualizar selección inicial
+  actualizarSeleccion();
+});
+</script> 

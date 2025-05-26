@@ -1,0 +1,311 @@
+<!-- Reporte: Documentos Sin Pago (Cobranza) -->
+<div class="card">
+  <div class="card-header bg-danger text-white">
+    <h5 class="mb-0">
+      <i class="fas fa-exclamation-triangle me-2"></i>
+      Documentos Sin Pago - Gestión de Cobranza
+    </h5>
+    <p class="mb-0 small">
+      Documentos que NO han sido pagados - Para gestión de cobranza y seguimiento de clientes
+    </p>
+  </div>
+  <div class="card-body">
+    
+    <!-- Resumen Ejecutivo -->
+    <div class="row mb-4">
+      <div class="col-md-4">
+        <div class="card bg-danger text-white h-100">
+          <div class="card-body text-center">
+            <i class="fas fa-exclamation-triangle fa-3x mb-3 opacity-75"></i>
+            <h6 class="card-title">Total Sin Pago</h6>
+            <h2 class="mb-0">{{statsGeneral.totalDocumentos}}</h2>
+            <small>Documentos pendientes</small>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-md-4">
+        <div class="card bg-warning text-dark h-100">
+          <div class="card-body text-center">
+            <i class="fas fa-dollar-sign fa-3x mb-3 opacity-75"></i>
+            <h6 class="card-title">Monto Total</h6>
+            <h2 class="mb-0">${{statsGeneral.totalValor}}</h2>
+            <small>Por cobrar</small>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-md-4">
+        <div class="card bg-info text-white h-100">
+          <div class="card-body text-center">
+            <i class="fas fa-calculator fa-3x mb-3 opacity-75"></i>
+            <h6 class="card-title">Promedio por Doc.</h6>
+            <h2 class="mb-0">
+              ${{#if statsGeneral.totalDocumentos}}{{divide statsGeneral.totalValor statsGeneral.totalDocumentos}}{{else}}0.00{{/if}}
+            </h2>
+            <small>Valor promedio</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Listado Detallado -->
+    {{#if documentos.length}}
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="mb-0">
+          <i class="fas fa-list me-2"></i>
+          Documentos Sin Pago ({{documentos.length}})
+        </h6>
+        <div>
+          <button class="btn btn-sm btn-outline-danger" onclick="verSoloAtrasados()">
+            <i class="fas fa-exclamation-triangle me-1"></i> Solo Atrasados (>30 días)
+          </button>
+          <button class="btn btn-sm btn-outline-warning" onclick="verPorMonto()">
+            <i class="fas fa-sort-amount-down me-1"></i> Por Monto (Mayor)
+          </button>
+          <button class="btn btn-sm btn-outline-primary" onclick="verTodos()">
+            <i class="fas fa-list me-1"></i> Ver Todos
+          </button>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0" id="tablaSinPago">
+            <thead class="table-light">
+              <tr>
+                <th>Código</th>
+                <th>Tipo Documento</th>
+                <th>Cliente</th>
+                <th class="text-end">Valor Factura</th>
+                <th class="text-center">Fecha Factura</th>
+                <th class="text-center">Días de Atraso</th>
+                <th class="text-center">Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each documentos}}
+              <tr data-dias="{{this.diasDesdeFactura}}" data-monto="{{this.valor_factura}}" class="{{#if this.atrasado}}table-danger{{/if}}">
+                <td>
+                  <code>{{this.codigo_barras}}</code>
+                </td>
+                <td>{{this.tipo_documento}}</td>
+                <td>
+                  <strong>{{this.nombre_cliente}}</strong>
+                </td>
+                <td class="text-end">
+                  <strong class="text-{{#if (gt this.valor_factura 100)}}danger{{else if (gt this.valor_factura 50)}}warning{{else}}success{{/if}}">
+                    ${{this.valor_factura_formato}}
+                  </strong>
+                </td>
+                <td class="text-center">
+                  {{#if this.fecha_factura_formato}}
+                  {{this.fecha_factura_formato}}
+                  {{else}}
+                  <span class="text-muted">Sin fecha</span>
+                  {{/if}}
+                </td>
+                <td class="text-center">
+                  {{#if (eq this.diasDesdeFactura "N/A")}}
+                  <span class="badge bg-secondary">Sin fecha</span>
+                  {{else}}
+                  <span class="badge {{#if this.atrasado}}bg-danger{{else if (gt this.diasDesdeFactura 15)}}bg-warning{{else}}bg-success{{/if}}">
+                    {{this.diasDesdeFactura}} días
+                  </span>
+                  {{/if}}
+                </td>
+                <td class="text-center">
+                  {{#if this.atrasado}}
+                  <i class="fas fa-exclamation-triangle text-danger" title="URGENTE: Más de 30 días sin pagar"></i>
+                  {{else if (and (ne this.diasDesdeFactura "N/A") (gt this.diasDesdeFactura 15))}}
+                  <i class="fas fa-clock text-warning" title="Atención: Más de 15 días sin pagar"></i>
+                  {{else}}
+                  <i class="fas fa-check text-success" title="Normal: Menos de 15 días"></i>
+                  {{/if}}
+                </td>
+                <td>
+                  <a href="/admin/documentos/detalle/{{this.id}}" class="btn btn-sm btn-outline-primary" title="Ver Detalle">
+                    <i class="fas fa-eye"></i>
+                  </a>
+                  <button class="btn btn-sm btn-outline-success" onclick="registrarPago({{this.id}}, '{{this.codigo_barras}}')" title="Registrar Pago">
+                    <i class="fas fa-dollar-sign"></i>
+                  </button>
+                  {{#if this.atrasado}}
+                  <button class="btn btn-sm btn-outline-warning" onclick="contactarCliente('{{this.nombre_cliente}}', '{{this.codigo_barras}}')" title="Contactar Cliente">
+                    <i class="fas fa-phone"></i>
+                  </button>
+                  {{/if}}
+                </td>
+              </tr>
+              {{/each}}
+            </tbody>
+            <tfoot class="table-light">
+              <tr>
+                <th colspan="3">TOTAL</th>
+                <th class="text-end"><strong>${{statsGeneral.totalValor}}</strong></th>
+                <th colspan="4"></th>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+    {{else}}
+    <div class="text-center py-5">
+      <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+      <h4>¡Todo está pagado!</h4>
+      <p class="text-muted">No hay documentos sin pago en el período seleccionado.</p>
+    </div>
+    {{/if}}
+
+    <!-- Análisis Adicional -->
+    {{#if documentos.length}}
+    <div class="row mt-4">
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <h6 class="mb-0">Análisis por Antigüedad</h6>
+          </div>
+          <div class="card-body">
+            <div class="row text-center">
+              <div class="col-4">
+                <div class="border-end">
+                  <h4 class="text-success" id="rango0-15">0</h4>
+                  <small>0-15 días</small>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="border-end">
+                  <h4 class="text-warning" id="rango16-30">0</h4>
+                  <small>16-30 días</small>
+                </div>
+              </div>
+              <div class="col-4">
+                <h4 class="text-danger" id="rango30plus">0</h4>
+                <small>+30 días</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <h6 class="mb-0">Análisis por Monto</h6>
+          </div>
+          <div class="card-body">
+            <div class="row text-center">
+              <div class="col-4">
+                <div class="border-end">
+                  <h4 class="text-success" id="montosBajos">0</h4>
+                  <small>≤ $50</small>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="border-end">
+                  <h4 class="text-warning" id="montosMedios">0</h4>
+                  <small>$51-$100</small>
+                </div>
+              </div>
+              <div class="col-4">
+                <h4 class="text-danger" id="montosAltos">0</h4>
+                <small>+$100</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {{/if}}
+
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  calcularEstadisticas();
+});
+
+function verSoloAtrasados() {
+  const filas = document.querySelectorAll('#tablaSinPago tbody tr');
+  filas.forEach(fila => {
+    const dias = fila.dataset.dias;
+    if (dias !== 'N/A' && parseInt(dias) > 30) {
+      fila.style.display = '';
+    } else {
+      fila.style.display = 'none';
+    }
+  });
+}
+
+function verPorMonto() {
+  const filas = Array.from(document.querySelectorAll('#tablaSinPago tbody tr'));
+  const tbody = document.querySelector('#tablaSinPago tbody');
+  
+  filas.sort((a, b) => {
+    const montoA = parseFloat(a.dataset.monto) || 0;
+    const montoB = parseFloat(b.dataset.monto) || 0;
+    return montoB - montoA; // Ordenar descendente
+  });
+  
+  // Reordenar las filas
+  filas.forEach(fila => tbody.appendChild(fila));
+  
+  // Mostrar todas las filas
+  filas.forEach(fila => fila.style.display = '');
+}
+
+function verTodos() {
+  const filas = document.querySelectorAll('#tablaSinPago tbody tr');
+  filas.forEach(fila => {
+    fila.style.display = '';
+  });
+}
+
+function calcularEstadisticas() {
+  const filas = document.querySelectorAll('#tablaSinPago tbody tr');
+  let rango0_15 = 0, rango16_30 = 0, rango30plus = 0;
+  let montosBajos = 0, montosMedios = 0, montosAltos = 0;
+  
+  filas.forEach(fila => {
+    const dias = fila.dataset.dias;
+    const monto = parseFloat(fila.dataset.monto) || 0;
+    
+    // Análisis por antigüedad
+    if (dias !== 'N/A') {
+      const diasNum = parseInt(dias);
+      if (diasNum <= 15) rango0_15++;
+      else if (diasNum <= 30) rango16_30++;
+      else rango30plus++;
+    }
+    
+    // Análisis por monto
+    if (monto <= 50) montosBajos++;
+    else if (monto <= 100) montosMedios++;
+    else montosAltos++;
+  });
+  
+  // Actualizar displays
+  document.getElementById('rango0-15').textContent = rango0_15;
+  document.getElementById('rango16-30').textContent = rango16_30;
+  document.getElementById('rango30plus').textContent = rango30plus;
+  document.getElementById('montosBajos').textContent = montosBajos;
+  document.getElementById('montosMedios').textContent = montosMedios;
+  document.getElementById('montosAltos').textContent = montosAltos;
+}
+
+function registrarPago(documentoId, codigoBarras) {
+  // Abrir modal para registrar pago (implementar según sea necesario)
+  if (confirm(`¿Registrar pago para el documento ${codigoBarras}?`)) {
+    // Redirigir a página de registro de pago o abrir modal
+    window.location.href = `/admin/documentos/pago/${documentoId}`;
+  }
+}
+
+function contactarCliente(nombreCliente, codigoBarras) {
+  // Generar recordatorio o abrir modal de contacto
+  alert(`Contactar a ${nombreCliente} sobre el documento ${codigoBarras} atrasado.\n\nEsta función puede integrarse con sistema de notificaciones.`);
+}
+</script> 

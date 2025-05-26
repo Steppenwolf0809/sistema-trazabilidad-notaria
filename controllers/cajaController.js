@@ -32,7 +32,7 @@ const { logger, logPayment, logTimestamp } = require('../utils/logger');
 const cajaController = {
   
   /**
-   * Muestra el dashboard de caja con estadísticas y resúmenes
+   * Dashboard principal para rol de caja
    */
   dashboard: async (req, res) => {
     try {
@@ -443,7 +443,7 @@ const cajaController = {
             attributes: ['id', 'nombre', 'email']
           }
         ],
-        order: [['updated_at', 'DESC']],
+        order: [['created_at', 'DESC']],
         limit,
         offset
       });
@@ -598,7 +598,7 @@ const cajaController = {
       // Buscar eventos del documento
       const eventos = await EventoDocumento.findAll({
         where: { idDocumento: id },
-        order: [['createdAt', 'DESC']]
+        order: [['created_at', 'DESC']]
       });
       
       // Buscar información del usuario que registró el pago (si está pagado)
@@ -619,7 +619,7 @@ const cajaController = {
           categoria: 'pago',
           titulo: 'Pago Registrado',
           descripcion: `Pago por $${documento.valorFactura} via ${documento.metodoPago}`,
-          fecha: documento.fechaPago || documento.updatedAt, // CORREGIDO: usar fechaPago
+          fecha: documento.fechaPago || documento.updated_at, // CORREGIDO: usar fechaPago
           usuario: usuarioPago?.nombre || 'Usuario de Caja',
           color: 'success',
           detalles: {
@@ -627,7 +627,7 @@ const cajaController = {
             metodoPago: documento.metodoPago,
             numeroFactura: documento.numeroFactura,
             usuarioCaja: usuarioPago?.nombre || 'Usuario de Caja',
-            fechaPago: documento.fechaPago || documento.updatedAt // CORREGIDO: usar fechaPago
+            fechaPago: documento.fechaPago || documento.updated_at // CORREGIDO: usar fechaPago
           }
         });
       }
@@ -669,7 +669,7 @@ const cajaController = {
             titulo: evento.tipo === 'cambio_estado' ? 'Estado Cambiado' : 
                    evento.tipo === 'entrega' ? 'Documento Entregado' : 'Pago Confirmado',
             descripcion: evento.detalles || 'Sin descripción',
-            fecha: evento.createdAt,
+            fecha: evento.created_at,
             usuario: evento.usuario || 'Sistema',
             color: evento.tipo === 'entrega' ? 'info' : 
                   evento.tipo === 'cambio_estado' ? 'warning' : 'success'
@@ -773,7 +773,7 @@ const cajaController = {
             attributes: ['id', 'nombre', 'email']
           }
         ],
-        order: [['fechaPago', 'DESC']], // CORREGIDO: Ordenar por cuándo se registró el pago
+        order: [['created_at', 'DESC']], // CORREGIDO: Ordenar por cuándo se registró el pago
         limit,
         offset
       });
@@ -880,7 +880,7 @@ const cajaController = {
             attributes: ['id', 'nombre']
           }
         ],
-        order: [['updated_at', 'DESC']],
+        order: [['created_at', 'DESC']],
         limit: 100 // Limitar para no sobrecargar la vista
       });
       
@@ -1381,26 +1381,33 @@ const cajaController = {
         // Generar código de verificación para entrega
         const codigoVerificacion = Math.floor(1000 + Math.random() * 9000).toString();
         
-        // Convertir fecha de emisión del XML para usar como fecha de factura
+        // Procesar la fecha del XML para almacenar correctamente
         let fechaFactura = null;
         if (fechaEmision) {
-          // Convertir formato DD/MM/YYYY a Date con hora 00:00:00
+          console.log(`Procesando fecha XML: ${fechaEmision}`);
+          
+          // Separar DD/MM/YYYY
           const partesFecha = fechaEmision.split('/');
           if (partesFecha.length === 3) {
-            fechaFactura = new Date(
-              parseInt(partesFecha[2]), // año
-              parseInt(partesFecha[1]) - 1, // mes (0-11)
-              parseInt(partesFecha[0]), // día
-              0, 0, 0, 0 // hora 00:00:00
-            );
+            const dia = partesFecha[0].padStart(2, '0');
+            const mes = partesFecha[1].padStart(2, '0'); 
+            const año = partesFecha[2];
+            
+            // Crear string de fecha en formato YYYY-MM-DD para evitar problemas de zona horaria
+            const fechaString = `${año}-${mes}-${dia}`;
+            fechaFactura = fechaString; // Usar string directo para evitar conversión de zona horaria
+            console.log(`Fecha XML convertida a: ${fechaString}`);
           }
         }
         
-        // Si no se pudo convertir la fecha del XML, usar la fecha actual como fallback
-        if (!fechaFactura || isNaN(fechaFactura.getTime())) {
+        // Si no se pudo convertir la fecha del XML, usar la fecha actual en formato string
+        if (!fechaFactura) {
           console.log('Fecha del XML no válida, usando fecha actual como fallback para fecha de factura');
-          fechaFactura = new Date();
-          fechaFactura.setHours(0, 0, 0, 0); // Asegurar que esté a medianoche
+          const hoy = new Date();
+          const dia = String(hoy.getDate()).padStart(2, '0');
+          const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+          const año = hoy.getFullYear();
+          fechaFactura = `${año}-${mes}-${dia}`;
         } else {
           console.log(`Usando fecha del XML: ${fechaEmision} convertida a: ${fechaFactura}`);
         }
@@ -1418,7 +1425,7 @@ const cajaController = {
           idMatrizador: idMatrizador || null,
           valorFactura: parseFloat(valorFactura) || null,
           numeroFactura: numeroFactura || null,
-          fechaFactura: fechaFactura,
+          fechaFactura,
           estadoPago: estadoPago || 'pendiente',
           metodoPago: metodoPago || null,
           comparecientes: JSON.parse(comparecientes || '[]'),
@@ -1826,7 +1833,7 @@ const cajaController = {
             [Op.ne]: 'cancelado'
           }
         },
-        order: [['fechaFactura', 'DESC']],
+        order: [['created_at', 'DESC']], // Ordenar por fecha de registro del sistema (operacional)
         limit: 100 // Limitar a 100 documentos para no sobrecargar la vista
       });
       
@@ -1882,6 +1889,7 @@ const cajaController = {
   
   /**
    * Genera y muestra el reporte de documentos pendientes
+   * CORREGIDO: Usar created_at para calcular días atrasados (cuándo se registró vs hoy)
    * @param {Object} req - Objeto de solicitud Express
    * @param {Object} res - Objeto de respuesta Express
    */
@@ -1894,19 +1902,21 @@ const cajaController = {
       
       // Construir condiciones de filtrado
       const whereConditions = {
-        estadoPago: 'pendiente'
+        estadoPago: 'pendiente',
+        numeroFactura: { [Op.not]: null }, // Solo documentos con factura
+        estado: { [Op.notIn]: ['eliminado', 'nota_credito'] } // Excluir estados especiales
       };
       
       if (matrizador) {
-        whereConditions.matrizadorId = matrizador;
+        whereConditions.idMatrizador = matrizador;
       }
       
       // Construir ORDER BY según el filtro
-      let order = [['fechaFactura', 'ASC']]; // Por defecto más antiguos
+      let order = [['created_at', 'ASC']]; // Por defecto más antiguos (cuándo se registraron)
       if (ordenar === 'monto') {
         order = [['valorFactura', 'DESC']];
       } else if (ordenar === 'fecha') {
-        order = [['fechaFactura', 'DESC']];
+        order = [['created_at', 'DESC']]; // CORREGIDO: usar created_at
       }
       
       // Obtener documentos pendientes
@@ -1922,20 +1932,22 @@ const cajaController = {
         offset
       });
       
-      // Calcular estadísticas por rangos de antigüedad usando SQL para mayor eficiencia (PostgreSQL syntax)
+      // CORREGIDO: Calcular estadísticas por rangos de antigüedad usando created_at (PostgreSQL syntax)
       const statsQuery = `
         SELECT 
-          COUNT(CASE WHEN EXTRACT(DAY FROM NOW() - fecha_factura) BETWEEN 1 AND 7 THEN 1 END) as rango1_7,
-          COUNT(CASE WHEN EXTRACT(DAY FROM NOW() - fecha_factura) BETWEEN 8 AND 15 THEN 1 END) as rango8_15,
-          COUNT(CASE WHEN EXTRACT(DAY FROM NOW() - fecha_factura) BETWEEN 16 AND 60 THEN 1 END) as rango16_60,
-          COUNT(CASE WHEN EXTRACT(DAY FROM NOW() - fecha_factura) > 60 THEN 1 END) as rango60,
-          SUM(CASE WHEN EXTRACT(DAY FROM NOW() - fecha_factura) BETWEEN 1 AND 7 THEN valor_factura ELSE 0 END) as monto1_7,
-          SUM(CASE WHEN EXTRACT(DAY FROM NOW() - fecha_factura) BETWEEN 8 AND 15 THEN valor_factura ELSE 0 END) as monto8_15,
-          SUM(CASE WHEN EXTRACT(DAY FROM NOW() - fecha_factura) BETWEEN 16 AND 60 THEN valor_factura ELSE 0 END) as monto16_60,
-          SUM(CASE WHEN EXTRACT(DAY FROM NOW() - fecha_factura) > 60 THEN valor_factura ELSE 0 END) as monto60,
+          COUNT(CASE WHEN EXTRACT(DAY FROM NOW() - created_at) BETWEEN 1 AND 7 THEN 1 END) as rango1_7,
+          COUNT(CASE WHEN EXTRACT(DAY FROM NOW() - created_at) BETWEEN 8 AND 15 THEN 1 END) as rango8_15,
+          COUNT(CASE WHEN EXTRACT(DAY FROM NOW() - created_at) BETWEEN 16 AND 60 THEN 1 END) as rango16_60,
+          COUNT(CASE WHEN EXTRACT(DAY FROM NOW() - created_at) > 60 THEN 1 END) as rango60,
+          SUM(CASE WHEN EXTRACT(DAY FROM NOW() - created_at) BETWEEN 1 AND 7 THEN valor_factura ELSE 0 END) as monto1_7,
+          SUM(CASE WHEN EXTRACT(DAY FROM NOW() - created_at) BETWEEN 8 AND 15 THEN valor_factura ELSE 0 END) as monto8_15,
+          SUM(CASE WHEN EXTRACT(DAY FROM NOW() - created_at) BETWEEN 16 AND 60 THEN valor_factura ELSE 0 END) as monto16_60,
+          SUM(CASE WHEN EXTRACT(DAY FROM NOW() - created_at) > 60 THEN valor_factura ELSE 0 END) as monto60,
           COUNT(*) as totalPendientes
         FROM documentos
         WHERE estado_pago = 'pendiente'
+        AND numero_factura IS NOT NULL
+        AND estado NOT IN ('eliminado', 'nota_credito')
         ${matrizador ? `AND id_matrizador = ${matrizador}` : ''}
       `;
       
@@ -1955,13 +1967,16 @@ const cajaController = {
         order: [['nombre', 'ASC']]
       });
       
-      // Agregar días de antigüedad y nombre del matrizador a cada documento
+      // CORREGIDO: Agregar días de antigüedad basado en created_at (cuándo se registró el documento)
       const documentosConDatos = documentosPendientes.map(doc => {
-        const diasAntiguedad = moment().diff(moment(doc.fechaFactura), 'days');
+        const diasAntiguedad = moment().diff(moment(doc.created_at), 'days'); // CORREGIDO: usar created_at
         return {
           ...doc.toJSON(),
           diasAntiguedad,
-          matrizador: doc.matrizador?.nombre || 'Sin asignar'
+          matrizador: doc.matrizador?.nombre || 'Sin asignar',
+          // Para debugging: también mostrar fecha de registro
+          fechaRegistro: doc.created_at,
+          fechaDocumento: doc.fechaFactura
         };
       });
       
@@ -2003,7 +2018,7 @@ const cajaController = {
       // Renderizar la vista con los datos
       res.render('caja/reportes/pendientes', {
         layout: 'caja',
-        title: 'Reporte de Documentos Pendientes',
+        title: 'Reporte de Pagos Atrasados',
         activeReportes: true,
         userRole: req.matrizador?.rol,
         userName: req.matrizador?.nombre,
@@ -2754,6 +2769,185 @@ const cajaController = {
       res.status(500).json({
         success: false,
         message: 'Error interno del servidor'
+      });
+    }
+  },
+  
+  /**
+   * NUEVO: Reporte de Cobros por Matrizador
+   * Muestra cuánto dinero ha cobrado cada matrizador en un período específico
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  reporteCobrosMatrizador: async (req, res) => {
+    try {
+      // Procesar parámetros de filtrado
+      const rango = req.query.rango || 'mes';
+      const idMatrizador = req.query.idMatrizador; // Filtro por matrizador específico
+      let fechaInicio, fechaFin, periodoTexto;
+      
+      // Establecer fechas según el rango seleccionado
+      const hoy = moment().startOf('day');
+      
+      switch (rango) {
+        case 'hoy':
+          fechaInicio = hoy.clone();
+          fechaFin = moment().endOf('day');
+          periodoTexto = 'Hoy ' + fechaInicio.format('DD/MM/YYYY');
+          break;
+        case 'ayer':
+          fechaInicio = hoy.clone().subtract(1, 'days');
+          fechaFin = hoy.clone().subtract(1, 'days').endOf('day');
+          periodoTexto = 'Ayer ' + fechaInicio.format('DD/MM/YYYY');
+          break;
+        case 'semana':
+          fechaInicio = hoy.clone().startOf('week');
+          fechaFin = moment().endOf('day');
+          periodoTexto = 'Esta semana (desde ' + fechaInicio.format('DD/MM/YYYY') + ')';
+          break;
+        case 'mes':
+          fechaInicio = hoy.clone().startOf('month');
+          fechaFin = moment().endOf('day');
+          periodoTexto = 'Este mes (desde ' + fechaInicio.format('DD/MM/YYYY') + ')';
+          break;
+        case 'ultimo_mes':
+          fechaInicio = hoy.clone().subtract(30, 'days');
+          fechaFin = moment().endOf('day');
+          periodoTexto = 'Últimos 30 días';
+          break;
+        case 'personalizado':
+          fechaInicio = req.query.fechaInicio ? moment(req.query.fechaInicio).startOf('day') : hoy.clone().startOf('month');
+          fechaFin = req.query.fechaFin ? moment(req.query.fechaFin).endOf('day') : moment().endOf('day');
+          periodoTexto = 'Del ' + fechaInicio.format('DD/MM/YYYY') + ' al ' + fechaFin.format('DD/MM/YYYY');
+          break;
+        default:
+          fechaInicio = hoy.clone().startOf('month');
+          fechaFin = moment().endOf('day');
+          periodoTexto = 'Este mes (desde ' + fechaInicio.format('DD/MM/YYYY') + ')';
+      }
+      
+      // Formatear fechas para consultas SQL
+      const fechaInicioSQL = fechaInicio.format('YYYY-MM-DD HH:mm:ss');
+      const fechaFinSQL = fechaFin.format('YYYY-MM-DD HH:mm:ss');
+      
+      // Consulta principal: cobros por matrizador usando fecha_pago
+      let whereMatrizador = '';
+      if (idMatrizador && idMatrizador !== 'todos' && idMatrizador !== '') {
+        whereMatrizador = `AND m.id = ${parseInt(idMatrizador)}`;
+      }
+      
+      const cobrosMatrizadorQuery = `
+        SELECT 
+          m.id,
+          m.nombre,
+          m.email,
+          COUNT(d.id) as documentos_cobrados,
+          COALESCE(SUM(d.valor_factura), 0) as total_cobrado,
+          COALESCE(AVG(d.valor_factura), 0) as promedio_por_documento,
+          MIN(d.fecha_pago) as primer_cobro,
+          MAX(d.fecha_pago) as ultimo_cobro
+        FROM matrizadores m
+        LEFT JOIN documentos d ON m.id = d.id_matrizador
+          AND d.estado_pago = 'pagado'
+          AND d.fecha_pago BETWEEN :fechaInicio AND :fechaFin
+          AND d.estado NOT IN ('eliminado', 'nota_credito')
+        WHERE m.rol = 'matrizador'
+        AND m.activo = true
+        ${whereMatrizador}
+        GROUP BY m.id, m.nombre, m.email
+        ORDER BY total_cobrado DESC
+      `;
+      
+      const cobrosMatrizador = await sequelize.query(cobrosMatrizadorQuery, {
+        replacements: { fechaInicio: fechaInicioSQL, fechaFin: fechaFinSQL },
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      // Estadísticas generales del período
+      const totalCobradoPeriodo = cobrosMatrizador.reduce((sum, item) => sum + parseFloat(item.total_cobrado || 0), 0);
+      const totalDocumentosCobrados = cobrosMatrizador.reduce((sum, item) => sum + parseInt(item.documentos_cobrados || 0), 0);
+      const promedioGeneral = totalDocumentosCobrados > 0 ? totalCobradoPeriodo / totalDocumentosCobrados : 0;
+      
+      // Obtener detalles de cobros recientes (últimos 20)
+      let whereDetalles = `
+        WHERE d.estado_pago = 'pagado'
+        AND d.fecha_pago BETWEEN :fechaInicio AND :fechaFin
+        AND d.estado NOT IN ('eliminado', 'nota_credito')
+      `;
+      if (idMatrizador && idMatrizador !== 'todos' && idMatrizador !== '') {
+        whereDetalles += ` AND d.id_matrizador = ${parseInt(idMatrizador)}`;
+      }
+      
+      const cobrosRecientesQuery = `
+        SELECT 
+          d.id,
+          d.codigo_barras,
+          d.tipo_documento,
+          d.nombre_cliente,
+          d.valor_factura,
+          d.fecha_pago,
+          d.metodo_pago,
+          m.nombre as matrizador_nombre
+        FROM documentos d
+        JOIN matrizadores m ON d.id_matrizador = m.id
+        ${whereDetalles}
+        ORDER BY d.fecha_pago DESC
+        LIMIT 20
+      `;
+      
+      const cobrosRecientes = await sequelize.query(cobrosRecientesQuery, {
+        replacements: { fechaInicio: fechaInicioSQL, fechaFin: fechaFinSQL },
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      // Obtener todos los matrizadores para el filtro
+      const matrizadores = await Matrizador.findAll({
+        attributes: ['id', 'nombre'],
+        where: { activo: true, rol: 'matrizador' },
+        order: [['nombre', 'ASC']],
+        raw: true
+      });
+      
+      // Preparar datos para gráfico
+      const datosGrafico = {
+        nombres: cobrosMatrizador.map(item => item.nombre),
+        montos: cobrosMatrizador.map(item => parseFloat(item.total_cobrado || 0)),
+        documentos: cobrosMatrizador.map(item => parseInt(item.documentos_cobrados || 0))
+      };
+      
+      // Renderizar la vista
+      res.render('caja/reportes/cobros-matrizador', {
+        layout: 'caja',
+        title: 'Cobros por Matrizador',
+        activeReportes: true,
+        userRole: req.matrizador?.rol,
+        userName: req.matrizador?.nombre,
+        cobrosMatrizador,
+        cobrosRecientes,
+        matrizadores,
+        idMatrizadorSeleccionado: idMatrizador || 'todos',
+        stats: {
+          totalCobradoPeriodo: formatearValorMonetario(totalCobradoPeriodo),
+          totalDocumentosCobrados,
+          promedioGeneral: formatearValorMonetario(promedioGeneral),
+          matrizadoresActivos: cobrosMatrizador.filter(m => parseInt(m.documentos_cobrados) > 0).length
+        },
+        datosGrafico,
+        periodoTexto,
+        filtros: {
+          rango,
+          idMatrizador,
+          fechaInicio: fechaInicio.format('YYYY-MM-DD'),
+          fechaFin: fechaFin.format('YYYY-MM-DD')
+        }
+      });
+    } catch (error) {
+      console.error('Error al generar reporte de cobros por matrizador:', error);
+      return res.status(500).render('error', {
+        layout: 'caja',
+        title: 'Error',
+        message: 'Error al generar el reporte de cobros por matrizador',
+        error
       });
     }
   }

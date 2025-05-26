@@ -6,7 +6,7 @@
         <th class="ordenable" data-columna="codigoBarras" data-tipo="texto">Código</th>
         <th class="ordenable" data-columna="tipoDocumento" data-tipo="texto">Tipo</th>
         <th class="ordenable" data-columna="nombreCliente" data-tipo="texto">Cliente</th>
-        <th class="ordenable" data-columna="fechaFactura" data-tipo="fecha">Fecha Creación</th>
+        <th class="ordenable" data-columna="created_at" data-tipo="fecha">Fecha Registro Sistema</th>
         <th class="ordenable" data-columna="estado" data-tipo="texto">Estado</th>
         <th>Factura</th>
         <th>Matrizador</th>
@@ -23,7 +23,7 @@
         </td>
         <td>{{this.tipoDocumento}}</td>
         <td>{{this.nombreCliente}}</td>
-        <td data-sort-value="{{this.fechaFactura}}">{{formatDate this.fechaFactura}}</td>
+        <td data-sort-value="{{this.created_at}}">{{formatDateDocument this.created_at}}</td>
         <td>
           {{#if (eq this.estado "en_proceso")}}
           <span class="badge bg-warning text-dark">En Proceso</span>

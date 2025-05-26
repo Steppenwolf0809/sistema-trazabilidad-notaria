@@ -1,41 +1,50 @@
-<!-- Vista principal de reportes -->
+<!-- Vista principal de reportes SIMPLIFICADA PARA CAJA -->
 <div class="row">
   <div class="col-md-12 mb-4">
     <div class="card">
       <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="fas fa-chart-bar me-2"></i> Reportes y Estadísticas</span>
-        
+        <span><i class="fas fa-chart-bar me-2"></i> Reportes Operativos de Caja</span>
+        <small class="text-muted">Solo reportes esenciales para operaciones de caja</small>
       </div>
     </div>
   </div>
 </div>
 
 <div class="row">
-  <!-- Navegación de reportes -->
+  <!-- Navegación de reportes SIMPLIFICADA -->
   <div class="col-md-3">
     <div class="card mb-4">
       <div class="card-header">
-        <i class="fas fa-list me-2"></i> Tipos de Reportes
+        <i class="fas fa-list me-2"></i> Reportes Disponibles
       </div>
       <div class="card-body p-0">
         <div class="list-group list-group-flush">
           <a href="/caja/reportes/financiero" class="list-group-item list-group-item-action {{#if (eq reporteActivo 'financiero')}}active{{/if}}">
             <i class="fas fa-dollar-sign me-2"></i> Reporte Financiero
-          </a>
-          <a href="/caja/reportes/matrizadores" class="list-group-item list-group-item-action {{#if (eq reporteActivo 'matrizadores')}}active{{/if}}">
-            <i class="fas fa-users me-2"></i> Reporte por Matrizador
-          </a>
-          <a href="/caja/reportes/documentos" class="list-group-item list-group-item-action {{#if (eq reporteActivo 'documentos')}}active{{/if}}">
-            <i class="fas fa-file-alt me-2"></i> Reporte de Documentos
+            <small class="d-block text-muted">Ingresos y pagos básicos</small>
           </a>
           <a href="/caja/reportes/pendientes" class="list-group-item list-group-item-action {{#if (eq reporteActivo 'pendientes')}}active{{/if}}">
-            <i class="fas fa-clock me-2"></i> Documentos Pendientes
+            <i class="fas fa-clock me-2"></i> Pagos Atrasados
+            <small class="d-block text-muted">Para gestión de cobranza</small>
+          </a>
+          <a href="/caja/reportes/cobros-matrizador" class="list-group-item list-group-item-action {{#if (eq reporteActivo 'cobros-matrizador')}}active{{/if}}">
+            <i class="fas fa-users me-2"></i> Cobros por Matrizador
+            <small class="d-block text-muted">Dinero cobrado por persona</small>
           </a>
         </div>
       </div>
     </div>
-
     
+    <!-- Nota sobre reportes transferidos -->
+    <div class="card mb-4">
+      <div class="card-header bg-info text-white">
+        <i class="fas fa-info-circle me-2"></i> Información
+      </div>
+      <div class="card-body">
+        <p class="small mb-2">Los reportes detallados han sido transferidos al área administrativa para mayor seguridad.</p>
+        <p class="small mb-0">Si necesita acceso a reportes completos, consulte con el administrador.</p>
+      </div>
+    </div>
   </div>
   
   <!-- Contenido del reporte -->
@@ -44,53 +53,57 @@
       <!-- Contenido dinámico del reporte cargado -->
       {{{contenidoReporte}}}
     {{else}}
-      <!-- Bienvenida a reportes cuando no hay reporte activo -->
+      <!-- Bienvenida a reportes simplificada -->
       <div class="card">
         <div class="card-body text-center py-5">
           <i class="fas fa-chart-pie fa-5x text-primary mb-4"></i>
-          <h3>Bienvenido a Reportes</h3>
-          <p class="lead">Seleccione un tipo de reporte del menú lateral para comenzar.</p>
+          <h3>Reportes de Caja</h3>
+          <p class="lead">Seleccione un reporte del menú lateral para comenzar.</p>
+          
           <div class="row mt-5">
-            <div class="col-md-6">
+            <div class="col-md-4">
               <div class="card bg-light mb-3">
                 <div class="card-body text-center p-4">
                   <i class="fas fa-dollar-sign fa-3x text-success mb-3"></i>
                   <h5>Reporte Financiero</h5>
-                  <p>Analice los montos facturados, cobrados y pendientes en diferentes períodos.</p>
+                  <p>Resumen de ingresos, pagos cobrados y pendientes por período.</p>
                   <a href="/caja/reportes/financiero" class="btn btn-outline-success">Ver Reporte</a>
                 </div>
               </div>
             </div>
-            <div class="col-md-6">
-              <div class="card bg-light mb-3">
-                <div class="card-body text-center p-4">
-                  <i class="fas fa-users fa-3x text-info mb-3"></i>
-                  <h5>Reporte por Matrizador</h5>
-                  <p>Compare el desempeño de los matrizadores en facturación y documentos procesados.</p>
-                  <a href="/caja/reportes/matrizadores" class="btn btn-outline-info">Ver Reporte</a>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="card bg-light mb-3">
-                <div class="card-body text-center p-4">
-                  <i class="fas fa-file-alt fa-3x text-primary mb-3"></i>
-                  <h5>Reporte de Documentos</h5>
-                  <p>Analice la distribución de documentos por tipo, estado y período.</p>
-                  <a href="/caja/reportes/documentos" class="btn btn-outline-primary">Ver Reporte</a>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-6">
+            
+            <div class="col-md-4">
               <div class="card bg-light mb-3">
                 <div class="card-body text-center p-4">
                   <i class="fas fa-clock fa-3x text-warning mb-3"></i>
-                  <h5>Documentos Pendientes</h5>
-                  <p>Identifique los documentos con pagos pendientes y su antigüedad.</p>
+                  <h5>Pagos Atrasados</h5>
+                  <p>Documentos pendientes de pago para gestión de cobranza urgente.</p>
                   <a href="/caja/reportes/pendientes" class="btn btn-outline-warning">Ver Reporte</a>
                 </div>
               </div>
             </div>
+            
+            <div class="col-md-4">
+              <div class="card bg-light mb-3">
+                <div class="card-body text-center p-4">
+                  <i class="fas fa-users fa-3x text-info mb-3"></i>
+                  <h5>Cobros por Matrizador</h5>
+                  <p>Dinero cobrado por cada matrizador en períodos específicos.</p>
+                  <a href="/caja/reportes/cobros-matrizador" class="btn btn-outline-info">Ver Reporte</a>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Información adicional -->
+          <div class="alert alert-info mt-4">
+            <h6 class="alert-heading">
+              <i class="fas fa-lightbulb me-2"></i>¿Necesita más reportes?
+            </h6>
+            <p class="mb-0">
+              Los reportes detallados de documentos y productividad han sido transferidos al área administrativa.
+              Si necesita acceso a estadísticas completas, consulte con el administrador del sistema.
+            </p>
           </div>
         </div>
       </div>
