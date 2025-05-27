@@ -1761,8 +1761,25 @@ exports.actualizarDocumento = async (req, res) => {
       numeroFactura,
       valorFactura,
       estadoPago,
-      metodoPago
+      metodoPago,
+      // Campos de configuración de notificaciones (nombres corregidos)
+      politicaNotificacion,
+      canalNotificacion,
+      razonSinNotificar,
+      entregaInmediata,
+      esHabilitante,
+      documentoPrincipalId
     } = req.body;
+
+    // Agregar logs para debugging
+    console.log('🔧 Datos de notificación recibidos:', {
+      politicaNotificacion,
+      canalNotificacion,
+      razonSinNotificar,
+      entregaInmediata,
+      esHabilitante,
+      documentoPrincipalId
+    });
 
     // Validación de teléfono
     if (telefonoCliente && !validarTelefono(telefonoCliente)) {
@@ -1798,6 +1815,93 @@ exports.actualizarDocumento = async (req, res) => {
       });
     }
 
+    // Procesar configuración de notificaciones
+    let configNotificaciones = {};
+    
+    console.log('🔧 Procesando configuración de notificaciones...');
+    
+    if (politicaNotificacion) {
+      console.log(`📋 Política seleccionada: ${politicaNotificacion}`);
+      switch (politicaNotificacion) {
+        case 'automatico':
+          configNotificaciones.notificarAutomatico = true;
+          configNotificaciones.metodoNotificacion = canalNotificacion || 'ambos';
+          configNotificaciones.razonSinNotificar = null;
+          console.log('✅ Configurado para notificar automáticamente');
+          break;
+        case 'no_notificar':
+          configNotificaciones.notificarAutomatico = false;
+          configNotificaciones.metodoNotificacion = 'ninguno';
+          configNotificaciones.razonSinNotificar = razonSinNotificar || 'Cliente no autoriza notificaciones';
+          console.log('✅ Configurado para NO notificar');
+          break;
+        default:
+          console.log(`⚠️ Política no reconocida: ${politicaNotificacion}`);
+          break;
+      }
+    }
+    
+    // Manejar entrega inmediata
+    const esEntregaInmediata = entregaInmediata === 'true' || entregaInmediata === true;
+    configNotificaciones.entregadoInmediatamente = esEntregaInmediata;
+    
+    if (esEntregaInmediata) {
+      console.log('⚡ Entrega inmediata activada - forzando no notificar');
+      configNotificaciones.notificarAutomatico = false;
+      configNotificaciones.metodoNotificacion = 'ninguno';
+    }
+    
+    // Manejar documento habilitante
+    const esDocumentoHabilitante = esHabilitante === 'true' || esHabilitante === true;
+    
+    if (esDocumentoHabilitante) {
+      console.log('🔗 Documento marcado como habilitante');
+      configNotificaciones.esDocumentoPrincipal = false;
+      configNotificaciones.documentoPrincipalId = documentoPrincipalId ? parseInt(documentoPrincipalId) : null;
+      console.log(`📄 Documento principal ID: ${configNotificaciones.documentoPrincipalId}`);
+    } else {
+      console.log('📄 Documento marcado como principal');
+      configNotificaciones.esDocumentoPrincipal = true;
+      configNotificaciones.documentoPrincipalId = null;
+    }
+    
+    console.log('🔧 Configuración final de notificaciones:', configNotificaciones);
+
+    // Validaciones adicionales
+    if (esDocumentoHabilitante && !documentoPrincipalId) {
+      req.flash('error', 'Debe seleccionar un documento principal si marca el documento como habilitante.');
+      await transaction.rollback();
+      let matrizadoresList = [];
+      if (usuario.rol === 'admin') {
+          matrizadoresList = await Matrizador.findAll({ order: [['nombre', 'ASC']] });
+      }
+      return res.status(400).render(viewToRender, {
+          layout: layoutToRender,
+          title: `Editar Documento (${usuario.rol})`,
+          documento: { ...documento.get(), ...req.body },
+          matrizadores: matrizadoresList,
+          usuario,
+          error: 'Debe seleccionar un documento principal si marca el documento como habilitante.',
+      });
+    }
+
+    if (politicaNotificacion === 'no_notificar' && !razonSinNotificar) {
+      req.flash('error', 'Debe especificar la razón para no notificar al cliente.');
+      await transaction.rollback();
+      let matrizadoresList = [];
+      if (usuario.rol === 'admin') {
+          matrizadoresList = await Matrizador.findAll({ order: [['nombre', 'ASC']] });
+      }
+      return res.status(400).render(viewToRender, {
+          layout: layoutToRender,
+          title: `Editar Documento (${usuario.rol})`,
+          documento: { ...documento.get(), ...req.body },
+          matrizadores: matrizadoresList,
+          usuario,
+          error: 'Debe especificar la razón para no notificar al cliente.',
+      });
+    }
+
     const datosActualizar = {
       tipoDocumento: tipoDocumento || documento.tipoDocumento,
       nombreCliente: nombreCliente || documento.nombreCliente,
@@ -1812,7 +1916,9 @@ exports.actualizarDocumento = async (req, res) => {
       numeroFactura: numeroFactura !== undefined ? numeroFactura : documento.numeroFactura,
       valorFactura: valorFactura !== undefined ? (valorFactura ? parseFloat(valorFactura) : null) : documento.valorFactura,
       estadoPago: estadoPago || documento.estadoPago || 'pendiente',
-      metodoPago: metodoPago !== undefined ? metodoPago : documento.metodoPago
+      metodoPago: metodoPago !== undefined ? metodoPago : documento.metodoPago,
+      // Configuración de notificaciones
+      ...configNotificaciones
     };
 
     if (usuario.rol === 'admin') {
@@ -1946,4 +2052,53 @@ function getBasePath(req) {
     }
   }
   return '/admin/documentos';
-} 
+}
+
+/**
+ * Obtiene documentos principales disponibles para vincular como habilitantes
+ * @param {Object} req - Objeto de solicitud Express
+ * @param {Object} res - Objeto de respuesta Express
+ */
+exports.obtenerDocumentosPrincipales = async (req, res) => {
+  try {
+    const usuario = req.matrizador || req.usuario;
+    
+    if (!usuario) {
+      return res.status(401).json({
+        exito: false,
+        mensaje: 'Usuario no autenticado'
+      });
+    }
+    
+    // Construir condiciones de búsqueda
+    const whereClause = {
+      esDocumentoPrincipal: true,
+      estado: ['en_proceso', 'listo_para_entrega'] // Solo documentos activos
+    };
+    
+    // Si es matrizador, solo sus documentos
+    if (usuario.rol === 'matrizador') {
+      whereClause.idMatrizador = usuario.id;
+    }
+    
+    const documentos = await Documento.findAll({
+      where: whereClause,
+      attributes: ['id', 'tipoDocumento', 'nombreCliente', 'codigoBarras', 'created_at'],
+      order: [['created_at', 'DESC']],
+      limit: 50 // Limitar resultados para performance
+    });
+    
+    return res.status(200).json({
+      exito: true,
+      datos: documentos,
+      mensaje: `Se encontraron ${documentos.length} documentos principales disponibles`
+    });
+  } catch (error) {
+    console.error('Error al obtener documentos principales:', error);
+    return res.status(500).json({
+      exito: false,
+      mensaje: 'Error al obtener documentos principales',
+      error: error.message
+    });
+  }
+}; 

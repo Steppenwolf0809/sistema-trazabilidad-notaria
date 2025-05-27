@@ -223,14 +223,36 @@ const reintentarCorreosPendientes = async () => {
  * Envía una notificación de documento listo para entrega
  * @param {Object} documento - Datos del documento
  * @param {Object} cliente - Datos del cliente
- * @returns {Promise<boolean>} Resultado del envío
+ * @returns {Promise<Object>} Resultado del envío
  */
 const enviarNotificacionDocumentoListo = async (documento, cliente) => {
   try {
     // Verificar si el cliente tiene correo
     if (!cliente.email) {
       console.warn(`Cliente ${cliente.nombre} no tiene correo para notificación`);
-      return false;
+      return {
+        exito: false,
+        error: 'Cliente no tiene correo electrónico',
+        destinatario: null,
+        timestamp: new Date().toISOString()
+      };
+    }
+    
+    // Modo desarrollo - simular envío
+    if (process.env.NODE_ENV !== 'production') {
+      const mensaje = `Su documento ${documento.tipoDocumento} está listo para retirar. Código: ${documento.codigoBarras}`;
+      console.log(`[SIMULADO] 📧 Email a ${cliente.email}:`);
+      console.log(`   Asunto: Documento listo para entrega - ${documento.tipoDocumento}`);
+      console.log(`   Mensaje: ${mensaje}`);
+      console.log(`[DESARROLLO] Notificación Email registrada sin envío real`);
+      
+      return {
+        exito: true,
+        simulado: true,
+        destinatario: cliente.email,
+        mensaje: mensaje,
+        timestamp: new Date().toISOString()
+      };
     }
     
     // Compilar la plantilla con los datos del documento y cliente
@@ -242,14 +264,27 @@ const enviarNotificacionDocumentoListo = async (documento, cliente) => {
     });
     
     // Enviar el correo
-    return await enviarCorreo(
+    const resultado = await enviarCorreo(
       cliente.email,
       `Documento listo para entrega - ${documento.tipoDocumento}`,
       contenidoHtml
     );
+    
+    return {
+      exito: resultado,
+      simulado: false,
+      destinatario: cliente.email,
+      mensaje: contenidoHtml,
+      timestamp: new Date().toISOString()
+    };
   } catch (error) {
     console.error('Error al enviar notificación de documento listo:', error);
-    return false;
+    return {
+      exito: false,
+      error: error.message,
+      destinatario: cliente.email,
+      timestamp: new Date().toISOString()
+    };
   }
 };
 
@@ -257,35 +292,71 @@ const enviarNotificacionDocumentoListo = async (documento, cliente) => {
  * Envía una confirmación de entrega de documento
  * @param {Object} documento - Datos del documento
  * @param {Object} cliente - Datos del cliente
- * @param {Object} receptor - Datos de quien recibe el documento
- * @returns {Promise<boolean>} Resultado del envío
+ * @param {Object} datosEntrega - Datos de la entrega
+ * @returns {Promise<Object>} Resultado del envío
  */
-const enviarConfirmacionEntrega = async (documento, cliente, receptor) => {
+const enviarConfirmacionEntrega = async (documento, cliente, datosEntrega) => {
   try {
     // Verificar si el cliente tiene correo
     if (!cliente.email) {
       console.warn(`Cliente ${cliente.nombre} no tiene correo para confirmación`);
-      return false;
+      return {
+        exito: false,
+        error: 'Cliente no tiene correo electrónico',
+        destinatario: null,
+        timestamp: new Date().toISOString()
+      };
+    }
+    
+    // Modo desarrollo - simular envío
+    if (process.env.NODE_ENV !== 'production') {
+      const fechaEntrega = new Date(datosEntrega.fechaEntrega || new Date()).toLocaleDateString('es-CO');
+      const mensaje = `Documento ${documento.tipoDocumento} entregado a ${datosEntrega.nombreReceptor} el ${fechaEntrega}`;
+      console.log(`[SIMULADO] 📧 Email confirmación a ${cliente.email}:`);
+      console.log(`   Asunto: Confirmación de entrega - ${documento.tipoDocumento}`);
+      console.log(`   Mensaje: ${mensaje}`);
+      console.log(`[DESARROLLO] Confirmación Email registrada sin envío real`);
+      
+      return {
+        exito: true,
+        simulado: true,
+        destinatario: cliente.email,
+        mensaje: mensaje,
+        timestamp: new Date().toISOString()
+      };
     }
     
     // Compilar la plantilla con los datos
     const contenidoHtml = await compilarPlantilla('confirmacion-entrega', {
       documento,
       cliente,
-      receptor,
-      fechaEntrega: new Date(documento.fechaEntrega).toLocaleDateString('es-ES'),
-      horaEntrega: new Date(documento.fechaEntrega).toLocaleTimeString('es-ES')
+      datosEntrega,
+      fechaEntrega: new Date(datosEntrega.fechaEntrega || documento.fechaEntrega).toLocaleDateString('es-ES'),
+      horaEntrega: new Date(datosEntrega.fechaEntrega || documento.fechaEntrega).toLocaleTimeString('es-ES')
     });
     
     // Enviar el correo
-    return await enviarCorreo(
+    const resultado = await enviarCorreo(
       cliente.email,
       `Confirmación de entrega - ${documento.tipoDocumento}`,
       contenidoHtml
     );
+    
+    return {
+      exito: resultado,
+      simulado: false,
+      destinatario: cliente.email,
+      mensaje: contenidoHtml,
+      timestamp: new Date().toISOString()
+    };
   } catch (error) {
     console.error('Error al enviar confirmación de entrega:', error);
-    return false;
+    return {
+      exito: false,
+      error: error.message,
+      destinatario: cliente.email,
+      timestamp: new Date().toISOString()
+    };
   }
 };
 

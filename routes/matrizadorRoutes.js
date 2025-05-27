@@ -47,6 +47,20 @@ router.post('/documentos/marcar-listo', validarAccesoConAuditoria(['matrizador']
 // Marcar documento como visto
 router.post('/documentos/marcar-visto/:id', validarAccesoConAuditoria(['matrizador']), matrizadorController.marcarDocumentoVisto);
 
+// Buscar documentos principales para vincular como habilitantes
+router.get('/documentos/buscar-principales', validarAccesoConAuditoria(['matrizador']), matrizadorController.buscarDocumentosPrincipales);
+
+// API para obtener documentos principales (para selección de documento habilitante)
+router.get('/api/documentos/principales', validarAccesoConAuditoria(['matrizador']), documentoController.obtenerDocumentosPrincipales);
+
+// Rutas de notificaciones
+const notificacionController = require('../controllers/notificacionController');
+router.get('/notificaciones/historial', validarAccesoConAuditoria(['matrizador']), notificacionController.mostrarHistorial);
+
+// APIs de notificaciones
+router.get('/api/notificaciones/:id', validarAccesoConAuditoria(['matrizador']), notificacionController.obtenerDetalleNotificacion);
+router.post('/api/notificaciones/:id/reintentar', validarAccesoConAuditoria(['admin']), notificacionController.reintentarNotificacion);
+
 // Rutas de logout - Disponible para todos los usuarios
 router.get('/logout', matrizadorController.logout);
 

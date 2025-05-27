@@ -232,6 +232,80 @@ const Documento = sequelize.define('Documento', {
     defaultValue: false
   },
   
+  // ============== SISTEMA DE NOTIFICACIONES AUTOMÁTICAS ==============
+  
+  // Control de notificación automática
+  notificarAutomatico: {
+    type: DataTypes.BOOLEAN,
+    field: 'notificar_automatico',
+    defaultValue: true,
+    allowNull: false,
+    comment: 'Indica si el documento debe ser notificado automáticamente cuando esté listo'
+  },
+  
+  // Método de notificación preferido
+  metodoNotificacion: {
+    type: DataTypes.ENUM('whatsapp', 'email', 'ambos', 'ninguno'),
+    field: 'metodo_notificacion',
+    defaultValue: 'ambos',
+    allowNull: false,
+    comment: 'Método preferido para notificar al cliente'
+  },
+  
+  // Referencia al documento principal (self-referencing)
+  documentoPrincipalId: {
+    type: DataTypes.INTEGER,
+    field: 'documento_principal_id',
+    allowNull: true,
+    references: {
+      model: 'documentos',
+      key: 'id'
+    },
+    comment: 'ID del documento principal si este es un documento habilitante'
+  },
+  
+  // Indica si es documento principal o habilitante
+  esDocumentoPrincipal: {
+    type: DataTypes.BOOLEAN,
+    field: 'es_documento_principal',
+    defaultValue: true,
+    allowNull: false,
+    comment: 'Indica si este documento es principal (true) o habilitante (false)',
+    validate: {
+      // Validación: si tiene documento_principal_id, no puede ser principal
+      validarConsistencia() {
+        if (this.documentoPrincipalId && this.esDocumentoPrincipal) {
+          throw new Error('Un documento con documento_principal_id no puede ser documento principal');
+        }
+      }
+    }
+  },
+  
+  // Indica si fue entregado inmediatamente
+  entregadoInmediatamente: {
+    type: DataTypes.BOOLEAN,
+    field: 'entregado_inmediatamente',
+    defaultValue: false,
+    allowNull: false,
+    comment: 'Indica si el documento fue entregado inmediatamente sin necesidad de notificación',
+    validate: {
+      // Validación: si fue entregado inmediatamente, no debe notificar automáticamente
+      validarEntregaInmediata() {
+        if (this.entregadoInmediatamente && this.notificarAutomatico) {
+          throw new Error('Si el documento fue entregado inmediatamente, no debe notificar automáticamente');
+        }
+      }
+    }
+  },
+  
+  // Razón específica para no notificar
+  razonSinNotificar: {
+    type: DataTypes.TEXT,
+    field: 'razon_sin_notificar',
+    allowNull: true,
+    comment: 'Razón específica por la cual no se debe notificar este documento'
+  },
+  
   // ============== CAMPOS DE ELIMINACIÓN ==============
   
   motivoEliminacion: {
@@ -289,6 +363,22 @@ Documento.belongsToMany(Documento, {
   foreignKey: 'idDocumentoRelacionado',
   otherKey: 'idDocumentoPrincipal',
   as: 'documentosPrincipales'
+});
+
+// ============== NUEVAS RELACIONES PARA SISTEMA DE NOTIFICACIONES ==============
+
+// Relación self-referencing para documento principal
+Documento.belongsTo(Documento, {
+  foreignKey: 'documentoPrincipalId',
+  as: 'documentoPrincipal',
+  constraints: false // Evita problemas de dependencias circulares
+});
+
+// Relación para documentos habilitantes
+Documento.hasMany(Documento, {
+  foreignKey: 'documentoPrincipalId',
+  as: 'documentosHabilitantes',
+  constraints: false
 });
 
 module.exports = Documento; 

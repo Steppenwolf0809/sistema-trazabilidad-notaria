@@ -11,6 +11,7 @@ const CambioMatrizador = require('./CambioMatrizador');
 const AutorizacionEntrega = require('./AutorizacionEntrega');
 const DocumentosRelacionados = require('./DocumentosRelacionados');
 const AuditoriaEliminacion = require('./AuditoriaEliminacion');
+const NotificacionEnviada = require('./NotificacionEnviada');
 
 // Relaciones entre modelos
 
@@ -174,6 +175,21 @@ AuditoriaEliminacion.belongsTo(Matrizador, {
   as: 'administrador'
 });
 
+// ============== RELACIONES PARA NOTIFICACIONES ==============
+
+// Relación Documento - NotificacionEnviada
+Documento.hasMany(NotificacionEnviada, {
+  foreignKey: 'documentoId',
+  as: 'notificaciones'
+});
+NotificacionEnviada.belongsTo(Documento, {
+  foreignKey: 'documentoId',
+  as: 'documento'
+});
+
+// NOTA: Las relaciones para el sistema de notificaciones están definidas en models/Documento.js
+// para evitar conflictos de alias duplicados
+
 module.exports = {
   Documento,
   Matrizador,
@@ -183,5 +199,6 @@ module.exports = {
   CambioMatrizador,
   AutorizacionEntrega,
   DocumentosRelacionados,
-  AuditoriaEliminacion
+  AuditoriaEliminacion,
+  NotificacionEnviada
 }; 

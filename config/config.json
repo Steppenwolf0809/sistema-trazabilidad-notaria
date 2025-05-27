@@ -25,5 +25,20 @@
     "port": 5433,
     "dialect": "postgres",
     "logging": false
+  },
+  "notificaciones": {
+    "modo_desarrollo": true,
+    "logs_detallados": true,
+    "whatsapp": {
+      "habilitado": false,
+      "api_url": "",
+      "token": "",
+      "max_intentos": 3
+    },
+    "email": {
+      "habilitado": false,
+      "max_intentos": 3,
+      "delay_reintentos": 60000
+    }
   }
 } 

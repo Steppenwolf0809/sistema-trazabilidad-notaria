@@ -19,6 +19,8 @@ router.get('/documentos/detalle/:id', validarAccesoConAuditoria(['recepcion']), 
 router.get('/documentos/entrega', validarAccesoConAuditoria(['recepcion']), recepcionController.mostrarEntrega);
 router.get('/documentos/entrega/:id', validarAccesoConAuditoria(['recepcion']), recepcionController.mostrarEntrega);
 router.post('/documentos/entrega/:id/confirmar', validarAccesoConAuditoria(['recepcion']), recepcionController.completarEntrega);
+// Ruta adicional para compatibilidad con el formulario de entrega
+router.post('/documentos/entrega/:id', validarAccesoConAuditoria(['recepcion']), recepcionController.completarEntrega);
 
 // Nueva ruta para marcar documento como listo para entrega - ESTRICTO: solo recepción
 router.post('/documentos/marcar-listo', validarAccesoConAuditoria(['recepcion']), recepcionController.marcarDocumentoListoParaEntrega);

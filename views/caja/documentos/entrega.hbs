@@ -41,6 +41,108 @@
             </div>
           </div>
           
+          <!-- Información de Configuración de Notificaciones -->
+          <div class="card mb-4 border-info">
+            <div class="card-header bg-info text-white">
+              <h6 class="card-title mb-0">
+                <i class="fas fa-bell me-2"></i> Estado de Notificaciones
+              </h6>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="mb-2">
+                    <strong>Política de notificación:</strong>
+                    {{#if documento.notificarAutomatico}}
+                      {{#if (ne documento.metodoNotificacion 'ninguno')}}
+                        <span class="badge bg-success ms-1">
+                          <i class="fas fa-bell me-1"></i> Automáticas habilitadas
+                        </span>
+                      {{else}}
+                        <span class="badge bg-warning ms-1">
+                          <i class="fas fa-check-circle me-1"></i> Solo confirmación
+                        </span>
+                      {{/if}}
+                    {{else}}
+                      {{#if (eq documento.metodoNotificacion 'ninguno')}}
+                        <span class="badge bg-danger ms-1">
+                          <i class="fas fa-bell-slash me-1"></i> No autoriza notificaciones
+                        </span>
+                      {{else}}
+                        <span class="badge bg-warning ms-1">
+                          <i class="fas fa-check-circle me-1"></i> Solo confirmación
+                        </span>
+                      {{/if}}
+                    {{/if}}
+                  </div>
+                  
+                  {{#if documento.notificarAutomatico}}
+                    {{#if (ne documento.metodoNotificacion 'ninguno')}}
+                      <div class="mb-2">
+                        <strong>Canales configurados:</strong>
+                        {{#if (eq documento.metodoNotificacion 'ambos')}}
+                          <span class="badge bg-primary ms-1">📱 WhatsApp</span>
+                          <span class="badge bg-primary ms-1">📧 Email</span>
+                        {{else if (eq documento.metodoNotificacion 'whatsapp')}}
+                          <span class="badge bg-primary ms-1">📱 WhatsApp</span>
+                        {{else if (eq documento.metodoNotificacion 'email')}}
+                          <span class="badge bg-primary ms-1">📧 Email</span>
+                        {{/if}}
+                      </div>
+                    {{/if}}
+                  {{/if}}
+                </div>
+                
+                <div class="col-md-6">
+                  {{#if documento.documentoPrincipalId}}
+                    <div class="mb-2">
+                      <strong>Documento habilitante:</strong>
+                      <span class="badge bg-info ms-1">
+                        <i class="fas fa-link me-1"></i> Parte de documento principal
+                      </span>
+                    </div>
+                  {{/if}}
+                  
+                  {{#if documento.entregadoInmediatamente}}
+                    <div class="mb-2">
+                      <strong>Entrega:</strong>
+                      <span class="badge bg-warning ms-1">
+                        <i class="fas fa-bolt me-1"></i> Inmediata
+                      </span>
+                    </div>
+                  {{/if}}
+                  
+                  {{#if documento.razonSinNotificar}}
+                    <div class="mb-2">
+                      <strong>Observaciones:</strong>
+                      <small class="text-muted d-block">{{documento.razonSinNotificar}}</small>
+                    </div>
+                  {{/if}}
+                </div>
+              </div>
+              
+              <!-- Información de contacto -->
+              <div class="row mt-2">
+                <div class="col-md-12">
+                  <div class="alert alert-light mb-0">
+                    <small>
+                      <strong>Contacto disponible:</strong>
+                      {{#if documento.emailCliente}}
+                        <span class="badge bg-secondary me-1">📧 {{documento.emailCliente}}</span>
+                      {{/if}}
+                      {{#if documento.telefonoCliente}}
+                        <span class="badge bg-secondary me-1">📱 {{documento.telefonoCliente}}</span>
+                      {{/if}}
+                      {{#unless (or documento.emailCliente documento.telefonoCliente)}}
+                        <span class="text-warning">⚠️ Sin información de contacto</span>
+                      {{/unless}}
+                    </small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
           <form id="formVerificacion" action="/caja/documentos/entregar" method="POST">
             <input type="hidden" name="codigoBarras" value="{{documento.codigoBarras}}">
             
@@ -84,6 +186,35 @@
                     <input type="text" class="form-control" id="identificacionRecibe" name="identificacionRecibe" required>
                   </div>
                 </div>
+                
+                <!-- Confirmación de entrega -->
+                {{#unless (eq documento.metodoNotificacion 'ninguno')}}
+                  <div class="alert alert-info">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="enviarConfirmacion" name="enviarConfirmacion" value="true" 
+                             {{#if (or documento.notificarAutomatico (ne documento.metodoNotificacion 'ninguno'))}}checked{{/if}}>
+                      <label class="form-check-label" for="enviarConfirmacion">
+                        <i class="fas fa-paper-plane me-1"></i>
+                        <strong>Enviar confirmación de entrega al cliente</strong>
+                        <small class="text-muted d-block">
+                          Se enviará una notificación confirmando que el documento fue entregado
+                          {{#if (and documento.emailCliente documento.telefonoCliente)}}
+                            por email y WhatsApp
+                          {{else if documento.emailCliente}}
+                            por email
+                          {{else if documento.telefonoCliente}}
+                            por WhatsApp
+                          {{/if}}
+                        </small>
+                      </label>
+                    </div>
+                  </div>
+                {{else}}
+                  <div class="alert alert-warning">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Sin confirmación:</strong> El cliente no autoriza notificaciones, no se enviará confirmación de entrega.
+                  </div>
+                {{/unless}}
               </div>
             </div>
             

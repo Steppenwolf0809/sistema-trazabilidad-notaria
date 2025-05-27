@@ -23,6 +23,7 @@ const {
   formatearTimestamp,
   formatearFechaSinHora
 } = require('../utils/documentoUtils');
+const NotificationService = require('../services/notificationService');
 
 // Objeto que contendrá todas las funciones del controlador
 const matrizadorController = {
@@ -1494,6 +1495,19 @@ const matrizadorController = {
       
       await transaction.commit();
       
+      // Enviar confirmación de entrega después de confirmar la transacción
+      try {
+        await NotificationService.enviarNotificacionEntrega(documento.id, {
+          nombreReceptor,
+          identificacionReceptor,
+          relacionReceptor,
+          fechaEntrega: documento.fechaEntrega
+        });
+      } catch (notificationError) {
+        console.error('Error al enviar confirmación de entrega:', notificationError);
+        // No afectar el flujo principal si falla la notificación
+      }
+      
       req.flash('success', `El documento ha sido entregado exitosamente a ${nombreReceptor}.`);
       res.redirect('/matrizador/documentos');
     } catch (error) {
@@ -1543,20 +1557,102 @@ const matrizadorController = {
         return res.redirect('/matrizador/documentos');
       }
       
+      // ============== VALIDACIÓN: PREVENIR MARCAR HABILITANTES INDIVIDUALMENTE ==============
+      
+      // Si es un documento habilitante, verificar si se debe marcar junto con el principal
+      if (!documento.esDocumentoPrincipal && documento.documentoPrincipalId) {
+        console.log(`⚠️ Intento de marcar documento habilitante ID: ${documento.id} como listo individualmente`);
+        
+        // Buscar el documento principal para verificar su estado
+        const documentoPrincipal = await Documento.findByPk(documento.documentoPrincipalId, { transaction });
+        
+        if (documentoPrincipal && documentoPrincipal.estado === 'en_proceso') {
+          await transaction.rollback();
+          req.flash('warning', `Este documento habilitante se marcará como listo automáticamente cuando se marque el documento principal "${documentoPrincipal.codigoBarras}" como listo. Por favor, marque el documento principal en su lugar.`);
+          return res.redirect('/matrizador/documentos');
+        } else if (documentoPrincipal && documentoPrincipal.estado === 'listo_para_entrega') {
+          // Si el principal ya está listo, permitir marcar el habilitante individualmente
+          console.log(`ℹ️ Permitiendo marcar habilitante individualmente porque el principal ya está listo`);
+        } else {
+          await transaction.rollback();
+          req.flash('error', 'No se puede determinar el estado del documento principal. Verifique la configuración del documento.');
+          return res.redirect('/matrizador/documentos');
+        }
+      }
+      
       // Generar código de verificación de 4 dígitos
       const codigoVerificacion = Math.floor(1000 + Math.random() * 9000).toString();
       
-      // Actualizar estado y código de verificación
+      // Actualizar estado y código de verificación del documento principal
       documento.estado = 'listo_para_entrega';
       documento.codigoVerificacion = codigoVerificacion;
       await documento.save({ transaction });
       
-      // Registrar el evento de cambio de estado
+      // ============== NUEVA LÓGICA: ACTUALIZAR DOCUMENTOS HABILITANTES RELACIONADOS ==============
+      
+      let documentosHabilitantesActualizados = 0;
+      
+      // Solo buscar documentos habilitantes si este es un documento principal
+      if (documento.esDocumentoPrincipal) {
+        console.log(`🔍 Verificando si el documento principal ${documento.id} tiene documentos habilitantes...`);
+        
+        // Buscar todos los documentos habilitantes relacionados
+        const documentosHabilitantes = await Documento.findAll({
+          where: {
+            documentoPrincipalId: documento.id,
+            esDocumentoPrincipal: false,
+            estado: 'en_proceso' // Solo actualizar los que están en proceso
+          },
+          transaction
+        });
+        
+        if (documentosHabilitantes.length > 0) {
+          console.log(`📄 Encontrados ${documentosHabilitantes.length} documentos habilitantes para actualizar`);
+          
+          // Actualizar todos los documentos habilitantes al mismo estado
+          for (const habilitante of documentosHabilitantes) {
+            // Generar código de verificación único para cada habilitante (o usar el mismo del principal)
+            const codigoHabilitante = Math.floor(1000 + Math.random() * 9000).toString();
+            
+            habilitante.estado = 'listo_para_entrega';
+            habilitante.codigoVerificacion = codigoHabilitante;
+            await habilitante.save({ transaction });
+            
+            // Registrar evento para cada documento habilitante
+            try {
+              await EventoDocumento.create({
+                idDocumento: habilitante.id,
+                tipo: 'cambio_estado',
+                detalles: `Documento habilitante marcado como listo automáticamente junto con el principal ${documento.codigoBarras}`,
+                usuario: req.matrizador.nombre
+              }, { transaction });
+            } catch (eventError) {
+              console.error(`Error al registrar evento para documento habilitante ${habilitante.id}:`, eventError);
+            }
+            
+            documentosHabilitantesActualizados++;
+            console.log(`✅ Documento habilitante ${habilitante.codigoBarras} marcado como listo`);
+          }
+          
+          console.log(`📊 Total de documentos habilitantes actualizados: ${documentosHabilitantesActualizados}`);
+        } else {
+          console.log(`ℹ️ El documento principal ${documento.codigoBarras} no tiene documentos habilitantes en proceso`);
+        }
+      } else {
+        console.log(`ℹ️ El documento ${documento.codigoBarras} no es un documento principal`);
+      }
+      
+      // Registrar el evento de cambio de estado para el documento principal
       try {
+        let detallesEvento = 'Documento marcado como listo para entrega por matrizador';
+        if (documentosHabilitantesActualizados > 0) {
+          detallesEvento += ` (incluyendo ${documentosHabilitantesActualizados} documento(s) habilitante(s))`;
+        }
+        
         await EventoDocumento.create({
           idDocumento: documento.id,
           tipo: 'cambio_estado',
-          detalles: 'Documento marcado como listo para entrega por matrizador',
+          detalles: detallesEvento,
           usuario: req.matrizador.nombre
         }, { transaction });
       } catch (eventError) {
@@ -1566,10 +1662,24 @@ const matrizadorController = {
       
       await transaction.commit();
       
+      // Enviar notificación después de confirmar la transacción
+      try {
+        await NotificationService.enviarNotificacionDocumentoListo(documento.id);
+      } catch (notificationError) {
+        console.error('Error al enviar notificación de documento listo:', notificationError);
+        // No afectar el flujo principal si falla la notificación
+      }
+      
       // Simular envío de notificación (en producción enviaría SMS o Email)
       console.log(`NOTIFICACIÓN: Se ha enviado el código ${codigoVerificacion} al cliente ${documento.nombreCliente} (${documento.emailCliente || documento.telefonoCliente})`);
       
-      req.flash('success', `El documento ha sido marcado como listo para entrega y se ha enviado el código de verificación al cliente.`);
+      // Mensaje de éxito personalizado según si se actualizaron documentos habilitantes
+      let mensajeExito = `El documento ha sido marcado como listo para entrega y se ha enviado el código de verificación al cliente.`;
+      if (documentosHabilitantesActualizados > 0) {
+        mensajeExito += ` También se marcaron como listos ${documentosHabilitantesActualizados} documento(s) habilitante(s) relacionado(s).`;
+      }
+      
+      req.flash('success', mensajeExito);
       res.redirect('/matrizador/documentos');
     } catch (error) {
       await transaction.rollback();
@@ -1646,6 +1756,56 @@ const matrizadorController = {
       console.error('Error al mostrar página de búsqueda:', error);
       req.flash('error', 'Error al cargar la página de búsqueda');
       res.redirect('/matrizador');
+    }
+  },
+
+  /**
+   * Buscar documentos principales para vincular como habilitantes
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  buscarDocumentosPrincipales: async (req, res) => {
+    try {
+      const { clienteId, excludeId } = req.query;
+      
+      if (!clienteId) {
+        return res.status(400).json({
+          exito: false,
+          mensaje: 'ID de cliente no proporcionado'
+        });
+      }
+      
+      // Construir condiciones de búsqueda
+      const whereClause = {
+        identificacionCliente: clienteId,
+        estado: ['listo_para_entrega', 'en_proceso'],
+        idMatrizador: req.matrizador.id // Solo documentos del mismo matrizador
+      };
+      
+      // Excluir el documento actual si se proporciona
+      if (excludeId) {
+        whereClause.id = { [Op.ne]: excludeId };
+      }
+      
+      const documentos = await Documento.findAll({
+        where: whereClause,
+        attributes: ['id', 'codigoBarras', 'tipoDocumento', 'nombreCliente'],
+        order: [['created_at', 'DESC']],
+        limit: 20
+      });
+      
+      return res.status(200).json({
+        exito: true,
+        datos: documentos,
+        mensaje: `Se encontraron ${documentos.length} documentos principales disponibles`
+      });
+    } catch (error) {
+      console.error('Error al buscar documentos principales:', error);
+      return res.status(500).json({
+        exito: false,
+        mensaje: 'Error interno del servidor',
+        error: error.message
+      });
     }
   },
 };

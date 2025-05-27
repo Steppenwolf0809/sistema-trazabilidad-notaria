@@ -1,0 +1,468 @@
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>
+                <i class="fas fa-history me-2"></i> Historial de Notificaciones
+            </h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/matrizador">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="/matrizador/documentos">Documentos</a></li>
+                    <li class="breadcrumb-item active">Historial de Notificaciones</li>
+                </ol>
+            </nav>
+        </div>
+        <div>
+            <button class="btn btn-outline-secondary" onclick="window.print()">
+                <i class="fas fa-print me-1"></i> Imprimir
+            </button>
+        </div>
+    </div>
+
+    <!-- Filtros de búsqueda -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-filter me-2"></i> Filtros de Búsqueda
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" action="/matrizador/notificaciones/historial">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label for="codigoBarras" class="form-label">Código de Barras:</label>
+                            <input type="text" class="form-control" id="codigoBarras" name="codigoBarras" 
+                                   value="{{filtros.codigoBarras}}" placeholder="Buscar por código...">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label for="cliente" class="form-label">Cliente:</label>
+                            <input type="text" class="form-control" id="cliente" name="cliente" 
+                                   value="{{filtros.cliente}}" placeholder="Nombre o identificación...">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="mb-3">
+                            <label for="canal" class="form-label">Canal:</label>
+                            <select class="form-select" id="canal" name="canal">
+                                <option value="">Todos</option>
+                                <option value="whatsapp" {{#if (eq filtros.canal 'whatsapp')}}selected{{/if}}>WhatsApp</option>
+                                <option value="email" {{#if (eq filtros.canal 'email')}}selected{{/if}}>Email</option>
+                                <option value="sms" {{#if (eq filtros.canal 'sms')}}selected{{/if}}>SMS</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="mb-3">
+                            <label for="estado" class="form-label">Estado:</label>
+                            <select class="form-select" id="estado" name="estado">
+                                <option value="">Todos</option>
+                                <option value="enviado" {{#if (eq filtros.estado 'enviado')}}selected{{/if}}>Enviado</option>
+                                <option value="fallido" {{#if (eq filtros.estado 'fallido')}}selected{{/if}}>Fallido</option>
+                                <option value="pendiente" {{#if (eq filtros.estado 'pendiente')}}selected{{/if}}>Pendiente</option>
+                                <option value="simulado" {{#if (eq filtros.estado 'simulado')}}selected{{/if}}>Simulado</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="mb-3">
+                            <label for="tipoEvento" class="form-label">Tipo de Evento:</label>
+                            <select class="form-select" id="tipoEvento" name="tipoEvento">
+                                <option value="">Todos</option>
+                                <option value="documento_listo" {{#if (eq filtros.tipoEvento 'documento_listo')}}selected{{/if}}>Documento Listo</option>
+                                <option value="entrega_confirmada" {{#if (eq filtros.tipoEvento 'entrega_confirmada')}}selected{{/if}}>Entrega Confirmada</option>
+                                <option value="recordatorio" {{#if (eq filtros.tipoEvento 'recordatorio')}}selected{{/if}}>Recordatorio</option>
+                                <option value="alerta_sin_recoger" {{#if (eq filtros.tipoEvento 'alerta_sin_recoger')}}selected{{/if}}>Alerta Sin Recoger</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label for="fechaDesde" class="form-label">Fecha Desde:</label>
+                            <input type="date" class="form-control" id="fechaDesde" name="fechaDesde" value="{{filtros.fechaDesde}}">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label for="fechaHasta" class="form-label">Fecha Hasta:</label>
+                            <input type="date" class="form-control" id="fechaHasta" name="fechaHasta" value="{{filtros.fechaHasta}}">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-search me-1"></i> Buscar
+                                </button>
+                                <a href="/matrizador/notificaciones/historial" class="btn btn-outline-secondary">
+                                    <i class="fas fa-times me-1"></i> Limpiar
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Estadísticas rápidas -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title">{{stats.enviadas}}</h5>
+                            <p class="card-text">Enviadas</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-check-circle fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title">{{stats.fallidas}}</h5>
+                            <p class="card-text">Fallidas</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-exclamation-triangle fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title">{{stats.pendientes}}</h5>
+                            <p class="card-text">Pendientes</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-clock fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title">{{stats.total}}</h5>
+                            <p class="card-text">Total</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-bell fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de notificaciones -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-list me-2"></i> Notificaciones Enviadas
+                {{#if notificaciones.length}}
+                    <span class="badge bg-secondary ms-2">{{notificaciones.length}} resultados</span>
+                {{/if}}
+            </h5>
+        </div>
+        <div class="card-body">
+            {{#if notificaciones.length}}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Fecha/Hora</th>
+                                <th>Documento</th>
+                                <th>Cliente</th>
+                                <th>Evento</th>
+                                <th>Canal</th>
+                                <th>Destinatario</th>
+                                <th>Estado</th>
+                                <th>Intentos</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{#each notificaciones}}
+                            <tr>
+                                <td>
+                                    <small>
+                                        {{formatDateTime this.created_at}}<br>
+                                        <span class="text-muted">{{formatTimeAgo this.created_at}}</span>
+                                    </small>
+                                </td>
+                                <td>
+                                    <div>
+                                        <strong>{{this.documento.tipoDocumento}}</strong><br>
+                                        <small class="text-muted">{{this.documento.codigoBarras}}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        {{this.documento.nombreCliente}}<br>
+                                        <small class="text-muted">{{this.documento.identificacionCliente}}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    {{#if (eq this.tipoEvento 'documento_listo')}}
+                                        <span class="badge bg-primary">
+                                            <i class="fas fa-bell me-1"></i> Documento Listo
+                                        </span>
+                                    {{else if (eq this.tipoEvento 'entrega_confirmada')}}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check me-1"></i> Entrega Confirmada
+                                        </span>
+                                    {{else if (eq this.tipoEvento 'recordatorio')}}
+                                        <span class="badge bg-warning">
+                                            <i class="fas fa-clock me-1"></i> Recordatorio
+                                        </span>
+                                    {{else if (eq this.tipoEvento 'alerta_sin_recoger')}}
+                                        <span class="badge bg-danger">
+                                            <i class="fas fa-exclamation-triangle me-1"></i> Alerta
+                                        </span>
+                                    {{else}}
+                                        <span class="badge bg-secondary">{{this.tipoEvento}}</span>
+                                    {{/if}}
+                                </td>
+                                <td>
+                                    {{#if (eq this.canal 'whatsapp')}}
+                                        <span class="badge bg-success">
+                                            <i class="fab fa-whatsapp me-1"></i> WhatsApp
+                                        </span>
+                                    {{else if (eq this.canal 'email')}}
+                                        <span class="badge bg-primary">
+                                            <i class="fas fa-envelope me-1"></i> Email
+                                        </span>
+                                    {{else if (eq this.canal 'sms')}}
+                                        <span class="badge bg-info">
+                                            <i class="fas fa-sms me-1"></i> SMS
+                                        </span>
+                                    {{else}}
+                                        <span class="badge bg-secondary">{{this.canal}}</span>
+                                    {{/if}}
+                                </td>
+                                <td>
+                                    <small>{{this.destinatario}}</small>
+                                </td>
+                                <td>
+                                    {{#if (eq this.estado 'enviado')}}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check me-1"></i> Enviado
+                                        </span>
+                                    {{else if (eq this.estado 'fallido')}}
+                                        <span class="badge bg-danger">
+                                            <i class="fas fa-times me-1"></i> Fallido
+                                        </span>
+                                    {{else if (eq this.estado 'pendiente')}}
+                                        <span class="badge bg-warning">
+                                            <i class="fas fa-clock me-1"></i> Pendiente
+                                        </span>
+                                    {{else if (eq this.estado 'simulado')}}
+                                        <span class="badge bg-info">
+                                            <i class="fas fa-play me-1"></i> Simulado
+                                        </span>
+                                    {{else}}
+                                        <span class="badge bg-secondary">{{this.estado}}</span>
+                                    {{/if}}
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark">{{this.intentos}}</span>
+                                    {{#if (gt this.intentos 1)}}
+                                        <i class="fas fa-redo text-warning" title="Múltiples intentos"></i>
+                                    {{/if}}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button type="button" class="btn btn-outline-primary" 
+                                                onclick="verDetalleNotificacion({{this.id}})" 
+                                                title="Ver detalles">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <a href="/matrizador/documentos/detalle/{{this.documento.id}}" 
+                                           class="btn btn-outline-secondary" 
+                                           title="Ver documento">
+                                            <i class="fas fa-file-alt"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {{/each}}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Paginación -->
+                {{#if pagination.pages.length}}
+                    <nav aria-label="Paginación de notificaciones">
+                        <ul class="pagination justify-content-center">
+                            {{#if pagination.prev}}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{pagination.prev}}">Anterior</a>
+                                </li>
+                            {{/if}}
+                            
+                            {{#each pagination.pages}}
+                                <li class="page-item {{#if this.active}}active{{/if}}">
+                                    <a class="page-link" href="{{this.url}}">{{this.num}}</a>
+                                </li>
+                            {{/each}}
+                            
+                            {{#if pagination.next}}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{pagination.next}}">Siguiente</a>
+                                </li>
+                            {{/if}}
+                        </ul>
+                    </nav>
+                {{/if}}
+            {{else}}
+                <div class="text-center py-5">
+                    <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No se encontraron notificaciones</h5>
+                    <p class="text-muted">
+                        {{#if (or filtros.codigoBarras filtros.cliente filtros.canal filtros.estado filtros.tipoEvento filtros.fechaDesde filtros.fechaHasta)}}
+                            No hay notificaciones que coincidan con los filtros aplicados.
+                        {{else}}
+                            Aún no se han enviado notificaciones para sus documentos.
+                        {{/if}}
+                    </p>
+                    {{#if (or filtros.codigoBarras filtros.cliente filtros.canal filtros.estado filtros.tipoEvento filtros.fechaDesde filtros.fechaHasta)}}
+                        <a href="/matrizador/notificaciones/historial" class="btn btn-outline-primary">
+                            <i class="fas fa-times me-1"></i> Limpiar filtros
+                        </a>
+                    {{/if}}
+                </div>
+            {{/if}}
+        </div>
+    </div>
+</div>
+
+<!-- Modal para detalles de notificación -->
+<div class="modal fade" id="modalDetalleNotificacion" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-info-circle me-2"></i> Detalles de Notificación
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="contenidoDetalleNotificacion">
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Función para ver detalles de notificación
+    window.verDetalleNotificacion = async function(notificacionId) {
+        const modal = new bootstrap.Modal(document.getElementById('modalDetalleNotificacion'));
+        const contenido = document.getElementById('contenidoDetalleNotificacion');
+        
+        // Mostrar loading
+        contenido.innerHTML = `
+            <div class="text-center">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Cargando...</span>
+                </div>
+            </div>
+        `;
+        
+        modal.show();
+        
+        try {
+            const response = await fetch(`/api/notificaciones/${notificacionId}`);
+            const data = await response.json();
+            
+            if (data.exito) {
+                const notificacion = data.datos;
+                contenido.innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Información General</h6>
+                            <table class="table table-sm">
+                                <tr><td><strong>ID:</strong></td><td>${notificacion.id}</td></tr>
+                                <tr><td><strong>Fecha:</strong></td><td>${new Date(notificacion.created_at).toLocaleString()}</td></tr>
+                                <tr><td><strong>Tipo:</strong></td><td>${notificacion.tipoEvento}</td></tr>
+                                <tr><td><strong>Canal:</strong></td><td>${notificacion.canal}</td></tr>
+                                <tr><td><strong>Estado:</strong></td><td>${notificacion.estado}</td></tr>
+                                <tr><td><strong>Intentos:</strong></td><td>${notificacion.intentos}</td></tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Destinatario</h6>
+                            <table class="table table-sm">
+                                <tr><td><strong>Contacto:</strong></td><td>${notificacion.destinatario}</td></tr>
+                            </table>
+                            ${notificacion.ultimoError ? `
+                                <h6 class="text-danger">Último Error</h6>
+                                <div class="alert alert-danger">
+                                    <small>${notificacion.ultimoError}</small>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                    ${notificacion.mensajeEnviado ? `
+                        <div class="mt-3">
+                            <h6>Mensaje Enviado</h6>
+                            <div class="alert alert-light">
+                                <pre style="white-space: pre-wrap; margin: 0;">${notificacion.mensajeEnviado}</pre>
+                            </div>
+                        </div>
+                    ` : ''}
+                    ${notificacion.respuestaApi ? `
+                        <div class="mt-3">
+                            <h6>Respuesta de API</h6>
+                            <div class="alert alert-info">
+                                <pre style="white-space: pre-wrap; margin: 0;">${JSON.stringify(notificacion.respuestaApi, null, 2)}</pre>
+                            </div>
+                        </div>
+                    ` : ''}
+                `;
+            } else {
+                contenido.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Error al cargar los detalles: ${data.mensaje}
+                    </div>
+                `;
+            }
+        } catch (error) {
+            contenido.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Error de conexión: ${error.message}
+                </div>
+            `;
+        }
+    };
+});
+</script> 

@@ -4,6 +4,7 @@ const EventoDocumento = require('../models/EventoDocumento');
 const { sequelize } = require('../config/database');
 const { Op } = require('sequelize');
 const moment = require('moment');
+const NotificationService = require('../services/notificationService');
 
 const recepcionController = {
   /**
@@ -700,6 +701,29 @@ const recepcionController = {
         return res.redirect('/recepcion/documentos/entrega');
       }
       
+      // ============== VALIDACIÓN: PREVENIR ENTREGA INDIVIDUAL DE DOCUMENTOS HABILITANTES ==============
+      
+      // Si es un documento habilitante, verificar si se debe entregar junto con el principal
+      if (!documento.esDocumentoPrincipal && documento.documentoPrincipalId) {
+        console.log(`⚠️ Intento de entregar documento habilitante ID: ${documento.id} individualmente`);
+        
+        // Buscar el documento principal para verificar su estado
+        const documentoPrincipal = await Documento.findByPk(documento.documentoPrincipalId, { transaction });
+        
+        if (documentoPrincipal && documentoPrincipal.estado === 'listo_para_entrega') {
+          await transaction.rollback();
+          req.flash('error', `Este documento habilitante se debe entregar junto con el documento principal "${documentoPrincipal.codigoBarras}". Por favor, procese la entrega del documento principal.`);
+          return res.redirect(`/recepcion/documentos/entrega/${documentoPrincipal.id}`);
+        } else if (documentoPrincipal && documentoPrincipal.estado === 'entregado') {
+          // Si el principal ya fue entregado, permitir entrega individual del habilitante
+          console.log(`ℹ️ El documento principal ya fue entregado, permitiendo entrega individual del habilitante`);
+        } else {
+          await transaction.rollback();
+          req.flash('error', `No se puede entregar este documento habilitante porque el documento principal no está disponible o no está listo para entrega.`);
+          return res.redirect('/recepcion/documentos/entrega');
+        }
+      }
+      
       // Verificar código a menos que sea verificación por llamada
       if (tipoVerificacion !== 'llamada' && documento.codigoVerificacion !== codigoVerificacion) {
         await transaction.rollback();
@@ -713,7 +737,7 @@ const recepcionController = {
         });
       }
       
-      // Actualizar el documento
+      // Actualizar el documento principal
       documento.estado = 'entregado';
       documento.fechaEntrega = new Date();
       documento.nombreReceptor = nombreReceptor;
@@ -721,6 +745,74 @@ const recepcionController = {
       documento.relacionReceptor = relacionReceptor;
       
       await documento.save({ transaction });
+      
+      // ============== NUEVA LÓGICA: ACTUALIZAR DOCUMENTOS HABILITANTES RELACIONADOS ==============
+      
+      let documentosHabilitantesActualizados = 0;
+      
+      // Solo buscar documentos habilitantes si este es un documento principal
+      if (documento.esDocumentoPrincipal) {
+        console.log(`🔍 Buscando documentos habilitantes para el documento principal ID: ${documento.id}`);
+        
+        // Buscar todos los documentos habilitantes que dependen de este documento principal
+        const documentosHabilitantes = await Documento.findAll({
+          where: {
+            documentoPrincipalId: documento.id,
+            esDocumentoPrincipal: false,
+            estado: 'listo_para_entrega' // Solo actualizar los que están listos
+          },
+          transaction
+        });
+        
+        if (documentosHabilitantes.length > 0) {
+          console.log(`📄 Encontrados ${documentosHabilitantes.length} documentos habilitantes para actualizar`);
+          
+          // Actualizar todos los documentos habilitantes con los mismos datos de entrega
+          await Documento.update({
+            estado: 'entregado',
+            fechaEntrega: documento.fechaEntrega,
+            nombreReceptor: nombreReceptor,
+            identificacionReceptor: identificacionReceptor,
+            relacionReceptor: relacionReceptor
+          }, {
+            where: {
+              documentoPrincipalId: documento.id,
+              esDocumentoPrincipal: false,
+              estado: 'listo_para_entrega'
+            },
+            transaction
+          });
+          
+          documentosHabilitantesActualizados = documentosHabilitantes.length;
+          
+          // Registrar eventos de entrega para cada documento habilitante
+          for (const docHabilitante of documentosHabilitantes) {
+            try {
+              const detallesHabilitante = tipoVerificacion === 'llamada'
+                ? `Entregado junto con documento principal a ${nombreReceptor} con verificación por llamada: ${observaciones}`
+                : `Entregado junto con documento principal a ${nombreReceptor} con código de verificación`;
+                
+              await EventoDocumento.create({
+                idDocumento: docHabilitante.id,
+                tipo: 'entrega',
+                detalles: detallesHabilitante,
+                usuario: req.matrizador.nombre
+              }, { transaction });
+              
+              console.log(`✅ Evento de entrega registrado para documento habilitante: ${docHabilitante.codigoBarras}`);
+            } catch (eventError) {
+              console.error(`Error al registrar evento para documento habilitante ${docHabilitante.id}:`, eventError);
+              // Continuar con otros documentos aunque falle el registro de eventos
+            }
+          }
+          
+          console.log(`✅ Actualizados ${documentosHabilitantesActualizados} documentos habilitantes junto con el principal`);
+        } else {
+          console.log(`ℹ️ No se encontraron documentos habilitantes para el documento principal ID: ${documento.id}`);
+        }
+      } else {
+        console.log(`ℹ️ El documento ID: ${documento.id} es un documento habilitante, no se buscan documentos relacionados`);
+      }
       
       // Registrar el evento de entrega
       try {
@@ -741,7 +833,26 @@ const recepcionController = {
       
       await transaction.commit();
       
-      req.flash('success', `El documento ha sido entregado exitosamente a ${nombreReceptor}.`);
+      // Enviar confirmación de entrega después de confirmar la transacción
+      try {
+        await NotificationService.enviarNotificacionEntrega(documento.id, {
+          nombreReceptor,
+          identificacionReceptor,
+          relacionReceptor,
+          fechaEntrega: documento.fechaEntrega
+        });
+      } catch (notificationError) {
+        console.error('Error al enviar confirmación de entrega:', notificationError);
+        // No afectar el flujo principal si falla la notificación
+      }
+      
+      // Mensaje de éxito personalizado según si se actualizaron documentos habilitantes
+      let mensajeExito = `El documento ha sido entregado exitosamente a ${nombreReceptor}.`;
+      if (documentosHabilitantesActualizados > 0) {
+        mensajeExito += ` También se entregaron ${documentosHabilitantesActualizados} documento(s) habilitante(s) relacionado(s).`;
+      }
+      
+      req.flash('success', mensajeExito);
       res.redirect('/recepcion/documentos');
     } catch (error) {
       await transaction.rollback();
@@ -805,8 +916,13 @@ const recepcionController = {
 
       await transaction.commit();
 
-      // Simular envío de notificación al cliente (si aplica desde recepción)
-      console.log(`NOTIFICACIÓN (RECEPCIÓN): Código ${codigoVerificacion} para cliente ${documento.nombreCliente} del doc ${documento.codigoBarras}`);
+      // Enviar notificación después de confirmar la transacción
+      try {
+        await NotificationService.enviarNotificacionDocumentoListo(documento.id);
+      } catch (notificationError) {
+        console.error('Error al enviar notificación de documento listo:', notificationError);
+        // No afectar el flujo principal si falla la notificación
+      }
 
       req.flash('success', `Documento ${documento.codigoBarras} marcado como LISTO PARA ENTREGA.`);
       res.redirect('/recepcion/documentos');
