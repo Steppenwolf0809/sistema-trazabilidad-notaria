@@ -273,55 +273,68 @@ exports.dashboard = async (req, res) => {
     // ============== ÚLTIMOS PAGOS REGISTRADOS ==============
     const ultimosPagos = await Documento.findAll({
       where: {
-        estado_pago: 'pagado',
-        fecha_pago: { [Op.not]: null },
-        valor_factura: { [Op.not]: null }
+        estadoPago: 'pagado', // CORREGIDO: usar camelCase
+        fechaPago: { [Op.not]: null },
+        valorFactura: { [Op.not]: null, [Op.gt]: 0 } // AÑADIDO: valor mayor a 0
       },
       attributes: [
         'id',
-        'codigo_barras', 
-        'nombre_cliente', 
-        'valor_factura', 
-        'fecha_pago', 
-        'metodo_pago',
-        'numero_factura'
+        'codigoBarras', // CORREGIDO: usar camelCase
+        'nombreCliente', // CORREGIDO: usar camelCase
+        'valorFactura', // CORREGIDO: usar camelCase
+        'fechaPago', // CORREGIDO: usar camelCase
+        'metodoPago', // CORREGIDO: usar camelCase
+        'numeroFactura' // CORREGIDO: usar camelCase
       ],
-      order: [['fecha_pago', 'DESC']],
+      order: [['fechaPago', 'DESC']], // CORREGIDO: usar camelCase
       limit: 8
     });
     
-    // Formatear datos de últimos pagos para la vista
-    const ultimosPagosFormateados = ultimosPagos.map(pago => ({
-      id: pago.id,
-      codigoBarras: pago.codigo_barras,
-      nombreCliente: pago.nombre_cliente || 'Cliente no especificado',
-      valorFactura: parseFloat(pago.valor_factura || 0).toFixed(2),
-      fechaPago: pago.fecha_pago,
-      metodoPago: pago.metodo_pago || 'No especificado',
-      numeroFactura: pago.numero_factura
-    }));
+    // Formatear datos de últimos pagos para la vista con validaciones mejoradas
+    const ultimosPagosFormateados = ultimosPagos.map(pago => {
+      const pagoData = pago.toJSON(); // Convertir a objeto plano
+      return {
+        id: pagoData.id,
+        codigoBarras: pagoData.codigoBarras || 'N/A',
+        nombreCliente: pagoData.nombreCliente || 'Cliente no especificado',
+        valorFactura: pagoData.valorFactura ? parseFloat(pagoData.valorFactura).toFixed(2) : '0.00',
+        fechaPago: pagoData.fechaPago,
+        metodoPago: pagoData.metodoPago && pagoData.metodoPago !== 'pendiente' ? 
+          pagoData.metodoPago.replace('_', ' ').toUpperCase() : 'EFECTIVO',
+        numeroFactura: pagoData.numeroFactura || 'N/A'
+      };
+    });
+    
+    // DEBUGGING TEMPORAL - LOGS PARA VERIFICAR DATOS
+    console.log('=== DEBUG ÚLTIMOS PAGOS ===');
+    console.log('Documentos pagados encontrados:', ultimosPagos.length);
+    if (ultimosPagos.length > 0) {
+      console.log('Primer pago (raw):', ultimosPagos[0].toJSON());
+      console.log('Primer pago (formateado):', ultimosPagosFormateados[0]);
+    }
+    console.log('============================');
     
     // ============== ÚLTIMAS ENTREGAS REALIZADAS ==============
     const ultimasEntregas = await Documento.findAll({
       where: {
         estado: 'entregado',
-        fecha_entrega: { [Op.not]: null }
+        fechaEntrega: { [Op.not]: null } // CORREGIDO: usar camelCase
       },
-      attributes: ['codigo_barras', 'nombre_cliente', 'tipo_documento', 'fecha_entrega'],
+      attributes: ['codigoBarras', 'nombreCliente', 'tipoDocumento', 'fechaEntrega'], // CORREGIDO: usar camelCase
       include: [{
         model: Matrizador,
         as: 'matrizador',
         attributes: ['nombre']
       }],
-      order: [['fecha_entrega', 'DESC']],
+      order: [['fechaEntrega', 'DESC']], // CORREGIDO: usar camelCase
       limit: 5
     });
     
     // ============== DOCUMENTOS QUE REQUIEREN ATENCIÓN ==============
     const documentosUrgentes = await Documento.findAll({
       where: {
-        estado_pago: 'pendiente',
-        numero_factura: { [Op.not]: null },
+        estadoPago: 'pendiente', // CORREGIDO: usar camelCase
+        numeroFactura: { [Op.not]: null }, // CORREGIDO: usar camelCase
         estado: { [Op.notIn]: ['eliminado', 'nota_credito'] },
         created_at: { [Op.lt]: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000) }
       },
@@ -1641,7 +1654,7 @@ exports.reporteFinanciero = async (req, res) => {
     
     // Obtener estadísticas financieras generales usando Sequelize ORM
     const whereClause = {
-      valor_factura: { [Op.not]: null },
+      valorFactura: { [Op.not]: null }, // CORREGIDO: usar camelCase
       estado: { [Op.ne]: 'cancelado' },
       created_at: {
         [Op.between]: [fechaInicioSQL, fechaFinSQL]
@@ -1650,17 +1663,17 @@ exports.reporteFinanciero = async (req, res) => {
     
     // Añadir filtro por matrizador si se seleccionó uno
     if (idMatrizador && idMatrizador !== 'todos' && idMatrizador !== '') {
-      whereClause.id_matrizador = parseInt(idMatrizador, 10);
+      whereClause.idMatrizador = parseInt(idMatrizador, 10); // CORREGIDO: usar camelCase
     }
     
-    const totalFacturado = await Documento.sum('valor_factura', {
+    const totalFacturado = await Documento.sum('valorFactura', { // CORREGIDO: usar camelCase
       where: whereClause
     }) || 0;
     
-    const totalCobrado = await Documento.sum('valor_factura', {
+    const totalCobrado = await Documento.sum('valorFactura', { // CORREGIDO: usar camelCase
       where: {
         ...whereClause,
-        estado_pago: 'pagado'
+        estadoPago: 'pagado' // CORREGIDO: usar camelCase
       }
     }) || 0;
     
@@ -1675,9 +1688,9 @@ exports.reporteFinanciero = async (req, res) => {
       where: whereClause,
       attributes: [
         [sequelize.fn('DATE', sequelize.col('created_at')), 'fecha'],
-        [sequelize.fn('SUM', sequelize.col('valor_factura')), 'totalFacturado'],
+        [sequelize.fn('SUM', sequelize.col('valorFactura')), 'totalFacturado'], // CORREGIDO: usar camelCase
         [sequelize.fn('SUM', 
-          sequelize.literal("CASE WHEN estado_pago = 'pagado' THEN valor_factura ELSE 0 END")
+          sequelize.literal("CASE WHEN estado_pago = 'pagado' THEN valor_factura ELSE 0 END") // MANTENER: SQL literal usa snake_case
         ), 'totalCobrado']
       ],
       group: [sequelize.fn('DATE', sequelize.col('created_at'))],
@@ -1724,8 +1737,8 @@ exports.reporteFinanciero = async (req, res) => {
     });
     
     // Renderizar la vista con los datos
-    res.render('caja/reportes/financiero', {
-      layout: 'caja',
+    res.render('admin/reportes/financiero', { // CORREGIDO: usar vista admin
+      layout: 'admin', // CORREGIDO: usar layout admin
       title: 'Reporte Financiero',
       activeReportes: true,
       userRole: req.matrizador?.rol,
@@ -2109,6 +2122,381 @@ exports.mostrarAlertas = async (req, res) => {
       layout: 'admin',
       title: 'Error',
       message: 'Ha ocurrido un error al cargar las alertas',
+      error
+    });
+  }
+};
+
+/**
+ * Reporte de Cobros por Matrizador
+ * Análisis detallado de cobros realizados por cada matrizador
+ */
+exports.reporteCobrosMatrizador = async (req, res) => {
+  try {
+    // Procesar parámetros de filtrado
+    const rango = req.query.rango || 'mes';
+    const idMatrizador = req.query.idMatrizador; // Filtro por matrizador específico
+    let fechaInicio, fechaFin, periodoTexto;
+    
+    // Establecer fechas según el rango seleccionado
+    const hoy = moment().startOf('day');
+    
+    switch (rango) {
+      case 'hoy':
+        fechaInicio = hoy.clone();
+        fechaFin = moment().endOf('day');
+        periodoTexto = 'Hoy ' + fechaInicio.format('DD/MM/YYYY');
+        break;
+      case 'ayer':
+        fechaInicio = hoy.clone().subtract(1, 'days');
+        fechaFin = hoy.clone().subtract(1, 'days').endOf('day');
+        periodoTexto = 'Ayer ' + fechaInicio.format('DD/MM/YYYY');
+        break;
+      case 'semana':
+        fechaInicio = hoy.clone().startOf('week');
+        fechaFin = moment().endOf('day');
+        periodoTexto = 'Esta semana (desde ' + fechaInicio.format('DD/MM/YYYY') + ')';
+        break;
+      case 'mes':
+        fechaInicio = hoy.clone().startOf('month');
+        fechaFin = moment().endOf('day');
+        periodoTexto = 'Este mes (desde ' + fechaInicio.format('DD/MM/YYYY') + ')';
+        break;
+      case 'ultimo_mes':
+        fechaInicio = hoy.clone().subtract(30, 'days');
+        fechaFin = moment().endOf('day');
+        periodoTexto = 'Últimos 30 días';
+        break;
+      case 'personalizado':
+        fechaInicio = req.query.fechaInicio ? moment(req.query.fechaInicio).startOf('day') : hoy.clone().startOf('month');
+        fechaFin = req.query.fechaFin ? moment(req.query.fechaFin).endOf('day') : moment().endOf('day');
+        periodoTexto = 'Del ' + fechaInicio.format('DD/MM/YYYY') + ' al ' + fechaFin.format('DD/MM/YYYY');
+        break;
+      default:
+        fechaInicio = hoy.clone().startOf('month');
+        fechaFin = moment().endOf('day');
+        periodoTexto = 'Este mes (desde ' + fechaInicio.format('DD/MM/YYYY') + ')';
+    }
+    
+    // Formatear fechas para consultas SQL
+    const fechaInicioSQL = fechaInicio.format('YYYY-MM-DD HH:mm:ss');
+    const fechaFinSQL = fechaFin.format('YYYY-MM-DD HH:mm:ss');
+    
+    // Consulta principal: cobros por matrizador usando fecha_pago
+    let whereMatrizador = '';
+    if (idMatrizador && idMatrizador !== 'todos' && idMatrizador !== '') {
+      whereMatrizador = `AND m.id = ${parseInt(idMatrizador)}`;
+    }
+    
+    const cobrosMatrizadorQuery = `
+      SELECT 
+        m.id,
+        m.nombre,
+        m.email,
+        COUNT(d.id) as documentos_cobrados,
+        COALESCE(SUM(d.valor_factura), 0) as total_cobrado,
+        COALESCE(AVG(d.valor_factura), 0) as promedio_por_documento,
+        MIN(d.fecha_pago) as primer_cobro,
+        MAX(d.fecha_pago) as ultimo_cobro
+      FROM matrizadores m
+      LEFT JOIN documentos d ON m.id = d.id_matrizador
+        AND d.estado_pago = 'pagado'
+        AND d.fecha_pago BETWEEN :fechaInicio AND :fechaFin
+        AND d.estado NOT IN ('eliminado', 'nota_credito')
+      WHERE m.rol IN ('matrizador', 'caja_archivo')
+      AND m.activo = true
+      ${whereMatrizador}
+      GROUP BY m.id, m.nombre, m.email
+      ORDER BY total_cobrado DESC
+    `;
+    
+    const cobrosMatrizador = await sequelize.query(cobrosMatrizadorQuery, {
+      replacements: { fechaInicio: fechaInicioSQL, fechaFin: fechaFinSQL },
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    // Estadísticas generales del período
+    const totalCobradoPeriodo = cobrosMatrizador.reduce((sum, item) => sum + parseFloat(item.total_cobrado || 0), 0);
+    const totalDocumentosCobrados = cobrosMatrizador.reduce((sum, item) => sum + parseInt(item.documentos_cobrados || 0), 0);
+    const promedioGeneral = totalDocumentosCobrados > 0 ? totalCobradoPeriodo / totalDocumentosCobrados : 0;
+    
+    // Obtener detalles de cobros recientes (últimos 20)
+    let whereDetalles = `
+      WHERE d.estado_pago = 'pagado'
+      AND d.fecha_pago BETWEEN :fechaInicio AND :fechaFin
+      AND d.estado NOT IN ('eliminado', 'nota_credito')
+    `;
+    if (idMatrizador && idMatrizador !== 'todos' && idMatrizador !== '') {
+      whereDetalles += ` AND d.id_matrizador = ${parseInt(idMatrizador)}`;
+    }
+    
+    const cobrosRecientesQuery = `
+      SELECT 
+        d.id,
+        d.codigo_barras,
+        d.tipo_documento,
+        d.nombre_cliente,
+        d.valor_factura,
+        d.fecha_pago,
+        d.metodo_pago,
+        m.nombre as matrizador_nombre
+      FROM documentos d
+      JOIN matrizadores m ON d.id_matrizador = m.id
+      ${whereDetalles}
+      ORDER BY d.fecha_pago DESC
+      LIMIT 20
+    `;
+    
+    const cobrosRecientes = await sequelize.query(cobrosRecientesQuery, {
+      replacements: { fechaInicio: fechaInicioSQL, fechaFin: fechaFinSQL },
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    // Obtener todos los matrizadores para el filtro
+    const matrizadores = await Matrizador.findAll({
+      attributes: ['id', 'nombre'],
+      where: { 
+        activo: true, 
+        rol: {
+          [Op.in]: ['matrizador', 'caja_archivo']
+        }
+      },
+      order: [['nombre', 'ASC']],
+      raw: true
+    });
+    
+    // Preparar datos para gráfico
+    const datosGrafico = {
+      nombres: cobrosMatrizador.map(item => item.nombre),
+      montos: cobrosMatrizador.map(item => parseFloat(item.total_cobrado || 0)),
+      documentos: cobrosMatrizador.map(item => parseInt(item.documentos_cobrados || 0))
+    };
+    
+    // Renderizar la vista con layout admin
+    res.render('admin/reportes/cobros-matrizador', {
+      layout: 'admin', // CORREGIDO: usar layout admin
+      title: 'Cobros por Matrizador',
+      activeReportes: true,
+      userRole: req.matrizador?.rol,
+      userName: req.matrizador?.nombre,
+      cobrosMatrizador,
+      cobrosRecientes,
+      matrizadores,
+      idMatrizadorSeleccionado: idMatrizador || 'todos',
+      stats: {
+        totalCobradoPeriodo: formatearValorMonetario(totalCobradoPeriodo),
+        totalDocumentosCobrados,
+        promedioGeneral: formatearValorMonetario(promedioGeneral),
+        matrizadoresActivos: cobrosMatrizador.filter(m => parseInt(m.documentos_cobrados) > 0).length
+      },
+      datosGrafico,
+      periodoTexto,
+      filtros: {
+        rango,
+        idMatrizador,
+        fechaInicio: fechaInicio.format('YYYY-MM-DD'),
+        fechaFin: fechaFin.format('YYYY-MM-DD')
+      }
+    });
+  } catch (error) {
+    console.error('Error al generar reporte de cobros por matrizador:', error);
+    return res.status(500).render('error', {
+      layout: 'admin',
+      title: 'Error',
+      message: 'Error al generar el reporte de cobros por matrizador',
+      error
+    });
+  }
+};
+
+/**
+ * Reporte de Productividad de Matrizadores
+ * Análisis completo de rendimiento y eficiencia por matrizador
+ */
+exports.reporteProductividadMatrizadores = async (req, res) => {
+  try {
+    // Procesar parámetros de filtrado
+    const rango = req.query.rango || 'mes';
+    const idMatrizador = req.query.idMatrizador;
+    let fechaInicio, fechaFin, periodoTexto;
+    
+    // Establecer fechas según el rango seleccionado
+    const hoy = moment().startOf('day');
+    
+    switch (rango) {
+      case 'hoy':
+        fechaInicio = hoy.clone();
+        fechaFin = moment().endOf('day');
+        periodoTexto = 'Hoy ' + fechaInicio.format('DD/MM/YYYY');
+        break;
+      case 'ayer':
+        fechaInicio = hoy.clone().subtract(1, 'days');
+        fechaFin = hoy.clone().subtract(1, 'days').endOf('day');
+        periodoTexto = 'Ayer ' + fechaInicio.format('DD/MM/YYYY');
+        break;
+      case 'semana':
+        fechaInicio = hoy.clone().startOf('week');
+        fechaFin = moment().endOf('day');
+        periodoTexto = 'Esta semana (desde ' + fechaInicio.format('DD/MM/YYYY') + ')';
+        break;
+      case 'mes':
+        fechaInicio = hoy.clone().startOf('month');
+        fechaFin = moment().endOf('day');
+        periodoTexto = 'Este mes (desde ' + fechaInicio.format('DD/MM/YYYY') + ')';
+        break;
+      case 'ultimo_mes':
+        fechaInicio = hoy.clone().subtract(30, 'days');
+        fechaFin = moment().endOf('day');
+        periodoTexto = 'Últimos 30 días';
+        break;
+      case 'personalizado':
+        fechaInicio = req.query.fechaInicio ? moment(req.query.fechaInicio).startOf('day') : hoy.clone().startOf('month');
+        fechaFin = req.query.fechaFin ? moment(req.query.fechaFin).endOf('day') : moment().endOf('day');
+        periodoTexto = 'Del ' + fechaInicio.format('DD/MM/YYYY') + ' al ' + fechaFin.format('DD/MM/YYYY');
+        break;
+      default:
+        fechaInicio = hoy.clone().startOf('month');
+        fechaFin = moment().endOf('day');
+        periodoTexto = 'Este mes (desde ' + fechaInicio.format('DD/MM/YYYY') + ')';
+    }
+    
+    // Formatear fechas para consultas SQL
+    const fechaInicioSQL = fechaInicio.format('YYYY-MM-DD HH:mm:ss');
+    const fechaFinSQL = fechaFin.format('YYYY-MM-DD HH:mm:ss');
+    
+    // Consulta principal: productividad por matrizador
+    let whereMatrizador = '';
+    if (idMatrizador && idMatrizador !== 'todos' && idMatrizador !== '') {
+      whereMatrizador = `AND m.id = ${parseInt(idMatrizador)}`;
+    }
+    
+    const productividadQuery = `
+      SELECT 
+        m.id,
+        m.nombre,
+        m.email,
+        m.rol,
+        -- Documentos procesados (registrados en el período)
+        COUNT(CASE WHEN d.created_at BETWEEN :fechaInicio AND :fechaFin THEN d.id END) as documentos_registrados,
+        -- Documentos completados (marcados como listo en el período)
+        COUNT(CASE WHEN d.estado = 'listo_para_entrega' AND d.updated_at BETWEEN :fechaInicio AND :fechaFin THEN d.id END) as documentos_completados,
+        -- Documentos entregados
+        COUNT(CASE WHEN d.estado = 'entregado' AND d.fecha_entrega BETWEEN :fechaInicio AND :fechaFin THEN d.id END) as documentos_entregados,
+        -- Documentos cobrados
+        COUNT(CASE WHEN d.estado_pago = 'pagado' AND d.fecha_pago BETWEEN :fechaInicio AND :fechaFin THEN d.id END) as documentos_cobrados,
+        -- Facturación total
+        COALESCE(SUM(CASE WHEN d.created_at BETWEEN :fechaInicio AND :fechaFin THEN d.valor_factura END), 0) as facturacion_total,
+        -- Ingresos cobrados
+        COALESCE(SUM(CASE WHEN d.estado_pago = 'pagado' AND d.fecha_pago BETWEEN :fechaInicio AND :fechaFin THEN d.valor_factura END), 0) as ingresos_cobrados,
+        -- Documentos pendientes actuales
+        COUNT(CASE WHEN d.estado IN ('en_proceso') THEN d.id END) as documentos_pendientes
+      FROM matrizadores m
+      LEFT JOIN documentos d ON m.id = d.id_matrizador
+        AND d.estado NOT IN ('eliminado', 'nota_credito')
+      WHERE m.rol IN ('matrizador', 'caja_archivo')
+      AND m.activo = true
+      ${whereMatrizador}
+      GROUP BY m.id, m.nombre, m.email, m.rol
+      ORDER BY documentos_registrados DESC, facturacion_total DESC
+    `;
+    
+    const productividadMatrizadores = await sequelize.query(productividadQuery, {
+      replacements: { fechaInicio: fechaInicioSQL, fechaFin: fechaFinSQL },
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    // Calcular métricas adicionales
+    const productividadConMetricas = productividadMatrizadores.map(item => {
+      const registrados = parseInt(item.documentos_registrados) || 0;
+      const completados = parseInt(item.documentos_completados) || 0;
+      const entregados = parseInt(item.documentos_entregados) || 0;
+      const cobrados = parseInt(item.documentos_cobrados) || 0;
+      const facturacion = parseFloat(item.facturacion_total) || 0;
+      const ingresos = parseFloat(item.ingresos_cobrados) || 0;
+      
+      return {
+        ...item,
+        // Eficiencia de procesamiento
+        eficiencia_procesamiento: registrados > 0 ? Math.round((completados / registrados) * 100) : 0,
+        // Eficiencia de entrega
+        eficiencia_entrega: completados > 0 ? Math.round((entregados / completados) * 100) : 0,
+        // Eficiencia de cobro
+        eficiencia_cobro: registrados > 0 ? Math.round((cobrados / registrados) * 100) : 0,
+        // Promedio por documento
+        promedio_facturacion: registrados > 0 ? (facturacion / registrados).toFixed(2) : '0.00',
+        // Porcentaje de recuperación
+        porcentaje_recuperacion: facturacion > 0 ? Math.round((ingresos / facturacion) * 100) : 0,
+        // Formatear valores monetarios
+        facturacion_total_formato: formatearValorMonetario(facturacion),
+        ingresos_cobrados_formato: formatearValorMonetario(ingresos)
+      };
+    });
+    
+    // Estadísticas generales
+    const totalRegistrados = productividadConMetricas.reduce((sum, item) => sum + parseInt(item.documentos_registrados), 0);
+    const totalCompletados = productividadConMetricas.reduce((sum, item) => sum + parseInt(item.documentos_completados), 0);
+    const totalEntregados = productividadConMetricas.reduce((sum, item) => sum + parseInt(item.documentos_entregados), 0);
+    const totalCobrados = productividadConMetricas.reduce((sum, item) => sum + parseInt(item.documentos_cobrados), 0);
+    const totalFacturacion = productividadConMetricas.reduce((sum, item) => sum + parseFloat(item.facturacion_total), 0);
+    const totalIngresos = productividadConMetricas.reduce((sum, item) => sum + parseFloat(item.ingresos_cobrados), 0);
+    
+    // Obtener todos los matrizadores para el filtro
+    const matrizadores = await Matrizador.findAll({
+      attributes: ['id', 'nombre'],
+      where: { 
+        activo: true, 
+        rol: {
+          [Op.in]: ['matrizador', 'caja_archivo']
+        }
+      },
+      order: [['nombre', 'ASC']],
+      raw: true
+    });
+    
+    // Preparar datos para gráficos
+    const datosGrafico = {
+      nombres: productividadConMetricas.map(item => item.nombre),
+      registrados: productividadConMetricas.map(item => parseInt(item.documentos_registrados)),
+      completados: productividadConMetricas.map(item => parseInt(item.documentos_completados)),
+      entregados: productividadConMetricas.map(item => parseInt(item.documentos_entregados)),
+      facturacion: productividadConMetricas.map(item => parseFloat(item.facturacion_total))
+    };
+    
+    // Renderizar la vista
+    res.render('admin/reportes/productividad-matrizadores', {
+      layout: 'admin',
+      title: 'Productividad de Matrizadores',
+      activeReportes: true,
+      userRole: req.matrizador?.rol,
+      userName: req.matrizador?.nombre,
+      productividadMatrizadores: productividadConMetricas,
+      matrizadores,
+      idMatrizadorSeleccionado: idMatrizador || 'todos',
+      stats: {
+        totalRegistrados,
+        totalCompletados,
+        totalEntregados,
+        totalCobrados,
+        totalFacturacion: formatearValorMonetario(totalFacturacion),
+        totalIngresos: formatearValorMonetario(totalIngresos),
+        eficienciaGeneral: totalRegistrados > 0 ? Math.round((totalCompletados / totalRegistrados) * 100) : 0,
+        matrizadoresActivos: productividadConMetricas.filter(m => parseInt(m.documentos_registrados) > 0).length
+      },
+      datosGrafico,
+      periodoTexto,
+      filtros: {
+        rango,
+        idMatrizador,
+        fechaInicio: fechaInicio.format('YYYY-MM-DD'),
+        fechaFin: fechaFin.format('YYYY-MM-DD')
+      }
+    });
+  } catch (error) {
+    console.error('Error al generar reporte de productividad de matrizadores:', error);
+    return res.status(500).render('error', {
+      layout: 'admin',
+      title: 'Error',
+      message: 'Error al generar el reporte de productividad de matrizadores',
       error
     });
   }

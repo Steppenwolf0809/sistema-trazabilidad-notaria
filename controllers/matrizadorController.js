@@ -304,7 +304,7 @@ const matrizadorController = {
   },
 
   /**
-   * Elimina un matrizador
+   * Elimina un matrizador del sistema
    * @param {Object} req - Objeto de solicitud Express
    * @param {Object} res - Objeto de respuesta Express
    */
@@ -326,7 +326,9 @@ const matrizadorController = {
         }
         
         req.flash('error', 'Debe proporcionar un ID de matrizador para eliminarlo');
-        return res.redirect('/matrizador');
+        // CORREGIDO: Redirigir según el contexto de la ruta
+        const redirectUrl = req.originalUrl.startsWith('/admin/') ? '/admin/matrizadores' : '/matrizador';
+        return res.redirect(redirectUrl);
       }
       
       const matrizador = await Matrizador.findByPk(id);
@@ -341,7 +343,9 @@ const matrizadorController = {
         }
         
         req.flash('error', `No se encontró matrizador con ID ${id}`);
-        return res.redirect('/matrizador');
+        // CORREGIDO: Redirigir según el contexto de la ruta
+        const redirectUrl = req.originalUrl.startsWith('/admin/') ? '/admin/matrizadores' : '/matrizador';
+        return res.redirect(redirectUrl);
       }
 
       console.log(`Eliminando matrizador: ${matrizador.nombre} (ID: ${matrizador.id})`);
@@ -350,7 +354,9 @@ const matrizadorController = {
       // Si es una solicitud de vista, redirigir con mensaje de éxito
       if (!req.path.startsWith('/api/')) {
         req.flash('success', 'Matrizador eliminado correctamente');
-        return res.redirect('/matrizador');
+        // CORREGIDO: Redirigir según el contexto de la ruta
+        const redirectUrl = req.originalUrl.startsWith('/admin/') ? '/admin/matrizadores' : '/matrizador';
+        return res.redirect(redirectUrl);
       }
       
       return res.status(200).json({
@@ -369,7 +375,9 @@ const matrizadorController = {
       }
       
       req.flash('error', `Error al eliminar el matrizador: ${error.message}`);
-      return res.redirect('/matrizador');
+      // CORREGIDO: Redirigir según el contexto de la ruta
+      const redirectUrl = req.originalUrl.startsWith('/admin/') ? '/admin/matrizadores' : '/matrizador';
+      return res.redirect(redirectUrl);
     }
   },
   
