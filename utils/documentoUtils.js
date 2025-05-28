@@ -134,23 +134,59 @@ function convertirRangoParaSQL(fechaInicio, fechaFin) {
 // ============== FUNCIONES DE DOCUMENTO (sin cambios) ==============
 
 /**
- * Infiere el tipo de documento basado en el código del libro
+ * Detecta el tipo de documento basado en el código notarial
+ * Extrae la letra de la posición 12 (índice 11) del código
+ * Ejemplo: "20251701018P01149" → P → "Protocolo"
+ * @param {string} codigo - Código completo del documento
+ * @returns {string} - Tipo de documento estandarizado
+ */
+function detectarTipoDocumento(codigo) {
+  if (!codigo || typeof codigo !== 'string') {
+    logger.warning('DOCUMENTO', 'Código inválido para detección de tipo', { codigo });
+    return 'Otros';
+  }
+  
+  // Extraer letra de posición 12 (índice 11)
+  const letra = codigo.charAt(11)?.toUpperCase();
+  
+  const mapeoTipos = {
+    'P': 'Protocolo',      // Protocolos notariales
+    'D': 'Diligencias',    // Diligencias y trámites
+    'C': 'Certificaciones', // Certificaciones y copias
+    'A': 'Arrendamientos', // Contratos de arrendamiento
+    'O': 'Otros'          // Otros documentos
+  };
+  
+  const tipoDetectado = mapeoTipos[letra] || 'Otros';
+  
+  logger.info('DOCUMENTO', 'Tipo de documento detectado automáticamente', {
+    codigo,
+    posicion12: letra,
+    tipoDetectado,
+    mapeoCompleto: mapeoTipos
+  });
+  
+  return tipoDetectado;
+}
+
+/**
+ * Infiere el tipo de documento basado en el código del libro (FUNCIÓN LEGACY)
+ * @deprecated Usar detectarTipoDocumento() para nueva detección automática
  */
 function inferirTipoDocumentoPorCodigo(numeroLibro) {
-  if (!numeroLibro) return 'Otro';
+  if (!numeroLibro) return 'Otros';
   
   const codigo = numeroLibro.toString().toUpperCase();
   
-  if (codigo.includes('E') || codigo.includes('ESCRIT')) return 'Escritura';
-  if (codigo.includes('D') || codigo.includes('DONAC')) return 'Donación';
-  if (codigo.includes('P') || codigo.includes('PODER')) return 'Poder';
-  if (codigo.includes('T') || codigo.includes('TEST')) return 'Testamento';
-  if (codigo.includes('C') || codigo.includes('CERT')) return 'Certificación';
-  if (codigo.includes('PROT')) return 'Protocolo';
-  if (codigo.includes('DILI')) return 'Diligencia';
-  if (codigo.includes('A') || codigo.includes('ARREN')) return 'Arrendamiento';
+  // Mapeo legacy a nuevos tipos estandarizados
+  if (codigo.includes('E') || codigo.includes('ESCRIT')) return 'Protocolo';
+  if (codigo.includes('D') || codigo.includes('DONAC') || codigo.includes('DILI')) return 'Diligencias';
+  if (codigo.includes('P') || codigo.includes('PODER') || codigo.includes('PROT')) return 'Protocolo';
+  if (codigo.includes('T') || codigo.includes('TEST')) return 'Protocolo';
+  if (codigo.includes('C') || codigo.includes('CERT')) return 'Certificaciones';
+  if (codigo.includes('A') || codigo.includes('ARREN')) return 'Arrendamientos';
   
-  return 'Otro';
+  return 'Otros';
 }
 
 /**
@@ -203,6 +239,7 @@ module.exports = {
   convertirRangoParaSQL,
   
   // Funciones de documento (sin cambios)
+  detectarTipoDocumento,
   inferirTipoDocumentoPorCodigo,
   formatearValorMonetario,
   mapearMetodoPago,

@@ -29,12 +29,13 @@ const Documento = sequelize.define('Documento', {
   
   // Tipo de documento (escritura, poder, testamento, etc.)
   tipoDocumento: {
-    type: DataTypes.STRING,
+    type: DataTypes.ENUM('Protocolo', 'Diligencias', 'Certificaciones', 'Arrendamientos', 'Otros'),
     field: 'tipo_documento',
     allowNull: false,
     validate: {
       notEmpty: true
-    }
+    },
+    comment: 'Tipo de documento notarial: P=Protocolo, D=Diligencias, C=Certificaciones, A=Arrendamientos, O=Otros'
   },
   
   // ============== FECHAS SIMPLIFICADAS (SOLO 4 CAMPOS) ==============

@@ -18,7 +18,17 @@
             <div class="col-md-6">
                 <div class="mb-3">
                     <label for="tipoDocumento" class="form-label">Tipo de Documento</label>
-                    <input type="text" class="form-control" id="tipoDocumento" name="tipoDocumento" value="{{documento.tipoDocumento}}" required>
+                    <select class="form-control" id="tipoDocumento" name="tipoDocumento" required>
+                        <option value="Protocolo" {{#if (eq documento.tipoDocumento "Protocolo")}}selected{{/if}}>📋 Protocolo</option>
+                        <option value="Diligencias" {{#if (eq documento.tipoDocumento "Diligencias")}}selected{{/if}}>⚖️ Diligencias</option>
+                        <option value="Certificaciones" {{#if (eq documento.tipoDocumento "Certificaciones")}}selected{{/if}}>📜 Certificaciones</option>
+                        <option value="Arrendamientos" {{#if (eq documento.tipoDocumento "Arrendamientos")}}selected{{/if}}>🏠 Arrendamientos</option>
+                        <option value="Otros" {{#if (eq documento.tipoDocumento "Otros")}}selected{{/if}}>📄 Otros</option>
+                    </select>
+                    <div class="form-text">
+                        <i class="fas fa-info-circle me-1"></i>
+                        <strong>P</strong>=Protocolo, <strong>D</strong>=Diligencias, <strong>C</strong>=Certificaciones, <strong>A</strong>=Arrendamientos, <strong>O</strong>=Otros
+                    </div>
                 </div>
             </div>
             <div class="col-md-6">

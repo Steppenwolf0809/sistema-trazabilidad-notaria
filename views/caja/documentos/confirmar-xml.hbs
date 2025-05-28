@@ -32,14 +32,18 @@
           <label for="tipoDocumento" class="form-label">Tipo de Documento</label>
           <select class="form-select" id="tipoDocumento" name="tipoDocumento" required>
             <option value="" disabled>Seleccionar tipo...</option>
-            <option value="Escritura Pública" {{#if (eq documento.tipoDocumento "Escritura Pública")}}selected{{/if}}>Escritura Pública</option>
-            <option value="Reconocimiento de Firma" {{#if (eq documento.tipoDocumento "Reconocimiento de Firma")}}selected{{/if}}>Reconocimiento de Firma</option>
-            <option value="Arrendamiento" {{#if (eq documento.tipoDocumento "Arrendamiento")}}selected{{/if}}>Arrendamiento</option>
-            <option value="Certificación" {{#if (eq documento.tipoDocumento "Certificación")}}selected{{/if}}>Certificación</option>
-            <option value="Copia de Archivo" {{#if (eq documento.tipoDocumento "Copia de Archivo")}}selected{{/if}}>Copia de Archivo</option>
-            <option value="Marginación" {{#if (eq documento.tipoDocumento "Marginación")}}selected{{/if}}>Marginación</option>
-            <option value="Otro" {{#if (eq documento.tipoDocumento "Otro")}}selected{{/if}}>Otro</option>
+            <option value="Protocolo" {{#if (eq documento.tipoDocumento "Protocolo")}}selected{{/if}}>📋 Protocolo</option>
+            <option value="Diligencias" {{#if (eq documento.tipoDocumento "Diligencias")}}selected{{/if}}>⚖️ Diligencias</option>
+            <option value="Certificaciones" {{#if (eq documento.tipoDocumento "Certificaciones")}}selected{{/if}}>📜 Certificaciones</option>
+            <option value="Arrendamientos" {{#if (eq documento.tipoDocumento "Arrendamientos")}}selected{{/if}}>🏠 Arrendamientos</option>
+            <option value="Otros" {{#if (eq documento.tipoDocumento "Otros")}}selected{{/if}}>📄 Otros</option>
           </select>
+          {{#if documento.numeroLibro}}
+          <div class="form-text text-success">
+            <i class="fas fa-magic me-1"></i>
+            <strong>Detectado automáticamente</strong> desde código: {{documento.numeroLibro}}
+          </div>
+          {{/if}}
         </div>
         
         <div class="col-md-4 mb-3">

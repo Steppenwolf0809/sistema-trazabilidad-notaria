@@ -19,17 +19,16 @@
                 <div class="mb-3">
                     <label for="tipoDocumento" class="form-label">Tipo de Documento</label>
                     <select class="form-control" id="tipoDocumento" name="tipoDocumento" required>
-                        <option value="Escritura" {{#if (eq documento.tipoDocumento "Escritura")}}selected{{/if}}>Escritura</option>
-                        <option value="Escritura Pública" {{#if (eq documento.tipoDocumento "Escritura Pública")}}selected{{/if}}>Escritura Pública</option>
-                        <option value="Protocolo" {{#if (eq documento.tipoDocumento "Protocolo")}}selected{{/if}}>Protocolo</option>
-                        <option value="Diligencia" {{#if (eq documento.tipoDocumento "Diligencia")}}selected{{/if}}>Diligencia</option>
-                        <option value="Arrendamiento" {{#if (eq documento.tipoDocumento "Arrendamiento")}}selected{{/if}}>Arrendamiento</option>
-                        <option value="Certificación" {{#if (eq documento.tipoDocumento "Certificación")}}selected{{/if}}>Certificación</option>
-                        <option value="Otro" {{#if (eq documento.tipoDocumento "Otro")}}selected{{/if}}>Otro</option>
-                        <option value="Testamento" {{#if (eq documento.tipoDocumento "Testamento")}}selected{{/if}}>Testamento</option>
-                        <option value="Poder" {{#if (eq documento.tipoDocumento "Poder")}}selected{{/if}}>Poder</option>
-                        <option value="Donación" {{#if (eq documento.tipoDocumento "Donación")}}selected{{/if}}>Donación</option>
+                        <option value="Protocolo" {{#if (eq documento.tipoDocumento "Protocolo")}}selected{{/if}}>📋 Protocolo</option>
+                        <option value="Diligencias" {{#if (eq documento.tipoDocumento "Diligencias")}}selected{{/if}}>⚖️ Diligencias</option>
+                        <option value="Certificaciones" {{#if (eq documento.tipoDocumento "Certificaciones")}}selected{{/if}}>📜 Certificaciones</option>
+                        <option value="Arrendamientos" {{#if (eq documento.tipoDocumento "Arrendamientos")}}selected{{/if}}>🏠 Arrendamientos</option>
+                        <option value="Otros" {{#if (eq documento.tipoDocumento "Otros")}}selected{{/if}}>📄 Otros</option>
                     </select>
+                    <div class="form-text">
+                        <i class="fas fa-info-circle me-1"></i>
+                        <strong>P</strong>=Protocolo, <strong>D</strong>=Diligencias, <strong>C</strong>=Certificaciones, <strong>A</strong>=Arrendamientos, <strong>O</strong>=Otros
+                    </div>
                 </div>
             </div>
             <div class="col-md-6">
@@ -158,9 +157,27 @@
                         <i class="fas fa-comment-alt me-1"></i> Razón para no notificar: <span class="text-danger">*</span>
                     </label>
                     <textarea class="form-control" id="razonSinNotificar" name="razonSinNotificar" rows="3" 
-                              placeholder="Explique por qué el cliente no autoriza notificaciones...">{{documento.razonSinNotificar}}</textarea>
+                              placeholder="Ejemplo: Cliente no autoriza notificaciones, Cliente prefiere contacto directo, etc.">{{documento.razonSinNotificar}}</textarea>
                     <div class="form-text text-muted">
-                        Este campo es obligatorio para documentar la decisión del cliente.
+                        <strong>Campo obligatorio:</strong> Debe especificar por qué el cliente no autoriza notificaciones.
+                    </div>
+                    <div class="invalid-feedback" id="razonSinNotificarError">
+                        Debe especificar la razón para no notificar al cliente.
+                    </div>
+                    <!-- Botón de ayuda para llenar rápidamente -->
+                    <div class="mt-2">
+                        <small class="text-muted">Razones comunes:</small>
+                        <div class="btn-group-sm mt-1" role="group">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="llenarRazonRapida('Cliente no autoriza notificaciones electrónicas')">
+                                No autoriza
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="llenarRazonRapida('Cliente prefiere contacto telefónico directo')">
+                                Prefiere llamada
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="llenarRazonRapida('Cliente recogerá personalmente sin notificación previa')">
+                                Recoge personalmente
+                            </button>
+                        </div>
                     </div>
                 </div>
                 
@@ -278,6 +295,16 @@ function validarEmailFrontend(email) {
         return { valido: false, mensaje: "Ingrese un correo electrónico válido (ejemplo@dominio.com)." };
     }
     return { valido: true };
+}
+
+// Función para llenar rápidamente la razón de no notificar
+function llenarRazonRapida(razon) {
+    const textarea = document.getElementById('razonSinNotificar');
+    if (textarea) {
+        textarea.value = razon;
+        textarea.classList.remove('is-invalid');
+        console.log('✅ Razón llenada automáticamente:', razon);
+    }
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -655,6 +682,16 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('🔧 Inicializando estado de campos...');
     toggleNotificationFields();
 
+    // Event listener para limpiar errores cuando el usuario escriba en el campo de razón
+    if (razonSinNotificarTextarea) {
+        razonSinNotificarTextarea.addEventListener('input', function() {
+            if (this.value.trim()) {
+                this.classList.remove('is-invalid');
+                console.log('✅ Error de razón limpiado - usuario escribiendo');
+            }
+        });
+    }
+
     if (form) {
         form.addEventListener('submit', function(event) {
             let formValido = true;
@@ -690,16 +727,31 @@ document.addEventListener('DOMContentLoaded', function() {
             const politicaSeleccionada = document.querySelector('input[name="politicaNotificacion"]:checked')?.value;
             const esDocumentoHabilitante = esHabilitanteCheckbox && esHabilitanteCheckbox.checked;
             
+            console.log('🔧 Validando notificaciones:', { politicaSeleccionada, esDocumentoHabilitante });
+            
             if (politicaSeleccionada === 'no_notificar' && !esDocumentoHabilitante) {
                 // Solo validar razón si NO es documento habilitante (ya que se llena automáticamente)
-                const razon = razonSinNotificarTextarea.value.trim();
+                const razon = razonSinNotificarTextarea ? razonSinNotificarTextarea.value.trim() : '';
                 if (!razon) {
                     formValido = false;
-                    razonSinNotificarTextarea.classList.add('is-invalid');
-                    mostrarAlertaTemp('danger', 'Debe especificar la razón para no notificar al cliente');
-                    razonSinNotificarTextarea.focus();
+                    if (razonSinNotificarTextarea) {
+                        razonSinNotificarTextarea.classList.add('is-invalid');
+                        razonSinNotificarTextarea.focus();
+                        
+                        // Asegurar que el campo sea visible
+                        const razonGroup = document.getElementById('razonGroup');
+                        if (razonGroup) {
+                            razonGroup.style.display = 'block';
+                        }
+                        
+                        // Scroll hacia el campo para que sea visible
+                        razonSinNotificarTextarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    mostrarAlertaTemp('danger', '📝 Debe especificar la razón para no notificar al cliente. Use los botones de ayuda si necesita sugerencias.');
                 } else {
-                    razonSinNotificarTextarea.classList.remove('is-invalid');
+                    if (razonSinNotificarTextarea) {
+                        razonSinNotificarTextarea.classList.remove('is-invalid');
+                    }
                 }
             } else if (esDocumentoHabilitante) {
                 // Para documentos habilitantes, siempre remover clase de error ya que se configura automáticamente

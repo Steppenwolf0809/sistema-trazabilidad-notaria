@@ -15,6 +15,7 @@ const xml2js = require('xml2js');
 const moment = require('moment');
 const { 
   inferirTipoDocumentoPorCodigo, 
+  detectarTipoDocumento,
   procesarFechaDocumento,
   formatearValorMonetario,
   mapearMetodoPago,
@@ -1208,33 +1209,24 @@ const cajaController = {
         
         // Extraer descripción de servicios
         let descripcionServicios = '';
-        let tipoDocumentoInferido = 'Otro';
+        let tipoDocumentoDetectado = 'Otros';
         
-        // Intentar extraer tipo de documento del número de libro
+        // 🔍 NUEVA DETECCIÓN AUTOMÁTICA: Usar código completo del documento
         const numeroLibro = camposAdicionales['NÚMERO DE LIBRO'] || '';
         if (numeroLibro) {
-          tipoDocumentoInferido = inferirTipoDocumentoPorCodigo(numeroLibro);
+          // Usar nueva función de detección automática basada en posición 11
+          tipoDocumentoDetectado = detectarTipoDocumento(numeroLibro);
+          console.log(`🔍 DETECCIÓN AUTOMÁTICA: Código "${numeroLibro}" → Tipo "${tipoDocumentoDetectado}"`);
         }
         
         if (result.factura.detalles && result.factura.detalles.detalle) {
           const detalles = Array.isArray(result.factura.detalles.detalle) ? 
             result.factura.detalles.detalle : [result.factura.detalles.detalle];
           
-          // Si no se pudo inferir por código, intentar por descripción
-          if (tipoDocumentoInferido === 'Otro') {
-            for (const detalle of detalles) {
-              const desc = detalle.descripcion.toLowerCase();
-              if (desc.includes('escritura')) tipoDocumentoInferido = 'Escritura';
-              else if (desc.includes('donación')) tipoDocumentoInferido = 'Donación';
-              else if (desc.includes('poder')) tipoDocumentoInferido = 'Poder';
-              else if (desc.includes('testamento')) tipoDocumentoInferido = 'Testamento';
-              else if (desc.includes('certificación')) tipoDocumentoInferido = 'Certificación';
-              else if (desc.includes('protocolo')) tipoDocumentoInferido = 'Protocolo';
-              else if (desc.includes('diligencia')) tipoDocumentoInferido = 'Diligencia';
-              else if (desc.includes('arrendamiento')) tipoDocumentoInferido = 'Arrendamiento';
-              
-              if (tipoDocumentoInferido !== 'Otro') break;
-            }
+          // Si la detección automática falló, usar método legacy como fallback
+          if (tipoDocumentoDetectado === 'Otros' && numeroLibro) {
+            console.log(`⚠️ FALLBACK: Usando detección legacy para código "${numeroLibro}"`);
+            tipoDocumentoDetectado = inferirTipoDocumentoPorCodigo(numeroLibro);
           }
           
           // Construir descripción completa
@@ -1266,7 +1258,7 @@ const cajaController = {
         }
         
         documentoData = {
-          tipoDocumento: tipoDocumentoInferido,
+          tipoDocumento: tipoDocumentoDetectado,
           nombreCliente: infoFactura.razonSocialComprador || '',
           identificacionCliente: infoFactura.identificacionComprador || '',
           emailCliente: camposAdicionales['Email Cliente'] || '',
