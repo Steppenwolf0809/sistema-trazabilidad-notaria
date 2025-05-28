@@ -1,0 +1,225 @@
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h2><i class="fas fa-edit me-2"></i> Editar Documento</h2>
+          <p class="text-muted mb-0">Configurar notificaciones y detalles del documento</p>
+        </div>
+        <div>
+          <a href="/caja/mis-documentos" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i> Volver a Mis Documentos
+          </a>
+        </div>
+      </div>
+
+      <div class="row">
+        <!-- Información del documento -->
+        <div class="col-md-6">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i> Información del Documento</h5>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-sm-6">
+                  <strong>Código:</strong><br>
+                  <code>{{documento.codigoBarras}}</code>
+                </div>
+                <div class="col-sm-6">
+                  <strong>Tipo:</strong><br>
+                  <span class="badge bg-secondary">{{documento.tipoDocumento}}</span>
+                </div>
+              </div>
+              <hr>
+              <div class="row">
+                <div class="col-sm-6">
+                  <strong>Cliente:</strong><br>
+                  {{documento.nombreCliente}}
+                </div>
+                <div class="col-sm-6">
+                  <strong>Identificación:</strong><br>
+                  {{documento.identificacionCliente}}
+                </div>
+              </div>
+              <hr>
+              <div class="row">
+                <div class="col-sm-6">
+                  <strong>Estado:</strong><br>
+                  {{#if (eq documento.estado 'en_proceso')}}
+                    <span class="badge bg-warning">En Proceso</span>
+                  {{else if (eq documento.estado 'listo_para_entrega')}}
+                    <span class="badge bg-success">Listo para Entrega</span>
+                  {{else if (eq documento.estado 'entregado')}}
+                    <span class="badge bg-info">Entregado</span>
+                  {{else}}
+                    <span class="badge bg-secondary">{{documento.estado}}</span>
+                  {{/if}}
+                </div>
+                <div class="col-sm-6">
+                  <strong>Estado de Pago:</strong><br>
+                  {{#if (eq documento.estadoPago 'pagado')}}
+                    <span class="badge bg-success">Pagado</span>
+                  {{else}}
+                    <span class="badge bg-danger">Pendiente</span>
+                  {{/if}}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Formulario de edición -->
+        <div class="col-md-6">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0"><i class="fas fa-cog me-2"></i> Configuración</h5>
+            </div>
+            <div class="card-body">
+              <form id="editarDocumentoForm">
+                <!-- Notificaciones automáticas -->
+                <div class="mb-3">
+                  <label class="form-label">
+                    <i class="fas fa-bell me-2"></i> Notificaciones Automáticas
+                  </label>
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="notificarAutomatico" 
+                           name="notificarAutomatico" {{#if documento.notificarAutomatico}}checked{{/if}}>
+                    <label class="form-check-label" for="notificarAutomatico">
+                      Activar notificaciones automáticas cuando esté listo
+                    </label>
+                  </div>
+                  <small class="form-text text-muted">
+                    Si está activado, se enviará notificación automática al cliente cuando el documento esté listo.
+                  </small>
+                </div>
+
+                <!-- Método de notificación -->
+                <div class="mb-3">
+                  <label for="metodoNotificacion" class="form-label">
+                    <i class="fas fa-paper-plane me-2"></i> Método de Notificación
+                  </label>
+                  <select class="form-select" id="metodoNotificacion" name="metodoNotificacion">
+                    <option value="ambos" {{#if (eq documento.metodoNotificacion 'ambos')}}selected{{/if}}>
+                      WhatsApp y Email
+                    </option>
+                    <option value="whatsapp" {{#if (eq documento.metodoNotificacion 'whatsapp')}}selected{{/if}}>
+                      Solo WhatsApp
+                    </option>
+                    <option value="email" {{#if (eq documento.metodoNotificacion 'email')}}selected{{/if}}>
+                      Solo Email
+                    </option>
+                    <option value="ninguno" {{#if (eq documento.metodoNotificacion 'ninguno')}}selected{{/if}}>
+                      No notificar
+                    </option>
+                  </select>
+                </div>
+
+                <!-- Razón para no notificar -->
+                <div class="mb-3" id="razonContainer" style="display: none;">
+                  <label for="razonSinNotificar" class="form-label">
+                    <i class="fas fa-comment me-2"></i> Razón para no notificar
+                  </label>
+                  <textarea class="form-control" id="razonSinNotificar" name="razonSinNotificar" 
+                            rows="3" placeholder="Explique por qué no se debe notificar...">{{documento.razonSinNotificar}}</textarea>
+                </div>
+
+                <!-- Estado del documento -->
+                <div class="mb-3">
+                  <label for="estado" class="form-label">
+                    <i class="fas fa-flag me-2"></i> Estado del Documento
+                  </label>
+                  <select class="form-select" id="estado" name="estado">
+                    <option value="en_proceso" {{#if (eq documento.estado 'en_proceso')}}selected{{/if}}>
+                      En Proceso
+                    </option>
+                    <option value="listo_para_entrega" {{#if (eq documento.estado 'listo_para_entrega')}}selected{{/if}}>
+                      Listo para Entrega
+                    </option>
+                  </select>
+                  <small class="form-text text-muted">
+                    Cambie a "Listo para Entrega" cuando el documento esté completamente procesado.
+                  </small>
+                </div>
+
+                <!-- Notas -->
+                <div class="mb-3">
+                  <label for="notas" class="form-label">
+                    <i class="fas fa-sticky-note me-2"></i> Notas Adicionales
+                  </label>
+                  <textarea class="form-control" id="notas" name="notas" rows="3" 
+                            placeholder="Agregue notas adicionales sobre el documento...">{{documento.notas}}</textarea>
+                </div>
+
+                <!-- Botones -->
+                <div class="d-grid gap-2">
+                  <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i> Guardar Cambios
+                  </button>
+                  <a href="/caja/mis-documentos" class="btn btn-outline-secondary">
+                    <i class="fas fa-times me-2"></i> Cancelar
+                  </a>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const metodoNotificacion = document.getElementById('metodoNotificacion');
+  const razonContainer = document.getElementById('razonContainer');
+  const notificarAutomatico = document.getElementById('notificarAutomatico');
+
+  // Mostrar/ocultar razón según método de notificación
+  function toggleRazonContainer() {
+    if (metodoNotificacion.value === 'ninguno' || !notificarAutomatico.checked) {
+      razonContainer.style.display = 'block';
+    } else {
+      razonContainer.style.display = 'none';
+    }
+  }
+
+  metodoNotificacion.addEventListener('change', toggleRazonContainer);
+  notificarAutomatico.addEventListener('change', toggleRazonContainer);
+  
+  // Ejecutar al cargar
+  toggleRazonContainer();
+
+  // Manejar envío del formulario
+  document.getElementById('editarDocumentoForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const data = Object.fromEntries(formData.entries());
+    
+    // Convertir checkbox a boolean
+    data.notificarAutomatico = document.getElementById('notificarAutomatico').checked;
+    
+    fetch(`/caja/documentos/editar/{{documento.id}}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert('Documento actualizado correctamente');
+        window.location.href = '/caja/mis-documentos';
+      } else {
+        alert('Error: ' + data.message);
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error al actualizar el documento');
+    });
+  });
+});
+</script> 

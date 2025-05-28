@@ -158,7 +158,7 @@ const esAdmin = (req, res, next) => {
     // Determinar layout correcto según el rol del usuario actual
     const layout = req.matrizador.rol === 'matrizador' ? 'matrizador' : 
                    req.matrizador.rol === 'recepcion' ? 'recepcion' : 
-                   req.matrizador.rol === 'caja' ? 'caja' : 'admin';
+                   (req.matrizador.rol === 'caja' || req.matrizador.rol === 'caja_archivo') ? 'caja' : 'admin';
     
     return res.render('error', {
       layout,
@@ -198,7 +198,7 @@ const esMatrizador = (req, res, next) => {
     
     // Determinar layout correcto según el rol del usuario actual
     const layout = req.matrizador.rol === 'recepcion' ? 'recepcion' : 
-                   req.matrizador.rol === 'caja' ? 'caja' : 'admin';
+                   (req.matrizador.rol === 'caja' || req.matrizador.rol === 'caja_archivo') ? 'caja' : 'admin';
     
     return res.render('error', {
       layout,
@@ -268,7 +268,7 @@ const esCaja = (req, res, next) => {
   }
   
   // Verificar que el rol sea válido para esta función
-  const rolesPermitidos = ['admin', 'matrizador', 'caja'];
+  const rolesPermitidos = ['admin', 'matrizador', 'caja', 'caja_archivo'];
   if (!rolesPermitidos.includes(req.matrizador.rol)) {
     if (req.path.startsWith('/api/')) {
       return res.status(403).json({
@@ -278,7 +278,8 @@ const esCaja = (req, res, next) => {
     }
     
     // Determinar layout correcto según el rol del usuario actual
-    const layout = req.matrizador.rol === 'recepcion' ? 'recepcion' : 'admin';
+    const layout = req.matrizador.rol === 'recepcion' ? 'recepcion' : 
+                   (req.matrizador.rol === 'caja' || req.matrizador.rol === 'caja_archivo') ? 'caja' : 'admin';
     
     return res.render('error', {
       layout,
@@ -313,6 +314,7 @@ function redirigirSegunRol(req, res) {
     case 'recepcion':
       return res.redirect('/recepcion');
     case 'caja':
+    case 'caja_archivo':
       return res.redirect('/caja');
     default:
       return res.redirect('/login');
@@ -413,6 +415,7 @@ function obtenerDashboardPorRol(rol) {
     case 'recepcion':
       return '/recepcion';
     case 'caja':
+    case 'caja_archivo':
       return '/caja';
     default:
       return '/login';

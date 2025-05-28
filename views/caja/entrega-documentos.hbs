@@ -1,0 +1,366 @@
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h2><i class="fas fa-hand-holding me-2"></i> Entrega de Documentos</h2>
+          <p class="text-muted mb-0">Entregar documentos listos desde archivo</p>
+        </div>
+        <div>
+          <span class="badge bg-success fs-6">{{estadisticas.listos}} listos para entrega</span>
+        </div>
+      </div>
+
+      <!-- Estadísticas rápidas -->
+      <div class="row mb-4">
+        <div class="col-md-4">
+          <div class="card bg-success text-white">
+            <div class="card-body text-center">
+              <h3 class="mb-1">{{estadisticas.listos}}</h3>
+              <small>Listos para Entrega</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card bg-info text-white">
+            <div class="card-body text-center">
+              <h3 class="mb-1">{{estadisticas.entregadosHoy}}</h3>
+              <small>Entregados Hoy</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+              <h3 class="mb-1">{{estadisticas.totalAsignados}}</h3>
+              <small>Total Asignados</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Búsqueda de documento -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h5 class="mb-0"><i class="fas fa-search me-2"></i> Buscar Documento para Entrega</h5>
+        </div>
+        <div class="card-body">
+          <form id="formBusqueda">
+            <div class="row">
+              <div class="col-md-8">
+                <input type="text" id="codigoBusqueda" class="form-control" 
+                       placeholder="Escanear o ingresar código de barras" autofocus>
+              </div>
+              <div class="col-md-4">
+                <button type="submit" id="btnBuscar" class="btn btn-primary">
+                  <i class="fas fa-search"></i> Buscar
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Resultado de búsqueda -->
+      <div id="resultadoBusqueda" class="card mb-4" style="display: none;">
+        <div class="card-header">
+          <h5 class="mb-0"><i class="fas fa-file-alt me-2"></i> Documento Encontrado</h5>
+        </div>
+        <div class="card-body" id="contenidoDocumento">
+          <!-- Se llena dinámicamente con JavaScript -->
+        </div>
+      </div>
+
+      <!-- Documentos listos para entrega -->
+      <div class="card">
+        <div class="card-header">
+          <h5 class="mb-0"><i class="fas fa-list me-2"></i> Mis Documentos Listos para Entrega</h5>
+        </div>
+        <div class="card-body">
+          {{#if documentosListos}}
+            <div class="table-responsive">
+              <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                  <tr>
+                    <th>Código</th>
+                    <th>Tipo</th>
+                    <th>Cliente</th>
+                    <th>Notificaciones</th>
+                    <th>Fecha Registro</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {{#each documentosListos}}
+                  <tr>
+                    <td>
+                      <code>{{codigoBarras}}</code>
+                    </td>
+                    <td>
+                      <span class="badge bg-secondary">{{tipoDocumento}}</span>
+                    </td>
+                    <td>
+                      <strong>{{nombreCliente}}</strong><br>
+                      <small class="text-muted">{{identificacionCliente}}</small>
+                    </td>
+                    <td>
+                      {{#if notificarAutomatico}}
+                        <i class="fas fa-check text-success" title="Con código de verificación"></i>
+                        <small class="text-success">Con código</small>
+                      {{else}}
+                        <i class="fas fa-times text-warning" title="Sin código de verificación"></i>
+                        <small class="text-warning">Sin código</small>
+                      {{/if}}
+                    </td>
+                    <td>
+                      <small>{{formatDate created_at}}</small>
+                    </td>
+                    <td>
+                      <button class="btn btn-sm btn-success btnEntregar" 
+                              data-id="{{id}}" 
+                              data-codigo="{{codigoBarras}}"
+                              data-cliente="{{nombreCliente}}"
+                              data-verificacion="{{codigoVerificacion}}"
+                              data-notificar="{{notificarAutomatico}}">
+                        <i class="fas fa-truck"></i> Entregar
+                      </button>
+                    </td>
+                  </tr>
+                  {{/each}}
+                </tbody>
+              </table>
+            </div>
+          {{else}}
+            <div class="alert alert-info text-center">
+              <i class="fas fa-inbox fa-3x mb-3"></i>
+              <h4>No tienes documentos listos para entrega</h4>
+              <p class="mb-0">Los documentos que marques como "listos para entrega" aparecerán aquí.</p>
+              <a href="/caja/mis-documentos" class="btn btn-primary mt-3">
+                <i class="fas fa-file-edit me-2"></i> Ver Mis Documentos
+              </a>
+            </div>
+          {{/if}}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para procesar entrega -->
+<div class="modal fade" id="modalEntrega" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-hand-holding me-2"></i> Procesar Entrega
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="formEntrega">
+        <div class="modal-body">
+          <div class="alert alert-info">
+            <strong>Documento:</strong> <span id="infoDocumento"></span>
+          </div>
+          
+          <!-- Código de verificación (condicional) -->
+          <div id="seccionCodigo" style="display: none;">
+            <div class="mb-3">
+              <label for="codigoVerificacion" class="form-label">
+                <i class="fas fa-key me-1"></i> Código de Verificación *
+              </label>
+              <input type="text" class="form-control" id="codigoVerificacion" 
+                     placeholder="Ingrese el código de 4 dígitos" maxlength="4">
+              <div class="form-text">El cliente debe proporcionar este código</div>
+            </div>
+          </div>
+
+          <!-- Información del receptor -->
+          <div class="mb-3">
+            <label for="nombreReceptor" class="form-label">
+              <i class="fas fa-user me-1"></i> Nombre del Receptor *
+            </label>
+            <input type="text" class="form-control" id="nombreReceptor" 
+                   placeholder="Nombre completo de quien recibe" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="identificacionReceptor" class="form-label">
+              <i class="fas fa-id-card me-1"></i> Identificación del Receptor
+            </label>
+            <input type="text" class="form-control" id="identificacionReceptor" 
+                   placeholder="Cédula o identificación">
+          </div>
+
+          <div class="mb-3">
+            <label for="relacionReceptor" class="form-label">
+              <i class="fas fa-users me-1"></i> Relación con el Cliente
+            </label>
+            <select class="form-select" id="relacionReceptor">
+              <option value="titular">Titular</option>
+              <option value="familiar">Familiar</option>
+              <option value="mandatario">Mandatario</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+
+          <input type="hidden" id="documentoId">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times"></i> Cancelar
+          </button>
+          <button type="submit" class="btn btn-success">
+            <i class="fas fa-check"></i> Confirmar Entrega
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const formBusqueda = document.getElementById('formBusqueda');
+  const codigoBusqueda = document.getElementById('codigoBusqueda');
+  const resultadoBusqueda = document.getElementById('resultadoBusqueda');
+  const contenidoDocumento = document.getElementById('contenidoDocumento');
+  const modalEntrega = new bootstrap.Modal(document.getElementById('modalEntrega'));
+  const formEntrega = document.getElementById('formEntrega');
+
+  // Buscar documento
+  formBusqueda.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const codigo = codigoBusqueda.value.trim();
+    
+    if (!codigo) {
+      alert('Por favor ingrese un código de barras');
+      return;
+    }
+
+    fetch('/caja/entrega-documentos/buscar', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ codigo })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        mostrarDocumentoEncontrado(data.documento);
+      } else {
+        alert('Error: ' + data.message);
+        resultadoBusqueda.style.display = 'none';
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error al buscar documento');
+    });
+  });
+
+  // Mostrar documento encontrado
+  function mostrarDocumentoEncontrado(documento) {
+    contenidoDocumento.innerHTML = `
+      <div class="row">
+        <div class="col-md-8">
+          <h6><strong>Código:</strong> ${documento.codigoBarras}</h6>
+          <p><strong>Tipo:</strong> ${documento.tipoDocumento}</p>
+          <p><strong>Cliente:</strong> ${documento.nombreCliente}</p>
+          <p><strong>Identificación:</strong> ${documento.identificacionCliente}</p>
+        </div>
+        <div class="col-md-4 text-end">
+          <button class="btn btn-success btnEntregar" 
+                  data-id="${documento.id}" 
+                  data-codigo="${documento.codigoBarras}"
+                  data-cliente="${documento.nombreCliente}"
+                  data-verificacion="${documento.codigoVerificacion}"
+                  data-notificar="${documento.notificarAutomatico}">
+            <i class="fas fa-truck"></i> Entregar
+          </button>
+        </div>
+      </div>
+    `;
+    resultadoBusqueda.style.display = 'block';
+    codigoBusqueda.value = '';
+  }
+
+  // Manejar botones de entrega (delegación de eventos)
+  document.addEventListener('click', function(e) {
+    if (e.target.closest('.btnEntregar')) {
+      const btn = e.target.closest('.btnEntregar');
+      const documentoId = btn.dataset.id;
+      const codigo = btn.dataset.codigo;
+      const cliente = btn.dataset.cliente;
+      const codigoVerificacion = btn.dataset.verificacion;
+      const notificar = btn.dataset.notificar === 'true';
+
+      // Configurar modal
+      document.getElementById('documentoId').value = documentoId;
+      document.getElementById('infoDocumento').textContent = `${codigo} - ${cliente}`;
+      
+      // Mostrar/ocultar sección de código
+      const seccionCodigo = document.getElementById('seccionCodigo');
+      if (notificar && codigoVerificacion) {
+        seccionCodigo.style.display = 'block';
+        document.getElementById('codigoVerificacion').required = true;
+      } else {
+        seccionCodigo.style.display = 'none';
+        document.getElementById('codigoVerificacion').required = false;
+      }
+
+      // Limpiar formulario
+      formEntrega.reset();
+      document.getElementById('documentoId').value = documentoId;
+
+      modalEntrega.show();
+    }
+  });
+
+  // Procesar entrega
+  formEntrega.addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const documentoId = document.getElementById('documentoId').value;
+    const nombreReceptor = document.getElementById('nombreReceptor').value;
+    const identificacionReceptor = document.getElementById('identificacionReceptor').value;
+    const relacionReceptor = document.getElementById('relacionReceptor').value;
+    const codigoIngresado = document.getElementById('codigoVerificacion').value;
+
+    if (!nombreReceptor.trim()) {
+      alert('El nombre del receptor es obligatorio');
+      return;
+    }
+
+    fetch(`/caja/entrega-documentos/procesar/${documentoId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        nombreReceptor,
+        identificacionReceptor,
+        relacionReceptor,
+        codigoIngresado
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert('Documento entregado exitosamente');
+        modalEntrega.hide();
+        location.reload(); // Recargar para actualizar la lista
+      } else {
+        alert('Error: ' + data.message);
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error al procesar entrega');
+    });
+  });
+
+  // Auto-focus en campo de búsqueda
+  codigoBusqueda.focus();
+});
+</script> 

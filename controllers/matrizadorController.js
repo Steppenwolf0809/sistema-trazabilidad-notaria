@@ -111,6 +111,10 @@ const matrizadorController = {
     try {
       const { nombre, email, identificacion, cargo, password, rol } = req.body;
       
+      // Determinar la ruta de redirección según el contexto
+      const esAdmin = req.path.includes('/admin/');
+      const rutaRedireccion = esAdmin ? '/admin/matrizadores' : '/matrizador';
+      
       // Verificar campos obligatorios
       if (!nombre || !email || !identificacion || !cargo) {
         if (req.path.startsWith('/api/')) {
@@ -121,7 +125,7 @@ const matrizadorController = {
         }
         
         req.flash('error', 'Todos los campos son obligatorios');
-        return res.redirect('/matrizador');
+        return res.redirect(rutaRedireccion);
       }
       
       // Verificar si ya existe un matrizador con el mismo email o identificación
@@ -143,7 +147,7 @@ const matrizadorController = {
         }
         
         req.flash('error', 'Ya existe un matrizador con ese email o identificación');
-        return res.redirect('/matrizador');
+        return res.redirect(rutaRedireccion);
       }
       
       // Preparar datos para crear el matrizador
@@ -157,7 +161,7 @@ const matrizadorController = {
       };
       
       // Validar que el rol sea válido
-      const rolesValidos = ['admin', 'matrizador', 'recepcion', 'consulta', 'caja'];
+      const rolesValidos = ['admin', 'matrizador', 'recepcion', 'consulta', 'caja', 'caja_archivo'];
       if (rol && !rolesValidos.includes(rol)) {
         datosMatrizador.rol = 'matrizador'; // Rol por defecto si no es válido
       }
@@ -173,7 +177,7 @@ const matrizadorController = {
       // Si es una solicitud de vista, redirigir con mensaje de éxito
       if (!req.path.startsWith('/api/')) {
         req.flash('success', 'Matrizador creado correctamente');
-        return res.redirect('/matrizador');
+        return res.redirect(rutaRedireccion);
       }
       
       // Para API, eliminar la contraseña de la respuesta
@@ -197,7 +201,7 @@ const matrizadorController = {
       }
       
       req.flash('error', `Error al crear el matrizador: ${error.message}`);
-      return res.redirect('/matrizador');
+      return res.redirect(rutaRedireccion);
     }
   },
 
@@ -210,6 +214,10 @@ const matrizadorController = {
     try {
       // Obtener ID de la ruta o del cuerpo de la solicitud
       const id = req.params.id || req.body.id;
+      
+      // Determinar la ruta de redirección según el contexto
+      const esAdmin = req.path.includes('/admin/');
+      const rutaRedireccion = esAdmin ? '/admin/matrizadores' : '/matrizador';
       
       console.log(`Intentando actualizar matrizador con ID: ${id}`);
       
@@ -224,7 +232,7 @@ const matrizadorController = {
         }
         
         req.flash('error', 'Debe proporcionar un ID de matrizador para actualizarlo');
-        return res.redirect('/matrizador');
+        return res.redirect(rutaRedireccion);
       }
       
       const { nombre, email, identificacion, cargo, password, rol, activo } = req.body;
@@ -242,7 +250,7 @@ const matrizadorController = {
         }
         
         req.flash('error', `No se encontró matrizador con ID ${id}`);
-        return res.redirect('/matrizador');
+        return res.redirect(rutaRedireccion);
       }
 
       // Preparar datos para actualizar
@@ -267,7 +275,7 @@ const matrizadorController = {
       // Si es una solicitud de vista, redirigir con mensaje de éxito
       if (!req.path.startsWith('/api/')) {
         req.flash('success', 'Matrizador actualizado correctamente');
-        return res.redirect('/matrizador');
+        return res.redirect(rutaRedireccion);
       }
       
       // Eliminar la contraseña de la respuesta
@@ -291,7 +299,7 @@ const matrizadorController = {
       }
       
       req.flash('error', `Error al actualizar el matrizador: ${error.message}`);
-      return res.redirect('/matrizador');
+      return res.redirect(rutaRedireccion);
     }
   },
 
@@ -1255,39 +1263,51 @@ const matrizadorController = {
         comparecientesJson = [];
       }
       
-      // Generar un código de verificación de 4 dígitos
-      const codigoVerificacion = Math.floor(1000 + Math.random() * 9000).toString();
+      // ============== CORRECCIÓN: GENERACIÓN CONDICIONAL DE CÓDIGO DE VERIFICACIÓN ==============
       
-      // Crear el nuevo documento
-      const nuevoDocumento = await Documento.create({
-        codigoBarras,
-        tipoDocumento,
-        nombreCliente,
-        identificacionCliente,
-        emailCliente: emailCliente || null,
-        telefonoCliente: telefonoCliente || null,
-        estado: 'en_proceso',
-        codigoVerificacion,
-        idMatrizador: req.matrizador.id,
-        notas: notas || null,
-        // Agregar nuevos campos
-        numeroFactura: numeroFactura || null,
-        valorFactura: valorFactura ? parseFloat(valorFactura) : null,
-        fechaFactura: procesarFechaDocumento(fechaFactura),
-        estadoPago: estadoPago || 'pendiente',
-        metodoPago: metodoPago || null,
-        omitirNotificacion: omitirNotificacion === 'true',
-        motivoOmision: omitirNotificacion === 'true' ? motivoOmision : null,
-        detalleOmision: (omitirNotificacion === 'true' && motivoOmision === 'otro') ? detalleOmision : null,
-        idUsuarioCreador: req.matrizador.id,
-        rolUsuarioCreador: req.matrizador.rol,
-        comparecientes: comparecientesJson
-      }, { transaction });
+      // Verificar si debe generar código de verificación
+      const debeNotificar = !documento.omitirNotificacion && 
+                           documento.emailCliente && 
+                           documento.telefonoCliente;
+      
+      const esEntregaInmediata = documento.entregadoInmediatamente || false;
+      
+      let codigoVerificacion = null;
+      let mensajeNotificacion = '';
+      
+      if (debeNotificar && !esEntregaInmediata) {
+        // Solo generar código si se va a notificar Y no es entrega inmediata
+        codigoVerificacion = Math.floor(1000 + Math.random() * 9000).toString();
+        mensajeNotificacion = 'Se enviará código de verificación al cliente';
+        console.log(`✅ Generando código de verificación: ${codigoVerificacion} para documento ${documento.codigoBarras}`);
+      } else {
+        // No generar código en estos casos:
+        // - Omitir notificación activado
+        // - Sin datos de contacto del cliente
+        // - Entrega inmediata
+        codigoVerificacion = null;
+        
+        if (documento.omitirNotificacion) {
+          mensajeNotificacion = 'Sin código - notificación omitida por configuración';
+          console.log(`⏭️ No se generará código para documento ${documento.codigoBarras}: notificación omitida`);
+        } else if (esEntregaInmediata) {
+          mensajeNotificacion = 'Sin código - entrega inmediata configurada';
+          console.log(`⚡ No se generará código para documento ${documento.codigoBarras}: entrega inmediata`);
+        } else {
+          mensajeNotificacion = 'Sin código - faltan datos de contacto del cliente';
+          console.log(`⚠️ No se generará código para documento ${documento.codigoBarras}: sin datos de contacto`);
+        }
+      }
+      
+      // Actualizar estado y código de verificación del documento principal
+      documento.estado = 'listo_para_entrega';
+      documento.codigoVerificacion = codigoVerificacion; // Puede ser null
+      await documento.save({ transaction });
       
       // Registrar el evento de creación
       try {
         await EventoDocumento.create({
-          idDocumento: nuevoDocumento.id,
+          idDocumento: documento.id,
           tipo: 'registro',
           detalles: 'Documento registrado por matrizador',
           usuario: req.matrizador.nombre
@@ -1495,7 +1515,7 @@ const matrizadorController = {
       
       await transaction.commit();
       
-      // Enviar confirmación de entrega después de confirmar la transacción
+      // Enviar notificación después de confirmar la transacción
       try {
         await NotificationService.enviarNotificacionEntrega(documento.id, {
           nombreReceptor,
@@ -1580,12 +1600,45 @@ const matrizadorController = {
         }
       }
       
-      // Generar código de verificación de 4 dígitos
-      const codigoVerificacion = Math.floor(1000 + Math.random() * 9000).toString();
+      // ============== CORRECCIÓN: GENERACIÓN CONDICIONAL DE CÓDIGO DE VERIFICACIÓN ==============
+      
+      // Verificar si debe generar código de verificación
+      const debeNotificar = !documento.omitirNotificacion && 
+                           documento.emailCliente && 
+                           documento.telefonoCliente;
+      
+      const esEntregaInmediata = documento.entregadoInmediatamente || false;
+      
+      let codigoVerificacion = null;
+      let mensajeNotificacion = '';
+      
+      if (debeNotificar && !esEntregaInmediata) {
+        // Solo generar código si se va a notificar Y no es entrega inmediata
+        codigoVerificacion = Math.floor(1000 + Math.random() * 9000).toString();
+        mensajeNotificacion = 'Se enviará código de verificación al cliente';
+        console.log(`✅ Generando código de verificación: ${codigoVerificacion} para documento ${documento.codigoBarras}`);
+      } else {
+        // No generar código en estos casos:
+        // - Omitir notificación activado
+        // - Sin datos de contacto del cliente
+        // - Entrega inmediata
+        codigoVerificacion = null;
+        
+        if (documento.omitirNotificacion) {
+          mensajeNotificacion = 'Sin código - notificación omitida por configuración';
+          console.log(`⏭️ No se generará código para documento ${documento.codigoBarras}: notificación omitida`);
+        } else if (esEntregaInmediata) {
+          mensajeNotificacion = 'Sin código - entrega inmediata configurada';
+          console.log(`⚡ No se generará código para documento ${documento.codigoBarras}: entrega inmediata`);
+        } else {
+          mensajeNotificacion = 'Sin código - faltan datos de contacto del cliente';
+          console.log(`⚠️ No se generará código para documento ${documento.codigoBarras}: sin datos de contacto`);
+        }
+      }
       
       // Actualizar estado y código de verificación del documento principal
       documento.estado = 'listo_para_entrega';
-      documento.codigoVerificacion = codigoVerificacion;
+      documento.codigoVerificacion = codigoVerificacion; // Puede ser null
       await documento.save({ transaction });
       
       // ============== NUEVA LÓGICA: ACTUALIZAR DOCUMENTOS HABILITANTES RELACIONADOS ==============
@@ -1611,19 +1664,41 @@ const matrizadorController = {
           
           // Actualizar todos los documentos habilitantes al mismo estado
           for (const habilitante of documentosHabilitantes) {
-            // Generar código de verificación único para cada habilitante (o usar el mismo del principal)
-            const codigoHabilitante = Math.floor(1000 + Math.random() * 9000).toString();
+            // ============== APLICAR MISMA LÓGICA CONDICIONAL A HABILITANTES ==============
+            
+            // Verificar si el habilitante debe tener código
+            const debeNotificarHabilitante = !habilitante.omitirNotificacion && 
+                                           habilitante.emailCliente && 
+                                           habilitante.telefonoCliente;
+            
+            const esEntregaInmediataHabilitante = habilitante.entregadoInmediatamente || false;
+            
+            let codigoHabilitante = null;
+            
+            if (debeNotificarHabilitante && !esEntregaInmediataHabilitante) {
+              // Solo generar código si se va a notificar
+              codigoHabilitante = Math.floor(1000 + Math.random() * 9000).toString();
+              console.log(`✅ Generando código para habilitante: ${codigoHabilitante}`);
+            } else {
+              // No generar código para habilitantes con notificación omitida
+              codigoHabilitante = null;
+              console.log(`⏭️ Sin código para habilitante ${habilitante.codigoBarras}: notificación omitida o entrega inmediata`);
+            }
             
             habilitante.estado = 'listo_para_entrega';
-            habilitante.codigoVerificacion = codigoHabilitante;
+            habilitante.codigoVerificacion = codigoHabilitante; // Puede ser null
             await habilitante.save({ transaction });
             
             // Registrar evento para cada documento habilitante
             try {
+              const detalleEvento = codigoHabilitante 
+                ? `Documento habilitante marcado como listo automáticamente junto con el principal ${documento.codigoBarras} (con código de verificación)`
+                : `Documento habilitante marcado como listo automáticamente junto con el principal ${documento.codigoBarras} (sin código - notificación omitida)`;
+                
               await EventoDocumento.create({
                 idDocumento: habilitante.id,
                 tipo: 'cambio_estado',
-                detalles: `Documento habilitante marcado como listo automáticamente junto con el principal ${documento.codigoBarras}`,
+                detalles: detalleEvento,
                 usuario: req.matrizador.nombre
               }, { transaction });
             } catch (eventError) {
@@ -1664,17 +1739,33 @@ const matrizadorController = {
       
       // Enviar notificación después de confirmar la transacción
       try {
-        await NotificationService.enviarNotificacionDocumentoListo(documento.id);
+        // Solo enviar notificación si se generó código
+        if (codigoVerificacion) {
+          await NotificationService.enviarNotificacionDocumentoListo(documento.id);
+          console.log(`📱 NOTIFICACIÓN ENVIADA: Código ${codigoVerificacion} enviado al cliente ${documento.nombreCliente} (${documento.emailCliente || documento.telefonoCliente})`);
+        } else {
+          console.log(`⏭️ NO SE ENVIÓ NOTIFICACIÓN: ${mensajeNotificacion} para documento ${documento.codigoBarras}`);
+        }
       } catch (notificationError) {
         console.error('Error al enviar notificación de documento listo:', notificationError);
         // No afectar el flujo principal si falla la notificación
       }
       
-      // Simular envío de notificación (en producción enviaría SMS o Email)
-      console.log(`NOTIFICACIÓN: Se ha enviado el código ${codigoVerificacion} al cliente ${documento.nombreCliente} (${documento.emailCliente || documento.telefonoCliente})`);
+      // Mensaje de éxito personalizado según la configuración del documento
+      let mensajeExito = '';
       
-      // Mensaje de éxito personalizado según si se actualizaron documentos habilitantes
-      let mensajeExito = `El documento ha sido marcado como listo para entrega y se ha enviado el código de verificación al cliente.`;
+      if (codigoVerificacion) {
+        mensajeExito = `El documento ha sido marcado como listo para entrega y se ha enviado el código de verificación al cliente.`;
+      } else {
+        if (documento.omitirNotificacion) {
+          mensajeExito = `El documento ha sido marcado como listo para entrega. No se envió notificación según la configuración del documento.`;
+        } else if (esEntregaInmediata) {
+          mensajeExito = `El documento ha sido marcado como listo para entrega inmediata. No se requiere código de verificación.`;
+        } else {
+          mensajeExito = `El documento ha sido marcado como listo para entrega. No se pudo enviar notificación por falta de datos de contacto.`;
+        }
+      }
+      
       if (documentosHabilitantesActualizados > 0) {
         mensajeExito += ` También se marcaron como listos ${documentosHabilitantesActualizados} documento(s) habilitante(s) relacionado(s).`;
       }
@@ -1810,4 +1901,4 @@ const matrizadorController = {
   },
 };
 
-module.exports = matrizadorController; 
+module.exports = matrizadorController;

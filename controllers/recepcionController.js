@@ -724,17 +724,104 @@ const recepcionController = {
         }
       }
       
-      // Verificar código a menos que sea verificación por llamada
-      if (tipoVerificacion !== 'llamada' && documento.codigoVerificacion !== codigoVerificacion) {
-        await transaction.rollback();
-        return res.render('recepcion/documentos/entrega', {
-          layout: 'recepcion',
-          title: 'Entrega de Documento',
-          documento,
-          error: 'El código de verificación es incorrecto, por favor verifique e intente nuevamente',
-          userRole: req.matrizador?.rol,
-          userName: req.matrizador?.nombre
-        });
+      // ============== VALIDACIÓN ACTUALIZADA: CÓDIGO DE VERIFICACIÓN CONDICIONAL ==============
+      
+      // Verificar si el documento tiene código de verificación
+      const tieneCodigoVerificacion = documento.codigoVerificacion && documento.codigoVerificacion !== 'sin_codigo';
+      
+      if (tieneCodigoVerificacion) {
+        // Documento CON código de verificación - validación tradicional
+        if (tipoVerificacion === 'codigo') {
+          if (!codigoVerificacion || documento.codigoVerificacion !== codigoVerificacion) {
+            await transaction.rollback();
+            return res.render('recepcion/documentos/entrega', {
+              layout: 'recepcion',
+              title: 'Entrega de Documento',
+              documento,
+              error: 'El código de verificación es incorrecto, por favor verifique e intente nuevamente',
+              userRole: req.matrizador?.rol,
+              userName: req.matrizador?.nombre
+            });
+          }
+        } else if (tipoVerificacion === 'llamada') {
+          if (!observaciones || observaciones.trim().length < 10) {
+            await transaction.rollback();
+            return res.render('recepcion/documentos/entrega', {
+              layout: 'recepcion',
+              title: 'Entrega de Documento',
+              documento,
+              error: 'Debe proporcionar observaciones detalladas de la verificación por llamada (mínimo 10 caracteres)',
+              userRole: req.matrizador?.rol,
+              userName: req.matrizador?.nombre
+            });
+          }
+        }
+      } else {
+        // Documento SIN código de verificación - validación alternativa
+        console.log(`📋 Validando entrega sin código para documento ${documento.codigoBarras} con método: ${tipoVerificacion}`);
+        
+        if (!tipoVerificacion || !['identidad', 'factura', 'llamada'].includes(tipoVerificacion)) {
+          await transaction.rollback();
+          return res.render('recepcion/documentos/entrega', {
+            layout: 'recepcion',
+            title: 'Entrega de Documento',
+            documento,
+            error: 'Debe seleccionar un método de verificación válido para documentos sin código',
+            userRole: req.matrizador?.rol,
+            userName: req.matrizador?.nombre
+          });
+        }
+        
+        if (!observaciones || observaciones.trim().length < 15) {
+          await transaction.rollback();
+          return res.render('recepcion/documentos/entrega', {
+            layout: 'recepcion',
+            title: 'Entrega de Documento',
+            documento,
+            error: 'Debe proporcionar detalles específicos del método de verificación utilizado (mínimo 15 caracteres)',
+            userRole: req.matrizador?.rol,
+            userName: req.matrizador?.nombre
+          });
+        }
+        
+        // Validaciones específicas por tipo de verificación
+        if (tipoVerificacion === 'identidad') {
+          if (!observaciones.toLowerCase().includes('cédula') && !observaciones.toLowerCase().includes('cedula')) {
+            await transaction.rollback();
+            return res.render('recepcion/documentos/entrega', {
+              layout: 'recepcion',
+              title: 'Entrega de Documento',
+              documento,
+              error: 'Para verificación por identidad, debe mencionar la cédula en las observaciones',
+              userRole: req.matrizador?.rol,
+              userName: req.matrizador?.nombre
+            });
+          }
+        } else if (tipoVerificacion === 'factura') {
+          if (!observaciones.toLowerCase().includes('factura')) {
+            await transaction.rollback();
+            return res.render('recepcion/documentos/entrega', {
+              layout: 'recepcion',
+              title: 'Entrega de Documento',
+              documento,
+              error: 'Para verificación por factura, debe mencionar el número de factura en las observaciones',
+              userRole: req.matrizador?.rol,
+              userName: req.matrizador?.nombre
+            });
+          }
+        } else if (tipoVerificacion === 'llamada') {
+          if (!observaciones.toLowerCase().includes('llamé') && !observaciones.toLowerCase().includes('llame') && !observaciones.toLowerCase().includes('teléfono') && !observaciones.toLowerCase().includes('telefono')) {
+            await transaction.rollback();
+            return res.render('recepcion/documentos/entrega', {
+              layout: 'recepcion',
+              title: 'Entrega de Documento',
+              documento,
+              error: 'Para verificación por llamada, debe describir los detalles de la llamada telefónica',
+              userRole: req.matrizador?.rol,
+              userName: req.matrizador?.nombre
+            });
+          }
+        }
       }
       
       // Actualizar el documento principal
@@ -788,9 +875,25 @@ const recepcionController = {
           // Registrar eventos de entrega para cada documento habilitante
           for (const docHabilitante of documentosHabilitantes) {
             try {
-              const detallesHabilitante = tipoVerificacion === 'llamada'
-                ? `Entregado junto con documento principal a ${nombreReceptor} con verificación por llamada: ${observaciones}`
-                : `Entregado junto con documento principal a ${nombreReceptor} con código de verificación`;
+              let detallesHabilitante = '';
+              
+              if (tieneCodigoVerificacion) {
+                // Documento principal con código de verificación
+                if (tipoVerificacion === 'codigo') {
+                  detallesHabilitante = `Entregado junto con documento principal a ${nombreReceptor} con código de verificación`;
+                } else if (tipoVerificacion === 'llamada') {
+                  detallesHabilitante = `Entregado junto con documento principal a ${nombreReceptor} con verificación por llamada: ${observaciones}`;
+                }
+              } else {
+                // Documento principal sin código de verificación
+                if (tipoVerificacion === 'identidad') {
+                  detallesHabilitante = `Entregado junto con documento principal a ${nombreReceptor} con verificación por cédula de identidad`;
+                } else if (tipoVerificacion === 'factura') {
+                  detallesHabilitante = `Entregado junto con documento principal a ${nombreReceptor} con verificación por número de factura`;
+                } else if (tipoVerificacion === 'llamada') {
+                  detallesHabilitante = `Entregado junto con documento principal a ${nombreReceptor} con verificación por llamada telefónica`;
+                }
+              }
                 
               await EventoDocumento.create({
                 idDocumento: docHabilitante.id,
@@ -814,11 +917,27 @@ const recepcionController = {
         console.log(`ℹ️ El documento ID: ${documento.id} es un documento habilitante, no se buscan documentos relacionados`);
       }
       
-      // Registrar el evento de entrega
+      // Registrar el evento de entrega con detalles específicos del tipo de verificación
       try {
-        const detalles = tipoVerificacion === 'llamada'
-          ? `Entregado a ${nombreReceptor} con verificación por llamada: ${observaciones}`
-          : `Entregado a ${nombreReceptor} con código de verificación`;
+        let detalles = '';
+        
+        if (tieneCodigoVerificacion) {
+          // Documento con código de verificación
+          if (tipoVerificacion === 'codigo') {
+            detalles = `Entregado a ${nombreReceptor} con código de verificación ${documento.codigoVerificacion}`;
+          } else if (tipoVerificacion === 'llamada') {
+            detalles = `Entregado a ${nombreReceptor} con verificación por llamada: ${observaciones}`;
+          }
+        } else {
+          // Documento sin código de verificación
+          if (tipoVerificacion === 'identidad') {
+            detalles = `Entregado a ${nombreReceptor} con verificación por cédula de identidad: ${observaciones}`;
+          } else if (tipoVerificacion === 'factura') {
+            detalles = `Entregado a ${nombreReceptor} con verificación por número de factura: ${observaciones}`;
+          } else if (tipoVerificacion === 'llamada') {
+            detalles = `Entregado a ${nombreReceptor} con verificación por llamada telefónica: ${observaciones}`;
+          }
+        }
           
         await EventoDocumento.create({
           idDocumento: documento.id,

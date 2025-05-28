@@ -186,6 +186,79 @@
   </div>
 </div>
 
+{{! ============== ESTADÍSTICAS ADICIONALES PARA CAJA_ARCHIVO ============== }}
+{{#if (eq userRole 'caja_archivo')}}
+  {{#if estadisticasMatrizador}}
+    <div class="row mt-4">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">
+              <i class="fas fa-user-edit me-2"></i> Mis Estadísticas como Matrizadora
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-2">
+                <div class="card bg-primary text-white">
+                  <div class="card-body text-center">
+                    <h4 class="mb-1">{{estadisticasMatrizador.asignados}}</h4>
+                    <small>Total Asignados</small>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-2">
+                <div class="card bg-warning text-white">
+                  <div class="card-body text-center">
+                    <h4 class="mb-1">{{estadisticasMatrizador.enProceso}}</h4>
+                    <small>En Proceso</small>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-2">
+                <div class="card bg-success text-white">
+                  <div class="card-body text-center">
+                    <h4 class="mb-1">{{estadisticasMatrizador.listos}}</h4>
+                    <small>Listos para Entrega</small>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-2">
+                <div class="card bg-info text-white">
+                  <div class="card-body text-center">
+                    <h4 class="mb-1">{{estadisticasMatrizador.entregados}}</h4>
+                    <small>Total Entregados</small>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-2">
+                <div class="card bg-secondary text-white">
+                  <div class="card-body text-center">
+                    <h4 class="mb-1">{{estadisticasMatrizador.entregadosHoy}}</h4>
+                    <small>Entregados Hoy</small>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-2">
+                <div class="d-grid gap-2">
+                  <a href="/caja/mis-documentos" class="btn btn-outline-primary">
+                    <i class="fas fa-file-edit"></i><br>
+                    <small>Ver Mis Documentos</small>
+                  </a>
+                  <a href="/caja/entrega-documentos" class="btn btn-outline-success">
+                    <i class="fas fa-hand-holding"></i><br>
+                    <small>Entrega de Documentos</small>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  {{/if}}
+{{/if}}
+
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     // ============ FUNCIÓN AUXILIAR PARA FORMATEAR DINERO ============

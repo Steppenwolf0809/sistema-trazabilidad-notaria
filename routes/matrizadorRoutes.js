@@ -17,48 +17,48 @@ router.get('/verificar/:codigo', matrizadorController.verificarQR);
 // Middleware global para validar token 
 router.use(verificarToken);
 
-// Dashboard del matrizador - ESTRICTO: solo matrizadores
-router.get('/', validarAccesoConAuditoria(['matrizador']), matrizadorController.dashboard);
+// Dashboard del matrizador - Permitir matrizadores y caja_archivo
+router.get('/', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.dashboard);
 
-// Rutas de matrizador - ESTRICTO: solo matrizadores
+// Rutas de matrizador - Permitir matrizadores y caja_archivo
 // Listado de documentos
-router.get('/documentos', validarAccesoConAuditoria(['matrizador']), matrizadorController.listarDocumentos);
-router.get('/documentos/buscar', validarAccesoConAuditoria(['matrizador']), matrizadorController.mostrarBuscarDocumentos);
+router.get('/documentos', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.listarDocumentos);
+router.get('/documentos/buscar', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.mostrarBuscarDocumentos);
 
 // Detalle de documento
-router.get('/documentos/detalle/:id', validarAccesoConAuditoria(['matrizador']), matrizadorController.detalleDocumento);
+router.get('/documentos/detalle/:id', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.detalleDocumento);
 
 // Registro de documento
-router.get('/documentos/registro', validarAccesoConAuditoria(['matrizador']), matrizadorController.mostrarFormularioRegistro);
-router.post('/documentos/registro', validarAccesoConAuditoria(['matrizador']), matrizadorController.registrarDocumento);
+router.get('/documentos/registro', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.mostrarFormularioRegistro);
+router.post('/documentos/registro', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.registrarDocumento);
 
-// Rutas para edición de documentos - Solo para matrizadores
-router.get('/documentos/editar/:id', validarAccesoConAuditoria(['matrizador']), documentoController.mostrarFormularioEdicionMatrizador);
-router.post('/documentos/editar/:id', validarAccesoConAuditoria(['matrizador']), documentoController.actualizarDocumento);
+// Rutas para edición de documentos - Permitir matrizadores y caja_archivo
+router.get('/documentos/editar/:id', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), documentoController.mostrarFormularioEdicionMatrizador);
+router.post('/documentos/editar/:id', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), documentoController.actualizarDocumento);
 
 // Entrega de documento
-router.get('/documentos/entrega', validarAccesoConAuditoria(['matrizador']), matrizadorController.mostrarEntrega);
-router.get('/documentos/entrega/:id', validarAccesoConAuditoria(['matrizador']), matrizadorController.mostrarEntrega);
-router.post('/documentos/completar-entrega/:id', validarAccesoConAuditoria(['matrizador']), matrizadorController.completarEntrega);
+router.get('/documentos/entrega', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.mostrarEntrega);
+router.get('/documentos/entrega/:id', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.mostrarEntrega);
+router.post('/documentos/completar-entrega/:id', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.completarEntrega);
 
 // Marcar documento como listo para entrega
-router.post('/documentos/marcar-listo', validarAccesoConAuditoria(['matrizador']), matrizadorController.marcarDocumentoListo);
+router.post('/documentos/marcar-listo', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.marcarDocumentoListo);
 
 // Marcar documento como visto
-router.post('/documentos/marcar-visto/:id', validarAccesoConAuditoria(['matrizador']), matrizadorController.marcarDocumentoVisto);
+router.post('/documentos/marcar-visto/:id', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.marcarDocumentoVisto);
 
 // Buscar documentos principales para vincular como habilitantes
-router.get('/documentos/buscar-principales', validarAccesoConAuditoria(['matrizador']), matrizadorController.buscarDocumentosPrincipales);
+router.get('/documentos/buscar-principales', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.buscarDocumentosPrincipales);
 
 // API para obtener documentos principales (para selección de documento habilitante)
-router.get('/api/documentos/principales', validarAccesoConAuditoria(['matrizador']), documentoController.obtenerDocumentosPrincipales);
+router.get('/api/documentos/principales', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), documentoController.obtenerDocumentosPrincipales);
 
 // Rutas de notificaciones
 const notificacionController = require('../controllers/notificacionController');
-router.get('/notificaciones/historial', validarAccesoConAuditoria(['matrizador']), notificacionController.mostrarHistorial);
+router.get('/notificaciones/historial', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), notificacionController.mostrarHistorial);
 
 // APIs de notificaciones
-router.get('/api/notificaciones/:id', validarAccesoConAuditoria(['matrizador']), notificacionController.obtenerDetalleNotificacion);
+router.get('/api/notificaciones/:id', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), notificacionController.obtenerDetalleNotificacion);
 router.post('/api/notificaciones/:id/reintentar', validarAccesoConAuditoria(['admin']), notificacionController.reintentarNotificacion);
 
 // Rutas de logout - Disponible para todos los usuarios

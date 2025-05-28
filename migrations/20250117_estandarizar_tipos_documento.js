@@ -42,27 +42,70 @@ module.exports = {
     
     try {
       await queryInterface.sequelize.query(`
-        CREATE TYPE enum_documentos_tipo_documento AS ENUM (
-          'Protocolo', 
-          'Diligencias', 
-          'Certificaciones', 
-          'Arrendamientos', 
-          'Otros'
-        );
+        DO $$ 
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_documentos_tipo_documento') THEN
+            CREATE TYPE enum_documentos_tipo_documento AS ENUM (
+              'Protocolo', 
+              'Diligencias', 
+              'Certificaciones', 
+              'Arrendamientos', 
+              'Otros'
+            );
+          END IF;
+        END $$;
       `);
       console.log('✅ ENUM creado exitosamente');
     } catch (error) {
       console.log('⚠️ ENUM ya existe, continuando...');
     }
     
-    // PASO 3: Cambiar el tipo de columna a ENUM
-    console.log('🔧 Cambiando tipo de columna a ENUM...');
+    // PASO 3: Enfoque step-by-step para cambiar tipo de columna (evita error USING)
+    console.log('🔧 Cambiando tipo de columna a ENUM usando enfoque compatible...');
     
-    await queryInterface.changeColumn('documentos', 'tipo_documento', {
-      type: Sequelize.ENUM('Protocolo', 'Diligencias', 'Certificaciones', 'Arrendamientos', 'Otros'),
-      allowNull: false,
-      comment: 'Tipo de documento notarial: P=Protocolo, D=Diligencias, C=Certificaciones, A=Arrendamientos, O=Otros'
-    });
+    try {
+      // 3.1: Agregar columna temporal con ENUM
+      await queryInterface.addColumn('documentos', 'tipo_documento_temp', {
+        type: 'enum_documentos_tipo_documento',
+        allowNull: true
+      });
+      console.log('✅ Columna temporal creada');
+      
+      // 3.2: Copiar datos a columna temporal
+      await queryInterface.sequelize.query(`
+        UPDATE documentos 
+        SET tipo_documento_temp = tipo_documento::enum_documentos_tipo_documento
+      `);
+      console.log('✅ Datos copiados a columna temporal');
+      
+      // 3.3: Eliminar columna original
+      await queryInterface.removeColumn('documentos', 'tipo_documento');
+      console.log('✅ Columna original eliminada');
+      
+      // 3.4: Renombrar columna temporal
+      await queryInterface.renameColumn('documentos', 'tipo_documento_temp', 'tipo_documento');
+      console.log('✅ Columna renombrada');
+      
+      // 3.5: Hacer columna NOT NULL
+      await queryInterface.changeColumn('documentos', 'tipo_documento', {
+        type: 'enum_documentos_tipo_documento',
+        allowNull: false,
+        comment: 'Tipo de documento notarial: P=Protocolo, D=Diligencias, C=Certificaciones, A=Arrendamientos, O=Otros'
+      });
+      console.log('✅ Columna configurada como NOT NULL');
+      
+    } catch (error) {
+      console.log('⚠️ Error en conversión de columna:', error.message);
+      // Si falla, intentar enfoque directo más simple
+      console.log('🔧 Intentando enfoque alternativo...');
+      
+      await queryInterface.sequelize.query(`
+        ALTER TABLE documentos 
+        ALTER COLUMN tipo_documento TYPE enum_documentos_tipo_documento 
+        USING tipo_documento::text::enum_documentos_tipo_documento;
+      `);
+      console.log('✅ Columna convertida usando enfoque alternativo');
+    }
     
     // PASO 4: Verificar que no hay tipos inválidos
     console.log('🔍 Verificando integridad de datos...');
@@ -112,11 +155,36 @@ module.exports = {
       console.log('⚠️ Error al eliminar índice:', error.message);
     }
     
-    // Cambiar columna de vuelta a STRING
-    await queryInterface.changeColumn('documentos', 'tipo_documento', {
-      type: Sequelize.STRING,
-      allowNull: false
-    });
+    // Cambiar columna de vuelta a STRING usando enfoque step-by-step
+    try {
+      // Agregar columna temporal STRING
+      await queryInterface.addColumn('documentos', 'tipo_documento_temp', {
+        type: Sequelize.STRING,
+        allowNull: true
+      });
+      
+      // Copiar datos
+      await queryInterface.sequelize.query(`
+        UPDATE documentos 
+        SET tipo_documento_temp = tipo_documento::text
+      `);
+      
+      // Eliminar columna ENUM
+      await queryInterface.removeColumn('documentos', 'tipo_documento');
+      
+      // Renombrar columna temporal
+      await queryInterface.renameColumn('documentos', 'tipo_documento_temp', 'tipo_documento');
+      
+      // Hacer NOT NULL
+      await queryInterface.changeColumn('documentos', 'tipo_documento', {
+        type: Sequelize.STRING,
+        allowNull: false
+      });
+      
+      console.log('✅ Columna revertida a STRING');
+    } catch (error) {
+      console.log('⚠️ Error al revertir columna:', error.message);
+    }
     
     // Eliminar ENUM
     try {

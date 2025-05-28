@@ -181,6 +181,36 @@ const cajaController = {
         fechaFin: fechaFin.format('YYYY-MM-DD')
       };
       
+      // ============== ESTADÍSTICAS ADICIONALES PARA CAJA_ARCHIVO ==============
+      let estadisticasMatrizador = null;
+      if (req.matrizador?.rol === 'caja_archivo') {
+        const userId = req.matrizador.id;
+        
+        // Obtener estadísticas como matrizador
+        const [statsMatrizador] = await sequelize.query(`
+          SELECT 
+            COUNT(*) as total_asignados,
+            COUNT(CASE WHEN estado = 'en_proceso' THEN 1 END) as en_proceso,
+            COUNT(CASE WHEN estado = 'listo_para_entrega' THEN 1 END) as listos,
+            COUNT(CASE WHEN estado = 'entregado' THEN 1 END) as entregados,
+            COUNT(CASE WHEN estado = 'entregado' AND DATE(fecha_entrega) = CURRENT_DATE THEN 1 END) as entregados_hoy
+          FROM documentos
+          WHERE id_matrizador = :userId
+            AND estado NOT IN ('eliminado', 'nota_credito')
+        `, {
+          replacements: { userId },
+          type: sequelize.QueryTypes.SELECT
+        });
+        
+        estadisticasMatrizador = {
+          asignados: parseInt(statsMatrizador.total_asignados) || 0,
+          enProceso: parseInt(statsMatrizador.en_proceso) || 0,
+          listos: parseInt(statsMatrizador.listos) || 0,
+          entregados: parseInt(statsMatrizador.entregados) || 0,
+          entregadosHoy: parseInt(statsMatrizador.entregados_hoy) || 0
+        };
+      }
+      
       // Renderizar el dashboard
       res.render('caja/dashboard', {
         layout: 'caja',
@@ -194,6 +224,7 @@ const cajaController = {
           documentosFacturados: documentosFacturados,
           documentosPendientesPago: documentosPendientesPago
         },
+        estadisticasMatrizador, // Nuevas estadísticas para caja_archivo
         documentosPendientes: documentosPendientesLista,
         documentosPagadosRecientes: documentosPagadosRecientesLista,
         periodo: periodoData
@@ -462,7 +493,9 @@ const cajaController = {
       // Obtener todos los matrizadores para el filtro
       const matrizadores = await Matrizador.findAll({
         where: {
-          rol: 'matrizador',
+          rol: {
+            [Op.in]: ['matrizador', 'caja_archivo']
+          },
           activo: true
         },
         attributes: ['id', 'nombre']
@@ -695,7 +728,9 @@ const cajaController = {
       // Obtener matrizadores para el formulario de cambio
       const matrizadores = await Matrizador.findAll({
         where: {
-          rol: 'matrizador',
+          rol: {
+            [Op.in]: ['matrizador', 'caja_archivo']
+          },
           activo: true
         },
         attributes: ['id', 'nombre']
@@ -1015,7 +1050,9 @@ const cajaController = {
       // Obtener matrizadores activos
       const matrizadores = await Matrizador.findAll({
         where: {
-          rol: 'matrizador',
+          rol: {
+            [Op.in]: ['matrizador', 'caja_archivo']
+          },
           activo: true
         },
         attributes: ['id', 'nombre', 'email']
@@ -1141,7 +1178,9 @@ const cajaController = {
       // Obtener matrizadores para la asignación
       const matrizadores = await Matrizador.findAll({
         where: {
-          rol: 'matrizador',
+          rol: {
+            [Op.in]: ['matrizador', 'caja_archivo']
+          },
           activo: true
         },
         attributes: ['id', 'nombre']
@@ -1245,7 +1284,9 @@ const cajaController = {
               nombre: {
                 [Op.iLike]: `%${nombreMatrizador}%`
               },
-              rol: 'matrizador',
+              rol: {
+                [Op.in]: ['matrizador', 'caja_archivo']
+              },
               activo: true
             }
           });
@@ -1279,10 +1320,13 @@ const cajaController = {
       // Obtener todos los matrizadores para la asignación
       const matrizadores = await Matrizador.findAll({
         where: {
-          rol: 'matrizador',
+          rol: {
+            [Op.in]: ['matrizador', 'caja_archivo']
+          },
           activo: true
         },
-        attributes: ['id', 'nombre']
+        attributes: ['id', 'nombre'],
+        order: [['nombre', 'ASC']]
       });
       
       // Renderizar vista de confirmación
@@ -1328,7 +1372,9 @@ const cajaController = {
           estadoPago,
           comparecientes,
           numeroLibro,
-          fechaEmision
+          fechaEmision,
+          notas = '',  // Agregar notas con valor por defecto
+          omitirNotificacion = false  // Agregar omitirNotificacion con valor por defecto
         } = req.body;
         
         // Validar campos obligatorios
@@ -1404,26 +1450,40 @@ const cajaController = {
           console.log(`Usando fecha del XML: ${fechaEmision} convertida a: ${fechaFactura}`);
         }
         
-        // Crear el documento
-        const nuevoDocumento = await Documento.create({
+        
+        // CORREGIDO: Preparar datos del documento con fecha de pago si es necesario
+        const datosDocumento = {
           codigoBarras,
           tipoDocumento,
           nombreCliente,
           identificacionCliente,
           emailCliente,
           telefonoCliente,
+          notas,
           estado: 'en_proceso',
           codigoVerificacion,
           idMatrizador: idMatrizador || null,
-          valorFactura: parseFloat(valorFactura) || null,
-          numeroFactura: numeroFactura || null,
-          fechaFactura,
-          estadoPago: estadoPago || 'pendiente',
-          metodoPago: metodoPago || null,
           comparecientes: JSON.parse(comparecientes || '[]'),
+          // Campos de facturación
+          numeroFactura: numeroFactura || null,
+          valorFactura: valorFactura ? parseFloat(valorFactura) : null,
+          fechaFactura: fechaFactura ? new Date(fechaFactura) : null,
+          estadoPago: estadoPago || 'pendiente',
+          metodoPago: mapearMetodoPago(metodoPago),
+          omitirNotificacion: omitirNotificacion === 'on',
           idUsuarioCreador: req.matrizador.id,
           rolUsuarioCreador: req.matrizador.rol
-        }, { transaction });
+        };
+
+        // CORREGIDO: Si se está creando como pagado, asignar fecha de pago y usuario que registró
+        if (estadoPago === 'pagado') {
+          datosDocumento.fechaPago = obtenerTimestampEcuador();
+          datosDocumento.registradoPor = req.matrizador.id;
+          console.log(`🔧 DOCUMENTO CREADO COMO PAGADO: Asignando fechaPago = ${datosDocumento.fechaPago}`);
+        }
+        
+        // Crear el documento
+        const nuevoDocumento = await Documento.create(datosDocumento, { transaction });
         
         // Registrar evento de creación
         await EventoDocumento.create({
@@ -1485,7 +1545,9 @@ const cajaController = {
       // Obtener matrizadores para los filtros
       const matrizadores = await Matrizador.findAll({
         where: {
-          rol: 'matrizador',
+          rol: {
+            [Op.in]: ['matrizador', 'caja_archivo']
+          },
           activo: true
         },
         attributes: ['id', 'nombre'],
@@ -1648,7 +1710,12 @@ const cajaController = {
       // Obtener todos los matrizadores para el dropdown
       const matrizadores = await Matrizador.findAll({
         attributes: ['id', 'nombre'],
-        where: { activo: true, rol: 'matrizador' }, // Opcional: filtrar por rol si es necesario
+        where: { 
+          activo: true, 
+          rol: {
+            [Op.in]: ['matrizador', 'caja_archivo']
+          }
+        },
         order: [['nombre', 'ASC']],
         raw: true
       });
@@ -1952,7 +2019,9 @@ const cajaController = {
       // Obtener lista de matrizadores para filtros
       const matrizadores = await Matrizador.findAll({
         where: {
-          rol: 'matrizador',
+          rol: {
+            [Op.in]: ['matrizador', 'caja_archivo']
+          },
           activo: true
         },
         attributes: ['id', 'nombre'],
@@ -2073,7 +2142,7 @@ const cajaController = {
         FROM matrizadores m
         LEFT JOIN documentos d ON m.id = d.id_matrizador
           AND d.fecha_factura BETWEEN :fechaInicio AND :fechaFin
-        WHERE m.rol = 'matrizador'
+        WHERE m.rol IN ('matrizador', 'caja_archivo')
         GROUP BY m.id, m.nombre
         ORDER BY facturacion_total DESC
       `, {
@@ -2148,7 +2217,9 @@ const cajaController = {
       // Obtener lista de matrizadores para el formulario
       const matrizadores = await Matrizador.findAll({
         where: {
-          rol: 'matrizador',
+          rol: {
+            [Op.in]: ['matrizador', 'caja_archivo']
+          },
           activo: true
         },
         order: [['nombre', 'ASC']]
@@ -2222,7 +2293,7 @@ const cajaController = {
       const codigoVerificacion = Math.floor(1000 + Math.random() * 9000).toString();
       
       // Crear el documento con el mapeo de metodoPago
-      const nuevoDocumento = await Documento.create({
+      const datosDocumento = {
         codigoBarras,
         tipoDocumento,
         nombreCliente,
@@ -2243,7 +2314,16 @@ const cajaController = {
         omitirNotificacion: omitirNotificacion === 'on',
         idUsuarioCreador: req.matrizador.id,
         rolUsuarioCreador: req.matrizador.rol
-      }, { transaction });
+      };
+
+      // CORREGIDO: Si se está creando como pagado, asignar fecha de pago y usuario que registró
+      if (estadoPago === 'pagado') {
+        datosDocumento.fechaPago = obtenerTimestampEcuador();
+        datosDocumento.registradoPor = req.matrizador.id;
+        console.log(`🔧 DOCUMENTO CREADO COMO PAGADO: Asignando fechaPago = ${datosDocumento.fechaPago}`);
+      }
+      
+      const nuevoDocumento = await Documento.create(datosDocumento, { transaction });
       
       // Registrar evento de creación
       await EventoDocumento.create({
@@ -2843,7 +2923,7 @@ const cajaController = {
           AND d.estado_pago = 'pagado'
           AND d.fecha_pago BETWEEN :fechaInicio AND :fechaFin
           AND d.estado NOT IN ('eliminado', 'nota_credito')
-        WHERE m.rol = 'matrizador'
+        WHERE m.rol IN ('matrizador', 'caja_archivo')
         AND m.activo = true
         ${whereMatrizador}
         GROUP BY m.id, m.nombre, m.email
@@ -2895,7 +2975,12 @@ const cajaController = {
       // Obtener todos los matrizadores para el filtro
       const matrizadores = await Matrizador.findAll({
         attributes: ['id', 'nombre'],
-        where: { activo: true, rol: 'matrizador' },
+        where: { 
+          activo: true, 
+          rol: {
+            [Op.in]: ['matrizador', 'caja_archivo']
+          }
+        },
         order: [['nombre', 'ASC']],
         raw: true
       });
@@ -2940,6 +3025,506 @@ const cajaController = {
         title: 'Error',
         message: 'Error al generar el reporte de cobros por matrizador',
         error
+      });
+    }
+  },
+
+  // ============== NUEVOS MÉTODOS PARA FUNCIONALIDAD HÍBRIDA CAJA_ARCHIVO ==============
+
+  /**
+   * Mostrar documentos asignados al usuario como matrizador (interfaz de caja)
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  misDocumentosMatrizador: async (req, res) => {
+    try {
+      const userId = req.matrizador.id;
+      
+      // Parámetros de filtrado
+      const estado = req.query.estado || '';
+      const estadoPago = req.query.estadoPago || '';
+      const busqueda = req.query.busqueda || '';
+      
+      // Construir condiciones de filtrado
+      const whereConditions = {
+        idMatrizador: userId  // Solo documentos asignados a este usuario
+      };
+      
+      if (estado) {
+        whereConditions.estado = estado;
+      }
+      
+      if (estadoPago) {
+        whereConditions.estadoPago = estadoPago;
+      }
+      
+      if (busqueda) {
+        whereConditions[Op.or] = [
+          { codigoBarras: { [Op.iLike]: `%${busqueda}%` } },
+          { nombreCliente: { [Op.iLike]: `%${busqueda}%` } },
+          { numeroFactura: { [Op.iLike]: `%${busqueda}%` } }
+        ];
+      }
+      
+      // Obtener documentos asignados al usuario
+      const documentos = await Documento.findAll({
+        where: whereConditions,
+        include: [
+          {
+            model: Matrizador,
+            as: 'matrizador',
+            attributes: ['id', 'nombre', 'email']
+          }
+        ],
+        order: [['created_at', 'DESC']]
+      });
+      
+      // Estadísticas rápidas
+      const stats = {
+        total: documentos.length,
+        enProceso: documentos.filter(d => d.estado === 'en_proceso').length,
+        listos: documentos.filter(d => d.estado === 'listo_para_entrega').length,
+        entregados: documentos.filter(d => d.estado === 'entregado').length,
+        pendientesPago: documentos.filter(d => d.estadoPago === 'pendiente').length
+      };
+
+      res.render('caja/mis-documentos-matrizador', {
+        layout: 'caja',
+        title: 'Mis Documentos como Matrizadora',
+        activeMisDocumentos: true,
+        documentos,
+        stats,
+        filtros: {
+          estado: estado || '',
+          estadoPago: estadoPago || '',
+          busqueda: busqueda || ''
+        },
+        userRole: req.matrizador?.rol,
+        userName: req.matrizador?.nombre
+      });
+    } catch (error) {
+      console.error('Error obteniendo documentos de matrizador:', error);
+      return res.status(500).render('error', {
+        layout: 'caja',
+        title: 'Error',
+        message: 'Error al cargar sus documentos como matrizadora',
+        error
+      });
+    }
+  },
+
+  /**
+   * Mostrar formulario para editar documento (interfaz de caja)
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  editarDocumentoMatrizador: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.matrizador.id;
+      
+      const documento = await Documento.findOne({
+        where: { 
+          id,
+          idMatrizador: userId  // Solo puede editar documentos asignados a él
+        },
+        include: [
+          {
+            model: Matrizador,
+            as: 'matrizador',
+            attributes: ['id', 'nombre', 'email']
+          }
+        ]
+      });
+
+      if (!documento) {
+        req.flash('error', 'Documento no encontrado o no asignado a usted');
+        return res.redirect('/caja/mis-documentos');
+      }
+
+      res.render('caja/editar-documento-matrizador', {
+        layout: 'caja',
+        title: 'Editar Documento',
+        activeEditarDocumento: true,
+        documento,
+        userRole: req.matrizador?.rol,
+        userName: req.matrizador?.nombre
+      });
+    } catch (error) {
+      console.error('Error obteniendo documento para editar:', error);
+      req.flash('error', 'Error al cargar el documento');
+      return res.redirect('/caja/mis-documentos');
+    }
+  },
+
+  /**
+   * Actualizar documento desde interfaz de caja
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  actualizarDocumentoMatrizador: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.matrizador.id;
+      const {
+        notificarAutomatico,
+        metodoNotificacion,
+        razonSinNotificar,
+        notas,
+        estado
+      } = req.body;
+
+      const documento = await Documento.findOne({
+        where: { 
+          id,
+          idMatrizador: userId
+        }
+      });
+
+      if (!documento) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'Documento no encontrado o no asignado a usted' 
+        });
+      }
+
+      // Actualizar campos que puede modificar
+      const datosActualizacion = {
+        notificarAutomatico: notificarAutomatico === 'true' || notificarAutomatico === true,
+        metodoNotificacion: metodoNotificacion || 'ninguno',
+        razonSinNotificar: razonSinNotificar || null,
+        notas: notas || documento.notas
+      };
+
+      // Si se está cambiando el estado, validar
+      if (estado && estado !== documento.estado) {
+        const estadosPermitidos = ['en_proceso', 'listo_para_entrega'];
+        if (estadosPermitidos.includes(estado)) {
+          datosActualizacion.estado = estado;
+        }
+      }
+
+      await documento.update(datosActualizacion);
+
+      // Registrar evento de actualización
+      await EventoDocumento.create({
+        idDocumento: id,
+        tipo: 'actualizacion',
+        detalles: `Documento actualizado por ${req.matrizador.nombre} desde interfaz de caja`,
+        usuario: req.matrizador.nombre,
+        metadatos: JSON.stringify({
+          actualizadoPor: req.matrizador.id,
+          cambios: datosActualizacion
+        })
+      });
+
+      if (req.headers.accept && req.headers.accept.includes('application/json')) {
+        return res.json({ 
+          success: true, 
+          message: 'Documento actualizado correctamente' 
+        });
+      } else {
+        req.flash('success', 'Documento actualizado correctamente');
+        return res.redirect('/caja/mis-documentos');
+      }
+    } catch (error) {
+      console.error('Error actualizando documento:', error);
+      
+      if (req.headers.accept && req.headers.accept.includes('application/json')) {
+        return res.status(500).json({ 
+          success: false, 
+          message: 'Error actualizando documento: ' + error.message 
+        });
+      } else {
+        req.flash('error', 'Error actualizando documento: ' + error.message);
+        return res.redirect('/caja/mis-documentos');
+      }
+    }
+  },
+
+  /**
+   * Marcar documento como listo para entrega desde interfaz de caja
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  marcarDocumentoListoMatrizador: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.matrizador.id;
+
+      const documento = await Documento.findOne({
+        where: { 
+          id,
+          idMatrizador: userId
+        }
+      });
+
+      if (!documento) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'Documento no encontrado o no asignado a usted' 
+        });
+      }
+
+      if (documento.estado === 'listo_para_entrega') {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'El documento ya está marcado como listo para entrega' 
+        });
+      }
+
+      // Actualizar estado
+      await documento.update({
+        estado: 'listo_para_entrega'
+      });
+
+      // Registrar evento
+      await EventoDocumento.create({
+        idDocumento: id,
+        tipo: 'cambio_estado',
+        detalles: `Documento marcado como listo para entrega por ${req.matrizador.nombre}`,
+        usuario: req.matrizador.nombre,
+        metadatos: JSON.stringify({
+          estadoAnterior: documento.estado,
+          estadoNuevo: 'listo_para_entrega',
+          marcadoPor: req.matrizador.id
+        })
+      });
+
+      return res.json({ 
+        success: true, 
+        message: 'Documento marcado como listo para entrega' 
+      });
+    } catch (error) {
+      console.error('Error marcando documento como listo:', error);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Error marcando documento como listo: ' + error.message 
+      });
+    }
+  },
+
+  // ============== NUEVOS MÉTODOS PARA ENTREGA DE DOCUMENTOS EN INTERFAZ CAJA ==============
+
+  /**
+   * Página principal de entrega de documentos (interfaz caja)
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  entregaDocumentos: async (req, res) => {
+    try {
+      const userId = req.matrizador.id;
+      
+      // Obtener documentos listos para entrega de este matrizador
+      const documentosListos = await Documento.findAll({
+        where: {
+          idMatrizador: userId,
+          estado: 'listo_para_entrega'
+        },
+        include: [
+          {
+            model: Matrizador,
+            as: 'matrizador',
+            attributes: ['id', 'nombre']
+          }
+        ],
+        order: [['created_at', 'DESC']]
+      });
+
+      // Estadísticas rápidas para el usuario
+      const estadisticas = {
+        listos: documentosListos.length,
+        entregadosHoy: await Documento.count({
+          where: {
+            idMatrizador: userId,
+            estado: 'entregado',
+            fechaEntrega: {
+              [Op.gte]: moment().startOf('day').toDate()
+            }
+          }
+        }),
+        totalAsignados: await Documento.count({
+          where: {
+            idMatrizador: userId,
+            estado: { [Op.notIn]: ['eliminado', 'nota_credito'] }
+          }
+        })
+      };
+
+      res.render('caja/entrega-documentos', {
+        layout: 'caja',
+        title: 'Entrega de Documentos',
+        activeEntregaDocumentos: true,
+        documentosListos,
+        estadisticas,
+        userRole: req.matrizador?.rol,
+        userName: req.matrizador?.nombre
+      });
+    } catch (error) {
+      console.error('Error en entrega de documentos:', error);
+      return res.status(500).render('error', {
+        layout: 'caja',
+        title: 'Error',
+        message: 'Error al cargar la página de entrega de documentos',
+        error
+      });
+    }
+  },
+
+  /**
+   * Buscar documento para entrega (interfaz caja)
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  buscarDocumentoEntrega: async (req, res) => {
+    try {
+      const { codigo } = req.body;
+      const userId = req.matrizador.id;
+      
+      const documento = await Documento.findOne({
+        where: {
+          codigoBarras: codigo,
+          idMatrizador: userId, // Solo documentos asignados a este usuario
+          estado: 'listo_para_entrega'
+        },
+        include: [
+          {
+            model: Matrizador,
+            as: 'matrizador',
+            attributes: ['id', 'nombre']
+          }
+        ]
+      });
+
+      if (!documento) {
+        return res.json({
+          success: false,
+          message: 'Documento no encontrado, no está listo para entrega o no está asignado a usted'
+        });
+      }
+
+      res.json({
+        success: true,
+        documento: {
+          id: documento.id,
+          codigoBarras: documento.codigoBarras,
+          tipoDocumento: documento.tipoDocumento,
+          nombreCliente: documento.nombreCliente,
+          identificacionCliente: documento.identificacionCliente,
+          codigoVerificacion: documento.codigoVerificacion,
+          notificarAutomatico: documento.notificarAutomatico,
+          metodoNotificacion: documento.metodoNotificacion
+        }
+      });
+    } catch (error) {
+      console.error('Error buscando documento:', error);
+      res.json({ 
+        success: false, 
+        message: 'Error interno del servidor' 
+      });
+    }
+  },
+
+  /**
+   * Procesar entrega de documento (interfaz caja)
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  procesarEntregaDocumento: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.matrizador.id;
+      const {
+        nombreReceptor,
+        identificacionReceptor,
+        relacionReceptor,
+        codigoIngresado
+      } = req.body;
+
+      // Iniciar transacción
+      const transaction = await sequelize.transaction();
+
+      try {
+        const documento = await Documento.findOne({
+          where: {
+            id,
+            idMatrizador: userId // Solo documentos asignados a este usuario
+          },
+          transaction
+        });
+
+        if (!documento) {
+          await transaction.rollback();
+          return res.json({ 
+            success: false, 
+            message: 'Documento no encontrado o no asignado a usted' 
+          });
+        }
+
+        if (documento.estado !== 'listo_para_entrega') {
+          await transaction.rollback();
+          return res.json({ 
+            success: false, 
+            message: 'El documento no está listo para entrega' 
+          });
+        }
+
+        // Validar código de verificación si es necesario
+        if (documento.codigoVerificacion && documento.notificarAutomatico) {
+          if (!codigoIngresado || codigoIngresado !== documento.codigoVerificacion) {
+            await transaction.rollback();
+            return res.json({ 
+              success: false, 
+              message: 'Código de verificación incorrecto' 
+            });
+          }
+        }
+
+        // Procesar entrega
+        await documento.update({
+          estado: 'entregado',
+          fechaEntrega: obtenerTimestampEcuador(),
+          nombreReceptor: nombreReceptor || null,
+          identificacionReceptor: identificacionReceptor || null,
+          relacionReceptor: relacionReceptor || 'titular'
+        }, { transaction });
+
+        // Registrar evento de entrega
+        await EventoDocumento.create({
+          idDocumento: documento.id,
+          tipo: 'entrega',
+          detalles: `Documento entregado por ${req.matrizador.nombre} (caja_archivo) a ${nombreReceptor || 'receptor no especificado'}`,
+          usuario: req.matrizador.nombre,
+          metadatos: JSON.stringify({
+            entregadoPor: req.matrizador.id,
+            nombreReceptor,
+            identificacionReceptor,
+            relacionReceptor,
+            codigoVerificado: !!codigoIngresado
+          })
+        }, { transaction });
+
+        // Confirmar transacción
+        await transaction.commit();
+
+        res.json({
+          success: true,
+          message: 'Documento entregado exitosamente',
+          documento: {
+            codigoBarras: documento.codigoBarras,
+            nombreCliente: documento.nombreCliente,
+            nombreReceptor
+          }
+        });
+      } catch (error) {
+        await transaction.rollback();
+        throw error;
+      }
+    } catch (error) {
+      console.error('Error procesando entrega:', error);
+      res.json({ 
+        success: false, 
+        message: 'Error procesando entrega: ' + error.message 
       });
     }
   }

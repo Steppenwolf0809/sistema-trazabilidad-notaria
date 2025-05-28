@@ -15,8 +15,10 @@ module.exports = function roleAuth(rolesPermitidos) {
       return next();
     }
     
-    // Regla especial: Si la ruta comienza con '/matrizador' y el usuario es matrizador, permitir acceso
-    if (req.path.startsWith('/matrizador') && req.matrizador.rol === 'matrizador') {
+    // ============== PERMISOS HÍBRIDOS PARA CAJA_ARCHIVO ==============
+    
+    // Regla especial: Si la ruta comienza con '/matrizador' y el usuario es matrizador O caja_archivo, permitir acceso
+    if (req.path.startsWith('/matrizador') && (req.matrizador.rol === 'matrizador' || req.matrizador.rol === 'caja_archivo')) {
       return next();
     }
     
@@ -25,8 +27,8 @@ module.exports = function roleAuth(rolesPermitidos) {
       return next();
     }
     
-    // Regla especial: Si la ruta comienza con '/caja' y el usuario es caja, permitir acceso
-    if (req.path.startsWith('/caja') && req.matrizador.rol === 'caja') {
+    // Regla especial: Si la ruta comienza con '/caja' y el usuario es caja O caja_archivo, permitir acceso
+    if (req.path.startsWith('/caja') && (req.matrizador.rol === 'caja' || req.matrizador.rol === 'caja_archivo')) {
       return next();
     }
     
@@ -35,7 +37,8 @@ module.exports = function roleAuth(rolesPermitidos) {
     // Si no tiene permiso, renderizar página de acceso denegado con el layout correspondiente
     const layout = req.matrizador.rol === 'matrizador' ? 'matrizador' : 
                    req.matrizador.rol === 'recepcion' ? 'recepcion' : 
-                   req.matrizador.rol === 'caja' ? 'caja' : 'admin';
+                   req.matrizador.rol === 'caja' ? 'caja' :
+                   req.matrizador.rol === 'caja_archivo' ? 'caja' : 'admin'; // caja_archivo usa layout de caja por defecto
                    
     return res.status(403).render('acceso_denegado', {
       layout,
@@ -44,4 +47,32 @@ module.exports = function roleAuth(rolesPermitidos) {
       userRole: req.matrizador.rol
     });
   };
-}; 
+};
+
+// ============== MIDDLEWARES ESPECÍFICOS ==============
+
+/**
+ * Middleware específico para usuarios caja_archivo
+ */
+const esCajaArchivo = (req, res, next) => {
+  if (!req.matrizador || !req.matrizador.rol) {
+    return res.redirect('/login?error=no_autorizado');
+  }
+  
+  const rol = req.matrizador.rol;
+  if (rol === 'caja_archivo' || rol === 'admin') {
+    return next();
+  }
+  
+  const layout = req.matrizador.rol === 'caja' ? 'caja' : 'admin';
+  return res.status(403).render('acceso_denegado', {
+    layout,
+    title: 'Acceso denegado',
+    message: 'Esta función solo está disponible para usuarios con rol caja_archivo',
+    userName: req.matrizador.nombre,
+    userRole: req.matrizador.rol
+  });
+};
+
+// Exportar tanto la función principal como los middlewares específicos
+module.exports.esCajaArchivo = esCajaArchivo; 

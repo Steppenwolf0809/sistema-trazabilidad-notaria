@@ -115,6 +115,14 @@
                 <i class="fas fa-lock me-2"></i> Verificación
               </div>
               <div class="card-body">
+                {{#if documento.codigoVerificacion}}
+                <!-- Documento CON código de verificación -->
+                <div class="alert alert-info mb-3">
+                  <i class="fas fa-info-circle me-2"></i>
+                  <strong>Documento con código de verificación</strong><br>
+                  <small>El cliente debe proporcionar el código de 4 dígitos que recibió por notificación.</small>
+                </div>
+                
                 <div class="mb-3">
                   <label class="form-label d-block">Método de verificación*</label>
                   <div class="form-check form-check-inline">
@@ -138,6 +146,60 @@
                   <textarea class="form-control" id="observaciones" name="observaciones" rows="3"></textarea>
                   <div class="form-text">Detalle la información de la llamada: hora, quién atendió, número al que se llamó, etc.</div>
                 </div>
+                {{else}}
+                <!-- Documento SIN código de verificación -->
+                <div class="alert alert-warning mb-3">
+                  <i class="fas fa-exclamation-triangle me-2"></i>
+                  <strong>Documento sin código de verificación</strong><br>
+                  <small>Este documento fue configurado para no enviar notificaciones automáticas o es de entrega inmediata.</small>
+                </div>
+                
+                <div class="card bg-light mb-3">
+                  <div class="card-body">
+                    <h6 class="card-title"><i class="fas fa-shield-alt me-2"></i>Métodos de verificación alternativos:</h6>
+                    <ul class="mb-0">
+                      <li><strong>Cédula de identidad:</strong> Verificar que coincida con los datos del documento</li>
+                      <li><strong>Número de factura:</strong> {{#if documento.numeroFactura}}{{documento.numeroFactura}}{{else}}Solicitar al cliente{{/if}}</li>
+                      <li><strong>Datos del cliente:</strong> Nombre completo y número de identificación</li>
+                      <li><strong>Llamada de confirmación:</strong> Contactar al cliente para verificar la entrega</li>
+                    </ul>
+                  </div>
+                </div>
+                
+                <div class="mb-3">
+                  <label class="form-label d-block">Método de verificación utilizado*</label>
+                  <div class="form-check">
+                    <input class="form-check-input" type="radio" name="tipoVerificacion" id="verificacionIdentidad" value="identidad" checked>
+                    <label class="form-check-label" for="verificacionIdentidad">
+                      <strong>Verificación por cédula de identidad</strong><br>
+                      <small class="text-muted">El receptor presenta cédula que coincide con los datos del documento</small>
+                    </label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="radio" name="tipoVerificacion" id="verificacionFactura" value="factura">
+                    <label class="form-check-label" for="verificacionFactura">
+                      <strong>Verificación por número de factura</strong><br>
+                      <small class="text-muted">El cliente proporciona el número de factura correcto</small>
+                    </label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="radio" name="tipoVerificacion" id="verificacionLlamadaAlt" value="llamada">
+                    <label class="form-check-label" for="verificacionLlamadaAlt">
+                      <strong>Verificación por llamada telefónica</strong><br>
+                      <small class="text-muted">Llamar al cliente para confirmar la entrega</small>
+                    </label>
+                  </div>
+                </div>
+                
+                <div id="divObservacionesAlt" class="mb-3 d-none">
+                  <label for="observacionesAlt" class="form-label">Detalles de la verificación*</label>
+                  <textarea class="form-control" id="observacionesAlt" name="observaciones" rows="3" placeholder="Ejemplo: Cliente presentó cédula 1234567890 que coincide con los datos del documento..."></textarea>
+                  <div class="form-text">Describa el método de verificación utilizado y los detalles relevantes.</div>
+                </div>
+                
+                <!-- Campo oculto para indicar que no hay código -->
+                <input type="hidden" name="codigoVerificacion" value="sin_codigo">
+                {{/if}}
               </div>
             </div>
             
@@ -258,7 +320,7 @@
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    // Controlar visibilidad de campos según método de verificación
+    // Elementos para documentos CON código de verificación
     const verificacionCodigo = document.getElementById('verificacionCodigo');
     const verificacionLlamada = document.getElementById('verificacionLlamada');
     const divCodigoVerificacion = document.getElementById('divCodigoVerificacion');
@@ -266,6 +328,14 @@
     const codigoVerificacion = document.getElementById('codigoVerificacion');
     const observaciones = document.getElementById('observaciones');
     
+    // Elementos para documentos SIN código de verificación
+    const verificacionIdentidad = document.getElementById('verificacionIdentidad');
+    const verificacionFactura = document.getElementById('verificacionFactura');
+    const verificacionLlamadaAlt = document.getElementById('verificacionLlamadaAlt');
+    const divObservacionesAlt = document.getElementById('divObservacionesAlt');
+    const observacionesAlt = document.getElementById('observacionesAlt');
+    
+    // Lógica para documentos CON código de verificación
     if (verificacionCodigo && verificacionLlamada) {
       verificacionCodigo.addEventListener('change', updateVerificationMethod);
       verificacionLlamada.addEventListener('change', updateVerificationMethod);
@@ -283,6 +353,39 @@
           observaciones.setAttribute('required', '');
         }
       }
+    }
+    
+    // Lógica para documentos SIN código de verificación
+    if (verificacionIdentidad && verificacionFactura && verificacionLlamadaAlt) {
+      verificacionIdentidad.addEventListener('change', updateAlternativeVerification);
+      verificacionFactura.addEventListener('change', updateAlternativeVerification);
+      verificacionLlamadaAlt.addEventListener('change', updateAlternativeVerification);
+      
+      function updateAlternativeVerification() {
+        if (verificacionLlamadaAlt.checked) {
+          // Mostrar campo de observaciones para llamada
+          divObservacionesAlt.classList.remove('d-none');
+          observacionesAlt.setAttribute('required', '');
+          observacionesAlt.placeholder = 'Ejemplo: Llamé al 0987654321, atendió María Pérez (esposa del titular), confirmó que autoriza la entrega...';
+        } else if (verificacionIdentidad.checked) {
+          // Mostrar campo de observaciones para verificación por cédula
+          divObservacionesAlt.classList.remove('d-none');
+          observacionesAlt.setAttribute('required', '');
+          observacionesAlt.placeholder = 'Ejemplo: Cliente presentó cédula 1234567890 que coincide con los datos del documento. Nombre: Juan Pérez...';
+        } else if (verificacionFactura.checked) {
+          // Mostrar campo de observaciones para verificación por factura
+          divObservacionesAlt.classList.remove('d-none');
+          observacionesAlt.setAttribute('required', '');
+          observacionesAlt.placeholder = 'Ejemplo: Cliente proporcionó número de factura 001-001-000123456 que coincide con el documento...';
+        } else {
+          // Ocultar observaciones
+          divObservacionesAlt.classList.add('d-none');
+          observacionesAlt.removeAttribute('required');
+        }
+      }
+      
+      // Inicializar estado
+      updateAlternativeVerification();
     }
   });
 </script> 

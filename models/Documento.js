@@ -158,7 +158,7 @@ const Documento = sequelize.define('Documento', {
   },
   
   rolUsuarioCreador: {
-    type: DataTypes.ENUM('admin', 'matrizador', 'recepcion', 'caja'),
+    type: DataTypes.ENUM('admin', 'matrizador', 'recepcion', 'caja', 'caja_archivo'),
     field: 'rol_usuario_creador',
     allowNull: true
   },

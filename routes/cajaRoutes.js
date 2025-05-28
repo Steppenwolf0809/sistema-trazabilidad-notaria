@@ -40,8 +40,8 @@ const upload = multer({
 // Middleware global para validar token 
 router.use(verificarToken);
 
-// Middleware ESTRICTO - Solo usuarios con rol 'caja' pueden acceder
-router.use(validarAccesoConAuditoria(['caja']));
+// Middleware ESTRICTO - Solo usuarios con rol 'caja' o 'caja_archivo' pueden acceder
+router.use(validarAccesoConAuditoria(['caja', 'caja_archivo']));
 
 // Dashboard de Caja
 router.get('/', cajaController.dashboard);
@@ -52,6 +52,31 @@ router.get('/documentos', cajaController.listarDocumentos);
 router.get('/documentos/detalle/:id', cajaController.verDocumento);
 router.get('/documentos/registro', cajaController.mostrarFormularioRegistro);
 router.post('/documentos/registro', cajaController.registrarDocumento);
+
+// ============== NUEVAS RUTAS PARA FUNCIONALIDAD HÍBRIDA CAJA_ARCHIVO ==============
+
+// Nueva ruta para "Mis Documentos" que mantenga interfaz de caja
+router.get('/mis-documentos', 
+  roleAuth.esCajaArchivo,  // Solo para usuarios caja_archivo
+  cajaController.misDocumentosMatrizador
+);
+
+// Rutas para editar documentos desde interfaz de caja
+router.get('/documentos/editar/:id', 
+  roleAuth.esCajaArchivo, 
+  cajaController.editarDocumentoMatrizador
+);
+
+router.post('/documentos/editar/:id', 
+  roleAuth.esCajaArchivo, 
+  cajaController.actualizarDocumentoMatrizador
+);
+
+// Ruta para marcar documento como listo desde interfaz de caja
+router.post('/documentos/marcar-listo/:id', 
+  roleAuth.esCajaArchivo, 
+  cajaController.marcarDocumentoListoMatrizador
+);
 
 // Rutas para registro de documentos vía XML
 router.get('/documentos/nuevo-xml', cajaController.mostrarFormularioXML);
@@ -80,6 +105,24 @@ router.post('/reportes/recordar-masivo', cajaController.recordarPagoMasivo);
 router.get('/reportes/exportar-pendientes', cajaController.exportarPendientes);
 router.get('/reportes/pendientes-pdf', cajaController.generarPdfPendientes);
 router.post('/documentos/marcar-pagado/:id', cajaController.marcarComoPagado);
+
+// ============== NUEVAS RUTAS PARA ENTREGA DE DOCUMENTOS EN INTERFAZ CAJA ==============
+
+// Entrega de documentos para caja_archivo (mantiene interfaz caja)
+router.get('/entrega-documentos', 
+  roleAuth.esCajaArchivo, 
+  cajaController.entregaDocumentos
+);
+
+router.post('/entrega-documentos/buscar', 
+  roleAuth.esCajaArchivo, 
+  cajaController.buscarDocumentoEntrega
+);
+
+router.post('/entrega-documentos/procesar/:id', 
+  roleAuth.esCajaArchivo, 
+  cajaController.procesarEntregaDocumento
+);
 
 // Exportar router
 module.exports = router; 

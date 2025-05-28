@@ -192,6 +192,31 @@
           <i class="fas fa-chart-pie"></i> Reportes y Estadísticas
         </a>
       </li>
+      
+      {{! ============== NAVEGACIÓN HÍBRIDA PARA CAJA_ARCHIVO ============== }}
+      {{#if (eq userRole 'caja_archivo')}}
+        <div class="sidebar-heading">
+          <i class="fas fa-user-edit me-1"></i> Funciones de Matrizador
+        </div>
+        
+        <li class="nav-item">
+          <a class="nav-link {{#if activeMisDocumentos}}active{{/if}}" href="/caja/mis-documentos">
+            <i class="fas fa-file-edit"></i> Mis Documentos
+          </a>
+        </li>
+        
+        <li class="nav-item">
+          <a class="nav-link {{#if activeEntregaDocumentos}}active{{/if}}" href="/caja/entrega-documentos">
+            <i class="fas fa-hand-holding"></i> Entrega de Documentos
+          </a>
+        </li>
+        
+        <div class="sidebar-heading">
+          <small class="text-muted">
+            <i class="fas fa-info-circle me-1"></i> Acceso Híbrido Activo
+          </small>
+        </div>
+      {{/if}}
     </ul>
   </div>
 

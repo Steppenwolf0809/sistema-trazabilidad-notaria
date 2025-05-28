@@ -539,27 +539,73 @@ exports.completarEntrega = async (req, res) => {
       throw new Error('Este documento no está listo para entrega');
     }
     
-    // Determinar el tipo de verificación
-    const verificacionPorLlamada = tipoVerificacion === 'llamada';
-    let verificacionExitosa = verificacionPorLlamada || (documento.codigoVerificacion === codigoVerificacion);
+    // ============== VALIDACIÓN ACTUALIZADA: CÓDIGO DE VERIFICACIÓN CONDICIONAL ==============
     
-    // Verificación del código (a menos que sea por llamada)
-    if (!verificacionPorLlamada && !verificacionExitosa) {
-      // Registrar intento fallido en auditoría
-      await RegistroAuditoria.create({
-        idDocumento: documento.id,
-        idMatrizador: req.matrizador.id,
-        accion: 'verificacion_codigo',
-        resultado: 'fallido',
-        ip: req.ip,
-        userAgent: req.get('User-Agent'),
-        detalles: `Intento fallido: código ingresado ${codigoVerificacion}, código correcto ${documento.codigoVerificacion}`
-      }, { transaction });
+    // Verificar si el documento tiene código de verificación
+    const tieneCodigoVerificacion = documento.codigoVerificacion && documento.codigoVerificacion !== 'sin_codigo';
+    
+    if (tieneCodigoVerificacion) {
+      // Documento CON código de verificación - validación tradicional
+      if (tipoVerificacion === 'codigo') {
+        if (!codigoVerificacion || documento.codigoVerificacion !== codigoVerificacion) {
+          // Registrar intento fallido en auditoría
+          await RegistroAuditoria.create({
+            idDocumento: documento.id,
+            idMatrizador: req.matrizador?.id,
+            accion: 'verificacion_codigo',
+            resultado: 'fallido',
+            ip: req.ip,
+            userAgent: req.get('User-Agent'),
+            detalles: `Intento fallido: código ingresado ${codigoVerificacion}, código correcto ${documento.codigoVerificacion}`
+          }, { transaction });
+          
+          await transaction.rollback();
+          req.flash('error', 'El código de verificación no es válido');
+          return res.redirect(getBasePath(req) + '/entrega/' + id);
+        }
+      } else if (tipoVerificacion === 'llamada') {
+        if (!observaciones || observaciones.trim().length < 10) {
+          await transaction.rollback();
+          req.flash('error', 'Debe proporcionar observaciones detalladas de la verificación por llamada (mínimo 10 caracteres)');
+          return res.redirect(getBasePath(req) + '/entrega/' + id);
+        }
+      }
+    } else {
+      // Documento SIN código de verificación - validación alternativa
+      console.log(`📋 Validando entrega sin código para documento ${documento.codigoBarras} con método: ${tipoVerificacion}`);
       
-      // No hacer commit de la transacción en caso de error
-      await transaction.rollback();
-      req.flash('error', 'El código de verificación no es válido');
-      return res.redirect(getBasePath(req) + '/entrega/' + id);
+      if (!tipoVerificacion || !['identidad', 'factura', 'llamada'].includes(tipoVerificacion)) {
+        await transaction.rollback();
+        req.flash('error', 'Debe seleccionar un método de verificación válido para documentos sin código');
+        return res.redirect(getBasePath(req) + '/entrega/' + id);
+      }
+      
+      if (!observaciones || observaciones.trim().length < 15) {
+        await transaction.rollback();
+        req.flash('error', 'Debe proporcionar detalles específicos del método de verificación utilizado (mínimo 15 caracteres)');
+        return res.redirect(getBasePath(req) + '/entrega/' + id);
+      }
+      
+      // Validaciones específicas por tipo de verificación
+      if (tipoVerificacion === 'identidad') {
+        if (!observaciones.toLowerCase().includes('cédula') && !observaciones.toLowerCase().includes('cedula')) {
+          await transaction.rollback();
+          req.flash('error', 'Para verificación por identidad, debe mencionar la cédula en las observaciones');
+          return res.redirect(getBasePath(req) + '/entrega/' + id);
+        }
+      } else if (tipoVerificacion === 'factura') {
+        if (!observaciones.toLowerCase().includes('factura')) {
+          await transaction.rollback();
+          req.flash('error', 'Para verificación por factura, debe mencionar el número de factura en las observaciones');
+          return res.redirect(getBasePath(req) + '/entrega/' + id);
+        }
+      } else if (tipoVerificacion === 'llamada') {
+        if (!observaciones.toLowerCase().includes('llamé') && !observaciones.toLowerCase().includes('llame') && !observaciones.toLowerCase().includes('teléfono') && !observaciones.toLowerCase().includes('telefono')) {
+          await transaction.rollback();
+          req.flash('error', 'Para verificación por llamada, debe describir los detalles de la llamada telefónica');
+          return res.redirect(getBasePath(req) + '/entrega/' + id);
+        }
+      }
     }
     
     // Actualizar datos de entrega
@@ -571,19 +617,60 @@ exports.completarEntrega = async (req, res) => {
     
     await documento.save({ transaction });
     
-    // Registrar evento de entrega
+    // Registrar evento de entrega con detalles específicos del tipo de verificación
+    let detalles = '';
+    
+    if (tieneCodigoVerificacion) {
+      // Documento con código de verificación
+      if (tipoVerificacion === 'codigo') {
+        detalles = `Entregado a ${nombreReceptor} con código de verificación ${documento.codigoVerificacion}`;
+      } else if (tipoVerificacion === 'llamada') {
+        detalles = `Entregado a ${nombreReceptor} con verificación por llamada: ${observaciones}`;
+      }
+    } else {
+      // Documento sin código de verificación
+      if (tipoVerificacion === 'identidad') {
+        detalles = `Entregado a ${nombreReceptor} con verificación por cédula de identidad: ${observaciones}`;
+      } else if (tipoVerificacion === 'factura') {
+        detalles = `Entregado a ${nombreReceptor} con verificación por número de factura: ${observaciones}`;
+      } else if (tipoVerificacion === 'llamada') {
+        detalles = `Entregado a ${nombreReceptor} con verificación por llamada telefónica: ${observaciones}`;
+      }
+    }
+    
     await EventoDocumento.create({
       idDocumento: documento.id,
       tipo: 'entrega',
-      detalles: `Entregado a ${nombreReceptor} (${relacionReceptor})`,
+      detalles,
       usuario: req.matrizador?.nombre || 'Sistema'
     }, { transaction });
     
     // Registrar evento de verificación con el método utilizado
-    const tipoEvento = verificacionPorLlamada ? 'verificacion_llamada' : 'verificacion_codigo';
-    const detallesVerificacion = verificacionPorLlamada 
-      ? `Verificación por llamada: ${observaciones || 'Sin observaciones'}`
-      : `Verificación con código: ${codigoVerificacion}`;
+    let tipoEvento = '';
+    let detallesVerificacion = '';
+    
+    if (tieneCodigoVerificacion) {
+      // Documento con código de verificación
+      if (tipoVerificacion === 'codigo') {
+        tipoEvento = 'verificacion_codigo';
+        detallesVerificacion = `Verificación con código: ${documento.codigoVerificacion}`;
+      } else if (tipoVerificacion === 'llamada') {
+        tipoEvento = 'verificacion_llamada';
+        detallesVerificacion = `Verificación por llamada: ${observaciones || 'Sin observaciones'}`;
+      }
+    } else {
+      // Documento sin código de verificación
+      if (tipoVerificacion === 'identidad') {
+        tipoEvento = 'verificacion_identidad';
+        detallesVerificacion = `Verificación por cédula de identidad: ${observaciones}`;
+      } else if (tipoVerificacion === 'factura') {
+        tipoEvento = 'verificacion_factura';
+        detallesVerificacion = `Verificación por número de factura: ${observaciones}`;
+      } else if (tipoVerificacion === 'llamada') {
+        tipoEvento = 'verificacion_llamada';
+        detallesVerificacion = `Verificación por llamada telefónica: ${observaciones}`;
+      }
+    }
     
     await EventoDocumento.create({
       idDocumento: documento.id,
@@ -595,14 +682,12 @@ exports.completarEntrega = async (req, res) => {
     // Registrar en auditoría
     await RegistroAuditoria.create({
       idDocumento: documento.id,
-      idMatrizador: req.matrizador.id,
-      accion: verificacionPorLlamada ? 'verificacion_llamada' : 'verificacion_codigo',
+      idMatrizador: req.matrizador?.id,
+      accion: tipoEvento,
       resultado: 'exitoso',
       ip: req.ip,
       userAgent: req.get('User-Agent'),
-      detalles: verificacionPorLlamada 
-        ? `Verificación por llamada exitosa: ${observaciones || 'Sin observaciones'}` 
-        : `Verificación con código exitosa: ${codigoVerificacion}`
+      detalles: detallesVerificacion
     }, { transaction });
     
     await transaction.commit();
@@ -795,7 +880,7 @@ exports.mostrarDetalle = async (req, res) => {
     });
     
     // DEBUG temporal para caja
-    if (userRole === 'caja') {
+    if (userRole === 'caja' || userRole === 'caja_archivo') {
       console.log(`🔍 DEBUG CAJA - Documento ID: ${id}`);
       console.log(`📄 Estado documento: ${documento.estado}, Pago: ${documento.estadoPago}`);
       console.log(`📊 Total eventos encontrados: ${eventos.length}`);
@@ -848,7 +933,7 @@ exports.mostrarDetalle = async (req, res) => {
     
     // Para caja: obtener matrizadores para el modal de cambio
     let matrizadores = [];
-    if (userRole === 'caja' || userRole === 'admin') {
+    if (userRole === 'caja' || userRole === 'caja_archivo' || userRole === 'admin') {
       matrizadores = await Matrizador.findAll({
         where: {
           rol: 'matrizador',
@@ -2031,7 +2116,7 @@ function getLayoutAndViewBase(req) {
   if (req.matrizador) {
     if (req.matrizador.rol === 'matrizador') {
       return { layout: 'matrizador', viewBase: 'matrizadores/documentos' };
-    } else if (req.matrizador.rol === 'caja') {
+    } else if (req.matrizador.rol === 'caja' || req.matrizador.rol === 'caja_archivo') {
       return { layout: 'caja', viewBase: 'caja/documentos' };
     } else if (req.matrizador.rol === 'recepcion') {
       return { layout: 'recepcion', viewBase: 'recepcion/documentos' };
@@ -2045,7 +2130,7 @@ function getBasePath(req) {
   if (req.matrizador) {
     if (req.matrizador.rol === 'matrizador') {
       return '/matrizador/documentos';
-    } else if (req.matrizador.rol === 'caja') {
+    } else if (req.matrizador.rol === 'caja' || req.matrizador.rol === 'caja_archivo') {
       return '/caja/documentos';
     } else if (req.matrizador.rol === 'recepcion') {
       return '/recepcion/documentos';

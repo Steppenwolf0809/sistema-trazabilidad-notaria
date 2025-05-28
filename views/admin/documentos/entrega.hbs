@@ -9,14 +9,29 @@
           <!-- Modo: Verificación de documento específico -->
           <h5 class="mb-4">Verificación para Entrega</h5>
           
-          <div class="alert alert-info">
-            <div class="d-flex align-items-center">
-              <i class="fas fa-info-circle fa-2x me-3"></i>
-              <div>
-                <p class="mb-0">El cliente debe proporcionar el código de verificación de 4 dígitos que recibió por teléfono o correo electrónico.</p>
+          {{! ============== LÓGICA CONDICIONAL: CON O SIN CÓDIGO DE VERIFICACIÓN ============== }}
+          {{#if documento.codigoVerificacion}}
+            {{! Documento CON código de verificación - Interfaz tradicional }}
+            <div class="alert alert-info">
+              <div class="d-flex align-items-center">
+                <i class="fas fa-info-circle fa-2x me-3"></i>
+                <div>
+                  <p class="mb-0">El cliente debe proporcionar el código de verificación de 4 dígitos que recibió por teléfono o correo electrónico.</p>
+                </div>
               </div>
             </div>
-          </div>
+          {{else}}
+            {{! Documento SIN código de verificación - Métodos alternativos }}
+            <div class="alert alert-warning">
+              <div class="d-flex align-items-center">
+                <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+                <div>
+                  <h6 class="mb-1">Documento sin código de verificación</h6>
+                  <p class="mb-0">Este documento no tiene código de verificación. Use uno de los métodos alternativos de verificación.</p>
+                </div>
+              </div>
+            </div>
+          {{/if}}
           
           <div class="row mb-4">
             <div class="col-md-6">
@@ -41,36 +56,97 @@
             </div>
           </div>
           
-          <form id="formVerificacion" action="/admin/documentos/completar-entrega/{{documento.id}}" method="POST">
-            <!-- Sección de verificación -->
-            <div class="card bg-light mb-4">
-              <div class="card-body">
-                <h6 class="card-title">Verificación de Código</h6>
-                
-                <div class="form-group mb-3">
-                  <label for="codigoVerificacion" class="form-label">Código de 4 dígitos:</label>
-                  <div class="input-group">
-                    <input type="text" class="form-control form-control-lg text-center" id="codigoVerificacion" name="codigoVerificacion" 
-                           maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="0000" required
-                           style="letter-spacing: 0.5em; font-weight: bold;">
-                    <button class="btn btn-primary" type="submit">
-                      <i class="fas fa-check-circle me-1"></i> Verificar
+          <form id="formVerificacion" action="/admin/documentos/entrega/{{documento.id}}" method="POST">
+            {{#if documento.codigoVerificacion}}
+              {{! ============== INTERFAZ PARA DOCUMENTOS CON CÓDIGO ============== }}
+              <!-- Sección de verificación -->
+              <div class="card bg-light mb-4">
+                <div class="card-body">
+                  <h6 class="card-title">Verificación de Código</h6>
+                  
+                  <div class="form-group mb-3">
+                    <label for="codigoVerificacion" class="form-label">Código de 4 dígitos:</label>
+                    <div class="input-group">
+                      <input type="text" class="form-control form-control-lg text-center" id="codigoVerificacion" name="codigoVerificacion" 
+                             maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="0000" required
+                             style="letter-spacing: 0.5em; font-weight: bold;">
+                      <button class="btn btn-primary" type="submit">
+                        <i class="fas fa-check-circle me-1"></i> Verificar
+                      </button>
+                    </div>
+                    {{#if error}}
+                    <div class="text-danger mt-2">
+                      <i class="fas fa-exclamation-circle me-1"></i> {{error}}
+                    </div>
+                    {{/if}}
+                  </div>
+                  
+                  <div class="text-center mt-2">
+                    <button type="button" class="btn btn-link" data-bs-toggle="modal" data-bs-target="#verificacionLlamadaModal">
+                      <i class="fas fa-phone me-1"></i> El cliente no recuerda el código
                     </button>
                   </div>
+                </div>
+              </div>
+            {{else}}
+              {{! ============== INTERFAZ PARA DOCUMENTOS SIN CÓDIGO ============== }}
+              <!-- Sección de verificación alternativa -->
+              <div class="card bg-warning bg-opacity-10 mb-4">
+                <div class="card-body">
+                  <h6 class="card-title">
+                    <i class="fas fa-shield-alt me-2"></i>Métodos de Verificación Alternativos
+                  </h6>
+                  
+                  <div class="form-group mb-3">
+                    <label class="form-label">Seleccione el método de verificación:</label>
+                    <div class="row">
+                      <div class="col-md-4 mb-2">
+                        <div class="form-check">
+                          <input class="form-check-input" type="radio" name="tipoVerificacion" id="verificacionIdentidad" value="identidad" required>
+                          <label class="form-check-label" for="verificacionIdentidad">
+                            <i class="fas fa-id-card me-1"></i> Cédula de Identidad
+                          </label>
+                        </div>
+                      </div>
+                      <div class="col-md-4 mb-2">
+                        <div class="form-check">
+                          <input class="form-check-input" type="radio" name="tipoVerificacion" id="verificacionFactura" value="factura" required>
+                          <label class="form-check-label" for="verificacionFactura">
+                            <i class="fas fa-receipt me-1"></i> Número de Factura
+                          </label>
+                        </div>
+                      </div>
+                      <div class="col-md-4 mb-2">
+                        <div class="form-check">
+                          <input class="form-check-input" type="radio" name="tipoVerificacion" id="verificacionLlamada" value="llamada" required>
+                          <label class="form-check-label" for="verificacionLlamada">
+                            <i class="fas fa-phone me-1"></i> Llamada Telefónica
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="form-group mb-3">
+                    <label for="observaciones" class="form-label">Detalles de la verificación:</label>
+                    <textarea class="form-control" id="observaciones" name="observaciones" rows="3" 
+                              placeholder="Describa los detalles del método de verificación utilizado..." required></textarea>
+                    <div class="form-text">
+                      <strong>Ejemplos:</strong><br>
+                      • <em>Cédula:</em> "Verificada cédula 1234567890 coincide con cliente"<br>
+                      • <em>Factura:</em> "Verificado número de factura 001-001-000123456"<br>
+                      • <em>Llamada:</em> "Llamé al 0987654321, confirmó datos personales y trámite"
+                    </div>
+                  </div>
+                  
                   {{#if error}}
-                  <div class="text-danger mt-2">
+                  <div class="alert alert-danger">
                     <i class="fas fa-exclamation-circle me-1"></i> {{error}}
                   </div>
                   {{/if}}
                 </div>
-                
-                <div class="text-center mt-2">
-                  <button type="button" class="btn btn-link" data-bs-toggle="modal" data-bs-target="#verificacionLlamadaModal">
-                    <i class="fas fa-phone me-1"></i> El cliente no recuerda el código
-                  </button>
-                </div>
               </div>
-            </div>
+            {{/if}}
             
             <!-- Sección de datos del receptor -->
             <div class="card mb-4">
@@ -154,7 +230,8 @@
   </div>
 </div>
 
-<!-- Modal de verificación por llamada -->
+{{#if documento.codigoVerificacion}}
+<!-- Modal de verificación por llamada (solo para documentos CON código) -->
 <div class="modal fade" id="verificacionLlamadaModal" tabindex="-1" aria-labelledby="verificacionLlamadaModalLabel" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -198,66 +275,97 @@
     </div>
   </div>
 </div>
+{{/if}}
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    // Auto-focus en el campo de código
-    const codigoInput = document.getElementById('codigoVerificacion');
-    if (codigoInput) {
-      codigoInput.focus();
+    {{#if documento.codigoVerificacion}}
+      // ============== SCRIPT PARA DOCUMENTOS CON CÓDIGO ==============
+      // Auto-focus en el campo de código
+      const codigoInput = document.getElementById('codigoVerificacion');
+      if (codigoInput) {
+        codigoInput.focus();
+        
+        // Solo permitir dígitos
+        codigoInput.addEventListener('input', function(e) {
+          this.value = this.value.replace(/[^0-9]/g, '');
+        });
+        
+        // Submit del formulario cuando se complete el código
+        codigoInput.addEventListener('input', function() {
+          if (this.value.length === 4) {
+            // Dar tiempo para verificar visualmente
+            setTimeout(function() {
+              document.getElementById('nombreReceptor').focus();
+            }, 300);
+          }
+        });
+      }
       
-      // Solo permitir dígitos
-      codigoInput.addEventListener('input', function(e) {
-        this.value = this.value.replace(/[^0-9]/g, '');
+      // Verificación por llamada
+      const checkboxConfirmacion = document.getElementById('confirmacionLlamada');
+      const btnConfirmarLlamada = document.getElementById('confirmarVerificacionLlamada');
+      
+      if (checkboxConfirmacion && btnConfirmarLlamada) {
+        checkboxConfirmacion.addEventListener('change', function() {
+          btnConfirmarLlamada.disabled = !this.checked;
+        });
+        
+        btnConfirmarLlamada.addEventListener('click', function() {
+          const observaciones = document.getElementById('observacionesLlamada').value;
+          
+          // Preparar formulario para envío
+          const form = document.getElementById('formVerificacion');
+          
+          // Agregar campo oculto para indicar verificación por llamada
+          const inputTipoVerificacion = document.createElement('input');
+          inputTipoVerificacion.type = 'hidden';
+          inputTipoVerificacion.name = 'tipoVerificacion';
+          inputTipoVerificacion.value = 'llamada';
+          form.appendChild(inputTipoVerificacion);
+          
+          // Agregar observaciones
+          const inputObservaciones = document.createElement('input');
+          inputObservaciones.type = 'hidden';
+          inputObservaciones.name = 'observaciones';
+          inputObservaciones.value = observaciones;
+          form.appendChild(inputObservaciones);
+          
+          // Cerrar modal y enviar formulario
+          const modal = bootstrap.Modal.getInstance(document.getElementById('verificacionLlamadaModal'));
+          modal.hide();
+          form.submit();
+        });
+      }
+    {{else}}
+      // ============== SCRIPT PARA DOCUMENTOS SIN CÓDIGO ==============
+      // Validación de métodos alternativos
+      const tiposVerificacion = document.querySelectorAll('input[name="tipoVerificacion"]');
+      const observacionesTextarea = document.getElementById('observaciones');
+      
+      // Actualizar placeholder según el tipo seleccionado
+      tiposVerificacion.forEach(radio => {
+        radio.addEventListener('change', function() {
+          if (this.checked) {
+            switch(this.value) {
+              case 'identidad':
+                observacionesTextarea.placeholder = 'Ej: Verificada cédula 1234567890, coincide con el nombre del cliente y datos del documento';
+                break;
+              case 'factura':
+                observacionesTextarea.placeholder = 'Ej: Cliente presentó factura número 001-001-000123456, coincide con el documento';
+                break;
+              case 'llamada':
+                observacionesTextarea.placeholder = 'Ej: Llamé al 0987654321, cliente confirmó nombre completo, cédula y detalles del trámite';
+                break;
+            }
+          }
+        });
       });
       
-      // Submit del formulario cuando se complete el código
-      codigoInput.addEventListener('input', function() {
-        if (this.value.length === 4) {
-          // Dar tiempo para verificar visualmente
-          setTimeout(function() {
-            document.getElementById('nombreReceptor').focus();
-          }, 300);
-        }
-      });
-    }
-    
-    // Verificación por llamada
-    const checkboxConfirmacion = document.getElementById('confirmacionLlamada');
-    const btnConfirmarLlamada = document.getElementById('confirmarVerificacionLlamada');
-    
-    checkboxConfirmacion.addEventListener('change', function() {
-      btnConfirmarLlamada.disabled = !this.checked;
-    });
-    
-    btnConfirmarLlamada.addEventListener('click', function() {
-      const observaciones = document.getElementById('observacionesLlamada').value;
-      
-      // Preparar formulario para envío
-      const form = document.getElementById('formVerificacion');
-      
-      // Agregar campo oculto para indicar verificación por llamada
-      const inputTipoVerificacion = document.createElement('input');
-      inputTipoVerificacion.type = 'hidden';
-      inputTipoVerificacion.name = 'tipoVerificacion';
-      inputTipoVerificacion.value = 'llamada';
-      form.appendChild(inputTipoVerificacion);
-      
-      // Agregar observaciones
-      const inputObservaciones = document.createElement('input');
-      inputObservaciones.type = 'hidden';
-      inputObservaciones.name = 'observaciones';
-      inputObservaciones.value = observaciones;
-      form.appendChild(inputObservaciones);
-      
-      // No necesitamos el código de verificación en este caso
-      document.getElementById('codigoVerificacion').removeAttribute('required');
-      
-      // Cerrar modal y enviar formulario
-      const modal = bootstrap.Modal.getInstance(document.getElementById('verificacionLlamadaModal'));
-      modal.hide();
-      
-      form.submit();
-    });
+      // Auto-focus en el primer método de verificación
+      if (tiposVerificacion.length > 0) {
+        tiposVerificacion[0].focus();
+      }
+    {{/if}}
   });
 </script> 

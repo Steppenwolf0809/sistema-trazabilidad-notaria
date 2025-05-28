@@ -509,6 +509,8 @@ app.get('/', (req, res) => {
         return res.redirect('/recepcion');
       case 'caja':
         return res.redirect('/caja');
+      case 'caja_archivo':
+        return res.redirect('/caja'); // caja_archivo redirige a caja por defecto
       default:
         return res.redirect('/login');
     }
@@ -566,6 +568,9 @@ app.use(async (req, res) => {
               break;
             case 'caja':
               layout = 'caja';
+              break;
+            case 'caja_archivo':
+              layout = 'caja'; // caja_archivo usa layout de caja
               break;
             default:
               layout = 'main';

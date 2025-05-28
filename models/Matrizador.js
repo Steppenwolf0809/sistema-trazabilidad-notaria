@@ -46,7 +46,7 @@ const Matrizador = sequelize.define('Matrizador', {
   
   // Rol del usuario en el sistema
   rol: {
-    type: DataTypes.ENUM('admin', 'matrizador', 'recepcion', 'consulta', 'caja'),
+    type: DataTypes.ENUM('admin', 'matrizador', 'recepcion', 'consulta', 'caja', 'caja_archivo'),
     allowNull: false,
     defaultValue: 'matrizador'
   },
