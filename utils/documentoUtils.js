@@ -79,18 +79,47 @@ function procesarFechaDocumento(fechaXML) {
     const mes = parseInt(partes[1]) - 1; // Mes base 0
     const año = parseInt(partes[2]);
     
-    // CORREGIDO: Crear fecha SIN zona horaria para mantener la fecha exacta del XML
-    // Usar UTC para evitar conversiones de zona horaria que cambien el día
-    const fecha = new Date(Date.UTC(año, mes, dia, 0, 0, 0, 0));
+    // 🔧 SOLUCIÓN DEFINITIVA: Crear fecha en timezone local de Ecuador
+    // Esto evita cualquier conversión automática de timezone
+    const fechaEcuador = moment.tz([año, mes, dia], TIMEZONE_ECUADOR).toDate();
     
     logger.debug('DOCUMENTO', 'Fecha XML procesada exitosamente', {
       fechaOriginal: fechaXML,
-      fechaProcesada: fecha,
-      fechaISO: fecha.toISOString(),
+      fechaProcesada: fechaEcuador,
+      fechaISO: fechaEcuador.toISOString(),
+      fechaLocal: fechaEcuador.toLocaleDateString('es-EC'),
       año, mes: mes + 1, dia
     });
     
-    return fecha;
+    // 🔧 VERIFICACIÓN: La fecha local debe coincidir con el XML
+    const fechaLocalFormateada = fechaEcuador.toLocaleDateString('es-EC');
+    const fechaXMLFormateada = fechaXML;
+    
+    // 🔧 COMPARACIÓN FLEXIBLE: Normalizar formatos para comparación
+    const normalizarFecha = (fecha) => {
+      return fecha.replace(/\b0(\d)\b/g, '$1'); // Remover ceros iniciales
+    };
+    
+    const fechaLocalNormalizada = normalizarFecha(fechaLocalFormateada);
+    const fechaXMLNormalizada = normalizarFecha(fechaXMLFormateada);
+    
+    if (fechaLocalNormalizada === fechaXMLNormalizada) {
+      logger.info('DOCUMENTO', '✅ Fecha procesada correctamente - coincide con XML', {
+        fechaXML: fechaXMLFormateada,
+        fechaLocal: fechaLocalFormateada,
+        fechaXMLNorm: fechaXMLNormalizada,
+        fechaLocalNorm: fechaLocalNormalizada
+      });
+    } else {
+      logger.warning('DOCUMENTO', '⚠️ Posible problema de timezone detectado', {
+        fechaXML: fechaXMLFormateada,
+        fechaLocal: fechaLocalFormateada,
+        fechaXMLNorm: fechaXMLNormalizada,
+        fechaLocalNorm: fechaLocalNormalizada
+      });
+    }
+    
+    return fechaEcuador;
   } catch (error) {
     logger.error('DOCUMENTO', 'Error al procesar fecha del documento', error);
     return null;

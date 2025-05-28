@@ -408,5 +408,186 @@ module.exports = {
   lowercase: function(str) {
     if (!str || typeof str !== 'string') return '';
     return str.toLowerCase();
+  },
+  
+  // ============== HELPERS ESPECÍFICOS DASHBOARD EJECUTIVO ==============
+  
+  /**
+   * Formatear fecha con timezone Ecuador (crítico para auditoría)
+   */
+  formatDateEcuador: function(date) {
+    if (!date) return 'N/A';
+    return moment(date).utcOffset(-5).format('DD/MM/YYYY HH:mm:ss');
+  },
+  
+  /**
+   * Formatear solo fecha con timezone Ecuador
+   */
+  formatDateOnlyEcuador: function(date) {
+    if (!date) return 'N/A';
+    return moment(date).utcOffset(-5).format('DD/MM/YYYY');
+  },
+  
+  /**
+   * Obtener clase CSS para métricas según valor
+   */
+  getMetricClass: function(value, type) {
+    if (type === 'money') {
+      if (value > 10000) return 'text-success';
+      if (value > 5000) return 'text-info';
+      if (value > 1000) return 'text-warning';
+      return 'text-danger';
+    }
+    if (type === 'count') {
+      if (value > 50) return 'text-success';
+      if (value > 20) return 'text-info';
+      if (value > 10) return 'text-warning';
+      return 'text-danger';
+    }
+    return 'text-primary';
+  },
+  
+  /**
+   * Formatear números grandes con K, M
+   */
+  formatLargeNumber: function(num) {
+    if (!num || isNaN(num)) return '0';
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+    return num.toString();
+  },
+  
+  /**
+   * Obtener icono para tendencia
+   */
+  getTrendIcon: function(current, previous) {
+    if (!previous || previous === 0) return 'fas fa-minus text-muted';
+    if (current > previous) return 'fas fa-arrow-up text-success';
+    if (current < previous) return 'fas fa-arrow-down text-danger';
+    return 'fas fa-minus text-muted';
+  },
+  
+  /**
+   * Calcular porcentaje de cambio
+   */
+  calculateChange: function(current, previous) {
+    if (!previous || previous === 0) return '0';
+    const change = ((current - previous) / previous) * 100;
+    return Math.abs(change).toFixed(1);
+  },
+  
+  /**
+   * Obtener clase CSS para prioridad
+   */
+  getPriorityClass: function(priority) {
+    const classes = {
+      'alta': 'text-danger',
+      'media': 'text-warning',
+      'baja': 'text-success',
+      'critica': 'text-danger fw-bold'
+    };
+    return classes[priority?.toLowerCase()] || 'text-muted';
+  },
+  
+  /**
+   * Obtener badge para estado de documento
+   */
+  getDocumentStatusBadge: function(estado) {
+    const badges = {
+      'en_proceso': 'badge bg-warning',
+      'listo_para_entrega': 'badge bg-success',
+      'entregado': 'badge bg-info',
+      'cancelado': 'badge bg-secondary',
+      'eliminado': 'badge bg-danger',
+      'pendiente': 'badge bg-warning',
+      'pagado': 'badge bg-success'
+    };
+    return badges[estado] || 'badge bg-secondary';
+  },
+  
+  /**
+   * Formatear tiempo de actividad reciente
+   */
+  formatActivityTime: function(date) {
+    if (!date) return 'Nunca';
+    const now = moment();
+    const activityDate = moment(date);
+    const diffMinutes = now.diff(activityDate, 'minutes');
+    
+    if (diffMinutes < 1) return 'Ahora mismo';
+    if (diffMinutes < 60) return `Hace ${diffMinutes} min`;
+    if (diffMinutes < 1440) return `Hace ${Math.floor(diffMinutes / 60)} h`;
+    return activityDate.format('DD/MM HH:mm');
+  },
+  
+  /**
+   * Obtener iniciales para avatar
+   */
+  getInitials: function(name) {
+    if (!name) return '??';
+    const words = name.split(' ');
+    if (words.length >= 2) {
+      return (words[0][0] + words[1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  },
+  
+  /**
+   * Obtener color de avatar basado en nombre
+   */
+  getAvatarColor: function(name) {
+    if (!name) return 'bg-secondary';
+    const colors = ['bg-primary', 'bg-success', 'bg-info', 'bg-warning', 'bg-danger'];
+    const index = name.length % colors.length;
+    return colors[index];
+  },
+  
+  /**
+   * Formatear duración en días/horas/minutos
+   */
+  formatDuration: function(minutes) {
+    if (!minutes || minutes < 1) return '0 min';
+    if (minutes < 60) return `${Math.round(minutes)} min`;
+    if (minutes < 1440) return `${Math.round(minutes / 60)} h`;
+    return `${Math.round(minutes / 1440)} días`;
+  },
+  
+  /**
+   * Verificar si una fecha es hoy
+   */
+  isToday: function(date) {
+    if (!date) return false;
+    return moment(date).isSame(moment(), 'day');
+  },
+  
+  /**
+   * Verificar si una fecha es esta semana
+   */
+  isThisWeek: function(date) {
+    if (!date) return false;
+    return moment(date).isSame(moment(), 'week');
+  },
+  
+  /**
+   * Obtener clase CSS para urgencia de documento
+   */
+  getUrgencyClass: function(fechaCreacion, estado) {
+    if (estado === 'entregado' || estado === 'cancelado') return 'text-muted';
+    
+    const dias = moment().diff(moment(fechaCreacion), 'days');
+    if (dias > 30) return 'text-danger fw-bold';
+    if (dias > 15) return 'text-warning';
+    if (dias > 7) return 'text-info';
+    return 'text-success';
+  },
+  
+  /**
+   * Formatear período de tiempo
+   */
+  formatPeriod: function(fechaInicio, fechaFin) {
+    if (!fechaInicio || !fechaFin) return 'Período no definido';
+    const inicio = moment(fechaInicio).format('DD/MM/YYYY');
+    const fin = moment(fechaFin).format('DD/MM/YYYY');
+    return `${inicio} - ${fin}`;
   }
 }; 

@@ -1,0 +1,702 @@
+/* ========================================
+   PRONOTARY - SISTEMA DE GESTIÓN NOTARIAL
+   Interfaz de Login Moderna - Notaría 18
+   Dra. Glenda Elizabeth Zapata Silva
+   ======================================== */
+
+/* Variables CSS para el tema ProNotary */
+:root {
+  /* Paleta de colores oficial Notaría 18 */
+  --azul-principal: #1E88E5;
+  --azul-oscuro: #0D47A1;
+  --azul-claro: #E3F2FD;
+  --gris-elegante: #37474F;
+  --blanco: #FFFFFF;
+  --acento-dorado: #FFC107;
+  
+  /* Gradientes */
+  --gradiente-azul: linear-gradient(135deg, #1E88E5 0%, #0D47A1 100%);
+  --gradiente-sutil: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+  
+  /* Tipografía */
+  --font-principal: 'Poppins', 'Segoe UI', sans-serif;
+  --font-secundaria: 'Open Sans', 'Roboto', sans-serif;
+  
+  /* Sombras */
+  --sombra-suave: 0 4px 20px rgba(30, 136, 229, 0.15);
+  --sombra-elevada: 0 8px 32px rgba(30, 136, 229, 0.25);
+  --sombra-texto: 0 2px 4px rgba(0, 0, 0, 0.1);
+  
+  /* Transiciones */
+  --transicion-suave: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transicion-rapida: all 0.2s ease-out;
+}
+
+/* Reset y configuración base */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Configuración del body para login */
+body.login-page {
+  font-family: var(--font-secundaria);
+  height: 100vh;
+  overflow: hidden;
+  background: var(--gradiente-sutil);
+  position: relative;
+}
+
+/* Contenedor principal del login */
+.login-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  height: 100vh;
+  min-height: 600px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ========================================
+   LADO IZQUIERDO - BRANDING Y PRESENTACIÓN
+   ======================================== */
+
+.login-branding {
+  background: var(--gradiente-azul);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 3rem;
+  position: relative;
+  overflow: hidden;
+  color: var(--blanco);
+  text-align: center;
+}
+
+/* Elementos decorativos de fondo */
+.login-branding::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+  animation: float 20s ease-in-out infinite;
+  z-index: 1;
+}
+
+.login-branding::after {
+  content: '';
+  position: absolute;
+  top: 20%;
+  right: -10%;
+  width: 300px;
+  height: 300px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 50%;
+  animation: pulse 4s ease-in-out infinite;
+  z-index: 1;
+}
+
+/* Contenido del branding */
+.branding-content {
+  position: relative;
+  z-index: 2;
+  max-width: 400px;
+}
+
+/* Logo GZS */
+.logo-gzs {
+  width: 120px;
+  height: 120px;
+  background: var(--blanco);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 2rem;
+  box-shadow: var(--sombra-elevada);
+  position: relative;
+  animation: slideInLeft 1s ease-out;
+}
+
+.logo-gzs .logo-text {
+  font-family: var(--font-principal);
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--azul-principal);
+  text-shadow: none;
+}
+
+.logo-gzs .notaria-number {
+  position: absolute;
+  bottom: -5px;
+  right: -5px;
+  background: var(--acento-dorado);
+  color: var(--azul-oscuro);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Títulos principales */
+.sistema-titulo {
+  font-family: var(--font-principal);
+  font-size: 2.8rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  text-shadow: var(--sombra-texto);
+  animation: slideInLeft 1s ease-out 0.2s both;
+}
+
+.sistema-subtitulo {
+  font-size: 1.3rem;
+  font-weight: 300;
+  margin-bottom: 2rem;
+  opacity: 0.9;
+  animation: slideInLeft 1s ease-out 0.4s both;
+}
+
+/* Información de la notaría */
+.notaria-info {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-top: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  animation: slideInLeft 1s ease-out 0.6s both;
+}
+
+.notaria-nombre {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.notaria-titular {
+  font-size: 1rem;
+  opacity: 0.9;
+  margin-bottom: 1rem;
+}
+
+.notaria-detalles {
+  font-size: 0.9rem;
+  opacity: 0.8;
+  line-height: 1.6;
+}
+
+/* Icono decorativo */
+.icono-justicia {
+  position: absolute;
+  bottom: 2rem;
+  left: 2rem;
+  font-size: 3rem;
+  opacity: 0.3;
+  animation: float 3s ease-in-out infinite;
+}
+
+/* ========================================
+   LADO DERECHO - FORMULARIO DE LOGIN
+   ======================================== */
+
+.login-form-section {
+  background: var(--blanco);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  position: relative;
+}
+
+/* Contenedor del formulario */
+.form-container {
+  width: 100%;
+  max-width: 400px;
+  animation: slideInRight 1s ease-out;
+}
+
+/* Encabezado del formulario */
+.form-header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.form-titulo {
+  font-family: var(--font-principal);
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--gris-elegante);
+  margin-bottom: 0.5rem;
+}
+
+.form-subtitulo {
+  color: var(--gris-elegante);
+  opacity: 0.7;
+  font-size: 1rem;
+}
+
+/* Estilos del formulario */
+.login-form {
+  width: 100%;
+}
+
+/* Grupos de campos */
+.form-group {
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 500;
+  color: var(--gris-elegante);
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+/* Contenedor de input con icono */
+.input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-icon {
+  position: absolute;
+  left: 1rem;
+  color: var(--azul-principal);
+  font-size: 1.1rem;
+  z-index: 2;
+  transition: var(--transicion-suave);
+}
+
+/* Estilos de inputs */
+.form-input {
+  width: 100%;
+  padding: 1rem 1rem 1rem 3rem;
+  border: 2px solid #E0E0E0;
+  border-radius: 12px;
+  font-size: 1rem;
+  transition: var(--transicion-suave);
+  background: var(--blanco);
+  color: var(--gris-elegante);
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--azul-principal);
+  box-shadow: 0 0 0 3px rgba(30, 136, 229, 0.1);
+  transform: translateY(-1px);
+}
+
+.form-input:focus + .input-icon {
+  color: var(--azul-principal);
+  transform: scale(1.1);
+}
+
+/* Botón mostrar/ocultar contraseña */
+.password-toggle {
+  position: absolute;
+  right: 1rem;
+  background: none;
+  border: none;
+  color: var(--gris-elegante);
+  cursor: pointer;
+  font-size: 1.1rem;
+  transition: var(--transicion-rapida);
+  z-index: 2;
+}
+
+.password-toggle:hover {
+  color: var(--azul-principal);
+}
+
+/* Checkbox personalizado */
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.checkbox-custom {
+  position: relative;
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  margin-right: 0.75rem;
+}
+
+.checkbox-custom input {
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  cursor: pointer;
+}
+
+.checkbox-custom .checkmark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 20px;
+  width: 20px;
+  background: var(--blanco);
+  border: 2px solid #E0E0E0;
+  border-radius: 4px;
+  transition: var(--transicion-suave);
+}
+
+.checkbox-custom input:checked ~ .checkmark {
+  background: var(--azul-principal);
+  border-color: var(--azul-principal);
+}
+
+.checkbox-custom .checkmark:after {
+  content: "";
+  position: absolute;
+  display: none;
+  left: 6px;
+  top: 2px;
+  width: 6px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.checkbox-custom input:checked ~ .checkmark:after {
+  display: block;
+}
+
+.checkbox-label {
+  font-size: 0.9rem;
+  color: var(--gris-elegante);
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Botón principal de login */
+.btn-login {
+  width: 100%;
+  padding: 1rem 2rem;
+  background: var(--gradiente-azul);
+  color: var(--blanco);
+  border: none;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transicion-suave);
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--sombra-suave);
+}
+
+.btn-login:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--sombra-elevada);
+}
+
+.btn-login:active {
+  transform: translateY(0);
+}
+
+.btn-login:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Efecto de loading en el botón */
+.btn-login.loading {
+  color: transparent;
+}
+
+.btn-login.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid transparent;
+  border-top: 2px solid var(--blanco);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Enlaces adicionales */
+.form-links {
+  text-align: center;
+}
+
+.form-links a {
+  color: var(--azul-principal);
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: var(--transicion-rapida);
+}
+
+.form-links a:hover {
+  color: var(--azul-oscuro);
+  text-decoration: underline;
+}
+
+/* Alertas de error/éxito */
+.alert-custom {
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  border: none;
+  font-size: 0.9rem;
+  animation: slideInDown 0.5s ease-out;
+}
+
+.alert-danger {
+  background: rgba(220, 53, 69, 0.1);
+  color: #721c24;
+  border-left: 4px solid #dc3545;
+}
+
+.alert-success {
+  background: rgba(25, 135, 84, 0.1);
+  color: #0f5132;
+  border-left: 4px solid #198754;
+}
+
+/* ========================================
+   ANIMACIONES
+   ======================================== */
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(5deg);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.05;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.1;
+  }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+
+/* Tablets */
+@media (max-width: 1024px) {
+  .login-container {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+  
+  .login-branding {
+    padding: 2rem;
+    min-height: auto;
+  }
+  
+  .sistema-titulo {
+    font-size: 2.2rem;
+  }
+  
+  .logo-gzs {
+    width: 80px;
+    height: 80px;
+    margin-bottom: 1.5rem;
+  }
+  
+  .logo-gzs .logo-text {
+    font-size: 2rem;
+  }
+  
+  .notaria-info {
+    margin-top: 1rem;
+    padding: 1rem;
+  }
+  
+  .icono-justicia {
+    display: none;
+  }
+}
+
+/* Móviles */
+@media (max-width: 768px) {
+  body.login-page {
+    overflow-y: auto;
+  }
+  
+  .login-container {
+    grid-template-rows: auto auto;
+    min-height: 100vh;
+    height: auto;
+  }
+  
+  .login-branding {
+    padding: 1.5rem;
+    text-align: center;
+  }
+  
+  .login-branding::before,
+  .login-branding::after {
+    display: none;
+  }
+  
+  .sistema-titulo {
+    font-size: 1.8rem;
+    margin-bottom: 0.25rem;
+  }
+  
+  .sistema-subtitulo {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .logo-gzs {
+    width: 60px;
+    height: 60px;
+    margin-bottom: 1rem;
+  }
+  
+  .logo-gzs .logo-text {
+    font-size: 1.5rem;
+  }
+  
+  .notaria-info {
+    font-size: 0.85rem;
+    padding: 0.75rem;
+    margin-top: 0.5rem;
+  }
+  
+  .login-form-section {
+    padding: 2rem 1.5rem;
+  }
+  
+  .form-titulo {
+    font-size: 1.5rem;
+  }
+  
+  .form-container {
+    max-width: 100%;
+  }
+}
+
+/* Móviles pequeños */
+@media (max-width: 480px) {
+  .login-branding {
+    padding: 1rem;
+  }
+  
+  .login-form-section {
+    padding: 1.5rem 1rem;
+  }
+  
+  .sistema-titulo {
+    font-size: 1.5rem;
+  }
+  
+  .form-input {
+    padding: 0.875rem 0.875rem 0.875rem 2.5rem;
+  }
+  
+  .btn-login {
+    padding: 0.875rem 1.5rem;
+    font-size: 1rem;
+  }
+}
+
+/* ========================================
+   MODO OSCURO (Opcional para futuro)
+   ======================================== */
+
+@media (prefers-color-scheme: dark) {
+  /* Implementación futura del modo oscuro */
+}
+
+/* ========================================
+   ACCESIBILIDAD
+   ======================================== */
+
+/* Reducir animaciones para usuarios que lo prefieran */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Mejorar contraste para usuarios con problemas de visión */
+@media (prefers-contrast: high) {
+  .form-input {
+    border-width: 3px;
+  }
+  
+  .btn-login {
+    border: 2px solid var(--azul-oscuro);
+  }
+}
+
+/* Focus visible para navegación por teclado */
+.form-input:focus-visible,
+.btn-login:focus-visible,
+.checkbox-custom input:focus-visible ~ .checkmark {
+  outline: 3px solid var(--acento-dorado);
+  outline-offset: 2px;
+} 

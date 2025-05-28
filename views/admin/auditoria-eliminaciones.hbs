@@ -230,10 +230,51 @@
 }
 </style>
 
+<!-- 🔧 CARGAR MOMENT.JS PARA FORMATEO CORRECTO DE FECHAS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.43/moment-timezone-with-data.min.js"></script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   let paginaActual = 1;
   let filtrosActuales = {};
+  
+  // 🔧 CONFIGURAR TIMEZONE DE ECUADOR PARA AUDITORÍA
+  const TIMEZONE_ECUADOR = 'America/Guayaquil';
+  
+  // 🔧 FUNCIÓN PARA FORMATEAR FECHAS CORRECTAMENTE EN TIMEZONE ECUADOR
+  function formatearFechaEcuador(fechaISO, soloFecha = false) {
+    if (!fechaISO) return 'No definida';
+    
+    try {
+      const momentEcuador = moment(fechaISO).tz(TIMEZONE_ECUADOR);
+      
+      if (soloFecha) {
+        return momentEcuador.format('DD/MM/YYYY');
+      } else {
+        return {
+          fecha: momentEcuador.format('DD/MM/YYYY'),
+          hora: momentEcuador.format('HH:mm:ss')
+        };
+      }
+    } catch (error) {
+      console.error('Error al formatear fecha:', error);
+      return soloFecha ? 'Error fecha' : { fecha: 'Error fecha', hora: 'Error hora' };
+    }
+  }
+  
+  // 🔧 FUNCIÓN PARA FORMATEAR FECHA COMPLETA PARA AUDITORÍA
+  function formatearFechaCompletaEcuador(fechaISO) {
+    if (!fechaISO) return 'No definida';
+    
+    try {
+      const momentEcuador = moment(fechaISO).tz(TIMEZONE_ECUADOR);
+      return momentEcuador.format('DD/MM/YYYY HH:mm:ss');
+    } catch (error) {
+      console.error('Error al formatear fecha completa:', error);
+      return 'Error en fecha';
+    }
+  }
   
   // Inicializar página
   cargarEstadisticas();
@@ -267,7 +308,7 @@ document.addEventListener('DOMContentLoaded', function() {
           '$' + data.resumen.valorImpactoTotal.toLocaleString();
         
         // Calcular eliminaciones de hoy
-        const hoy = new Date().toISOString().split('T')[0];
+        const hoy = moment().tz(TIMEZONE_ECUADOR).format('YYYY-MM-DD');
         const eliminacionesHoy = data.evolucionTemporal
           .filter(item => item.fecha === hoy)
           .reduce((sum, item) => sum + parseInt(item.eliminaciones), 0);
@@ -327,7 +368,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
   
-  // Función para renderizar tabla
+  // 🔧 FUNCIÓN CORREGIDA PARA RENDERIZAR TABLA CON FECHAS CORRECTAS
   function renderizarTabla(registros) {
     const tbody = document.getElementById('tablaEliminaciones');
     tbody.innerHTML = '';
@@ -336,12 +377,15 @@ document.addEventListener('DOMContentLoaded', function() {
       const datos = registro.datosDocumento;
       const tr = document.createElement('tr');
       
+      // 🔧 FORMATEAR FECHA CORRECTAMENTE EN TIMEZONE ECUADOR
+      const fechaFormateada = formatearFechaEcuador(registro.fechaEliminacion);
+      
       tr.innerHTML = `
         <td>
           <small class="text-muted">
-            ${new Date(registro.fechaEliminacion).toLocaleDateString('es-ES')}
+            ${fechaFormateada.fecha}
           </small><br>
-          <small>${new Date(registro.fechaEliminacion).toLocaleTimeString('es-ES')}</small>
+          <small class="text-primary"><strong>${fechaFormateada.hora}</strong></small>
         </td>
         <td>
           <code>${registro.codigoDocumento}</code>
@@ -486,7 +530,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   };
   
-  // Función para renderizar detalle
+  // 🔧 FUNCIÓN CORREGIDA PARA RENDERIZAR DETALLE CON FECHAS CORRECTAS
   function renderizarDetalle(registro) {
     const container = document.getElementById('detalleEliminacion');
     const datos = registro.datosDocumento;
@@ -495,7 +539,7 @@ document.addEventListener('DOMContentLoaded', function() {
       <div class="row">
         <div class="col-md-6">
           <h6 class="border-bottom pb-2 mb-3">Información de la Eliminación</h6>
-          <p><strong>Fecha/Hora:</strong> ${new Date(registro.fechaEliminacion).toLocaleString('es-ES')}</p>
+          <p><strong>Fecha/Hora:</strong> <span class="text-primary">${formatearFechaCompletaEcuador(registro.fechaEliminacion)}</span></p>
           <p><strong>Motivo:</strong> <span class="badge badge-${registro.motivo}">${formatearMotivo(registro.motivo)}</span></p>
           <p><strong>Administrador:</strong> ${registro.nombreAdministrador} (ID: ${registro.eliminadoPor})</p>
           <p><strong>IP:</strong> ${registro.ip || 'N/A'}</p>
@@ -511,7 +555,7 @@ document.addEventListener('DOMContentLoaded', function() {
           <p><strong>Estado:</strong> ${datos.estado}</p>
           <p><strong>Valor Factura:</strong> $${(datos.valorFactura || 0).toLocaleString()}</p>
           <p><strong>Estado Pago:</strong> ${datos.estadoPago}</p>
-          <p><strong>Fecha Creación:</strong> ${new Date(datos.created_at).toLocaleString('es-ES')}</p>
+          <p><strong>Fecha Creación:</strong> ${formatearFechaCompletaEcuador(datos.created_at)}</p>
         </div>
       </div>
       

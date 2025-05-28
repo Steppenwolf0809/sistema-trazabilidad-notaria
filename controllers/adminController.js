@@ -22,19 +22,19 @@ const {
 const { logger, logDashboard, logQuery } = require('../utils/logger');
 
 /**
- * Dashboard Administrativo REALMENTE ÚTIL
- * Diseñado para identificar problemas urgentes y tomar decisiones informadas
+ * Dashboard Administrativo EJECUTIVO PROFESIONAL
+ * Diseñado para proporcionar información crítica y tomar decisiones informadas
  */
 exports.dashboard = async (req, res) => {
   try {
-    // 🔍 INICIO DE DEBUGGING - Dashboard Útil
-    logger.separator('DASHBOARD', 'DASHBOARD ADMIN REALMENTE ÚTIL');
-    logger.start('DASHBOARD', 'cargarDashboardUtil', {
+    // 🔍 INICIO DE DEBUGGING - Dashboard Ejecutivo
+    logger.separator('DASHBOARD', 'DASHBOARD ADMIN EJECUTIVO PROFESIONAL');
+    logger.start('DASHBOARD', 'cargarDashboardEjecutivo', {
       usuario: req.matrizador?.nombre || 'admin'
     });
     
     // ============== PROCESAR FILTROS DE PERÍODO ==============
-    const rango = req.query.rango || 'mes';
+    const rango = req.query.rango || req.query.tipoPeriodo || 'mes';
     let fechaInicio, fechaFin, periodoTexto;
     
     // Establecer fechas según el rango seleccionado
@@ -44,52 +44,45 @@ exports.dashboard = async (req, res) => {
       case 'hoy':
         fechaInicio = hoy.clone();
         fechaFin = moment().endOf('day');
-        periodoTexto = 'Hoy ' + fechaInicio.format('DD/MM/YYYY');
+        periodoTexto = 'HOY - ' + fechaInicio.format('DD/MM/YYYY');
         break;
       case 'ayer':
         fechaInicio = hoy.clone().subtract(1, 'days');
         fechaFin = hoy.clone().subtract(1, 'days').endOf('day');
-        periodoTexto = 'Ayer ' + fechaInicio.format('DD/MM/YYYY');
+        periodoTexto = 'AYER - ' + fechaInicio.format('DD/MM/YYYY');
         break;
       case 'semana':
         fechaInicio = hoy.clone().startOf('week');
         fechaFin = moment().endOf('day');
-        periodoTexto = 'Esta semana (desde ' + fechaInicio.format('DD/MM/YYYY') + ')';
+        periodoTexto = 'ESTA SEMANA - ' + fechaInicio.format('DD/MM/YYYY') + ' al ' + fechaFin.format('DD/MM/YYYY');
         break;
       case 'mes':
         fechaInicio = hoy.clone().startOf('month');
         fechaFin = moment().endOf('day');
-        periodoTexto = 'Este mes (desde ' + fechaInicio.format('DD/MM/YYYY') + ')';
+        periodoTexto = 'ESTE MES - ' + fechaInicio.format('DD/MM/YYYY') + ' al ' + fechaFin.format('DD/MM/YYYY');
         break;
       case 'ultimo_mes':
         fechaInicio = hoy.clone().subtract(30, 'days');
         fechaFin = moment().endOf('day');
-        periodoTexto = 'Últimos 30 días';
+        periodoTexto = 'ÚLTIMOS 30 DÍAS - ' + fechaInicio.format('DD/MM/YYYY') + ' al ' + fechaFin.format('DD/MM/YYYY');
         break;
       case 'personalizado':
         fechaInicio = req.query.fechaInicio ? moment(req.query.fechaInicio).startOf('day') : hoy.clone().startOf('month');
         fechaFin = req.query.fechaFin ? moment(req.query.fechaFin).endOf('day') : moment().endOf('day');
-        periodoTexto = 'Del ' + fechaInicio.format('DD/MM/YYYY') + ' al ' + fechaFin.format('DD/MM/YYYY');
+        periodoTexto = 'PERÍODO PERSONALIZADO - ' + fechaInicio.format('DD/MM/YYYY') + ' al ' + fechaFin.format('DD/MM/YYYY');
         break;
       default:
         fechaInicio = hoy.clone().startOf('month');
         fechaFin = moment().endOf('day');
-        periodoTexto = 'Este mes (desde ' + fechaInicio.format('DD/MM/YYYY') + ')';
+        periodoTexto = 'ESTE MES - ' + fechaInicio.format('DD/MM/YYYY') + ' al ' + fechaFin.format('DD/MM/YYYY');
     }
-    
-    const ahora = obtenerTimestampEcuador();
-    const hoyStr = ahora.toISOString().split('T')[0];
-    const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
-    const hace7Dias = new Date(ahora);
-    hace7Dias.setDate(hace7Dias.getDate() - 7);
     
     // Formatear fechas para consultas SQL
     const fechaInicioSQL = fechaInicio.format('YYYY-MM-DD HH:mm:ss');
     const fechaFinSQL = fechaFin.format('YYYY-MM-DD HH:mm:ss');
+    const hoySQL = hoy.format('YYYY-MM-DD');
     
-    // ============== INFORMACIÓN CRÍTICA Y URGENTE ==============
-    
-    // 🚨 ALERTAS CRÍTICAS
+    // ============== ALERTAS CRÍTICAS EJECUTIVAS ==============
     const alertasCriticas = [];
     
     // Documentos atrasados más de 30 días sin pagar
@@ -108,8 +101,7 @@ exports.dashboard = async (req, res) => {
         icono: 'fas fa-exclamation-triangle',
         titulo: `${documentosAtrasados} documentos atrasados +30 días`,
         descripcion: 'Requieren gestión de cobranza urgente',
-        accion: '/admin/reportes/pendientes?antiguedad=30%2B',
-        urgencia: 'alta'
+        accion: '/admin/reportes/pendientes?antiguedad=30%2B'
       });
     }
     
@@ -127,8 +119,7 @@ exports.dashboard = async (req, res) => {
         icono: 'fas fa-clock',
         titulo: `${documentosListosViejos} documentos listos sin entregar`,
         descripcion: 'Más de 3 días esperando entrega',
-        accion: '/admin/documentos/listado?estado=listo_para_entrega',
-        urgencia: 'media'
+        accion: '/admin/documentos/listado?estado=listo_para_entrega'
       });
     }
     
@@ -146,12 +137,41 @@ exports.dashboard = async (req, res) => {
         icono: 'fas fa-user-slash',
         titulo: `${documentosSinMatrizador} documentos sin asignar`,
         descripcion: 'Necesitan matrizador responsable',
-        accion: '/admin/documentos/listado?idMatrizador=',
-        urgencia: 'baja'
+        accion: '/admin/documentos/listado?idMatrizador='
       });
     }
     
-    // ============== MÉTRICAS FINANCIERAS DEL PERÍODO ==============
+    // ============== MÉTRICAS EJECUTIVAS PRINCIPALES ==============
+    
+    // Conteos básicos
+    const totalDocumentos = await Documento.count({
+      where: { estado: { [Op.notIn]: ['eliminado', 'nota_credito'] } }
+    });
+    
+    const enProceso = await Documento.count({
+      where: { estado: 'en_proceso' }
+    });
+    
+    const listoParaEntrega = await Documento.count({
+      where: { estado: 'listo_para_entrega' }
+    });
+    
+    const entregados = await Documento.count({
+      where: { estado: 'entregado' }
+    });
+    
+    // Documentos entregados hoy
+    const entregadosHoy = await Documento.count({
+      where: {
+        estado: 'entregado',
+        fecha_entrega: {
+          [Op.gte]: hoy.toDate(),
+          [Op.lt]: moment().endOf('day').toDate()
+        }
+      }
+    });
+    
+    // ============== MÉTRICAS FINANCIERAS EJECUTIVAS ==============
     
     // Ingresos del período (pagos registrados en el período)
     const [ingresosPeriodoResult] = await sequelize.query(`
@@ -174,7 +194,7 @@ exports.dashboard = async (req, res) => {
       AND estado_pago = 'pagado'
       AND estado NOT IN ('eliminado', 'nota_credito')
     `, {
-      replacements: { hoy: hoyStr },
+      replacements: { hoy: hoySQL },
       type: sequelize.QueryTypes.SELECT
     });
     const ingresosHoy = parseFloat(ingresosHoyResult.total);
@@ -194,8 +214,8 @@ exports.dashboard = async (req, res) => {
       where: {
         estado_pago: 'pagado',
         fecha_pago: {
-          [Op.gte]: new Date(hoyStr + 'T00:00:00'),
-          [Op.lt]: new Date(hoyStr + 'T23:59:59')
+          [Op.gte]: hoy.toDate(),
+          [Op.lt]: moment().endOf('day').toDate()
         }
       }
     });
@@ -213,10 +233,20 @@ exports.dashboard = async (req, res) => {
     });
     const facturacionPeriodo = parseFloat(facturacionPeriodoResult.total);
     
-    // ============== RENDIMIENTO DEL EQUIPO ==============
+    // Total pendiente de cobro (global)
+    const [totalPendienteResult] = await sequelize.query(`
+      SELECT COALESCE(SUM(valor_factura), 0) as total
+      FROM documentos
+      WHERE estado_pago = 'pendiente'
+      AND numero_factura IS NOT NULL
+      AND estado NOT IN ('eliminado', 'nota_credito')
+    `, {
+      type: sequelize.QueryTypes.SELECT
+    });
+    const totalPendiente = parseFloat(totalPendienteResult.total);
     
-    // Productividad por matrizador (últimos 7 días)
-    const productividadMatrizadores = await sequelize.query(`
+    // ============== RENDIMIENTO DEL EQUIPO (7 días) ==============
+    const equipoRendimiento = await sequelize.query(`
       SELECT 
         m.nombre,
         COUNT(d.id) as documentos_procesados,
@@ -231,13 +261,63 @@ exports.dashboard = async (req, res) => {
       ORDER BY documentos_procesados DESC
       LIMIT 5
     `, {
-      replacements: { hace7Dias },
+      replacements: { hace7Dias: moment().subtract(7, 'days').format('YYYY-MM-DD HH:mm:ss') },
       type: sequelize.QueryTypes.SELECT
     });
     
-    // ============== DOCUMENTOS QUE NECESITAN ATENCIÓN ==============
+    // Formatear dinero cobrado
+    equipoRendimiento.forEach(item => {
+      item.dinero_cobrado = parseFloat(item.dinero_cobrado || 0).toFixed(2);
+    });
     
-    // Documentos pendientes urgentes (más de 15 días)
+    // ============== ÚLTIMOS PAGOS REGISTRADOS ==============
+    const ultimosPagos = await Documento.findAll({
+      where: {
+        estado_pago: 'pagado',
+        fecha_pago: { [Op.not]: null },
+        valor_factura: { [Op.not]: null }
+      },
+      attributes: [
+        'id',
+        'codigo_barras', 
+        'nombre_cliente', 
+        'valor_factura', 
+        'fecha_pago', 
+        'metodo_pago',
+        'numero_factura'
+      ],
+      order: [['fecha_pago', 'DESC']],
+      limit: 8
+    });
+    
+    // Formatear datos de últimos pagos para la vista
+    const ultimosPagosFormateados = ultimosPagos.map(pago => ({
+      id: pago.id,
+      codigoBarras: pago.codigo_barras,
+      nombreCliente: pago.nombre_cliente || 'Cliente no especificado',
+      valorFactura: parseFloat(pago.valor_factura || 0).toFixed(2),
+      fechaPago: pago.fecha_pago,
+      metodoPago: pago.metodo_pago || 'No especificado',
+      numeroFactura: pago.numero_factura
+    }));
+    
+    // ============== ÚLTIMAS ENTREGAS REALIZADAS ==============
+    const ultimasEntregas = await Documento.findAll({
+      where: {
+        estado: 'entregado',
+        fecha_entrega: { [Op.not]: null }
+      },
+      attributes: ['codigo_barras', 'nombre_cliente', 'tipo_documento', 'fecha_entrega'],
+      include: [{
+        model: Matrizador,
+        as: 'matrizador',
+        attributes: ['nombre']
+      }],
+      order: [['fecha_entrega', 'DESC']],
+      limit: 5
+    });
+    
+    // ============== DOCUMENTOS QUE REQUIEREN ATENCIÓN ==============
     const documentosUrgentes = await Documento.findAll({
       where: {
         estado_pago: 'pendiente',
@@ -254,154 +334,12 @@ exports.dashboard = async (req, res) => {
       limit: 5
     });
     
-    // Documentos listos para entrega
-    const documentosListos = await Documento.findAll({
-      where: {
-        estado: 'listo_para_entrega'
-      },
-      include: [{
-        model: Matrizador,
-        as: 'matrizador',
-        attributes: ['nombre']
-      }],
-      order: [['updated_at', 'ASC']],
-      limit: 5
-    });
-    
-    // ============== ACTIVIDAD RECIENTE RELEVANTE ==============
-    
-    // Últimos pagos registrados
-    const ultimosPagos = await Documento.findAll({
-      where: {
-        estado_pago: 'pagado',
-        fecha_pago: { [Op.not]: null }
-      },
-      attributes: ['codigo_barras', 'nombre_cliente', 'valor_factura', 'fecha_pago', 'metodo_pago'],
-      order: [['fecha_pago', 'DESC']],
-      limit: 5
-    });
-    
-    // Últimas entregas
-    const ultimasEntregas = await Documento.findAll({
-      where: {
-        estado: 'entregado',
-        fecha_entrega: { [Op.not]: null }
-      },
-      attributes: ['codigo_barras', 'nombre_cliente', 'tipo_documento', 'fecha_entrega'],
-      include: [{
-        model: Matrizador,
-        as: 'matrizador',
-        attributes: ['nombre']
-      }],
-      order: [['fecha_entrega', 'DESC']],
-      limit: 5
-    });
-    
-    // ============== ESTADO GENERAL DEL SISTEMA ==============
-    
-    // Conteos rápidos para métricas
-    const totalDocumentos = await Documento.count({
-      where: { estado: { [Op.notIn]: ['eliminado', 'nota_credito'] } }
-    });
-    
-    const enProceso = await Documento.count({
-      where: { estado: 'en_proceso' }
-    });
-    
-    const listoParaEntrega = await Documento.count({
-      where: { estado: 'listo_para_entrega' }
-    });
-    
-    const entregados = await Documento.count({
-      where: { estado: 'entregado' }
-    });
-    
-    // ============== DETERMINAR ESTADO GENERAL ==============
-    
-    let estadoGeneral = 'success'; // Verde por defecto
-    let mensajeEstado = 'Todo funcionando correctamente';
-    
-    if (documentosAtrasados > 10 || documentosListosViejos > 5) {
-      estadoGeneral = 'danger';
-      mensajeEstado = 'Atención requerida urgente';
-    } else if (documentosAtrasados > 0 || documentosListosViejos > 0) {
-      estadoGeneral = 'warning';
-      mensajeEstado = 'Algunos problemas requieren atención';
-    }
-    
     // ============== PREPARAR DATOS PARA LA VISTA ==============
     
     const dashboardData = {
-      // Alertas críticas
-      alertasCriticas,
-      estadoGeneral,
-      mensajeEstado,
-      
-      // Métricas principales
-      metricas: {
-        totalDocumentos,
-        enProceso,
-        listoParaEntrega,
-        entregados,
-        documentosAtrasados,
-        documentosUrgentes: documentosUrgentes.length
-      },
-      
-      // Métricas financieras
-      finanzas: {
-        ingresosPeriodo: ingresosPeriodo.toFixed(2),
-        ingresosHoy: ingresosHoy.toFixed(2),
-        documentosCobradosPeriodo,
-        documentosCobradosHoy,
-        facturacionPeriodo: facturacionPeriodo.toFixed(2)
-      },
-      
-      // Rendimiento del equipo
-      equipoRendimiento: productividadMatrizadores,
-      
-      // Documentos que requieren atención
-      documentosUrgentes,
-      documentosListos,
-      
-      // Actividad reciente
-      ultimosPagos,
-      ultimasEntregas
-    };
-    
-    logDashboard('DASHBOARD_UTIL_CARGADO', 'completo', {
-      alertas: alertasCriticas.length,
-      estadoGeneral,
-      documentosUrgentes: documentosUrgentes.length,
-      ingresosPeriodo,
-      equipoActivo: productividadMatrizadores.filter(m => m.documentos_procesados > 0).length
-    });
-    
-    logger.end('DASHBOARD', 'cargarDashboardUtil', {
-      exitoso: true,
-      alertasCriticas: alertasCriticas.length,
-      estadoGeneral
-    });
-    
-    // Total pendiente de cobro (global, no del período)
-    const [totalPendienteResult] = await sequelize.query(`
-      SELECT COALESCE(SUM(valor_factura), 0) as total
-      FROM documentos
-      WHERE estado_pago = 'pendiente'
-      AND numero_factura IS NOT NULL
-      AND estado NOT IN ('eliminado', 'nota_credito')
-    `, {
-      type: sequelize.QueryTypes.SELECT
-    });
-    const totalPendiente = parseFloat(totalPendienteResult.total);
-    
-    res.render('admin/dashboard-util', {
-      layout: 'admin',
-      title: 'Panel de Control - Administrativo',
-      activeDashboard: true,
-      
-      // Datos del período seleccionado
+      // Información del período
       periodo: {
-        rango: req.params.periodo || req.query.rango || 'mes',
+        rango: rango,
         fechaInicio: fechaInicio.format('YYYY-MM-DD'),
         fechaFin: fechaFin.format('YYYY-MM-DD'),
         periodoTexto,
@@ -413,20 +351,61 @@ exports.dashboard = async (req, res) => {
         esPersonalizado: rango === 'personalizado'
       },
       
-      ...dashboardData,
+      // Alertas críticas
+      alertasCriticas,
       
-      // Actualizar métricas financieras
+      // Métricas principales
+      metricas: {
+        totalDocumentos,
+        enProceso,
+        listoParaEntrega,
+        entregados,
+        entregadosHoy,
+        documentosAtrasados,
+        documentosUrgentes: documentosUrgentes.length
+      },
+      
+      // Métricas financieras
       finanzas: {
-        ...dashboardData.finanzas,
+        ingresosPeriodo: ingresosPeriodo.toFixed(2),
+        ingresosHoy: ingresosHoy.toFixed(2),
+        documentosCobradosPeriodo,
+        documentosCobradosHoy,
+        facturacionPeriodo: facturacionPeriodo.toFixed(2),
         totalPendiente: totalPendiente.toFixed(2)
-      }
+      },
+      
+      // Rendimiento del equipo
+      equipoRendimiento,
+      
+      // Actividad reciente
+      ultimosPagos: ultimosPagosFormateados,
+      ultimasEntregas,
+      documentosUrgentes
+    };
+    
+    logger.end('DASHBOARD', 'cargarDashboardEjecutivo', {
+      exitoso: true,
+      alertasCriticas: alertasCriticas.length,
+      totalDocumentos,
+      ingresosPeriodo
     });
+    
+    res.render('admin/dashboard', {
+      layout: 'admin',
+      title: 'Panel de Control Ejecutivo - ProNotary',
+      activeDashboard: true,
+      userRole: req.matrizador?.rol,
+      userName: req.matrizador?.nombre,
+      ...dashboardData
+    });
+    
   } catch (error) {
-    logger.error('DASHBOARD', 'Error al cargar dashboard útil', error);
+    logger.error('DASHBOARD', 'Error al cargar dashboard ejecutivo', error);
     res.status(500).render('error', {
       layout: 'admin',
       title: 'Error',
-      message: 'Ha ocurrido un error al cargar el dashboard',
+      message: 'Ha ocurrido un error al cargar el dashboard ejecutivo',
       error
     });
   }

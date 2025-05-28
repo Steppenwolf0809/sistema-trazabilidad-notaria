@@ -1,675 +1,775 @@
-<!-- Selector de período de tiempo -->
-<div class="row mb-4">
+{{!-- 🎯 DASHBOARD EJECUTIVO PROFESIONAL - LAYOUT OPTIMIZADO --}}
+
+{{!-- 1. HEADER COMPACTO --}}
+<div class="row mb-2">
   <div class="col-12">
-    <div class="card">
-      <div class="card-body">
-        <form id="periodoForm" class="row align-items-end">
-          <div class="col-md-3">
-            <label for="tipoPeriodo" class="form-label">Período</label>
-            <select id="tipoPeriodo" name="tipoPeriodo" class="form-select">
-              <option value="hoy" {{#if periodo.esHoy}}selected{{/if}}>Hoy</option>
-              <option value="semana" {{#if periodo.esSemana}}selected{{/if}}>Esta semana</option>
-              <option value="mes" {{#if periodo.esMes}}selected{{/if}}>Este mes</option>
-              <option value="ultimo_mes" {{#if periodo.esUltimoMes}}selected{{/if}}>Último mes</option>
-              <option value="personalizado" {{#if periodo.esPersonalizado}}selected{{/if}}>Personalizado</option>
-            </select>
-          </div>
-          
-          <div id="fechasPersonalizadas" class="row align-items-end" style="{{#unless periodo.esPersonalizado}}display: none;{{/unless}}">
-            <div class="col-md-3">
-              <label for="fechaInicio" class="form-label">Desde</label>
-              <input type="date" id="fechaInicio" name="fechaInicio" class="form-control" value="{{periodo.fechaInicio}}">
+    <div class="d-flex justify-content-between align-items-center bg-white p-3 rounded shadow-sm">
+      <div>
+        <h4 class="mb-0 text-dark">Panel de Control Ejecutivo</h4>
+        <small class="text-muted">{{periodo.periodoTexto}} • {{periodo.fechaInicio}} - {{periodo.fechaFin}} • {{metricas.totalDocumentos}} docs</small>
+      </div>
+      <div class="text-end">
+        <span class="badge bg-primary px-3 py-2">{{metricas.totalDocumentos}} documentos</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+{{!-- 2. FILTROS + ALERTAS EN UNA FILA (COMPACTO) --}}
+<div class="row mb-3">
+  {{!-- FILTROS COMPACTOS (8 columnas) --}}
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body py-2">
+        <form id="periodoForm" class="row align-items-center">
+          <div class="col-md-4">
+            <div class="d-flex">
+              <input type="date" class="form-control form-control-sm me-1" id="fechaInicio" name="fechaInicio" value="{{periodo.fechaInicio}}">
+              <input type="date" class="form-control form-control-sm" id="fechaFin" name="fechaFin" value="{{periodo.fechaFin}}">
             </div>
-            <div class="col-md-3">
-              <label for="fechaFin" class="form-label">Hasta</label>
-              <input type="date" id="fechaFin" name="fechaFin" class="form-control" value="{{periodo.fechaFin}}">
+          </div>
+          <div class="col-md-6">
+            <div class="btn-group btn-group-sm w-100" role="group">
+              <button type="button" class="btn btn-outline-primary" data-periodo="hoy">Hoy</button>
+              <button type="button" class="btn btn-outline-primary" data-periodo="semana">7d</button>
+              <button type="button" class="btn btn-outline-primary" data-periodo="mes">30d</button>
+              <button type="button" class="btn btn-outline-primary" data-periodo="ultimo_mes">Año</button>
             </div>
           </div>
-          
-          <div class="col-md-3">
-            <button type="submit" class="btn btn-primary">
-              <i class="fas fa-filter me-1"></i> Aplicar Filtro
-            </button>
-            <button type="button" id="exportarBtn" class="btn btn-outline-success ms-2">
-              <i class="fas fa-download me-1"></i> Exportar
+          <div class="col-md-2">
+            <button type="submit" class="btn btn-primary btn-sm w-100">
+              <i class="fas fa-filter"></i> Aplicar
             </button>
           </div>
+          <input type="hidden" id="tipoPeriodo" name="tipoPeriodo" value="{{periodo.rango}}">
         </form>
       </div>
     </div>
   </div>
-</div>
-
-<!-- Dashboard principal -->
-<div class="row">
-  <!-- Tarjetas de estadísticas -->
-  <div class="col-md-3">
-    <div class="card text-white bg-primary">
-      <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <h6 class="text-white">Documentos Totales</h6>
-            <h2 class="mb-0">{{stats.total}}</h2>
-          </div>
-          <i class="fas fa-file-alt fa-3x opacity-50"></i>
-        </div>
-      </div>
-    </div>
-  </div>
   
-  <div class="col-md-3">
-    <div class="card text-white bg-warning">
-      <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <h6 class="text-white">Documentos Nuevos</h6>
-            <h2 class="mb-0">{{stats.nuevos}}</h2>
-            <small class="text-white">En el período seleccionado</small>
+  {{!-- ALERTAS COMPACTAS (4 columnas) --}}
+  <div class="col-lg-4">
+    {{#if alertasCriticas}}
+    <div class="card border-0 shadow-sm border-left-warning">
+      <div class="card-body py-2">
+        <div class="d-flex align-items-center">
+          <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+          <div class="flex-grow-1">
+            <small class="text-warning font-weight-bold">ATENCIÓN REQUERIDA</small>
+            <div class="d-flex justify-content-between">
+              <small>{{alertasCriticas.length}} alertas</small>
+              <small>{{metricas.documentosUrgentes}} urgentes</small>
+            </div>
           </div>
-          <i class="fas fa-plus-circle fa-3x opacity-50"></i>
+          <a href="#alertas-section" class="btn btn-warning btn-sm">Ver</a>
         </div>
       </div>
     </div>
-  </div>
-  
-  <div class="col-md-3">
-    <div class="card text-white bg-success">
-      <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <h6 class="text-white">Procesados</h6>
-            <h2 class="mb-0">{{stats.procesados}}</h2>
-            <small class="text-white">Listos para entrega: {{stats.listoParaEntrega}}</small>
+    {{else}}
+    <div class="card border-0 shadow-sm border-left-success">
+      <div class="card-body py-2">
+        <div class="d-flex align-items-center">
+          <i class="fas fa-check-circle text-success me-2"></i>
+          <div class="flex-grow-1">
+            <small class="text-success font-weight-bold">TODO EN ORDEN</small>
+            <div><small class="text-muted">Sin problemas detectados</small></div>
           </div>
-          <i class="fas fa-check-circle fa-3x opacity-50"></i>
         </div>
       </div>
     </div>
-  </div>
-  
-  <div class="col-md-3">
-    <div class="card text-white bg-info">
-      <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <h6 class="text-white">Entregados</h6>
-            <h2 class="mb-0">{{stats.entregadosPeriodo}}</h2>
-            <small class="text-white">Total entregados: {{stats.entregados}}</small>
-          </div>
-          <i class="fas fa-hand-holding fa-3x opacity-50"></i>
-        </div>
-      </div>
-    </div>
+    {{/if}}
   </div>
 </div>
 
-<!-- Métricas adicionales -->
-<div class="row mt-3">
-  <div class="col-md-6">
-    <div class="card">
-      <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <h6 class="card-title">Tiempo Promedio de Procesamiento</h6>
-            <h3 class="mb-0">{{stats.tiempoPromedioProcesamiento}} días</h3>
-            <small class="text-muted">Desde registro hasta listo para entrega</small>
+{{!-- 3. MÉTRICAS PRINCIPALES - VISIBLE SIN SCROLL --}}
+<div class="row mb-3">
+  <div class="col-xl-3 col-md-6 mb-2">
+    <div class="card border-0 shadow-sm border-left-primary h-100">
+      <div class="card-body py-3">
+        <div class="d-flex align-items-center">
+          <div class="me-3">
+            <i class="fas fa-file-alt fa-2x text-primary"></i>
           </div>
-          <i class="fas fa-stopwatch fa-3x text-warning opacity-50"></i>
-        </div>
-      </div>
-    </div>
-  </div>
-  
-  <div class="col-md-6">
-    <div class="card">
-      <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center">
           <div>
-            <h6 class="card-title">Tiempo Promedio de Entrega</h6>
-            <h3 class="mb-0">{{stats.tiempoPromedioEntrega}} días</h3>
-            <small class="text-muted">Desde listo para entrega hasta entregado</small>
+            <div class="text-xs font-weight-bold text-primary text-uppercase">Documentos</div>
+            <div class="h4 mb-0 font-weight-bold">{{metricas.totalDocumentos}}</div>
+            <small class="text-muted">En sistema</small>
           </div>
-          <i class="fas fa-hourglass-half fa-3x text-info opacity-50"></i>
         </div>
       </div>
     </div>
   </div>
-</div>
 
-<!-- Gráficos estadísticos -->
-<div class="row mt-4">
-  <div class="col-md-12">
-    <div class="card">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <span>Estadísticas del Período</span>
-        <div class="btn-group" role="group">
-          <button type="button" class="btn btn-sm btn-outline-primary active" id="btnVolumen">Volumen</button>
-          <button type="button" class="btn btn-sm btn-outline-primary" id="btnMatrizador">Por Matrizador</button>
-          <button type="button" class="btn btn-sm btn-outline-primary" id="btnTipo">Por Tipo</button>
-        </div>
-      </div>
-      <div class="card-body">
-        <div id="graficoVolumen">
-          <canvas id="volumenChart" height="300"></canvas>
-        </div>
-        <div id="graficoMatrizador" style="display: none;">
-          <canvas id="matrizadorChart" height="300"></canvas>
-        </div>
-        <div id="graficoTipo" style="display: none;">
-          <canvas id="tipoChart" height="300"></canvas>
+  <div class="col-xl-3 col-md-6 mb-2">
+    <div class="card border-0 shadow-sm border-left-warning h-100">
+      <div class="card-body py-3">
+        <div class="d-flex align-items-center">
+          <div class="me-3">
+            <i class="fas fa-cogs fa-2x text-warning"></i>
+          </div>
+          <div>
+            <div class="text-xs font-weight-bold text-warning text-uppercase">En Proceso</div>
+            <div class="h4 mb-0 font-weight-bold">{{metricas.enProceso}}</div>
+            <small class="text-muted">Procesando</small>
+          </div>
         </div>
       </div>
     </div>
   </div>
-</div>
 
-<!-- Documentos recientes -->
-<div class="row mt-4">
-  <div class="col-md-6">
-    <div class="card">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <span>Documentos Pendientes de Entrega</span>
-        <div>
-          <select id="filtroMatrizadorPendientes" class="form-select form-select-sm d-inline-block me-2" style="width: auto;">
-            <option value="">Todos los matrizadores</option>
-            {{#each matrizadores}}
-            <option value="{{this.id}}">{{this.nombre}}</option>
-            {{/each}}
-          </select>
-          <a href="/admin/documentos/listado?estado=listo_para_entrega" class="btn btn-sm btn-outline-primary">Ver Todos</a>
+  <div class="col-xl-3 col-md-6 mb-2">
+    <div class="card border-0 shadow-sm border-left-success h-100">
+      <div class="card-body py-3">
+        <div class="d-flex align-items-center">
+          <div class="me-3">
+            <i class="fas fa-check-circle fa-2x text-success"></i>
+          </div>
+          <div>
+            <div class="text-xs font-weight-bold text-success text-uppercase">Listos</div>
+            <div class="h4 mb-0 font-weight-bold">{{metricas.listoParaEntrega}}</div>
+            <small class="text-muted">Para entrega</small>
+          </div>
         </div>
       </div>
-      <div class="card-body p-0">
-        <div class="table-responsive">
-          <table class="table table-hover mb-0">
-            <thead>
-              <tr>
-                <th class="sortable" data-sort="codigo">Código</th>
-                <th class="sortable" data-sort="tipo">Tipo</th>
-                <th class="sortable" data-sort="cliente">Cliente</th>
-                <th class="sortable" data-sort="fecha">Fecha</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="tablaPendientes">
-              {{#each documentosPendientes}}
-              <tr data-matrizador="{{this.idMatrizador}}">
-                <td>{{this.codigoBarras}}</td>
-                <td>{{this.tipoDocumento}}</td>
-                <td>{{this.nombreCliente}}</td>
-                <td>{{formatDate this.updatedAt}}</td>
-                <td>
-                  <a href="/admin/documentos/entrega/{{this.id}}" class="btn btn-sm btn-primary">
-                    <i class="fas fa-hand-holding"></i> Entregar
-                  </a>
-                </td>
-              </tr>
+    </div>
+  </div>
+
+  <div class="col-xl-3 col-md-6 mb-2">
+    <div class="card border-0 shadow-sm border-left-info h-100">
+      <div class="card-body py-3">
+        <div class="d-flex align-items-center">
+          <div class="me-3">
+            <i class="fas fa-handshake fa-2x text-info"></i>
+          </div>
+          <div>
+            <div class="text-xs font-weight-bold text-info text-uppercase">Eficiencia</div>
+            <div class="h4 mb-0 font-weight-bold">
+              {{#if (and metricas.totalDocumentos (gt metricas.totalDocumentos 0))}}
+                {{percentage metricas.entregados metricas.totalDocumentos}}%
               {{else}}
-              <tr>
-                <td colspan="5" class="text-center py-3">No hay documentos pendientes de entrega</td>
-              </tr>
-              {{/each}}
-            </tbody>
-          </table>
+                0%
+              {{/if}}
+            </div>
+            <small class="text-muted">Entregados</small>
+          </div>
         </div>
       </div>
     </div>
   </div>
-  
-  <div class="col-md-6">
-    <div class="card">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <span>Últimos Documentos Registrados</span>
-        <div>
-          <input type="text" id="buscarDocumento" class="form-control form-control-sm d-inline-block me-2" placeholder="Buscar por cliente" style="width: auto;">
-          <a href="/admin/documentos/listado" class="btn btn-sm btn-outline-primary">Ver Todos</a>
+</div>
+
+{{!-- 4. MÉTRICAS FINANCIERAS CORREGIDAS --}}
+<div class="row mb-3">
+  <div class="col-xl-3 col-md-6 mb-2">
+    <div class="card bg-success text-white border-0 shadow-sm h-100">
+      <div class="card-body py-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-white-50 small">INGRESOS REALES</div>
+            <div class="h4 mb-0">${{finanzas.ingresosPeriodo}}</div>
+            <small class="text-white-75">Pagos recibidos</small>
+          </div>
+          <i class="fas fa-dollar-sign fa-2x text-white-25"></i>
         </div>
       </div>
-      <div class="card-body p-0">
+    </div>
+  </div>
+
+  <div class="col-xl-3 col-md-6 mb-2">
+    <div class="card bg-info text-white border-0 shadow-sm h-100">
+      <div class="card-body py-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-white-50 small">FACTURADO TOTAL</div>
+            <div class="h4 mb-0">${{finanzas.facturacionPeriodo}}</div>
+            <small class="text-white-75">En el período</small>
+          </div>
+          <i class="fas fa-file-invoice fa-2x text-white-25"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-3 col-md-6 mb-2">
+    <div class="card bg-warning text-white border-0 shadow-sm h-100">
+      <div class="card-body py-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-white-50 small">PENDIENTE COBRO</div>
+            <div class="h4 mb-0">${{finanzas.totalPendiente}}</div>
+            <small class="text-white-75">Por cobrar</small>
+          </div>
+          <i class="fas fa-clock fa-2x text-white-25"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-3 col-md-6 mb-2">
+    <div class="card bg-dark text-white border-0 shadow-sm h-100">
+      <div class="card-body py-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-white-50 small">INGRESOS HOY</div>
+            <div class="h4 mb-0">${{finanzas.ingresosHoy}}</div>
+            <small class="text-white-75">{{finanzas.documentosCobradosHoy}} docs</small>
+          </div>
+          <i class="fas fa-chart-bar fa-2x text-white-25"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{{!-- VALIDACIÓN MATEMÁTICA VISIBLE --}}
+<div class="row mb-3">
+  <div class="col-12">
+    <div class="alert alert-light border-left-info py-2">
+      <small class="text-muted">
+        <i class="fas fa-calculator me-1"></i>
+        <strong>Validación:</strong> 
+        Facturado (${{finanzas.facturacionPeriodo}}) vs Ingresos (${{finanzas.ingresosPeriodo}}) + Pendiente (${{finanzas.totalPendiente}})
+        <span class="text-info ms-2"><i class="fas fa-info-circle"></i> Datos del período seleccionado</span>
+      </small>
+    </div>
+  </div>
+</div>
+
+{{!-- 🚨 ALERTAS CRÍTICAS DESTACADAS --}}
+{{#if alertasCriticas}}
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card border-left-danger shadow-sm">
+      <div class="card-header bg-transparent border-0">
+        <h6 class="mb-0 text-danger">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          Situaciones que Requieren Atención Inmediata
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          {{#each alertasCriticas}}
+          <div class="col-md-6 col-xl-3 mb-3">
+            <div class="alert alert-{{tipo}} border-left-{{tipo}} mb-0">
+              <div class="d-flex align-items-center">
+                <i class="{{icono}} fa-2x me-3"></i>
+                <div>
+                  <div class="font-weight-bold">{{titulo}}</div>
+                  <small>{{descripcion}}</small>
+                  <div class="mt-2">
+                    <a href="{{accion}}" class="btn btn-{{tipo}} btn-sm">
+                      <i class="fas fa-arrow-right me-1"></i>Gestionar
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {{/each}}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{{/if}}
+
+{{!-- 🔄 ACTIVIDAD RECIENTE Y RENDIMIENTO DEL EQUIPO --}}
+<div class="row mb-4">
+  <div class="col-lg-6 mb-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-transparent border-0">
+        <h6 class="mb-0">
+          <i class="fas fa-credit-card text-primary me-2"></i>
+          Últimos Pagos Registrados
+        </h6>
+      </div>
+      <div class="card-body">
+        {{#if ultimosPagos}}
         <div class="table-responsive">
-          <table class="table table-hover mb-0">
+          <table class="table table-sm table-hover">
             <thead>
               <tr>
-                <th class="sortable" data-sort="codigo">Código</th>
-                <th class="sortable" data-sort="tipo">Tipo</th>
-                <th class="sortable" data-sort="cliente">Cliente</th>
-                <th class="sortable" data-sort="estado">Estado</th>
-                <th>Acciones</th>
+                <th>Código</th>
+                <th>Cliente</th>
+                <th>Valor</th>
+                <th>Método</th>
+                <th>Fecha</th>
               </tr>
             </thead>
-            <tbody id="tablaRecientes">
-              {{#each documentosRecientes}}
-              <tr data-cliente="{{this.nombreCliente}}">
-                <td>{{this.codigoBarras}}</td>
-                <td>{{this.tipoDocumento}}</td>
-                <td>{{this.nombreCliente}}</td>
+            <tbody>
+              {{#each ultimosPagos}}
+              <tr>
                 <td>
-                  {{#if (eq this.estado "en_proceso")}}
-                  <span class="badge bg-warning">En Proceso</span>
-                  {{else if (eq this.estado "listo_para_entrega")}}
-                  <span class="badge bg-success">Listo</span>
-                  {{else if (eq this.estado "entregado")}}
-                  <span class="badge bg-info">Entregado</span>
-                  {{else}}
-                  <span class="badge bg-secondary">{{this.estado}}</span>
+                  <code class="text-primary">{{this.codigoBarras}}</code>
+                </td>
+                <td>
+                  <div class="font-weight-bold">{{this.nombreCliente}}</div>
+                  {{#if this.numeroFactura}}
+                  <small class="text-muted">Fact: {{this.numeroFactura}}</small>
                   {{/if}}
                 </td>
                 <td>
-                  <a href="/admin/documentos/detalle/{{this.id}}" class="btn btn-sm btn-outline-secondary">
-                    <i class="fas fa-eye"></i>
-                  </a>
+                  <span class="text-success font-weight-bold">${{this.valorFactura}}</span>
                 </td>
-              </tr>
-              {{else}}
-              <tr>
-                <td colspan="5" class="text-center py-3">No hay documentos registrados recientemente</td>
+                <td>
+                  <span class="badge bg-secondary">{{this.metodoPago}}</span>
+                </td>
+                <td>
+                  <small class="text-muted">{{formatDateEcuador this.fechaPago}}</small>
+                </td>
               </tr>
               {{/each}}
             </tbody>
           </table>
+        </div>
+        <div class="text-center mt-3">
+          <a href="/admin/reportes/financiero" class="btn btn-outline-primary btn-sm">
+            <i class="fas fa-chart-line me-1"></i>Ver Reporte Financiero
+          </a>
+        </div>
+        {{else}}
+        <div class="text-center text-muted py-4">
+          <i class="fas fa-info-circle fa-2x mb-2"></i>
+          <p class="mb-0">No hay pagos registrados en el período seleccionado</p>
+          <small class="text-muted">Los pagos aparecerán aquí cuando se registren</small>
+        </div>
+        {{/if}}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6 mb-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-transparent border-0">
+        <h6 class="mb-0">
+          <i class="fas fa-users text-primary me-2"></i>
+          Rendimiento del Equipo (7 días)
+        </h6>
+      </div>
+      <div class="card-body">
+        {{#if equipoRendimiento}}
+        <div class="table-responsive">
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th>Matrizador</th>
+                <th class="text-center">Procesados</th>
+                <th class="text-center">Entregados</th>
+                <th class="text-end">Cobrado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each equipoRendimiento}}
+              <tr>
+                <td>
+                  <div class="d-flex align-items-center">
+                    <div class="bg-primary text-white rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; font-size: 12px;">
+                      {{substring this.nombre 0 2}}
+                    </div>
+                    <span class="font-weight-bold">{{this.nombre}}</span>
+                  </div>
+                </td>
+                <td class="text-center">
+                  <span class="badge bg-primary">{{this.documentos_procesados}}</span>
+                </td>
+                <td class="text-center">
+                  <span class="badge bg-success">{{this.documentos_entregados}}</span>
+                </td>
+                <td class="text-end">
+                  <span class="font-weight-bold">${{this.dinero_cobrado}}</span>
+                </td>
+              </tr>
+              {{/each}}
+            </tbody>
+          </table>
+        </div>
+        <div class="text-center mt-3">
+          <a href="/admin/reportes/matrizadores" class="btn btn-outline-primary btn-sm">
+            <i class="fas fa-users me-1"></i>Ver Reporte Completo
+          </a>
+        </div>
+        {{else}}
+        <div class="text-center text-muted py-4">
+          <i class="fas fa-users fa-2x mb-2"></i>
+          <p class="mb-0">No hay datos de rendimiento disponibles</p>
+        </div>
+        {{/if}}
+      </div>
+    </div>
+  </div>
+</div>
+
+{{!-- 🚨 SECCIÓN DE ALERTAS DETALLADAS --}}
+{{#if alertasCriticas}}
+<div id="alertas-section" class="row mb-4">
+  <div class="col-12">
+    <div class="card border-left-danger shadow-sm">
+      <div class="card-header bg-transparent border-0">
+        <h6 class="mb-0 text-danger">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          Situaciones que Requieren Atención Inmediata
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          {{#each alertasCriticas}}
+          <div class="col-md-6 col-xl-3 mb-3">
+            <div class="alert alert-{{tipo}} border-left-{{tipo}} mb-0">
+              <div class="d-flex align-items-center">
+                <i class="{{icono}} fa-2x me-3"></i>
+                <div>
+                  <div class="font-weight-bold">{{titulo}}</div>
+                  <small>{{descripcion}}</small>
+                  <div class="mt-2">
+                    <a href="{{accion}}" class="btn btn-{{tipo}} btn-sm">
+                      <i class="fas fa-arrow-right me-1"></i>Gestionar
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {{/each}}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{{/if}}
+
+{{!-- 📋 ÚLTIMAS ENTREGAS Y DOCUMENTOS CRÍTICOS --}}
+<div class="row mb-4">
+  <div class="col-lg-6 mb-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent border-0">
+        <h6 class="mb-0">
+          <i class="fas fa-handshake text-primary me-2"></i>
+          Últimas Entregas Realizadas
+        </h6>
+      </div>
+      <div class="card-body">
+        {{#if ultimasEntregas}}
+        <div class="list-group list-group-flush">
+          {{#each ultimasEntregas}}
+          <div class="list-group-item border-0 px-0">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <div class="font-weight-bold">{{this.nombreCliente}}</div>
+                <small class="text-muted">{{this.codigoBarras}} - {{this.tipoDocumento}}</small>
+                {{#if this.matrizador}}
+                <div><small class="text-info">Matrizador: {{this.matrizador.nombre}}</small></div>
+                {{/if}}
+              </div>
+              <div class="text-end">
+                <span class="badge bg-success">Entregado</span>
+                <div><small class="text-muted">{{formatDate this.fechaEntrega}}</small></div>
+              </div>
+            </div>
+          </div>
+          {{/each}}
+        </div>
+        <div class="text-center mt-3">
+          <a href="/admin/documentos/listado?estado=entregado" class="btn btn-outline-success btn-sm">
+            <i class="fas fa-list me-1"></i>Ver Todos los Entregados
+          </a>
+        </div>
+        {{else}}
+        <div class="text-center text-muted py-4">
+          <i class="fas fa-handshake fa-2x mb-2"></i>
+          <p class="mb-0">No hay entregas recientes</p>
+        </div>
+        {{/if}}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6 mb-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent border-0">
+        <h6 class="mb-0">
+          <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+          Documentos que Requieren Atención
+        </h6>
+      </div>
+      <div class="card-body">
+        {{#if documentosUrgentes}}
+        <div class="list-group list-group-flush">
+          {{#each documentosUrgentes}}
+          <div class="list-group-item border-0 px-0">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <div class="font-weight-bold">{{this.codigoBarras}}</div>
+                <small class="text-muted">{{this.nombreCliente}}</small>
+                {{#if this.matrizador}}
+                <div><small class="text-info">Asignado: {{this.matrizador.nombre}}</small></div>
+                {{/if}}
+              </div>
+              <div class="text-end">
+                <span class="badge bg-warning">Pendiente</span>
+                <div><small class="text-muted">{{daysAgo this.createdAt}} días</small></div>
+              </div>
+            </div>
+          </div>
+          {{/each}}
+        </div>
+        <div class="text-center mt-3">
+          <a href="/admin/reportes/pendientes" class="btn btn-outline-warning btn-sm">
+            <i class="fas fa-exclamation-triangle me-1"></i>Ver Reporte de Pendientes
+          </a>
+        </div>
+        {{else}}
+        <div class="text-center text-muted py-4">
+          <i class="fas fa-check-circle fa-2x mb-2 text-success"></i>
+          <p class="mb-0">Todos los documentos están al día</p>
+        </div>
+        {{/if}}
+      </div>
+    </div>
+  </div>
+</div>
+
+{{!-- 🎯 ACCESOS RÁPIDOS EJECUTIVOS --}}
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent border-0">
+        <h6 class="mb-0">
+          <i class="fas fa-bolt text-primary me-2"></i>
+          Accesos Rápidos Administrativos
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="row text-center">
+          <div class="col-md-3 mb-3">
+            <a href="/admin/reportes/pendientes" class="btn btn-lg btn-outline-danger w-100 h-100 py-4">
+              <i class="fas fa-exclamation-triangle fa-2x mb-3"></i><br>
+              <strong>Pagos Atrasados</strong><br>
+              <small>Gestión de cobranza</small>
+            </a>
+          </div>
+          <div class="col-md-3 mb-3">
+            <a href="/admin/reportes/financiero" class="btn btn-lg btn-outline-success w-100 h-100 py-4">
+              <i class="fas fa-chart-line fa-2x mb-3"></i><br>
+              <strong>Reporte Financiero</strong><br>
+              <small>Análisis de ingresos</small>
+            </a>
+          </div>
+          <div class="col-md-3 mb-3">
+            <a href="/admin/documentos/listado" class="btn btn-lg btn-outline-primary w-100 h-100 py-4">
+              <i class="fas fa-search fa-2x mb-3"></i><br>
+              <strong>Buscar Documentos</strong><br>
+              <small>Consulta avanzada</small>
+            </a>
+          </div>
+          <div class="col-md-3 mb-3">
+            <a href="/admin/auditoria-eliminaciones" class="btn btn-lg btn-outline-info w-100 h-100 py-4">
+              <i class="fas fa-shield-alt fa-2x mb-3"></i><br>
+              <strong>Auditoría</strong><br>
+              <small>Registros de seguridad</small>
+            </a>
+          </div>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Actividad reciente -->
-<div class="row mt-4">
-  <div class="col-md-12">
-    <div class="card">
-      <div class="card-header">
-        Actividad Reciente
-      </div>
-      <div class="card-body p-0">
-        <ul class="list-group list-group-flush">
-          {{#each actividades}}
-          <li class="list-group-item">
-            <div class="d-flex w-100 justify-content-between">
-              <h6 class="mb-1">{{this.titulo}}</h6>
-              <small>{{formatTimeAgo this.fecha}}</small>
-            </div>
-            <p class="mb-1">{{this.descripcion}}</p>
-            <small>
-              {{#if this.usuario}}
-              <i class="fas fa-user me-1"></i> {{this.usuario}}
-              {{/if}}
-            </small>
-          </li>
-          {{else}}
-          <li class="list-group-item text-center py-4">
-            <i class="fas fa-info-circle me-2"></i> No hay actividad reciente registrada
-          </li>
-          {{/each}}
-        </ul>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Modal de Exportación -->
-<div class="modal fade" id="exportarModal" tabindex="-1" aria-labelledby="exportarModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="exportarModalLabel">Exportar Reporte</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <form id="exportarForm">
-          <div class="mb-3">
-            <label class="form-label">Formato</label>
-            <div class="form-check">
-              <input class="form-check-input" type="radio" name="formato" id="formatoPDF" value="pdf" checked>
-              <label class="form-check-label" for="formatoPDF">PDF</label>
-            </div>
-            <div class="form-check">
-              <input class="form-check-input" type="radio" name="formato" id="formatoExcel" value="excel">
-              <label class="form-check-label" for="formatoExcel">Excel</label>
-            </div>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Contenido</label>
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" name="contenido" id="contenidoResumen" value="resumen" checked>
-              <label class="form-check-label" for="contenidoResumen">Resumen estadístico</label>
-            </div>
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" name="contenido" id="contenidoListado" value="listado">
-              <label class="form-check-label" for="contenidoListado">Listado detallado</label>
-            </div>
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" name="contenido" id="contenidoMatrizador" value="matrizador">
-              <label class="form-check-label" for="contenidoMatrizador">Desglose por matrizador</label>
-            </div>
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" name="contenido" id="contenidoTipo" value="tipo">
-              <label class="form-check-label" for="contenidoTipo">Desglose por tipo</label>
-            </div>
-          </div>
-        </form>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button type="button" class="btn btn-success" id="descargarReporte">Descargar Reporte</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Scripts para gráficos -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.0.0/dist/chartjs-adapter-luxon.min.js"></script>
+{{!-- 🔧 JAVASCRIPT PARA FUNCIONALIDAD INTERACTIVA OPTIMIZADA --}}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  // Inicializar gráficos
-  initGraficos();
+  // ============ FUNCIONALIDAD DE FILTROS OPTIMIZADA ============
   
-  // Inicializar manejo de filtros
-  initFiltros();
+  const periodoForm = document.getElementById('periodoForm');
+  const tipoPeriodo = document.getElementById('tipoPeriodo');
   
-  // Inicializar manejo de exportación
-  initExportacion();
+  // Botones de período rápido
+  document.querySelectorAll('[data-periodo]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const periodo = this.getAttribute('data-periodo');
+      
+      // Actualizar campo hidden
+      tipoPeriodo.value = periodo;
+      
+      // Activar botón seleccionado
+      document.querySelectorAll('[data-periodo]').forEach(b => {
+        b.classList.remove('active');
+        b.classList.add('btn-outline-primary');
+        b.classList.remove('btn-primary');
+      });
+      this.classList.add('active', 'btn-primary');
+      this.classList.remove('btn-outline-primary');
+      
+      // Calcular fechas según período
+      const fechas = calcularFechasPeriodo(periodo);
+      document.getElementById('fechaInicio').value = fechas.inicio;
+      document.getElementById('fechaFin').value = fechas.fin;
+      
+      // Enviar formulario automáticamente
+      periodoForm.submit();
+    });
+  });
+  
+  // Marcar botón activo según período actual
+  const periodoActual = tipoPeriodo.value;
+  const btnActivo = document.querySelector(`[data-periodo="${periodoActual}"]`);
+  if (btnActivo) {
+    btnActivo.classList.add('active', 'btn-primary');
+    btnActivo.classList.remove('btn-outline-primary');
+  }
+  
+  // ============ FUNCIONES AUXILIARES ============
+  
+  function calcularFechasPeriodo(periodo) {
+    const hoy = new Date();
+    let inicio, fin;
+    
+    switch(periodo) {
+      case 'hoy':
+        inicio = fin = hoy.toISOString().split('T')[0];
+        break;
+      case 'semana':
+        const inicioSemana = new Date(hoy);
+        inicioSemana.setDate(hoy.getDate() - hoy.getDay());
+        inicio = inicioSemana.toISOString().split('T')[0];
+        fin = hoy.toISOString().split('T')[0];
+        break;
+      case 'mes':
+        inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
+        fin = hoy.toISOString().split('T')[0];
+        break;
+      case 'ultimo_mes':
+        const hace30Dias = new Date(hoy);
+        hace30Dias.setDate(hoy.getDate() - 30);
+        inicio = hace30Dias.toISOString().split('T')[0];
+        fin = hoy.toISOString().split('T')[0];
+        break;
+      default:
+        inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
+        fin = hoy.toISOString().split('T')[0];
+    }
+    
+    return { inicio, fin };
+  }
+  
+  // ============ SCROLL SUAVE A ALERTAS ============
+  
+  document.querySelectorAll('a[href="#alertas-section"]').forEach(link => {
+    link.addEventListener('click', function(e) {
+      e.preventDefault();
+      const alertasSection = document.getElementById('alertas-section');
+      if (alertasSection) {
+        alertasSection.scrollIntoView({ 
+          behavior: 'smooth',
+          block: 'start'
+        });
+      }
+    });
+  });
+  
+  // ============ ANIMACIONES Y EFECTOS MEJORADOS ============
+  
+  // Efecto hover en cards de métricas con mejor performance
+  const cards = document.querySelectorAll('.card');
+  cards.forEach(card => {
+    card.addEventListener('mouseenter', function() {
+      this.style.transform = 'translateY(-2px)';
+      this.style.transition = 'transform 0.2s ease, box-shadow 0.2s ease';
+      this.style.boxShadow = '0 0.5rem 1rem rgba(0, 0, 0, 0.15)';
+    });
+    
+    card.addEventListener('mouseleave', function() {
+      this.style.transform = 'translateY(0)';
+      this.style.boxShadow = '';
+    });
+  });
+  
+  // Loading state mejorado para formularios
+  periodoForm.addEventListener('submit', function() {
+    const submitBtn = this.querySelector('button[type="submit"]');
+    if (submitBtn) {
+      const originalText = submitBtn.innerHTML;
+      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando...';
+      submitBtn.disabled = true;
+      
+      // Restaurar después de 3 segundos si no se recarga la página
+      setTimeout(() => {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+      }, 3000);
+    }
+  });
+  
+  // Auto-actualización cada 5 minutos si está en "hoy"
+  if (tipoPeriodo.value === 'hoy') {
+    setInterval(function() {
+      // Solo recargar si la página está visible
+      if (!document.hidden) {
+        location.reload();
+      }
+    }, 5 * 60 * 1000); // 5 minutos
+  }
+  
+  // ============ VALIDACIÓN MATEMÁTICA VISUAL ============
+  
+  // Verificar consistencia de datos financieros
+  const facturado = parseFloat('{{finanzas.facturacionPeriodo}}') || 0;
+  const ingresos = parseFloat('{{finanzas.ingresosPeriodo}}') || 0;
+  const pendiente = parseFloat('{{finanzas.totalPendiente}}') || 0;
+  
+  const diferencia = Math.abs(facturado - (ingresos + pendiente));
+  
+  if (diferencia > 0.01) {
+    console.warn('⚠️ Inconsistencia en datos financieros detectada:');
+    console.warn('Facturado:', facturado);
+    console.warn('Ingresos + Pendiente:', ingresos + pendiente);
+    console.warn('Diferencia:', diferencia);
+    
+    // Mostrar alerta visual si hay inconsistencia mayor
+    if (diferencia > 1) {
+      const validacionAlert = document.querySelector('.alert.border-left-info');
+      if (validacionAlert) {
+        validacionAlert.classList.remove('border-left-info');
+        validacionAlert.classList.add('border-left-warning');
+        validacionAlert.innerHTML = validacionAlert.innerHTML.replace(
+          'Datos del período seleccionado',
+          '⚠️ Posible inconsistencia en datos - Diferencia: $' + diferencia.toFixed(2)
+        );
+      }
+    }
+  }
+  
+  // ============ OPTIMIZACIÓN DE PERFORMANCE ============
+  
+  // Lazy loading para secciones no críticas
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('animate-fade-in');
+      }
+    });
+  });
+  
+  // Observar tablas y secciones secundarias
+  document.querySelectorAll('.table, .list-group').forEach(el => {
+    observer.observe(el);
+  });
 });
 
-function initGraficos() {
-  // Datos para los gráficos
-  const datosVolumen = {
-    labels: {{{json estadisticas.volumen.fechas}}},
-    datasets: [
-      {
-        label: 'Nuevos',
-        data: {{{json estadisticas.volumen.nuevos}}},
-        borderColor: '#ffc107',
-        backgroundColor: 'rgba(255, 193, 7, 0.2)',
-        fill: true,
-        tension: 0.4
-      },
-      {
-        label: 'Procesados',
-        data: {{{json estadisticas.volumen.procesados}}},
-        borderColor: '#28a745',
-        backgroundColor: 'rgba(40, 167, 69, 0.2)',
-        fill: true,
-        tension: 0.4
-      },
-      {
-        label: 'Entregados',
-        data: {{{json estadisticas.volumen.entregados}}},
-        borderColor: '#17a2b8',
-        backgroundColor: 'rgba(23, 162, 184, 0.2)',
-        fill: true,
-        tension: 0.4
-      }
-    ]
-  };
+// ============ CSS ANIMATIONS ============
+const style = document.createElement('style');
+style.textContent = `
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+  }
   
-  const datosMatrizador = {
-    labels: {{{json estadisticas.matrizador.nombres}}},
-    datasets: [{
-      label: 'Documentos por Matrizador',
-      data: {{{json estadisticas.matrizador.documentos}}},
-      backgroundColor: [
-        'rgba(255, 99, 132, 0.7)',
-        'rgba(54, 162, 235, 0.7)',
-        'rgba(255, 206, 86, 0.7)',
-        'rgba(75, 192, 192, 0.7)',
-        'rgba(153, 102, 255, 0.7)',
-        'rgba(255, 159, 64, 0.7)',
-        'rgba(199, 199, 199, 0.7)'
-      ],
-      borderWidth: 1
-    }]
-  };
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
   
-  const datosTipo = {
-    labels: {{{json estadisticas.tipo.nombres}}},
-    datasets: [{
-      label: 'Documentos por Tipo',
-      data: {{{json estadisticas.tipo.documentos}}},
-      backgroundColor: [
-        'rgba(255, 99, 132, 0.7)',
-        'rgba(54, 162, 235, 0.7)',
-        'rgba(255, 206, 86, 0.7)',
-        'rgba(75, 192, 192, 0.7)',
-        'rgba(153, 102, 255, 0.7)',
-        'rgba(255, 159, 64, 0.7)'
-      ],
-      borderWidth: 1
-    }]
-  };
-  
-  // Gráfico de volumen (líneas)
-  const ctxVolumen = document.getElementById('volumenChart').getContext('2d');
-  const volumenChart = new Chart(ctxVolumen, {
-    type: 'line',
-    data: datosVolumen,
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        x: {
-          type: 'time',
-          time: {
-            unit: '{{estadisticas.volumen.unidadTiempo}}'
-          },
-          title: {
-            display: true,
-            text: 'Fecha'
-          }
-        },
-        y: {
-          beginAtZero: true,
-          title: {
-            display: true,
-            text: 'Cantidad de Documentos'
-          }
-        }
-      }
-    }
-  });
-  
-  // Gráfico por matrizador (barras)
-  const ctxMatrizador = document.getElementById('matrizadorChart').getContext('2d');
-  const matrizadorChart = new Chart(ctxMatrizador, {
-    type: 'bar',
-    data: datosMatrizador,
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        y: {
-          beginAtZero: true,
-          title: {
-            display: true,
-            text: 'Cantidad de Documentos'
-          }
-        }
-      }
-    }
-  });
-  
-  // Gráfico por tipo (circular)
-  const ctxTipo = document.getElementById('tipoChart').getContext('2d');
-  const tipoChart = new Chart(ctxTipo, {
-    type: 'pie',
-    data: datosTipo,
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: 'bottom'
-        }
-      }
-    }
-  });
-  
-  // Manejo de cambio entre gráficos
-  document.getElementById('btnVolumen').addEventListener('click', function() {
-    document.getElementById('graficoVolumen').style.display = 'block';
-    document.getElementById('graficoMatrizador').style.display = 'none';
-    document.getElementById('graficoTipo').style.display = 'none';
-    document.getElementById('btnVolumen').classList.add('active');
-    document.getElementById('btnMatrizador').classList.remove('active');
-    document.getElementById('btnTipo').classList.remove('active');
-  });
-  
-  document.getElementById('btnMatrizador').addEventListener('click', function() {
-    document.getElementById('graficoVolumen').style.display = 'none';
-    document.getElementById('graficoMatrizador').style.display = 'block';
-    document.getElementById('graficoTipo').style.display = 'none';
-    document.getElementById('btnVolumen').classList.remove('active');
-    document.getElementById('btnMatrizador').classList.add('active');
-    document.getElementById('btnTipo').classList.remove('active');
-  });
-  
-  document.getElementById('btnTipo').addEventListener('click', function() {
-    document.getElementById('graficoVolumen').style.display = 'none';
-    document.getElementById('graficoMatrizador').style.display = 'none';
-    document.getElementById('graficoTipo').style.display = 'block';
-    document.getElementById('btnVolumen').classList.remove('active');
-    document.getElementById('btnMatrizador').classList.remove('active');
-    document.getElementById('btnTipo').classList.add('active');
-  });
-}
-
-function initFiltros() {
-  // Manejo del selector de período
-  const tipoPeriodo = document.getElementById('tipoPeriodo');
-  const fechasPersonalizadas = document.getElementById('fechasPersonalizadas');
-  
-  tipoPeriodo.addEventListener('change', function() {
-    if (this.value === 'personalizado') {
-      fechasPersonalizadas.style.display = 'flex';
-    } else {
-      fechasPersonalizadas.style.display = 'none';
-    }
-  });
-  
-  // Filtro por matrizador en tabla de pendientes
-  const filtroMatrizadorPendientes = document.getElementById('filtroMatrizadorPendientes');
-  filtroMatrizadorPendientes.addEventListener('change', function() {
-    const idMatrizador = this.value;
-    const filas = document.querySelectorAll('#tablaPendientes tr[data-matrizador]');
-    
-    filas.forEach(fila => {
-      if (!idMatrizador || fila.dataset.matrizador === idMatrizador) {
-        fila.style.display = '';
-      } else {
-        fila.style.display = 'none';
-      }
-    });
-  });
-  
-  // Búsqueda por cliente en tabla de recientes
-  const buscarDocumento = document.getElementById('buscarDocumento');
-  buscarDocumento.addEventListener('input', function() {
-    const termino = this.value.toLowerCase();
-    const filas = document.querySelectorAll('#tablaRecientes tr[data-cliente]');
-    
-    filas.forEach(fila => {
-      const cliente = fila.dataset.cliente.toLowerCase();
-      if (cliente.includes(termino)) {
-        fila.style.display = '';
-      } else {
-        fila.style.display = 'none';
-      }
-    });
-  });
-  
-  // Ordenamiento de tablas
-  document.querySelectorAll('.sortable').forEach(th => {
-    th.addEventListener('click', function() {
-      const tabla = this.closest('table');
-      const tbody = tabla.querySelector('tbody');
-      const filas = Array.from(tbody.querySelectorAll('tr'));
-      const columna = this.dataset.sort;
-      const ascendente = !this.classList.contains('asc');
-      
-      // Quitar clases de orden de todos los encabezados
-      tabla.querySelectorAll('th').forEach(th => {
-        th.classList.remove('asc', 'desc');
-      });
-      
-      // Añadir clase de orden al encabezado actual
-      this.classList.add(ascendente ? 'asc' : 'desc');
-      
-      // Ordenar filas
-      filas.sort((a, b) => {
-        const valorA = a.cells[this.cellIndex].textContent.trim();
-        const valorB = b.cells[this.cellIndex].textContent.trim();
-        
-        if (columna === 'fecha') {
-          // Ordenar fechas
-          const fechaA = new Date(valorA);
-          const fechaB = new Date(valorB);
-          return ascendente ? fechaA - fechaB : fechaB - fechaA;
-        } else {
-          // Ordenar texto
-          return ascendente
-            ? valorA.localeCompare(valorB)
-            : valorB.localeCompare(valorA);
-        }
-      });
-      
-      // Reordenar las filas en la tabla
-      filas.forEach(fila => {
-        tbody.appendChild(fila);
-      });
-    });
-  });
-}
-
-function initExportacion() {
-  // Manejo del botón de exportar
-  document.getElementById('exportarBtn').addEventListener('click', function() {
-    const modal = new bootstrap.Modal(document.getElementById('exportarModal'));
-    modal.show();
-  });
-  
-  // Manejo del botón de descargar reporte
-  document.getElementById('descargarReporte').addEventListener('click', function() {
-    const formato = document.querySelector('input[name="formato"]:checked').value;
-    const contenidos = Array.from(document.querySelectorAll('input[name="contenido"]:checked')).map(input => input.value);
-    
-    // Obtener parámetros del período actual
-    const tipoPeriodo = document.getElementById('tipoPeriodo').value;
-    const fechaInicio = document.getElementById('fechaInicio').value;
-    const fechaFin = document.getElementById('fechaFin').value;
-    
-    // Construir URL para descargar
-    let url = `/admin/reportes/descargar?formato=${formato}`;
-    contenidos.forEach(contenido => {
-      url += `&contenido=${contenido}`;
-    });
-    
-    url += `&tipoPeriodo=${tipoPeriodo}`;
-    if (tipoPeriodo === 'personalizado') {
-      url += `&fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
-    }
-    
-    // Redirigir a la URL de descarga
-    window.location.href = url;
-    
-    // Cerrar el modal
-    bootstrap.Modal.getInstance(document.getElementById('exportarModal')).hide();
-  });
-}
-</script>
-
-<!-- Estilos adicionales -->
-<style>
-.sortable {
-  cursor: pointer;
-}
-.sortable:hover {
-  background-color: rgba(0,0,0,0.05);
-}
-.sortable.asc::after {
-  content: " ↑";
-}
-.sortable.desc::after {
-  content: " ↓";
-}
-</style> 
+  .card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+`;
+document.head.appendChild(style);
+</script> 

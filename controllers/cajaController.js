@@ -40,44 +40,69 @@ const cajaController = {
       console.log('Accediendo al dashboard de caja');
       console.log('Usuario:', req.matrizador?.nombre, 'Rol:', req.matrizador?.rol);
       
-      // Procesar parámetros de período usando utilidades centralizadas
-      const tipoPeriodo = req.query.tipoPeriodo || 'mes';
+      // 🎯 MEJORADO: Cambiar filtro por defecto de 'mes' a 'hoy' para mejor UX inicial
+      const tipoPeriodo = req.query.tipoPeriodo || 'hoy'; // 🔧 CAMBIO: era 'mes', ahora 'hoy'
       let fechaInicio, fechaFin;
-      const hoy = moment().startOf('day');
       
-      // Establecer fechas según el período seleccionado
+      // 🔧 CORREGIDO: Usar timezone de Ecuador para cálculos consistentes
+      const moment = require('moment-timezone');
+      const TIMEZONE_ECUADOR = 'America/Guayaquil';
+      const ahora = moment().tz(TIMEZONE_ECUADOR);
+      
+      // 🔧 CORREGIDO: Establecer fechas según el período seleccionado con lógica correcta
       switch (tipoPeriodo) {
         case 'hoy':
-          fechaInicio = hoy.clone();
-          fechaFin = moment().endOf('day');
+          fechaInicio = ahora.clone().startOf('day');
+          fechaFin = ahora.clone().endOf('day');
           break;
         case 'semana':
-          fechaInicio = hoy.clone().startOf('week');
-          fechaFin = moment().endOf('day');
+          // 🔧 CORREGIDO: Semana completa desde lunes hasta hoy
+          fechaInicio = ahora.clone().startOf('week').add(1, 'day'); // Lunes
+          fechaFin = ahora.clone().endOf('day');
           break;
         case 'mes':
-          fechaInicio = hoy.clone().startOf('month');
-          fechaFin = moment().endOf('day');
+          // 🔧 CORREGIDO: Mes completo desde el día 1 hasta hoy
+          fechaInicio = ahora.clone().startOf('month');
+          fechaFin = ahora.clone().endOf('day');
           break;
         case 'ultimo_mes':
-          fechaInicio = hoy.clone().subtract(30, 'days');
-          fechaFin = moment().endOf('day');
+          // 🔧 CORREGIDO: Últimos 30 días completos
+          fechaInicio = ahora.clone().subtract(30, 'days').startOf('day');
+          fechaFin = ahora.clone().endOf('day');
+          break;
+        case 'ano':
+          // 🔧 NUEVO: Año actual desde enero 1 hasta hoy
+          fechaInicio = ahora.clone().startOf('year');
+          fechaFin = ahora.clone().endOf('day');
           break;
         case 'personalizado':
-          fechaInicio = req.query.fechaInicio ? moment(req.query.fechaInicio) : hoy.clone().startOf('month');
-          fechaFin = req.query.fechaFin ? moment(req.query.fechaFin).endOf('day') : moment().endOf('day');
+          fechaInicio = req.query.fechaInicio ? 
+            moment.tz(req.query.fechaInicio, TIMEZONE_ECUADOR).startOf('day') : 
+            ahora.clone().startOf('day'); // 🔧 CAMBIO: por defecto usar hoy en lugar de mes
+          fechaFin = req.query.fechaFin ? 
+            moment.tz(req.query.fechaFin, TIMEZONE_ECUADOR).endOf('day') : 
+            ahora.clone().endOf('day');
           break;
         default:
-          fechaInicio = hoy.clone().startOf('month');
-          fechaFin = moment().endOf('day');
+          // 🎯 MEJORADO: Caso por defecto también usa 'hoy' en lugar de mes
+          fechaInicio = ahora.clone().startOf('day');
+          fechaFin = ahora.clone().endOf('day');
       }
       
-      // Formatear fechas para consultas SQL
+      // 🔧 NUEVO: Logging para debugging
+      console.log('=== DEBUG FILTROS CAJA ===');
+      console.log('Filtro aplicado:', tipoPeriodo);
+      console.log('Fecha inicio:', fechaInicio.format('YYYY-MM-DD HH:mm:ss'));
+      console.log('Fecha fin:', fechaFin.format('YYYY-MM-DD HH:mm:ss'));
+      console.log('Timezone:', TIMEZONE_ECUADOR);
+      console.log('========================');
+      
+      // 🔧 CORREGIDO: Formatear fechas para consultas SQL con timezone correcto
       const fechaInicioSQL = fechaInicio.format('YYYY-MM-DD HH:mm:ss');
       const fechaFinSQL = fechaFin.format('YYYY-MM-DD HH:mm:ss');
       
-      // ============== MÉTRICAS FINANCIERAS SIMPLIFICADAS ==============
-      // Usar created_at para métricas del período (cuándo se registraron)
+      // ============== MÉTRICAS FINANCIERAS CORREGIDAS ==============
+      // 🔧 CORREGIDO: Usar created_at para métricas del período (cuándo se registraron)
       
       // Dinero Facturado: Suma de todos los documentos con monto definido
       const [totalFacturadoResult] = await sequelize.query(`
@@ -114,6 +139,12 @@ const cajaController = {
       // Dinero Pendiente
       const totalPendiente = totalFacturado - totalCobrado;
       
+      // 🔧 NUEVO: Validación de lógica temporal
+      console.log('=== VALIDACIÓN LÓGICA TEMPORAL ===');
+      console.log('Total Facturado:', totalFacturado);
+      console.log('Total Cobrado:', totalCobrado);
+      console.log('Total Pendiente:', totalPendiente);
+      
       // Obtener cantidad de documentos facturados
       const [documentosFacturadosResult] = await sequelize.query(`
         SELECT COUNT(*) as total
@@ -147,6 +178,10 @@ const cajaController = {
       });
       const documentosPendientesPago = parseInt(documentosPendientesPagoResult.total);
 
+      console.log('Documentos Facturados:', documentosFacturados);
+      console.log('Documentos Pendientes:', documentosPendientesPago);
+      console.log('================================');
+
       // Documentos pendientes de pago para la lista
       const documentosPendientesLista = await Documento.findAll({
         where: {
@@ -170,15 +205,24 @@ const cajaController = {
         limit: 10
       });
       
-      // Preparar datos de período para la plantilla
+      // 🔧 CORREGIDO: Preparar datos de período para la plantilla con información de debugging
       const periodoData = {
         esHoy: tipoPeriodo === 'hoy',
         esSemana: tipoPeriodo === 'semana',
         esMes: tipoPeriodo === 'mes',
         esUltimoMes: tipoPeriodo === 'ultimo_mes',
+        esAno: tipoPeriodo === 'ano', // 🔧 NUEVO
         esPersonalizado: tipoPeriodo === 'personalizado',
         fechaInicio: fechaInicio.format('YYYY-MM-DD'),
-        fechaFin: fechaFin.format('YYYY-MM-DD')
+        fechaFin: fechaFin.format('YYYY-MM-DD'),
+        // 🔧 NUEVO: Información de debugging
+        periodoTexto: tipoPeriodo,
+        rangoCalculado: `${fechaInicio.format('DD/MM/YYYY')} - ${fechaFin.format('DD/MM/YYYY')}`,
+        // 🎯 NUEVO: Texto descriptivo para el indicador global
+        periodoDescriptivo: obtenerTextoDescriptivoPeriodo(tipoPeriodo, fechaInicio, fechaFin),
+        fechaInicioFormateada: fechaInicio.format('DD/MM/YYYY'),
+        fechaFinFormateada: fechaFin.format('DD/MM/YYYY'),
+        filtroActivo: tipoPeriodo
       };
       
       // ============== ESTADÍSTICAS ADICIONALES PARA CAJA_ARCHIVO ==============
@@ -1419,37 +1463,40 @@ const cajaController = {
         // Generar código de verificación para entrega
         const codigoVerificacion = Math.floor(1000 + Math.random() * 9000).toString();
         
-        // Procesar la fecha del XML para almacenar correctamente
+        // 🔧 CORREGIDO: Procesar la fecha del XML usando la función especializada
         let fechaFactura = null;
         if (fechaEmision) {
-          console.log(`Procesando fecha XML: ${fechaEmision}`);
+          console.log(`🔧 PROCESANDO FECHA XML: ${fechaEmision}`);
           
-          // Separar DD/MM/YYYY
-          const partesFecha = fechaEmision.split('/');
-          if (partesFecha.length === 3) {
-            const dia = partesFecha[0].padStart(2, '0');
-            const mes = partesFecha[1].padStart(2, '0'); 
-            const año = partesFecha[2];
-            
-            // Crear string de fecha en formato YYYY-MM-DD para evitar problemas de zona horaria
-            const fechaString = `${año}-${mes}-${dia}`;
-            fechaFactura = fechaString; // Usar string directo para evitar conversión de zona horaria
-            console.log(`Fecha XML convertida a: ${fechaString}`);
+          // 🎯 USAR FUNCIÓN ESPECIALIZADA: procesarFechaDocumento maneja timezone correctamente
+          fechaFactura = procesarFechaDocumento(fechaEmision);
+          
+          if (fechaFactura) {
+            console.log(`✅ FECHA XML PROCESADA CORRECTAMENTE: ${fechaEmision} → ${fechaFactura.toISOString()}`);
+          } else {
+            console.log(`⚠️ FECHA XML NO VÁLIDA: ${fechaEmision}, usando fallback`);
           }
         }
         
-        // Si no se pudo convertir la fecha del XML, usar la fecha actual en formato string
+        // Si no se pudo convertir la fecha del XML, usar la fecha actual
         if (!fechaFactura) {
-          console.log('Fecha del XML no válida, usando fecha actual como fallback para fecha de factura');
+          console.log('🔧 USANDO FECHA ACTUAL COMO FALLBACK');
           const hoy = new Date();
           const dia = String(hoy.getDate()).padStart(2, '0');
           const mes = String(hoy.getMonth() + 1).padStart(2, '0');
           const año = hoy.getFullYear();
-          fechaFactura = `${año}-${mes}-${dia}`;
-        } else {
-          console.log(`Usando fecha del XML: ${fechaEmision} convertida a: ${fechaFactura}`);
+          const fechaString = `${dia}/${mes}/${año}`;
+          fechaFactura = procesarFechaDocumento(fechaString);
+          console.log(`✅ FALLBACK APLICADO: ${fechaString} → ${fechaFactura?.toISOString()}`);
         }
         
+        // 🔧 NUEVO: Logging de debugging para verificar corrección
+        console.log('=== DEBUG CORRECCIÓN FECHA XML ===');
+        console.log('Fecha original del XML:', fechaEmision);
+        console.log('Fecha procesada final:', fechaFactura);
+        console.log('Fecha ISO final:', fechaFactura?.toISOString());
+        console.log('Timezone del servidor:', Intl.DateTimeFormat().resolvedOptions().timeZone);
+        console.log('================================');
         
         // CORREGIDO: Preparar datos del documento con fecha de pago si es necesario
         const datosDocumento = {
@@ -1467,7 +1514,7 @@ const cajaController = {
           // Campos de facturación
           numeroFactura: numeroFactura || null,
           valorFactura: valorFactura ? parseFloat(valorFactura) : null,
-          fechaFactura: fechaFactura ? new Date(fechaFactura) : null,
+          fechaFactura: fechaFactura, // 🎯 CORREGIDO: Usar fecha ya procesada correctamente
           estadoPago: estadoPago || 'pendiente',
           metodoPago: mapearMetodoPago(metodoPago),
           omitirNotificacion: omitirNotificacion === 'on',
@@ -2479,8 +2526,13 @@ const cajaController = {
         });
       }
       
-      const fechaDesdeObj = new Date(fechaDesde + 'T00:00:00.000Z');
-      const fechaHastaObj = new Date(fechaHasta + 'T23:59:59.999Z');
+      // 🔧 CORREGIDO: Usar timezone de Ecuador para consistencia
+      const moment = require('moment-timezone');
+      const TIMEZONE_ECUADOR = 'America/Guayaquil';
+      
+      // 🔧 CORREGIDO: Crear fechas con timezone correcto
+      const fechaDesdeObj = moment.tz(fechaDesde, TIMEZONE_ECUADOR).startOf('day').toDate();
+      const fechaHastaObj = moment.tz(fechaHasta, TIMEZONE_ECUADOR).endOf('day').toDate();
       
       if (fechaDesdeObj > fechaHastaObj) {
         return res.json({
@@ -2489,14 +2541,23 @@ const cajaController = {
         });
       }
       
-      // Configurar filtros de fecha
+      // 🔧 NUEVO: Logging para debugging
+      console.log('=== DEBUG FILTROS AJAX ===');
+      console.log('Fecha desde recibida:', fechaDesde);
+      console.log('Fecha hasta recibida:', fechaHasta);
+      console.log('Fecha desde procesada:', fechaDesdeObj);
+      console.log('Fecha hasta procesada:', fechaHastaObj);
+      console.log('Timezone:', TIMEZONE_ECUADOR);
+      console.log('========================');
+      
+      // 🔧 CORREGIDO: Configurar filtros de fecha con campos correctos
       const whereClause = {
         created_at: {
           [Op.between]: [fechaDesdeObj, fechaHastaObj]
         }
       };
       
-      // Obtener métricas filtradas
+      // 🔧 CORREGIDO: Obtener métricas filtradas con validaciones adicionales
       const [
         totalFacturado,
         totalCobrado,
@@ -2509,7 +2570,7 @@ const cajaController = {
           where: {
             ...whereClause,
             valorFactura: { [Op.not]: null },
-            estado: { [Op.ne]: 'cancelado' }
+            estado: { [Op.notIn]: ['eliminado', 'nota_credito', 'cancelado'] } // 🔧 CORREGIDO
           }
         }),
         
@@ -2518,7 +2579,7 @@ const cajaController = {
           where: {
             ...whereClause,
             estadoPago: 'pagado',
-            estado: { [Op.ne]: 'cancelado' }
+            estado: { [Op.notIn]: ['eliminado', 'nota_credito', 'cancelado'] } // 🔧 CORREGIDO
           }
         }),
         
@@ -2527,7 +2588,7 @@ const cajaController = {
           where: {
             ...whereClause,
             estadoPago: 'pendiente',
-            estado: { [Op.ne]: 'cancelado' }
+            estado: { [Op.notIn]: ['eliminado', 'nota_credito', 'cancelado'] } // 🔧 CORREGIDO
           }
         }),
         
@@ -2535,8 +2596,8 @@ const cajaController = {
         Documento.count({
           where: {
             ...whereClause,
-            valorFactura: { [Op.not]: null },
-            estado: { [Op.ne]: 'cancelado' }
+            numeroFactura: { [Op.not]: null }, // 🔧 CORREGIDO: Usar numeroFactura en lugar de valorFactura
+            estado: { [Op.notIn]: ['eliminado', 'nota_credito', 'cancelado'] } // 🔧 CORREGIDO
           }
         }),
         
@@ -2545,35 +2606,46 @@ const cajaController = {
           where: {
             ...whereClause,
             estadoPago: 'pendiente',
-            estado: { [Op.ne]: 'cancelado' }
+            numeroFactura: { [Op.not]: null }, // 🔧 NUEVO: Solo documentos con factura
+            estado: { [Op.notIn]: ['eliminado', 'nota_credito', 'cancelado'] } // 🔧 CORREGIDO
           }
         })
       ]);
+      
+      // 🔧 NUEVO: Validación de lógica temporal para AJAX
+      console.log('=== VALIDACIÓN AJAX ===');
+      console.log('Total Facturado AJAX:', totalFacturado || 0);
+      console.log('Total Cobrado AJAX:', totalCobrado || 0);
+      console.log('Total Pendiente AJAX:', totalPendiente || 0);
+      console.log('Documentos Facturados AJAX:', documentosFacturados || 0);
+      console.log('Documentos Pendientes AJAX:', documentosPendientesPago || 0);
+      console.log('====================');
       
       // Obtener documentos pendientes para la tabla
       const documentosPendientes = await Documento.findAll({
         where: {
           ...whereClause,
           estadoPago: 'pendiente',
-          estado: { [Op.ne]: 'cancelado' }
+          numeroFactura: { [Op.not]: null }, // 🔧 NUEVO: Solo documentos con factura
+          estado: { [Op.notIn]: ['eliminado', 'nota_credito', 'cancelado'] } // 🔧 CORREGIDO
         },
         attributes: ['id', 'codigoBarras', 'nombreCliente', 'numeroFactura', 'valorFactura'],
         limit: 10,
         order: [['created_at', 'DESC']]
       });
       
-      // Obtener pagos recientes para la tabla (documentos marcados como pagados en el período)
+      // 🔧 CORREGIDO: Obtener pagos recientes usando fecha_pago en lugar de updated_at
       const documentosPagadosRecientes = await Documento.findAll({
         where: {
           estadoPago: 'pagado',
-          estado: { [Op.ne]: 'cancelado' },
-          updated_at: {
+          estado: { [Op.notIn]: ['eliminado', 'nota_credito', 'cancelado'] },
+          fechaPago: { // 🔧 CORREGIDO: Usar fechaPago en lugar de updated_at
             [Op.between]: [fechaDesdeObj, fechaHastaObj]
           }
         },
-        attributes: ['id', 'codigoBarras', 'nombreCliente', 'valorFactura', 'metodoPago', 'updated_at'],
+        attributes: ['id', 'codigoBarras', 'nombreCliente', 'valorFactura', 'metodoPago', 'fechaPago'], // 🔧 CORREGIDO
         limit: 10,
-        order: [['updated_at', 'DESC']]
+        order: [['fechaPago', 'DESC']] // 🔧 CORREGIDO
       });
       
       // Formatear los valores
@@ -2602,7 +2674,7 @@ const cajaController = {
             nombreCliente: doc.nombreCliente,
             valorFactura: doc.valorFactura ? parseFloat(doc.valorFactura).toFixed(2) : '0.00',
             metodoPago: mapearMetodoPagoInverso(doc.metodoPago),
-            updated_at: doc.updated_at
+            fechaPago: doc.fechaPago // 🔧 CORREGIDO: Usar fechaPago
           }))
         }
       });
@@ -3529,5 +3601,32 @@ const cajaController = {
     }
   }
 };
+
+// 🎯 FUNCIÓN AUXILIAR: Generar texto descriptivo del período para el indicador global
+function obtenerTextoDescriptivoPeriodo(tipoPeriodo, fechaInicio, fechaFin) {
+  const moment = require('moment-timezone');
+  const TIMEZONE_ECUADOR = 'America/Guayaquil';
+  
+  // Asegurar que las fechas sean objetos moment
+  const inicio = moment.isMoment(fechaInicio) ? fechaInicio : moment.tz(fechaInicio, TIMEZONE_ECUADOR);
+  const fin = moment.isMoment(fechaFin) ? fechaFin : moment.tz(fechaFin, TIMEZONE_ECUADOR);
+  
+  switch(tipoPeriodo) {
+    case 'hoy':
+      return `HOY - ${inicio.format('DD/MM/YYYY')}`;
+    case 'semana':
+      return `ESTA SEMANA - ${inicio.format('DD/MM')} al ${fin.format('DD/MM/YYYY')}`;
+    case 'mes':
+      return `ESTE MES - ${inicio.format('DD/MM')} al ${fin.format('DD/MM/YYYY')}`;
+    case 'ultimo_mes':
+      return `ÚLTIMOS 30 DÍAS - ${inicio.format('DD/MM')} al ${fin.format('DD/MM/YYYY')}`;
+    case 'ano':
+      return `AÑO ACTUAL - ${inicio.format('DD/MM')} al ${fin.format('DD/MM/YYYY')}`;
+    case 'personalizado':
+      return `PERÍODO PERSONALIZADO - ${inicio.format('DD/MM')} al ${fin.format('DD/MM/YYYY')}`;
+    default:
+      return `${inicio.format('DD/MM')} al ${fin.format('DD/MM/YYYY')}`;
+  }
+}
 
 module.exports = cajaController;

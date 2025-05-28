@@ -11,6 +11,26 @@
   --light-color: #f8f9fa;
   --dark-color: #212529;
   --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  
+  /* 🎯 NUEVAS VARIABLES PARA DASHBOARD ADMIN */
+  --admin-primary: #4e73df;
+  --admin-success: #1cc88a;
+  --admin-warning: #f6c23e;
+  --admin-danger: #e74a3b;
+  --admin-info: #36b9cc;
+  --admin-gray-800: #5a5c69;
+  --admin-gray-300: #dddfeb;
+  --admin-border-color: #e3e6f0;
+  --admin-secondary: #858796;
+  --admin-light: #f8f9fc;
+  --admin-dark: #5a5c69;
+  --admin-gray-100: #f8f9fc;
+  --admin-gray-200: #eaecf4;
+  --admin-gray-400: #d1d3e2;
+  --admin-gray-500: #b7b9cc;
+  --admin-gray-600: #858796;
+  --admin-gray-700: #6e707e;
+  --admin-gray-900: #3a3b45;
 }
 
 /* Estilos generales */
@@ -126,5 +146,744 @@ footer {
 @media (max-width: 768px) {
   body {
     padding-bottom: 120px;
+  }
+}
+
+/* 🎯 ESTILOS PARA INDICADOR DE PERÍODO ACTIVO - DASHBOARD CAJA */
+.border-left-primary {
+  border-left: 4px solid var(--primary-color) !important;
+}
+
+.alert.border-left-primary {
+  background-color: #f8f9fa;
+  border: 1px solid #e3e6f0;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+}
+
+.alert.border-left-primary .text-primary {
+  color: var(--primary-color) !important;
+  font-weight: 600;
+}
+
+.alert.border-left-primary .fas.fa-calendar-day {
+  color: var(--primary-color);
+  opacity: 0.8;
+}
+
+.alert.border-left-primary .text-success {
+  color: var(--success-color) !important;
+  font-weight: 500;
+}
+
+.alert.border-left-primary .text-warning {
+  color: var(--warning-color) !important;
+  font-weight: 500;
+}
+
+.alert.border-left-primary .text-muted {
+  color: #6c757d !important;
+  font-size: 0.875rem;
+}
+
+/* Efectos hover para el indicador */
+.alert.border-left-primary:hover {
+  background-color: #f1f3f4;
+  transition: background-color 0.2s ease;
+}
+
+/* Responsividad para el indicador de período */
+@media (max-width: 768px) {
+  .alert.border-left-primary .d-flex {
+    flex-direction: column;
+    align-items: flex-start !important;
+  }
+  
+  .alert.border-left-primary .text-end {
+    text-align: left !important;
+    margin-top: 0.5rem;
+  }
+  
+  .alert.border-left-primary .fas.fa-calendar-day {
+    font-size: 1rem !important;
+    margin-right: 0.5rem !important;
+  }
+}
+
+/* 🎨 ESTILOS PARA DASHBOARD ADMIN MODERNIZADO */
+
+/* Clases border-left para todos los colores */
+.border-left-success {
+  border-left: 0.25rem solid var(--admin-success) !important;
+}
+
+.border-left-warning {
+  border-left: 0.25rem solid var(--admin-warning) !important;
+}
+
+.border-left-danger {
+  border-left: 0.25rem solid var(--admin-danger) !important;
+}
+
+.border-left-info {
+  border-left: 0.25rem solid var(--admin-info) !important;
+}
+
+/* Estilos para cards del dashboard admin */
+.card.shadow-sm {
+  box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15) !important;
+  border: 1px solid var(--admin-border-color);
+  transition: all 0.3s ease;
+}
+
+.card.shadow-sm:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15) !important;
+}
+
+/* Estilos para métricas del dashboard admin */
+.text-xs {
+  font-size: 0.7rem;
+}
+
+.font-weight-bold {
+  font-weight: 700 !important;
+}
+
+.text-uppercase {
+  text-transform: uppercase !important;
+}
+
+.text-gray-800 {
+  color: var(--admin-gray-800) !important;
+}
+
+.text-gray-300 {
+  color: var(--admin-gray-300) !important;
+}
+
+/* Estilos para alertas del dashboard admin */
+.alert.border-left-success {
+  border-left-color: var(--admin-success) !important;
+  background-color: rgba(28, 200, 138, 0.1);
+}
+
+.alert.border-left-warning {
+  border-left-color: var(--admin-warning) !important;
+  background-color: rgba(246, 194, 62, 0.1);
+}
+
+.alert.border-left-danger {
+  border-left-color: var(--admin-danger) !important;
+  background-color: rgba(231, 74, 59, 0.1);
+}
+
+.alert.border-left-info {
+  border-left-color: var(--admin-info) !important;
+  background-color: rgba(54, 185, 204, 0.1);
+}
+
+/* Estilos para botones del dashboard admin */
+.btn-group .btn.active {
+  background-color: var(--admin-primary);
+  border-color: var(--admin-primary);
+  color: white;
+}
+
+/* Estilos para tablas del dashboard admin */
+.table th {
+  border-top: none;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  color: var(--admin-gray-800);
+}
+
+/* Estilos para accesos rápidos del dashboard admin */
+.btn-lg {
+  padding: 1.5rem 1rem;
+  border-radius: 0.35rem;
+}
+
+/* Animaciones para el dashboard admin */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.card {
+  animation: fadeIn 0.5s ease-out;
+}
+
+/* Efectos de carga para el dashboard admin */
+.loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid var(--admin-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsividad específica para dashboard admin */
+@media (max-width: 768px) {
+  .btn-group {
+    flex-direction: column;
+  }
+  
+  .btn-group .btn {
+    border-radius: 0.25rem !important;
+    margin-bottom: 0.25rem;
+  }
+  
+  .card.shadow-sm {
+    margin-bottom: 1rem;
+  }
+}
+
+/* ============================================
+   CLASES BORDER-LEFT PARA TODOS LOS COLORES
+   ============================================ */
+.border-left-primary {
+  border-left: 0.25rem solid var(--admin-primary) !important;
+}
+
+.border-left-success {
+  border-left: 0.25rem solid var(--admin-success) !important;
+}
+
+.border-left-warning {
+  border-left: 0.25rem solid var(--admin-warning) !important;
+}
+
+.border-left-danger {
+  border-left: 0.25rem solid var(--admin-danger) !important;
+}
+
+.border-left-info {
+  border-left: 0.25rem solid var(--admin-info) !important;
+}
+
+.border-left-secondary {
+  border-left: 0.25rem solid var(--admin-secondary) !important;
+}
+
+/* ============================================
+   ESTILOS PARA MÉTRICAS DASHBOARD ADMIN
+   ============================================ */
+.text-xs {
+  font-size: 0.75rem !important;
+}
+
+.font-weight-bold {
+  font-weight: 700 !important;
+}
+
+.text-uppercase {
+  text-transform: uppercase !important;
+}
+
+.text-gray-800 {
+  color: var(--admin-gray-800) !important;
+}
+
+.text-gray-300 {
+  color: var(--admin-gray-300) !important;
+}
+
+/* ============================================
+   ALERTAS CON BORDER-LEFT
+   ============================================ */
+.alert.border-left-success {
+  border-left: 0.25rem solid var(--admin-success) !important;
+}
+
+.alert.border-left-warning {
+  border-left: 0.25rem solid var(--admin-warning) !important;
+}
+
+.alert.border-left-danger {
+  border-left: 0.25rem solid var(--admin-danger) !important;
+}
+
+.alert.border-left-info {
+  border-left: 0.25rem solid var(--admin-info) !important;
+}
+
+/* ============================================
+   BOTONES ACTIVOS EN GRUPOS
+   ============================================ */
+.btn-group .btn.active {
+  background-color: var(--admin-primary) !important;
+  border-color: var(--admin-primary) !important;
+  color: white !important;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
+}
+
+/* ============================================
+   MEJORAS PARA TABLAS
+   ============================================ */
+.table th {
+  border-top: none !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  font-size: 0.75rem !important;
+  color: var(--admin-gray-700) !important;
+  background-color: var(--admin-gray-100) !important;
+}
+
+/* ============================================
+   BOTONES GRANDES PARA ACCESOS RÁPIDOS
+   ============================================ */
+.btn-lg {
+  padding: 1rem 1.5rem !important;
+  font-size: 1rem !important;
+  border-radius: 0.5rem !important;
+  transition: all 0.3s ease !important;
+}
+
+/* ============================================
+   ANIMACIONES Y EFECTOS
+   ============================================ */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.card {
+  animation: fadeIn 0.3s ease-in-out;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.loading {
+  position: relative;
+  pointer-events: none;
+}
+
+.loading::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.loading::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid var(--admin-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  z-index: 1001;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ============================================
+   RESPONSIVIDAD MEJORADA
+   ============================================ */
+@media (max-width: 768px) {
+  .btn-group {
+    flex-direction: column;
+  }
+  
+  .btn-group .btn {
+    border-radius: 0.25rem !important;
+    margin-bottom: 0.25rem;
+  }
+  
+  .card.shadow-sm {
+    margin-bottom: 1rem;
+  }
+}
+
+/* ============================================
+   ESTILOS ESPECÍFICOS DASHBOARD EJECUTIVO
+   ============================================ */
+
+/* Cards con colores de fondo */
+.bg-success {
+  background-color: var(--admin-success) !important;
+}
+
+.bg-info {
+  background-color: var(--admin-info) !important;
+}
+
+.bg-warning {
+  background-color: var(--admin-warning) !important;
+}
+
+.bg-dark {
+  background-color: var(--admin-dark) !important;
+}
+
+/* Texto en cards de colores */
+.text-white-50 {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.text-white-75 {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+
+.text-white-25 {
+  color: rgba(255, 255, 255, 0.25) !important;
+}
+
+/* Efectos hover para cards ejecutivos */
+.card.shadow-sm:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Botones de acceso rápido mejorados */
+.btn-lg.btn-outline-danger:hover,
+.btn-lg.btn-outline-success:hover,
+.btn-lg.btn-outline-primary:hover,
+.btn-lg.btn-outline-info:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
+}
+
+/* Avatares para equipo */
+.bg-primary.text-white.rounded-circle {
+  font-weight: bold;
+  font-size: 0.75rem;
+}
+
+/* Badges mejorados */
+.badge {
+  font-weight: 600;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.375rem;
+}
+
+/* List group items mejorados */
+.list-group-item {
+  border: none !important;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--admin-gray-200) !important;
+}
+
+.list-group-item:last-child {
+  border-bottom: none !important;
+}
+
+/* Headers de cards transparentes */
+.card-header.bg-transparent {
+  background-color: transparent !important;
+  border-bottom: 1px solid var(--admin-gray-200) !important;
+}
+
+/* Alertas ejecutivas mejoradas */
+.alert.border-left-danger {
+  background-color: rgba(231, 74, 59, 0.05);
+  border-color: rgba(231, 74, 59, 0.1);
+}
+
+.alert.border-left-warning {
+  background-color: rgba(246, 194, 62, 0.05);
+  border-color: rgba(246, 194, 62, 0.1);
+}
+
+.alert.border-left-info {
+  background-color: rgba(54, 185, 204, 0.05);
+  border-color: rgba(54, 185, 204, 0.1);
+}
+
+/* Botones en alertas */
+.alert .btn {
+  font-size: 0.875rem;
+  padding: 0.25rem 0.75rem;
+}
+
+/* Métricas con iconos */
+.fa-2x.text-gray-300 {
+  opacity: 0.3;
+}
+
+/* Animaciones suaves para elementos interactivos */
+.btn, .card, .alert {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Indicador de período mejorado */
+.alert.border-left-primary {
+  background: linear-gradient(135deg, rgba(78, 115, 223, 0.05) 0%, rgba(78, 115, 223, 0.02) 100%);
+  border-left-width: 4px !important;
+}
+
+/* Filtros compactos */
+.form-select-sm, .form-control-sm {
+  font-size: 0.875rem;
+  padding: 0.25rem 0.5rem;
+}
+
+/* Botones de período rápido */
+.btn-group .btn-sm {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+/* Responsividad para dashboard ejecutivo */
+@media (max-width: 992px) {
+  .col-xl-3 {
+    margin-bottom: 1rem;
+  }
+  
+  .h4 {
+    font-size: 1.25rem;
+  }
+  
+  .btn-lg {
+    padding: 0.75rem 1rem !important;
+    font-size: 0.9rem !important;
+  }
+}
+
+@media (max-width: 576px) {
+  .alert.border-left-primary .d-flex {
+    flex-direction: column;
+    align-items: flex-start !important;
+  }
+  
+  .alert.border-left-primary .text-end {
+    text-align: left !important;
+    margin-top: 0.5rem;
+  }
+  
+  .btn-group {
+    width: 100%;
+  }
+  
+  .btn-group .btn {
+    flex: 1;
+  }
+  
+  .table-responsive {
+    font-size: 0.875rem;
+  }
+}
+
+/* Estados de carga específicos */
+.dashboard-loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Mejoras para accesibilidad */
+.btn:focus, .form-control:focus, .form-select:focus {
+  box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+}
+
+/* Colores de estado para badges */
+.badge.bg-primary {
+  background-color: var(--admin-primary) !important;
+}
+
+.badge.bg-success {
+  background-color: var(--admin-success) !important;
+}
+
+.badge.bg-warning {
+  background-color: var(--admin-warning) !important;
+  color: var(--admin-dark) !important;
+}
+
+.badge.bg-danger {
+  background-color: var(--admin-danger) !important;
+}
+
+/* Efectos de hover para elementos interactivos */
+.list-group-item:hover {
+  background-color: var(--admin-gray-100);
+}
+
+.table tbody tr:hover {
+  background-color: var(--admin-gray-100);
+}
+
+/* Estilos para iconos en métricas */
+.fas.fa-chart-line,
+.fas.fa-file-alt,
+.fas.fa-cogs,
+.fas.fa-check-circle,
+.fas.fa-chart-pie {
+  opacity: 0.7;
+}
+
+/* Mejoras para el indicador global */
+.alert.border-left-primary h5 {
+  font-weight: 600;
+  margin-bottom: 0;
+}
+
+.alert.border-left-primary .fas.fa-chart-line {
+  opacity: 0.8;
+}
+
+/* Estilos para botones de exportación */
+.btn-outline-success:hover {
+  background-color: var(--admin-success);
+  border-color: var(--admin-success);
+  color: white;
+}
+
+/* ============================================
+   OPTIMIZACIÓN DE DENSIDAD VISUAL
+   ============================================ */
+
+/* Optimización de densidad visual */
+.card-body.py-2 {
+  padding-top: 0.5rem !important;
+  padding-bottom: 0.5rem !important;
+}
+
+.card-body.py-3 {
+  padding-top: 0.75rem !important;
+  padding-bottom: 0.75rem !important;
+}
+
+.mb-2 {
+  margin-bottom: 0.5rem !important;
+}
+
+.mb-3 {
+  margin-bottom: 1rem !important;
+}
+
+/* Border-left para todos los colores */
+.border-left-primary {
+  border-left: 3px solid var(--admin-primary) !important;
+}
+
+.border-left-warning {
+  border-left: 3px solid var(--admin-warning) !important;
+}
+
+.border-left-success {
+  border-left: 3px solid var(--admin-success) !important;
+}
+
+.border-left-info {
+  border-left: 3px solid var(--admin-info) !important;
+}
+
+.border-left-danger {
+  border-left: 3px solid var(--admin-danger) !important;
+}
+
+/* Alertas compactas */
+.alert.py-2 {
+  padding-top: 0.5rem !important;
+  padding-bottom: 0.5rem !important;
+}
+
+/* Badges mejorados */
+.badge.px-3 {
+  padding-left: 1rem !important;
+  padding-right: 1rem !important;
+}
+
+.badge.py-2 {
+  padding-top: 0.5rem !important;
+  padding-bottom: 0.5rem !important;
+}
+
+/* Cards con hover effect mejorado */
+.card:hover {
+  transform: translateY(-2px);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Texto pequeño para labels */
+.text-xs {
+  font-size: 0.75rem !important;
+}
+
+/* Espaciado optimizado para métricas */
+.h4.mb-0 {
+  line-height: 1.2;
+}
+
+/* Iconos con opacidad para fondos */
+.text-white-25 {
+  opacity: 0.25 !important;
+}
+
+.text-white-50 {
+  opacity: 0.5 !important;
+}
+
+.text-white-75 {
+  opacity: 0.75 !important;
+}
+
+/* Flex utilities mejorados */
+.flex-grow-1 {
+  flex-grow: 1 !important;
+}
+
+/* Botones compactos */
+.btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  border-radius: 0.2rem;
+}
+
+/* Form controls compactos */
+.form-control-sm {
+  min-height: calc(1.5em + 0.5rem + 2px);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  border-radius: 0.2rem;
+}
+
+/* Optimización para viewport pequeños */
+@media (max-width: 768px) {
+  .card-body.py-3 {
+    padding: 0.5rem !important;
+  }
+  
+  .h4 {
+    font-size: 1.25rem !important;
+  }
+  
+  .btn-group-sm .btn {
+    padding: 0.125rem 0.25rem;
+    font-size: 0.75rem;
   }
 } 

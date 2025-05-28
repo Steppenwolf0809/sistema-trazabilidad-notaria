@@ -1,4 +1,4 @@
-<!-- Dashboard Caja --><div class="row">  <div class="col-md-12 mb-4">    <div class="alert alert-info d-flex justify-content-between align-items-center">      <span><i class="fas fa-info-circle me-2"></i> Bienvenido al panel de Caja. Desde aquí podrás gestionar pagos, facturas y documentos.</span>      <button type="button" class="btn btn-sm btn-outline-secondary" id="toggleValores">        <i class="fas fa-eye me-1"></i> <span id="toggleText">Mostrar Valores</span>      </button>    </div>  </div>    <!-- Filtros de Fecha -->  <div class="col-md-12 mb-4">    <div class="card">      <div class="card-header">        <i class="fas fa-filter me-2"></i> Filtros de Período      </div>      <div class="card-body">        <div class="row align-items-end">          <div class="col-md-3">            <label for="fechaDesde" class="form-label">Desde</label>            <input type="date" class="form-control" id="fechaDesde" name="fechaDesde">          </div>          <div class="col-md-3">            <label for="fechaHasta" class="form-label">Hasta</label>            <input type="date" class="form-control" id="fechaHasta" name="fechaHasta">          </div>          <div class="col-md-6">            <div class="btn-group mb-2" role="group">              <button type="button" class="btn btn-outline-primary btn-sm" data-periodo="hoy">Hoy</button>              <button type="button" class="btn btn-outline-primary btn-sm" data-periodo="semana">Esta Semana</button>              <button type="button" class="btn btn-outline-primary btn-sm" data-periodo="mes">Este Mes</button>              <button type="button" class="btn btn-outline-primary btn-sm" data-periodo="ano">Año Actual</button>            </div>            <div class="d-flex">              <button type="button" class="btn btn-primary me-2" id="aplicarFiltros">                <i class="fas fa-search me-1"></i>Aplicar Filtros              </button>              <button type="button" class="btn btn-outline-secondary" id="limpiarFiltros">                <i class="fas fa-times me-1"></i>Limpiar              </button>            </div>          </div>        </div>      </div>    </div>  </div>
+<!-- Dashboard Caja --><div class="row">  <div class="col-md-12 mb-4">    <div class="alert alert-info d-flex justify-content-between align-items-center">      <span><i class="fas fa-info-circle me-2"></i> Bienvenido al panel de Caja. Desde aquí podrás gestionar pagos, facturas y documentos.</span>      <button type="button" class="btn btn-sm btn-outline-secondary" id="toggleValores">        <i class="fas fa-eye me-1"></i> <span id="toggleText">Mostrar Valores</span>      </button>    </div>  </div>    <!-- 🎯 INDICADOR ELEGANTE DE PERÍODO ACTIVO -->  <div class="col-md-12 mb-4">    <div class="alert alert-light border-left-primary shadow-sm">      <div class="d-flex align-items-center justify-content-between">        <div class="d-flex align-items-center">          <i class="fas fa-calendar-day text-primary me-3" style="font-size: 1.2rem;"></i>          <div>            <span class="text-muted me-2">Mostrando datos de:</span>            <strong class="text-primary" id="periodoActivo">{{periodo.periodoDescriptivo}}</strong>          </div>        </div>        <div class="text-end">          {{#if (and periodo.esHoy (eq stats.documentosFacturados 0))}}            <small class="text-warning">              <i class="fas fa-info-circle me-1"></i>Sin actividad hoy            </small>            <br>            <small class="text-muted">Use otros filtros para ver períodos anteriores</small>          {{else}}            <small class="text-success">              <i class="fas fa-check-circle me-1"></i>{{stats.documentosFacturados}} documentos            </small>            <br>            <small class="text-muted">en este período</small>          {{/if}}        </div>      </div>    </div>  </div>    <!-- Filtros de Fecha -->  <div class="col-md-12 mb-4">    <div class="card">      <div class="card-header">        <i class="fas fa-filter me-2"></i> Filtros de Período      </div>      <div class="card-body">        <div class="row align-items-end">          <div class="col-md-3">            <label for="fechaDesde" class="form-label">Desde</label>            <input type="date" class="form-control" id="fechaDesde" name="fechaDesde">          </div>          <div class="col-md-3">            <label for="fechaHasta" class="form-label">Hasta</label>            <input type="date" class="form-control" id="fechaHasta" name="fechaHasta">          </div>          <div class="col-md-6">            <div class="btn-group mb-2" role="group">              <button type="button" class="btn btn-outline-primary btn-sm" data-periodo="hoy">Hoy</button>              <button type="button" class="btn btn-outline-primary btn-sm" data-periodo="semana">Esta Semana</button>              <button type="button" class="btn btn-outline-primary btn-sm" data-periodo="mes">Este Mes</button>              <button type="button" class="btn btn-outline-primary btn-sm" data-periodo="ano">Año Actual</button>            </div>            <div class="d-flex">              <button type="button" class="btn btn-primary me-2" id="aplicarFiltros">                <i class="fas fa-search me-1"></i>Aplicar Filtros              </button>              <button type="button" class="btn btn-outline-secondary" id="limpiarFiltros">                <i class="fas fa-times me-1"></i>Limpiar              </button>            </div>          </div>        </div>      </div>    </div>  </div>
   
   <!-- Tarjetas de estadísticas -->
   <div class="col-md-3 mb-4">
@@ -262,11 +262,10 @@
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     // ============ FUNCIÓN AUXILIAR PARA FORMATEAR DINERO ============
-    function formatMoney(amount) {
-      if (!amount) return '0.00';
-      const num = parseFloat(amount);
-      if (isNaN(num)) return '0.00';
-      return num.toLocaleString('es-ES', {
+    function formatMoney(value) {
+      if (!value) return '0.00';
+      const num = parseFloat(value.toString().replace(/[^0-9.-]/g, ''));
+      return num.toLocaleString('es-EC', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
       });
@@ -342,12 +341,21 @@
     
     // ============ FUNCIONALIDAD FILTROS DE FECHA ============
     
-    // Establecer fechas por defecto (este mes)
+    // 🎯 MEJORADO: Establecer fechas por defecto como HOY en lugar del mes completo
     const hoy = new Date();
-    const primerDiaDelMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
     
-    document.getElementById('fechaDesde').value = primerDiaDelMes.toISOString().split('T')[0];
+    // 🔧 CAMBIO: Usar solo el día de hoy como filtro por defecto
+    document.getElementById('fechaDesde').value = hoy.toISOString().split('T')[0];
     document.getElementById('fechaHasta').value = hoy.toISOString().split('T')[0];
+    
+    // 🎯 NUEVO: Activar el botón "Hoy" por defecto para mostrar visualmente el filtro activo
+    const botonHoy = document.querySelector('[data-periodo="hoy"]');
+    if (botonHoy) {
+      botonHoy.classList.add('active');
+      // Cambiar clase para que se vea como seleccionado
+      botonHoy.classList.remove('btn-outline-primary');
+      botonHoy.classList.add('btn-primary');
+    }
     
     // Manejar botones de período predefinido
     document.querySelectorAll('[data-periodo]').forEach(btn => {
@@ -358,9 +366,16 @@
         document.getElementById('fechaDesde').value = fechas.desde;
         document.getElementById('fechaHasta').value = fechas.hasta;
         
-        // Destacar botón activo
-        document.querySelectorAll('[data-periodo]').forEach(b => b.classList.remove('active'));
-        this.classList.add('active');
+        // 🔧 MEJORADO: Destacar botón activo con estilos correctos
+        document.querySelectorAll('[data-periodo]').forEach(b => {
+          b.classList.remove('active', 'btn-primary');
+          b.classList.add('btn-outline-primary');
+        });
+        this.classList.remove('btn-outline-primary');
+        this.classList.add('active', 'btn-primary');
+        
+        // 🎯 NUEVO: Actualizar indicador de período activo
+        actualizarIndicadorPeriodo(periodo, fechas.desde, fechas.hasta);
         
         // Aplicar automáticamente
         aplicarFiltrosFecha();
@@ -374,23 +389,40 @@
       
       switch(periodo) {
         case 'hoy':
+          // 🔧 CORREGIDO: Solo el día de hoy
           desde = hasta = hoy.toISOString().split('T')[0];
           break;
         case 'semana':
+          // 🔧 CORREGIDO: Desde el lunes de esta semana hasta hoy
           const primerDiaSemana = new Date(hoy);
-          primerDiaSemana.setDate(hoy.getDate() - hoy.getDay());
+          const diasHastaLunes = (hoy.getDay() + 6) % 7; // Calcular días hasta el lunes anterior
+          primerDiaSemana.setDate(hoy.getDate() - diasHastaLunes);
           desde = primerDiaSemana.toISOString().split('T')[0];
           hasta = hoy.toISOString().split('T')[0];
           break;
         case 'mes':
+          // 🔧 CORREGIDO: Desde el día 1 del mes actual hasta hoy
           desde = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
           hasta = hoy.toISOString().split('T')[0];
           break;
         case 'ano':
+          // 🔧 NUEVO: Desde enero 1 del año actual hasta hoy
           desde = new Date(hoy.getFullYear(), 0, 1).toISOString().split('T')[0];
           hasta = hoy.toISOString().split('T')[0];
           break;
+        default:
+          // 🔧 FALLBACK: Mes actual
+          desde = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
+          hasta = hoy.toISOString().split('T')[0];
       }
+      
+      // 🔧 NUEVO: Logging para debugging
+      console.log('=== DEBUG FRONTEND ===');
+      console.log('Período:', periodo);
+      console.log('Fecha desde:', desde);
+      console.log('Fecha hasta:', hasta);
+      console.log('Hoy:', hoy.toISOString().split('T')[0]);
+      console.log('==================');
       
       return { desde, hasta };
     }
@@ -402,15 +434,24 @@
     
     // Limpiar filtros
     document.getElementById('limpiarFiltros').addEventListener('click', function() {
-      // Volver al período del mes actual
+      // 🎯 MEJORADO: Volver al período "HOY" por defecto en lugar del mes
       const hoy = new Date();
-      const primerDiaDelMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
       
-      document.getElementById('fechaDesde').value = primerDiaDelMes.toISOString().split('T')[0];
+      document.getElementById('fechaDesde').value = hoy.toISOString().split('T')[0];
       document.getElementById('fechaHasta').value = hoy.toISOString().split('T')[0];
       
-      // Quitar selección de botones
-      document.querySelectorAll('[data-periodo]').forEach(b => b.classList.remove('active'));
+      // 🔧 MEJORADO: Activar botón "Hoy" y quitar selección de otros
+      document.querySelectorAll('[data-periodo]').forEach(b => {
+        b.classList.remove('active', 'btn-primary');
+        b.classList.add('btn-outline-primary');
+      });
+      
+      // Activar botón "Hoy"
+      const botonHoy = document.querySelector('[data-periodo="hoy"]');
+      if (botonHoy) {
+        botonHoy.classList.remove('btn-outline-primary');
+        botonHoy.classList.add('active', 'btn-primary');
+      }
       
       // Aplicar filtros
       aplicarFiltrosFecha();
@@ -476,12 +517,41 @@
       }
     }
     
-    // Actualizar métricas en la interfaz
+    // Actualizar métricas en la interfaz con validación de lógica temporal
     function actualizarMetricas(datos) {
+      // 🔧 NUEVO: Validación de lógica temporal en frontend
+      const totalFacturado = parseFloat(datos.stats.totalFacturado.replace(/[^0-9.-]/g, '')) || 0;
+      const totalCobrado = parseFloat(datos.stats.totalCobrado.replace(/[^0-9.-]/g, '')) || 0;
+      const totalPendiente = parseFloat(datos.stats.totalPendiente.replace(/[^0-9.-]/g, '')) || 0;
+      
+      console.log('=== VALIDACIÓN FRONTEND ===');
+      console.log('Total Facturado:', totalFacturado);
+      console.log('Total Cobrado:', totalCobrado);
+      console.log('Total Pendiente:', totalPendiente);
+      console.log('Documentos Facturados:', datos.stats.documentosFacturados);
+      console.log('Documentos Pendientes:', datos.stats.documentosPendientesPago);
+      
+      // 🔧 NUEVO: Validaciones de coherencia
+      if (totalCobrado > totalFacturado) {
+        console.error('❌ ERROR: Total cobrado no puede ser mayor que total facturado');
+        console.error('Facturado:', totalFacturado, 'Cobrado:', totalCobrado);
+      }
+      
+      if (Math.abs((totalFacturado - totalCobrado) - totalPendiente) > 0.01) {
+        console.error('❌ ERROR: Inconsistencia en cálculo de pendiente');
+        console.error('Calculado:', totalFacturado - totalCobrado, 'Reportado:', totalPendiente);
+      }
+      
+      if (datos.stats.documentosPendientesPago > datos.stats.documentosFacturados) {
+        console.error('❌ ERROR: Documentos pendientes no pueden ser más que documentos facturados');
+      }
+      
+      console.log('========================');
+      
       // Actualizar tarjetas principales (guardando valores originales)
-      document.getElementById('totalFacturado').setAttribute('data-valor-original', '$' + formatMoney(datos.stats.totalFacturado));
-      document.getElementById('totalCobrado').setAttribute('data-valor-original', '$' + formatMoney(datos.stats.totalCobrado));
-      document.getElementById('totalPendiente').setAttribute('data-valor-original', '$' + formatMoney(datos.stats.totalPendiente));
+      document.getElementById('totalFacturado').setAttribute('data-valor-original', datos.stats.totalFacturado);
+      document.getElementById('totalCobrado').setAttribute('data-valor-original', datos.stats.totalCobrado);
+      document.getElementById('totalPendiente').setAttribute('data-valor-original', datos.stats.totalPendiente);
       
       document.getElementById('documentosFacturados').textContent = datos.stats.documentosFacturados;
       document.getElementById('cantidadPendientes').textContent = datos.stats.documentosPendientesPago;
@@ -592,7 +662,13 @@
       `;
       
       documentos.forEach(doc => {
-        const fecha = new Date(doc.updated_at).toLocaleDateString('es-ES');
+        // 🔧 CORREGIDO: Usar fechaPago en lugar de updated_at
+        const fecha = doc.fechaPago ? 
+          new Date(doc.fechaPago).toLocaleDateString('es-EC', {
+            day: '2-digit',
+            month: '2-digit', 
+            year: 'numeric'
+          }) : 'N/A';
         const valorFormateado = '$' + formatMoney(doc.valorFactura || '0.00');
         html += `
           <tr>
@@ -612,6 +688,35 @@
       `;
       
       tabla.innerHTML = html;
+    }
+
+    // 🎯 NUEVA FUNCIÓN: Actualizar indicador de período activo
+    function actualizarIndicadorPeriodo(periodo, fechaDesde, fechaHasta) {
+      const indicador = document.getElementById('periodoActivo');
+      const fechaDesdeFormateada = new Date(fechaDesde).toLocaleDateString('es-EC');
+      const fechaHastaFormateada = new Date(fechaHasta).toLocaleDateString('es-EC');
+      
+      let textoIndicador = '';
+      switch(periodo) {
+        case 'hoy':
+          textoIndicador = `HOY - ${fechaDesdeFormateada}`;
+          break;
+        case 'semana':
+          textoIndicador = `ESTA SEMANA - ${fechaDesdeFormateada} al ${fechaHastaFormateada}`;
+          break;
+        case 'mes':
+          textoIndicador = `ESTE MES - ${fechaDesdeFormateada} al ${fechaHastaFormateada}`;
+          break;
+        case 'ano':
+          textoIndicador = `AÑO ACTUAL - ${fechaDesdeFormateada} al ${fechaHastaFormateada}`;
+          break;
+        default:
+          textoIndicador = `PERÍODO PERSONALIZADO - ${fechaDesdeFormateada} al ${fechaHastaFormateada}`;
+      }
+      
+      if (indicador) {
+        indicador.textContent = textoIndicador;
+      }
     }
   });
 </script> 
