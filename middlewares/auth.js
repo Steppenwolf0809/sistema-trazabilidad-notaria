@@ -359,7 +359,7 @@ const validarAccesoConAuditoria = (rolesPermitidos) => {
         return res.redirect('/login?error=no_autorizado&redirect=' + encodeURIComponent(req.originalUrl));
       }
 
-      // Verificar si el rol está permitido
+      // ✅ CORRECCIÓN: Verificar si el rol está permitido
       if (!rolesPermitidos.includes(req.matrizador.rol)) {
         // Log del intento de acceso no autorizado
         console.log(`⚠️ ACCESO DENEGADO: Usuario ${req.matrizador.nombre} (ROL: ${req.matrizador.rol}) intentó acceder a ruta que requiere roles: [${rolesPermitidos.join(', ')}] - Ruta: ${req.originalUrl}`);
@@ -371,8 +371,8 @@ const validarAccesoConAuditoria = (rolesPermitidos) => {
           });
         }
 
-        // CONTROL ESTRICTO: Si es admin intentando acceder a rutas de otros roles, redirigir con mensaje
-        if (req.matrizador.rol === 'admin') {
+        // ✅ CORRECCIÓN: Solo redirigir admin si NO está en sus propias rutas administrativas
+        if (req.matrizador.rol === 'admin' && !req.path.startsWith('/admin/')) {
           console.log(`🔐 REDIRECCIÓN: Admin ${req.matrizador.nombre} intentó acceder a ruta de ROL [${rolesPermitidos.join(', ')}] - Redirigiendo a /admin`);
           req.flash('error', `Acceso restringido. Como administrador, debe usar las funcionalidades desde el panel administrativo. Para acceder a funcionalidades de ${rolesPermitidos.join(' o ')}, debe hacerlo desde su panel correspondiente.`);
           return res.redirect('/admin');
@@ -384,8 +384,8 @@ const validarAccesoConAuditoria = (rolesPermitidos) => {
         return res.redirect(dashboardUrl);
       }
 
-      // Si es admin accediendo a funciones de otros roles, registrar auditoría
-      if (req.matrizador.rol === 'admin' && !rolesPermitidos.includes('admin')) {
+      // ✅ CORRECCIÓN: Si es admin accediendo a funciones de otros roles (no sus propias rutas), registrar auditoría
+      if (req.matrizador.rol === 'admin' && !rolesPermitidos.includes('admin') && !req.path.startsWith('/admin/')) {
         console.log(`🔍 AUDITORÍA: Admin ${req.matrizador.nombre} (ID: ${req.matrizador.id}) accedió a funcionalidad de ROL [${rolesPermitidos.join(', ')}] en la ruta: ${req.originalUrl} - Método: ${req.method} - IP: ${req.ip || req.connection.remoteAddress} - Timestamp: ${new Date().toISOString()}`);
       }
 

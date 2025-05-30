@@ -25,6 +25,128 @@ const {
 } = require('../utils/documentoUtils');
 const NotificationService = require('../services/notificationService');
 
+// ============== FUNCIONES PARA CONSTRUCCIÓN DE MENSAJES PROFESIONALES ==============
+
+/**
+ * Construye mensajes profesionales para notificación de documento listo
+ * @param {Object} documento - Datos del documento
+ * @param {string} codigoVerificacion - Código de verificación generado
+ * @returns {Object} Mensajes para WhatsApp y Email
+ */
+function construirMensajeDocumentoListo(documento, codigoVerificacion) {
+  let contextoTramite = '';
+  if (documento.notas && 
+      typeof documento.notas === 'string' && 
+      documento.notas.trim().length > 0) {
+    contextoTramite = ` - ${documento.notas.trim()}`;
+  }
+
+  // Mensaje WhatsApp optimizado
+  const mensajeWhatsApp = `🏛️ *NOTARÍA 18*
+
+¡Su documento está listo para retirar!
+
+📄 *Trámite:* ${documento.tipoDocumento}${contextoTramite}
+📋 *Documento:* ${documento.codigoBarras}
+🔢 *Código de verificación:* ${codigoVerificacion}
+👤 *Cliente:* ${documento.nombreCliente}
+
+📍 Retírelo en: Notaría Décima Octava
+🕒 Horario: Lunes a Viernes 8:00-17:00
+
+⚠️ *IMPORTANTE:* Presente el código de verificación y su cédula para el retiro.`;
+
+  // Datos para email profesional
+  const datosEmail = {
+    nombreCliente: documento.nombreCliente,
+    tipoDocumento: documento.tipoDocumento,
+    codigoDocumento: documento.codigoBarras,
+    detallesAdicionales: documento.notas?.trim() || null,
+    codigoVerificacion: codigoVerificacion,
+    fechaFormateada: new Date().toLocaleDateString('es-EC')
+  };
+
+  return {
+    whatsapp: mensajeWhatsApp,
+    email: {
+      subject: `Documento listo para retiro - Notaría 18`,
+      template: 'documento-listo',
+      data: datosEmail
+    },
+    tipo: 'documento_listo'
+  };
+}
+
+/**
+ * Construye mensajes profesionales para notificación de documento entregado
+ * @param {Object} documento - Datos del documento
+ * @param {Object} datosEntrega - Datos de la entrega
+ * @returns {Object} Mensajes para WhatsApp y Email
+ */
+function construirMensajeDocumentoEntregado(documento, datosEntrega) {
+  let contextoTramite = '';
+  if (documento.notas && 
+      typeof documento.notas === 'string' && 
+      documento.notas.trim().length > 0) {
+    contextoTramite = ` - ${documento.notas.trim()}`;
+  }
+
+  const fechaEntrega = new Date().toLocaleDateString('es-EC', {
+    day: '2-digit', month: '2-digit', year: 'numeric'
+  });
+  
+  const horaEntrega = new Date().toLocaleTimeString('es-EC', {
+    hour: '2-digit', minute: '2-digit', hour12: false
+  });
+
+  // Mensaje WhatsApp para confirmación de entrega
+  const mensajeWhatsApp = `🏛️ *NOTARÍA 18*
+
+✅ *DOCUMENTO ENTREGADO EXITOSAMENTE*
+
+📄 *Documento:* ${documento.tipoDocumento}${contextoTramite}
+📋 *Código:* ${documento.codigoBarras}
+👤 *Cliente:* ${documento.nombreCliente}
+
+📦 *DETALLES DE LA ENTREGA:*
+👨‍💼 *Retirado por:* ${datosEntrega.nombreReceptor}
+🆔 *Identificación:* ${datosEntrega.identificacionReceptor}
+👥 *Relación:* ${datosEntrega.relacionReceptor}
+
+📅 *Fecha:* ${fechaEntrega}
+🕒 *Hora:* ${horaEntrega}
+📍 *Lugar:* Notaría Décima Octava, Quito
+
+✅ *Su trámite ha sido completado exitosamente.*
+
+_Guarde este mensaje como comprobante de entrega._`;
+
+  // Datos para email de confirmación
+  const datosEmail = {
+    nombreCliente: documento.nombreCliente,
+    tipoDocumento: documento.tipoDocumento,
+    codigoDocumento: documento.codigoBarras,
+    detallesAdicionales: documento.notas?.trim() || null,
+    nombreReceptor: datosEntrega.nombreReceptor,
+    identificacionReceptor: datosEntrega.identificacionReceptor,
+    relacionReceptor: datosEntrega.relacionReceptor,
+    fechaEntrega: fechaEntrega,
+    horaEntrega: horaEntrega,
+    usuarioEntrega: datosEntrega.usuarioEntrega || 'Personal de Notaría',
+    fechaGeneracion: new Date().toLocaleString('es-EC')
+  };
+
+  return {
+    whatsapp: mensajeWhatsApp,
+    email: {
+      subject: `Documento entregado - ${documento.codigoBarras} - Notaría 18`,
+      template: 'confirmacion-entrega',
+      data: datosEmail
+    },
+    tipo: 'documento_entregado'
+  };
+}
+
 // Objeto que contendrá todas las funciones del controlador
 const matrizadorController = {
   
@@ -112,7 +234,7 @@ const matrizadorController = {
       const { nombre, email, identificacion, cargo, password, rol } = req.body;
       
       // Determinar la ruta de redirección según el contexto
-      const esAdmin = req.path.includes('/admin/');
+      const esAdmin = req.originalUrl.includes('/admin/') || req.baseUrl.includes('/admin/');
       const rutaRedireccion = esAdmin ? '/admin/matrizadores' : '/matrizador';
       
       // Verificar campos obligatorios
@@ -212,13 +334,26 @@ const matrizadorController = {
    */
   actualizar: async (req, res) => {
     try {
+      // 🔍 DEBUG ESPECÍFICO PARA IDENTIFICAR EL PROBLEMA
+      console.log('=== DEBUG ACTUALIZAR MATRIZADOR ===');
+      console.log('URL original:', req.originalUrl);
+      console.log('Path:', req.path);
+      console.log('Método:', req.method);
+      console.log('Usuario rol:', req.matrizador?.rol);
+      console.log('Usuario nombre:', req.matrizador?.nombre);
+      console.log('Body ID:', req.body.id);
+      console.log('Params ID:', req.params.id);
+      console.log('¿Es admin?:', req.originalUrl.includes('/admin/') || req.baseUrl.includes('/admin/'));
+      console.log('=====================================');
+      
       // Obtener ID de la ruta o del cuerpo de la solicitud
       const id = req.params.id || req.body.id;
       
       // Determinar la ruta de redirección según el contexto
-      const esAdmin = req.path.includes('/admin/');
+      const esAdmin = req.originalUrl.includes('/admin/') || req.baseUrl.includes('/admin/');
       const rutaRedireccion = esAdmin ? '/admin/matrizadores' : '/matrizador';
       
+      console.log(`🎯 Ruta de redirección determinada: ${rutaRedireccion}`);
       console.log(`Intentando actualizar matrizador con ID: ${id}`);
       
       // Validar que el ID exista
@@ -232,6 +367,7 @@ const matrizadorController = {
         }
         
         req.flash('error', 'Debe proporcionar un ID de matrizador para actualizarlo');
+        console.log(`🔄 Redirigiendo por falta de ID a: ${rutaRedireccion}`);
         return res.redirect(rutaRedireccion);
       }
       
@@ -274,6 +410,7 @@ const matrizadorController = {
       
       // Si es una solicitud de vista, redirigir con mensaje de éxito
       if (!req.path.startsWith('/api/')) {
+        console.log(`✅ ÉXITO: Matrizador actualizado correctamente. Redirigiendo a: ${rutaRedireccion}`);
         req.flash('success', 'Matrizador actualizado correctamente');
         return res.redirect(rutaRedireccion);
       }
@@ -786,7 +923,10 @@ const matrizadorController = {
       // Eficiencia de procesamiento (% completados en menos de 7 días)
       const [eficiencia] = await sequelize.query(`
         SELECT 
-          COUNT(CASE WHEN EXTRACT(EPOCH FROM (updated_at - created_at))/86400 <= 7 THEN 1 END) * 100.0 / COUNT(*) as porcentaje
+          CASE 
+            WHEN COUNT(*) = 0 THEN 0
+            ELSE COUNT(CASE WHEN EXTRACT(EPOCH FROM (updated_at - created_at))/86400 <= 7 THEN 1 END) * 100.0 / COUNT(*)
+          END as porcentaje
         FROM documentos
         WHERE id_matrizador = :idMatrizador
         AND estado IN ('listo_para_entrega', 'entregado')
@@ -944,7 +1084,10 @@ const matrizadorController = {
         },
         tiempos: {
           labels: datosTiempos.map(d => d.tipo_documento),
-          datos: datosTiempos.map(d => parseFloat(d.promedio).toFixed(1))
+          datos: datosTiempos.map(d => {
+            const promedio = d.promedio ? parseFloat(d.promedio) : 0;
+            return promedio.toFixed(1);
+          })
         },
         tipos: {
           labels: datosTipos.map(d => d.tipo_documento),
@@ -1523,29 +1666,425 @@ const matrizadorController = {
       
       await transaction.commit();
       
-      // Enviar notificación después de confirmar la transacción
+      // Enviar confirmación de entrega después de confirmar la transacción
       try {
-        await NotificationService.enviarNotificacionEntrega(documento.id, {
+        // Construir mensajes profesionales para confirmación de entrega
+        const mensajes = construirMensajeDocumentoEntregado(documento, {
           nombreReceptor,
           identificacionReceptor,
           relacionReceptor,
-          fechaEntrega: documento.fechaEntrega
+          usuarioEntrega: req.matrizador.nombre
         });
+        
+        // Registrar evento de notificación de entrega en el historial
+        await EventoDocumento.create({
+          idDocumento: documento.id,
+          tipo: mensajes.tipo,
+          detalles: `Confirmación de entrega enviada - Entregado a: ${nombreReceptor}`,
+          usuario: req.matrizador.nombre,
+          metadatos: {
+            nombreReceptor: nombreReceptor,
+            identificacionReceptor: identificacionReceptor,
+            relacionReceptor: relacionReceptor,
+            metodoNotificacion: documento.metodoNotificacion || 'ambos',
+            canal: documento.metodoNotificacion || 'ambos',
+            estado: 'enviado',
+            tipoVerificacion: tipoVerificacion
+          }
+        });
+        
+        console.log(`📧 Confirmación de entrega enviada para documento ${documento.codigoBarras} a ${nombreReceptor}`);
       } catch (notificationError) {
         console.error('Error al enviar confirmación de entrega:', notificationError);
         // No afectar el flujo principal si falla la notificación
       }
       
-      req.flash('success', `El documento ha sido entregado exitosamente a ${nombreReceptor}.`);
+      // Mensaje de éxito personalizado según la configuración del documento
+      let mensajeExito = '';
+      
+      if (codigoVerificacion) {
+        mensajeExito = `El documento ha sido marcado como listo para entrega y se ha enviado el código de verificación al cliente.`;
+      } else {
+        if (documento.omitirNotificacion) {
+          mensajeExito = `El documento ha sido marcado como listo para entrega. No se envió notificación según la configuración del documento.`;
+        } else if (esEntregaInmediata) {
+          mensajeExito = `El documento ha sido marcado como listo para entrega inmediata. No se requiere código de verificación.`;
+        } else {
+          mensajeExito = `El documento ha sido marcado como listo para entrega. No se pudo enviar notificación por falta de datos de contacto.`;
+        }
+      }
+      
+      req.flash('success', mensajeExito);
       res.redirect('/matrizador/documentos');
     } catch (error) {
       await transaction.rollback();
-      console.error('Error al completar la entrega del documento:', error);
-      req.flash('error', `Error al completar la entrega: ${error.message}`);
-      res.redirect('/matrizador/documentos/entrega');
+      console.error('Error al marcar documento como listo:', error);
+      req.flash('error', `Error al marcar el documento como listo: ${error.message}`);
+      res.redirect('/matrizador/documentos');
+    }
+  },
+
+  /**
+   * Marcar un documento como visto por el matrizador
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  marcarDocumentoVisto: async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      if (!id) {
+        return res.status(400).json({
+          exito: false,
+          mensaje: 'ID de documento no proporcionado'
+        });
+      }
+      
+      // Buscar el documento
+      const documento = await Documento.findByPk(id);
+      
+      if (!documento) {
+        return res.status(404).json({
+          exito: false,
+          mensaje: `No se encontró documento con ID ${id}`
+        });
+      }
+      
+      // Actualizar el campo visto_por_matrizador
+      await documento.update({ visto_por_matrizador: true });
+      
+      // Registrar evento
+      await EventoDocumento.create({
+        documentoId: id,
+        tipo: 'vista',
+        detalles: 'Documento visto por matrizador',
+        usuario: req.matrizador.nombre
+      });
+      
+      return res.status(200).json({
+        exito: true,
+        mensaje: 'Documento marcado como visto correctamente'
+      });
+    } catch (error) {
+      console.error('Error al marcar documento como visto:', error);
+      return res.status(500).json({
+        exito: false,
+        mensaje: 'Error al marcar el documento como visto',
+        error: error.message
+      });
+    }
+  },
+
+  /**
+   * Mostrar página de búsqueda de documentos para matrizadores
+   */
+  mostrarBuscarDocumentos: async (req, res) => {
+    try {
+      res.render('matrizadores/documentos/buscar', {
+        layout: 'matrizador',
+        title: 'Buscar Documentos',
+        activeBuscar: true,
+        userRole: req.matrizador?.rol,
+        userName: req.matrizador?.nombre
+      });
+    } catch (error) {
+      console.error('Error al mostrar página de búsqueda:', error);
+      req.flash('error', 'Error al cargar la página de búsqueda');
+      res.redirect('/matrizador');
+    }
+  },
+
+  /**
+   * Buscar documentos principales para vincular como habilitantes
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  buscarDocumentosPrincipales: async (req, res) => {
+    try {
+      const { clienteId, excludeId } = req.query;
+      
+      if (!clienteId) {
+        return res.status(400).json({
+          exito: false,
+          mensaje: 'ID de cliente no proporcionado'
+        });
+      }
+      
+      // Construir condiciones de búsqueda
+      const whereClause = {
+        identificacionCliente: clienteId,
+        estado: ['listo_para_entrega', 'en_proceso'],
+        idMatrizador: req.matrizador.id // Solo documentos del mismo matrizador
+      };
+      
+      // Excluir el documento actual si se proporciona
+      if (excludeId) {
+        whereClause.id = { [Op.ne]: excludeId };
+      }
+      
+      const documentos = await Documento.findAll({
+        where: whereClause,
+        attributes: ['id', 'codigoBarras', 'tipoDocumento', 'nombreCliente'],
+        order: [['created_at', 'DESC']],
+        limit: 20
+      });
+      
+      return res.status(200).json({
+        exito: true,
+        datos: documentos,
+        mensaje: `Se encontraron ${documentos.length} documentos principales disponibles`
+      });
+    } catch (error) {
+      console.error('Error al buscar documentos principales:', error);
+      return res.status(500).json({
+        exito: false,
+        mensaje: 'Error interno del servidor',
+        error: error.message
+      });
     }
   },
   
+  /**
+   * Muestra el historial de notificaciones con filtros mejorados
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  historialNotificaciones: async (req, res) => {
+    try {
+      const { fechaDesde, fechaHasta, tipo, canal, busqueda } = req.query;
+      
+      let whereClause = {};
+      let documentoWhereClause = {
+        idMatrizador: req.matrizador.id
+      };
+      
+      // Filtros de fecha
+      if (fechaDesde || fechaHasta) {
+        whereClause.createdAt = {};
+        if (fechaDesde) {
+          whereClause.createdAt[Op.gte] = new Date(fechaDesde + 'T00:00:00');
+        }
+        if (fechaHasta) {
+          whereClause.createdAt[Op.lte] = new Date(fechaHasta + 'T23:59:59');
+        }
+      }
+      
+      // Filtros de tipo y canal
+      if (tipo) whereClause.tipo = tipo;
+      if (canal && canal !== '') {
+        // Buscar en metadatos.canal
+        whereClause['metadatos.canal'] = canal;
+      }
+      
+      // ============== NUEVO: BÚSQUEDA POR TEXTO ==============
+      if (busqueda && busqueda.trim() !== '') {
+        const textoBusqueda = busqueda.trim();
+        documentoWhereClause[Op.or] = [
+          // Buscar por código de barras
+          { codigoBarras: { [Op.iLike]: `%${textoBusqueda}%` } },
+          // Buscar por nombre del cliente
+          { nombreCliente: { [Op.iLike]: `%${textoBusqueda}%` } },
+          // Buscar por número de factura
+          { numeroFactura: { [Op.iLike]: `%${textoBusqueda}%` } },
+          // Buscar por identificación del cliente
+          { identificacionCliente: { [Op.iLike]: `%${textoBusqueda}%` } }
+        ];
+      }
+      
+      // Solo mostrar notificaciones de documentos del matrizador actual
+      const notificaciones = await EventoDocumento.findAll({
+        where: {
+          tipo: {
+            [Op.in]: ['documento_listo', 'documento_entregado']
+          },
+          ...whereClause
+        },
+        include: [{
+          model: Documento,
+          as: 'documento',
+          attributes: ['codigoBarras', 'tipoDocumento', 'nombreCliente', 'numeroFactura', 'identificacionCliente'],
+          where: documentoWhereClause,
+          required: true
+        }],
+        order: [['createdAt', 'DESC']], // Más recientes primero
+        limit: 50 // Limitar para performance
+      });
+      
+      // ============== CALCULAR ESTADÍSTICAS ==============
+      const stats = {
+        total: notificaciones.length,
+        enviadas: notificaciones.filter(n => n.metadatos?.estado === 'enviado').length,
+        fallidas: notificaciones.filter(n => n.metadatos?.estado === 'error').length,
+        pendientes: notificaciones.filter(n => n.metadatos?.estado === 'pendiente').length
+      };
+      
+      res.render('matrizadores/notificaciones/historial', {
+        layout: 'matrizador',
+        title: 'Historial de Notificaciones',
+        notificaciones,
+        stats,
+        filtros: { fechaDesde, fechaHasta, tipo, canal, busqueda },
+        userRole: req.matrizador?.rol,
+        userName: req.matrizador?.nombre
+      });
+      
+    } catch (error) {
+      console.error('Error en historial notificaciones:', error);
+      res.status(500).render('error', { 
+        layout: 'matrizador',
+        title: 'Error',
+        message: 'Error al cargar historial de notificaciones' 
+      });
+    }
+  },
+
+  /**
+   * Obtiene los detalles de una notificación específica (API)
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  obtenerDetalleNotificacion: async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      if (!id) {
+        return res.status(400).json({
+          exito: false,
+          mensaje: 'ID de notificación no proporcionado'
+        });
+      }
+      
+      // Buscar el evento de notificación
+      const evento = await EventoDocumento.findOne({
+        where: {
+          id: id,
+          tipo: {
+            [Op.in]: ['documento_listo', 'documento_entregado']
+          }
+        },
+        include: [{
+          model: Documento,
+          as: 'documento',
+          attributes: ['codigoBarras', 'tipoDocumento', 'nombreCliente', 'emailCliente', 'telefonoCliente', 'notas'],
+          where: {
+            idMatrizador: req.matrizador.id
+          },
+          required: true
+        }]
+      });
+      
+      if (!evento) {
+        return res.status(404).json({
+          exito: false,
+          mensaje: 'Notificación no encontrada o no tienes permisos para verla'
+        });
+      }
+      
+      // ============== RECONSTRUIR MENSAJE ENVIADO ==============
+      let mensajeEnviado = '';
+      
+      if (evento.tipo === 'documento_listo') {
+        // Reconstruir mensaje de documento listo
+        const codigoVerificacion = evento.metadatos?.codigoVerificacion || 'N/A';
+        let contextoTramite = '';
+        if (evento.documento.notas && 
+            typeof evento.documento.notas === 'string' && 
+            evento.documento.notas.trim().length > 0) {
+          contextoTramite = ` - ${evento.documento.notas.trim()}`;
+        }
+        
+        mensajeEnviado = `🏛️ *NOTARÍA 18*
+
+¡Su documento está listo para retirar!
+
+📄 *Trámite:* ${evento.documento.tipoDocumento}${contextoTramite}
+📋 *Documento:* ${evento.documento.codigoBarras}
+🔢 *Código de verificación:* ${codigoVerificacion}
+👤 *Cliente:* ${evento.documento.nombreCliente}
+
+📍 Retírelo en: Notaría Décima Octava
+🕒 Horario: Lunes a Viernes 8:00-17:00
+
+⚠️ *IMPORTANTE:* Presente el código de verificación y su cédula para el retiro.`;
+        
+      } else if (evento.tipo === 'documento_entregado') {
+        // Reconstruir mensaje de documento entregado
+        const fechaEntrega = new Date(evento.createdAt).toLocaleDateString('es-EC', {
+          day: '2-digit', month: '2-digit', year: 'numeric'
+        });
+        
+        const horaEntrega = new Date(evento.createdAt).toLocaleTimeString('es-EC', {
+          hour: '2-digit', minute: '2-digit', hour12: false
+        });
+        
+        let contextoTramite = '';
+        if (evento.documento.notas && 
+            typeof evento.documento.notas === 'string' && 
+            evento.documento.notas.trim().length > 0) {
+          contextoTramite = ` - ${evento.documento.notas.trim()}`;
+        }
+        
+        const nombreReceptor = evento.metadatos?.nombreReceptor || 'Receptor no especificado';
+        const identificacionReceptor = evento.metadatos?.identificacionReceptor || 'N/A';
+        const relacionReceptor = evento.metadatos?.relacionReceptor || 'N/A';
+        
+        mensajeEnviado = `🏛️ *NOTARÍA 18*
+
+✅ *DOCUMENTO ENTREGADO EXITOSAMENTE*
+
+📄 *Documento:* ${evento.documento.tipoDocumento}${contextoTramite}
+📋 *Código:* ${evento.documento.codigoBarras}
+👤 *Cliente:* ${evento.documento.nombreCliente}
+
+📦 *DETALLES DE LA ENTREGA:*
+👨‍💼 *Retirado por:* ${nombreReceptor}
+🆔 *Identificación:* ${identificacionReceptor}
+👥 *Relación:* ${relacionReceptor}
+
+📅 *Fecha:* ${fechaEntrega}
+🕒 *Hora:* ${horaEntrega}
+📍 *Lugar:* Notaría Décima Octava, Quito
+
+✅ *Su trámite ha sido completado exitosamente.*
+
+_Guarde este mensaje como comprobante de entrega._`;
+      }
+      
+      // Preparar datos detallados
+      const detalles = {
+        id: evento.id,
+        tipo: evento.tipo,
+        fecha: evento.createdAt,
+        detalles: evento.detalles,
+        usuario: evento.usuario,
+        documento: {
+          codigo: evento.documento.codigoBarras,
+          tipo: evento.documento.tipoDocumento,
+          cliente: evento.documento.nombreCliente
+        },
+        metadatos: evento.metadatos || {},
+        canales: {
+          email: evento.documento.emailCliente,
+          telefono: evento.documento.telefonoCliente
+        },
+        mensajeEnviado: mensajeEnviado // ← NUEVO: Mensaje completo enviado
+      };
+      
+      return res.status(200).json({
+        exito: true,
+        datos: detalles,
+        mensaje: 'Detalles de notificación obtenidos correctamente'
+      });
+    } catch (error) {
+      console.error('Error al obtener detalles de notificación:', error);
+      return res.status(500).json({
+        exito: false,
+        mensaje: 'Error al obtener los detalles de la notificación',
+        error: error.message
+      });
+    }
+  },
+
   // Nueva función para marcar documentos como listos para entrega
   marcarDocumentoListo: async (req, res) => {
     console.log("Marcando documento como listo para entrega");
@@ -1749,8 +2288,47 @@ const matrizadorController = {
       try {
         // Solo enviar notificación si se generó código
         if (codigoVerificacion) {
-          await NotificationService.enviarNotificacionDocumentoListo(documento.id);
-          console.log(`📱 NOTIFICACIÓN ENVIADA: Código ${codigoVerificacion} enviado al cliente ${documento.nombreCliente} (${documento.emailCliente || documento.telefonoCliente})`);
+          console.log(`🔔 Enviando notificación para documento ${documento.codigoBarras}`);
+          console.log(`📋 Configuración: método=${documento.metodoNotificacion}, auto=${documento.notificarAutomatico}`);
+          console.log(`📞 Teléfono: ${documento.telefonoCliente || 'no disponible'}`);
+          console.log(`📧 Email: ${documento.emailCliente || 'no disponible'}`);
+          
+          // Construir mensajes profesionales
+          const mensajes = construirMensajeDocumentoListo(documento, codigoVerificacion);
+          
+          // Registrar evento de notificación en el historial
+          await EventoDocumento.create({
+            idDocumento: documento.id,
+            tipo: mensajes.tipo,
+            detalles: `Notificación de documento listo enviada - Código: ${codigoVerificacion}`,
+            usuario: req.matrizador.nombre,
+            metadatos: {
+              codigoVerificacion: codigoVerificacion,
+              metodoNotificacion: documento.metodoNotificacion || 'ambos',
+              canal: documento.metodoNotificacion || 'ambos',
+              estado: 'enviado'
+            }
+          });
+          
+          // Enviar por NotificationService (mantener compatibilidad)
+          const resultadoNotificacion = await NotificationService.enviarNotificacionDocumentoListo(documento.id);
+          
+          // Log detallado de resultados
+          console.log('✅ Notificación procesada para documento', documento.codigoBarras);
+          console.log('   Método configurado:', documento.metodoNotificacion);
+          console.log('   Canales enviados:', resultadoNotificacion.canalesEnviados || 'ninguno');
+          console.log('   Errores:', resultadoNotificacion.errores?.length || 0);
+          
+          if (resultadoNotificacion.canalesEnviados && resultadoNotificacion.canalesEnviados.length > 0) {
+            console.log(`📱 NOTIFICACIÓN ENVIADA: Código ${codigoVerificacion} enviado por ${resultadoNotificacion.canalesEnviados.join(' y ')} al cliente ${documento.nombreCliente}`);
+          } else {
+            console.log(`❌ NOTIFICACIÓN FALLÓ: No se pudo enviar por ningún canal configurado (${documento.metodoNotificacion})`);
+            if (resultadoNotificacion.errores && resultadoNotificacion.errores.length > 0) {
+              resultadoNotificacion.errores.forEach(error => {
+                console.log(`   - Error en ${error.canal}: ${error.error}`);
+              });
+            }
+          }
         } else {
           console.log(`⏭️ NO SE ENVIÓ NOTIFICACIÓN: ${mensajeNotificacion} para documento ${documento.codigoBarras}`);
         }
@@ -1785,126 +2363,6 @@ const matrizadorController = {
       console.error('Error al marcar documento como listo:', error);
       req.flash('error', `Error al marcar el documento como listo: ${error.message}`);
       res.redirect('/matrizador/documentos');
-    }
-  },
-
-  /**
-   * Marcar un documento como visto por el matrizador
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
-   */
-  marcarDocumentoVisto: async (req, res) => {
-    try {
-      const { id } = req.params;
-      
-      if (!id) {
-        return res.status(400).json({
-          exito: false,
-          mensaje: 'ID de documento no proporcionado'
-        });
-      }
-      
-      // Buscar el documento
-      const documento = await Documento.findByPk(id);
-      
-      if (!documento) {
-        return res.status(404).json({
-          exito: false,
-          mensaje: `No se encontró documento con ID ${id}`
-        });
-      }
-      
-      // Actualizar el campo visto_por_matrizador
-      await documento.update({ visto_por_matrizador: true });
-      
-      // Registrar evento
-      await EventoDocumento.create({
-        documentoId: id,
-        tipo: 'vista',
-        detalles: 'Documento visto por matrizador',
-        usuario: req.matrizador.nombre
-      });
-      
-      return res.status(200).json({
-        exito: true,
-        mensaje: 'Documento marcado como visto correctamente'
-      });
-    } catch (error) {
-      console.error('Error al marcar documento como visto:', error);
-      return res.status(500).json({
-        exito: false,
-        mensaje: 'Error al marcar el documento como visto',
-        error: error.message
-      });
-    }
-  },
-
-  /**
-   * Mostrar página de búsqueda de documentos para matrizadores
-   */
-  mostrarBuscarDocumentos: async (req, res) => {
-    try {
-      res.render('matrizadores/documentos/buscar', {
-        layout: 'matrizador',
-        title: 'Buscar Documentos',
-        activeBuscar: true,
-        userRole: req.matrizador?.rol,
-        userName: req.matrizador?.nombre
-      });
-    } catch (error) {
-      console.error('Error al mostrar página de búsqueda:', error);
-      req.flash('error', 'Error al cargar la página de búsqueda');
-      res.redirect('/matrizador');
-    }
-  },
-
-  /**
-   * Buscar documentos principales para vincular como habilitantes
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
-   */
-  buscarDocumentosPrincipales: async (req, res) => {
-    try {
-      const { clienteId, excludeId } = req.query;
-      
-      if (!clienteId) {
-        return res.status(400).json({
-          exito: false,
-          mensaje: 'ID de cliente no proporcionado'
-        });
-      }
-      
-      // Construir condiciones de búsqueda
-      const whereClause = {
-        identificacionCliente: clienteId,
-        estado: ['listo_para_entrega', 'en_proceso'],
-        idMatrizador: req.matrizador.id // Solo documentos del mismo matrizador
-      };
-      
-      // Excluir el documento actual si se proporciona
-      if (excludeId) {
-        whereClause.id = { [Op.ne]: excludeId };
-      }
-      
-      const documentos = await Documento.findAll({
-        where: whereClause,
-        attributes: ['id', 'codigoBarras', 'tipoDocumento', 'nombreCliente'],
-        order: [['created_at', 'DESC']],
-        limit: 20
-      });
-      
-      return res.status(200).json({
-        exito: true,
-        datos: documentos,
-        mensaje: `Se encontraron ${documentos.length} documentos principales disponibles`
-      });
-    } catch (error) {
-      console.error('Error al buscar documentos principales:', error);
-      return res.status(500).json({
-        exito: false,
-        mensaje: 'Error interno del servidor',
-        error: error.message
-      });
     }
   },
 };

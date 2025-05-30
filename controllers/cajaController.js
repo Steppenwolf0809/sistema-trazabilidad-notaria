@@ -1767,6 +1767,12 @@ const cajaController = {
         raw: true
       });
       
+      // Convertir IDs a string para comparación en la vista
+      const matrizadoresConIdString = matrizadores.map(m => ({
+        ...m,
+        id: String(m.id)
+      }));
+      
       // Renderizar la vista con los datos
       res.render('caja/reportes/financiero', {
         layout: 'caja',
@@ -2928,6 +2934,14 @@ const cajaController = {
       // Procesar parámetros de filtrado
       const rango = req.query.rango || 'mes';
       const idMatrizador = req.query.idMatrizador; // Filtro por matrizador específico
+      
+      // Debug: Mostrar parámetros recibidos
+      console.log('🔍 REPORTE CAJA - Parámetros recibidos:');
+      console.log('- rango:', rango);
+      console.log('- idMatrizador:', idMatrizador, '(tipo:', typeof idMatrizador, ')');
+      console.log('- fechaInicio:', req.query.fechaInicio);
+      console.log('- fechaFin:', req.query.fechaFin);
+      
       let fechaInicio, fechaFin, periodoTexto;
       
       // Establecer fechas según el rango seleccionado
@@ -3057,6 +3071,22 @@ const cajaController = {
         raw: true
       });
       
+      // Convertir IDs a string para comparación en la vista
+      const matrizadoresConIdString = matrizadores.map(m => ({
+        ...m,
+        id: String(m.id)
+      }));
+      
+      // NUEVO: Obtener información del matrizador seleccionado
+      let matrizadorSeleccionado = null;
+      if (idMatrizador && idMatrizador !== 'todos' && idMatrizador !== '') {
+        console.log('🔍 Buscando matrizador con ID:', idMatrizador);
+        matrizadorSeleccionado = await Matrizador.findByPk(parseInt(idMatrizador), {
+          attributes: ['id', 'nombre', 'email']
+        });
+        console.log('👤 Matrizador encontrado:', matrizadorSeleccionado ? matrizadorSeleccionado.nombre : 'NO ENCONTRADO');
+      }
+      
       // Preparar datos para gráfico
       const datosGrafico = {
         nombres: cobrosMatrizador.map(item => item.nombre),
@@ -3064,32 +3094,58 @@ const cajaController = {
         documentos: cobrosMatrizador.map(item => parseInt(item.documentos_cobrados || 0))
       };
       
-      // Renderizar la vista
-      res.render('caja/reportes/cobros-matrizador', {
+      // NUEVO: Preparar datos mejorados para la vista
+      const datosVista = {
         layout: 'caja',
-        title: 'Cobros por Matrizador',
+        title: 'Reporte de Comisiones por Matrizador - Caja',
         activeReportes: true,
         userRole: req.matrizador?.rol,
         userName: req.matrizador?.nombre,
+        
+        // Datos principales
         cobrosMatrizador,
         cobrosRecientes,
-        matrizadores,
-        idMatrizadorSeleccionado: idMatrizador || 'todos',
+        matrizadores: matrizadoresConIdString, // Usar IDs como string
+        datosGrafico,
+        
+        // Información del contexto
+        periodoTexto,
+        matrizadorSeleccionado,
+        idMatrizadorSeleccionado: idMatrizador ? String(idMatrizador) : 'todos', // Convertir a string
+        
+        // Estadísticas mejoradas
         stats: {
           totalCobradoPeriodo: formatearValorMonetario(totalCobradoPeriodo),
           totalDocumentosCobrados,
           promedioGeneral: formatearValorMonetario(promedioGeneral),
           matrizadoresActivos: cobrosMatrizador.filter(m => parseInt(m.documentos_cobrados) > 0).length
         },
-        datosGrafico,
-        periodoTexto,
+        
+        // Filtros con información adicional
         filtros: {
           rango,
-          idMatrizador,
+          idMatrizador: idMatrizador ? String(idMatrizador) : 'todos', // Convertir a string
           fechaInicio: fechaInicio.format('YYYY-MM-DD'),
-          fechaFin: fechaFin.format('YYYY-MM-DD')
+          fechaFin: fechaFin.format('YYYY-MM-DD'),
+          // Flags para la vista
+          esHoy: rango === 'hoy',
+          esAyer: rango === 'ayer',
+          esSemana: rango === 'semana',
+          esMes: rango === 'mes',
+          esUltimoMes: rango === 'ultimo_mes',
+          esPersonalizado: rango === 'personalizado'
         }
-      });
+      };
+      
+      // Debug: Mostrar datos finales
+      console.log('📊 Datos para la vista:');
+      console.log('- idMatrizadorSeleccionado:', datosVista.idMatrizadorSeleccionado);
+      console.log('- matrizadorSeleccionado:', datosVista.matrizadorSeleccionado?.nombre || 'null');
+      console.log('- Total matrizadores:', datosVista.matrizadores.length);
+      
+      // Renderizar la vista con datos mejorados
+      res.render('caja/reportes/cobros-matrizador', datosVista);
+      
     } catch (error) {
       console.error('Error al generar reporte de cobros por matrizador:', error);
       return res.status(500).render('error', {

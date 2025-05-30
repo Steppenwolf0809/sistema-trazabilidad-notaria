@@ -1,133 +1,66 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Documento Listo para Entrega</title>
-  <style>
-    body {
-      font-family: Arial, Helvetica, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      margin: 0;
-      padding: 0;
-    }
-    .container {
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-    .header {
-      background-color: #0d6efd;
-      color: white;
-      padding: 20px;
-      text-align: center;
-    }
-    .content {
-      padding: 20px;
-      background-color: #f9f9f9;
-      border: 1px solid #ddd;
-    }
-    .footer {
-      margin-top: 20px;
-      text-align: center;
-      font-size: 12px;
-      color: #777;
-    }
-    .btn {
-      display: inline-block;
-      background-color: #0d6efd;
-      color: white;
-      padding: 10px 20px;
-      text-decoration: none;
-      border-radius: 5px;
-      margin-top: 20px;
-    }
-    .info-box {
-      background-color: #e9f7fe;
-      border-left: 4px solid #0d6efd;
-      padding: 15px;
-      margin: 20px 0;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 20px 0;
-    }
-    table, th, td {
-      border: 1px solid #ddd;
-    }
-    th, td {
-      padding: 10px;
-      text-align: left;
-    }
-    th {
-      background-color: #f2f2f2;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>Documento Listo - Notaría 18</title>
+    <style>
+        .header { background: linear-gradient(135deg, #1E88E5, #0D47A1); color: white; padding: 25px; text-align: center; }
+        .content { padding: 30px; font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; }
+        .codigo { background: #E3F2FD; padding: 20px; border-left: 4px solid #1E88E5; margin: 25px 0; border-radius: 0 8px 8px 0; }
+        .info-box { background: #F5F5F5; padding: 20px; border-radius: 8px; margin: 20px 0; }
+        .footer { background: #f8f9fa; padding: 20px; font-size: 12px; color: #666; border-top: 1px solid #e9ecef; }
+    </style>
 </head>
 <body>
-  <div class="container">
     <div class="header">
-      <h1>Documento Listo para Entrega</h1>
+        <h1>🏛️ NOTARÍA DÉCIMA OCTAVA</h1>
+        <p>Dra. Glenda Elizabeth Zapata Silva</p>
     </div>
     
     <div class="content">
-      <p>Estimado(a) <strong>{{cliente.nombreCliente}}</strong>,</p>
-      
-      <p>Nos complace informarle que su documento <strong>{{documento.tipoDocumento}}</strong> se encuentra listo para ser retirado en nuestra notaría.</p>
-      
-      <div class="info-box">
-        <h3>Información del Documento:</h3>
-        <table>
-          <tr>
-            <th>Tipo de Documento</th>
-            <td>{{documento.tipoDocumento}}</td>
-          </tr>
-          <tr>
-            <th>Número de Protocolo</th>
-            <td>{{documento.numeroProtocolo}}</td>
-          </tr>
-          <tr>
-            <th>Fecha de Disponibilidad</th>
-            <td>{{fechaDisponible}}</td>
-          </tr>
-          <tr>
-            <th>Código de Barras</th>
-            <td>{{documento.codigoBarras}}</td>
-          </tr>
-        </table>
-      </div>
-      
-      <p>Por favor, cuando se acerque a retirar su documento, presente su identificación oficial vigente.</p>
-      
-      <p>Si desea verificar el estado de su documento, puede hacerlo a través del siguiente enlace:</p>
-      
-      <p style="text-align: center;">
-        <a href="{{urlVerificacion}}" class="btn">Verificar Documento</a>
-      </p>
-      
-      <p>Si necesita autorizar a un tercero para retirar su documento, por favor asegúrese de que esta persona traiga:</p>
-      <ul>
-        <li>Su identificación oficial vigente</li>
-        <li>Una autorización firmada por usted</li>
-        <li>Copia de su identificación</li>
-      </ul>
-      
-      <p>Horario de atención para retiro de documentos: <br>
-      Lunes a Viernes de 8:00 a 17:00 hrs.</p>
-      
-      <p>Gracias por confiar en nuestros servicios.</p>
-      
-      <p>Atentamente,</p>
-      <p><strong>Notaría Décima Octava</strong></p>
+        <h2>¡Su documento está listo para retirar!</h2>
+        
+        <p>Estimado/a <strong>{{nombreCliente}}</strong>,</p>
+        
+        <p>Nos complace informarle que su trámite ha sido completado y está disponible para retiro:</p>
+        
+        <div class="info-box">
+            <ul style="margin: 0;">
+                <li><strong>Tipo de documento:</strong> {{tipoDocumento}}</li>
+                {{#if detallesAdicionales}}
+                <li><strong>Detalles:</strong> {{detallesAdicionales}}</li>
+                {{/if}}
+                <li><strong>Código del documento:</strong> {{codigoDocumento}}</li>
+                <li><strong>Fecha de finalización:</strong> {{fechaFormateada}}</li>
+            </ul>
+        </div>
+        
+        <div class="codigo">
+            <h3>🔢 CÓDIGO DE VERIFICACIÓN PARA RETIRO:</h3>
+            <h2 style="color: #1E88E5; font-size: 36px; margin: 15px 0; text-align: center;">{{codigoVerificacion}}</h2>
+            <p style="text-align: center; margin: 0;"><strong>Presente este código junto con su cédula para autorizar el retiro</strong></p>
+        </div>
+        
+        <h3>📍 INFORMACIÓN PARA EL RETIRO:</h3>
+        <ul>
+            <li><strong>Dirección:</strong> Notaría Décima Octava, Quito</li>
+            <li><strong>Horario de atención:</strong> Lunes a Viernes de 8:00 a 17:00</li>
+            <li><strong>Requisitos:</strong> Presentar cédula de identidad y código de verificación</li>
+        </ul>
+        
+        <div style="background: #FFF3E0; padding: 15px; border-radius: 8px; border-left: 4px solid #FF9800;">
+            <h4 style="margin: 0 0 10px 0; color: #E65100;">⚠️ IMPORTANTE:</h4>
+            <ul style="margin: 0; padding-left: 20px;">
+                <li>El código de verificación es personal e intransferible</li>
+                <li>En caso de no poder retirar personalmente, debe enviar autorización notariada</li>
+                <li>Este código tiene validez hasta la fecha de retiro</li>
+            </ul>
+        </div>
     </div>
     
     <div class="footer">
-      <p>Este correo es generado automáticamente. Por favor no responda a este mensaje.</p>
-      <p>Si tiene alguna pregunta, comuníquese al teléfono: (593) 99-659-1682</p>
-      <p>&copy; {{currentYear}} Notaría Décima Octava. Todos los derechos reservados.</p>
+        <p>Este es un mensaje automático del Sistema ProNotary - Gestión Notarial Inteligente</p>
+        <p>Notaría Décima Octava • Quito, Ecuador</p>
     </div>
-  </div>
 </body>
 </html> 

@@ -2128,8 +2128,8 @@ exports.mostrarAlertas = async (req, res) => {
 };
 
 /**
- * Reporte de Cobros por Matrizador
- * Análisis detallado de cobros realizados por cada matrizador
+ * Reporte de Cobros por Matrizador - MEJORADO PARA COMISIONES
+ * Análisis detallado de cobros realizados por cada matrizador con UX profesional
  */
 exports.reporteCobrosMatrizador = async (req, res) => {
   try {
@@ -2265,6 +2265,14 @@ exports.reporteCobrosMatrizador = async (req, res) => {
       raw: true
     });
     
+    // NUEVO: Obtener información del matrizador seleccionado
+    let matrizadorSeleccionado = null;
+    if (idMatrizador && idMatrizador !== 'todos' && idMatrizador !== '') {
+      matrizadorSeleccionado = await Matrizador.findByPk(parseInt(idMatrizador), {
+        attributes: ['id', 'nombre', 'email']
+      });
+    }
+    
     // Preparar datos para gráfico
     const datosGrafico = {
       nombres: cobrosMatrizador.map(item => item.nombre),
@@ -2272,32 +2280,52 @@ exports.reporteCobrosMatrizador = async (req, res) => {
       documentos: cobrosMatrizador.map(item => parseInt(item.documentos_cobrados || 0))
     };
     
-    // Renderizar la vista con layout admin
-    res.render('admin/reportes/cobros-matrizador', {
-      layout: 'admin', // CORREGIDO: usar layout admin
-      title: 'Cobros por Matrizador',
+    // NUEVO: Preparar datos mejorados para la vista
+    const datosVista = {
+      layout: 'admin',
+      title: 'Reporte de Comisiones por Matrizador',
       activeReportes: true,
       userRole: req.matrizador?.rol,
       userName: req.matrizador?.nombre,
+      
+      // Datos principales
       cobrosMatrizador,
       cobrosRecientes,
       matrizadores,
+      datosGrafico,
+      
+      // Información del contexto
+      periodoTexto,
+      matrizadorSeleccionado,
       idMatrizadorSeleccionado: idMatrizador || 'todos',
+      
+      // Estadísticas mejoradas
       stats: {
         totalCobradoPeriodo: formatearValorMonetario(totalCobradoPeriodo),
         totalDocumentosCobrados,
         promedioGeneral: formatearValorMonetario(promedioGeneral),
         matrizadoresActivos: cobrosMatrizador.filter(m => parseInt(m.documentos_cobrados) > 0).length
       },
-      datosGrafico,
-      periodoTexto,
+      
+      // Filtros con información adicional
       filtros: {
         rango,
         idMatrizador,
         fechaInicio: fechaInicio.format('YYYY-MM-DD'),
-        fechaFin: fechaFin.format('YYYY-MM-DD')
+        fechaFin: fechaFin.format('YYYY-MM-DD'),
+        // Flags para la vista
+        esHoy: rango === 'hoy',
+        esAyer: rango === 'ayer',
+        esSemana: rango === 'semana',
+        esMes: rango === 'mes',
+        esUltimoMes: rango === 'ultimo_mes',
+        esPersonalizado: rango === 'personalizado'
       }
-    });
+    };
+    
+    // Renderizar la vista con datos mejorados
+    res.render('admin/reportes/cobros-matrizador', datosVista);
+    
   } catch (error) {
     console.error('Error al generar reporte de cobros por matrizador:', error);
     return res.status(500).render('error', {

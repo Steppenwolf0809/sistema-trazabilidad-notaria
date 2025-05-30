@@ -1,135 +1,223 @@
-<!-- Botón Volver -->
+{{!-- REPORTE PROFESIONAL DE COMISIONES - ProNotary CAJA --}}
+
+{{!-- 1. HEADER EJECUTIVO CON CONTEXTO CLARO --}}
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+      <div class="card-body text-white">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h4 class="mb-1 text-white">
+              <i class="fas fa-chart-line me-2"></i>Reporte de Comisiones - Caja
+            </h4>
+            <p class="mb-0 opacity-75">
+              <i class="fas fa-calendar me-1"></i>Período: <strong>{{periodoTexto}}</strong>
+              {{#if matrizadorSeleccionado}}
+              • <i class="fas fa-user me-1"></i>Matrizador: <strong>{{matrizadorSeleccionado.nombre}}</strong>
+              {{else}}
+              • <i class="fas fa-users me-1"></i><strong>Todos los Matrizadores</strong>
+              {{/if}}
+            </p>
+          </div>
+          <div class="text-end">
+            <div class="text-white-50 small">Total del Período</div>
+            <div class="h3 mb-0 text-white font-weight-bold">${{stats.totalCobradoPeriodo}}</div>
+            <small class="text-white-75">{{stats.totalDocumentosCobrados}} documentos cobrados</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{{!-- Botón Volver --}}
 <div class="mb-3">
   <a href="/caja/reportes" class="btn btn-outline-secondary">
     <i class="fas fa-arrow-left me-1"></i> Volver a Reportes
   </a>
 </div>
 
-<!-- Filtros del Reporte -->
-<div class="card mb-4">
-  <div class="card-header">
-    <i class="fas fa-filter me-2"></i> Filtros del Reporte
-  </div>
-  <div class="card-body">
-    <form method="GET" action="/caja/reportes/cobros-matrizador">
-      <div class="row">
-        <div class="col-md-3">
-          <label for="rango" class="form-label">Período</label>
-          <select class="form-select" id="rango" name="rango" onchange="toggleFechasPersonalizadas()">
-            <option value="hoy" {{#eq filtros.rango 'hoy'}}selected{{/eq}}>Hoy</option>
-            <option value="ayer" {{#eq filtros.rango 'ayer'}}selected{{/eq}}>Ayer</option>
-            <option value="semana" {{#eq filtros.rango 'semana'}}selected{{/eq}}>Esta Semana</option>
-            <option value="mes" {{#eq filtros.rango 'mes'}}selected{{/eq}}>Este Mes</option>
-            <option value="ultimo_mes" {{#eq filtros.rango 'ultimo_mes'}}selected{{/eq}}>Últimos 30 Días</option>
-            <option value="personalizado" {{#eq filtros.rango 'personalizado'}}selected{{/eq}}>Personalizado</option>
-          </select>
-        </div>
-        
-        <div class="col-md-3" id="fechaInicioContainer" style="{{#unless (eq filtros.rango 'personalizado')}}display: none;{{/unless}}">
-          <label for="fechaInicio" class="form-label">Fecha Inicio</label>
-          <input type="date" class="form-control" id="fechaInicio" name="fechaInicio" value="{{filtros.fechaInicio}}">
-        </div>
-        
-        <div class="col-md-3" id="fechaFinContainer" style="{{#unless (eq filtros.rango 'personalizado')}}display: none;{{/unless}}">
-          <label for="fechaFin" class="form-label">Fecha Fin</label>
-          <input type="date" class="form-control" id="fechaFin" name="fechaFin" value="{{filtros.fechaFin}}">
-        </div>
-        
-        <div class="col-md-3">
-          <label for="idMatrizador" class="form-label">Matrizador</label>
-          <select class="form-select" id="idMatrizador" name="idMatrizador">
-            <option value="todos" {{#eq idMatrizadorSeleccionado 'todos'}}selected{{/eq}}>Todos los Matrizadores</option>
-            {{#each matrizadores}}
-            <option value="{{this.id}}" {{#eq ../idMatrizadorSeleccionado this.id}}selected{{/eq}}>{{this.nombre}}</option>
-            {{/each}}
-          </select>
-        </div>
-      </div>
-      
-      <div class="row mt-3">
-        <div class="col-12">
-          <button type="submit" class="btn btn-primary">
-            <i class="fas fa-search me-1"></i> Generar Reporte
-          </button>
-          <button type="button" class="btn btn-outline-success ms-2" onclick="exportarReporte()">
-            <i class="fas fa-download me-1"></i> Exportar
-          </button>
-        </div>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- Estadísticas Generales -->
+{{!-- 2. FILTROS PERSISTENTES Y CLAROS --}}
 <div class="row mb-4">
-  <div class="col-md-3">
-    <div class="card text-white bg-success">
+  <div class="col-12">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-light border-bottom">
+        <h6 class="mb-0 text-dark">
+          <i class="fas fa-filter me-2 text-success"></i>Filtros del Reporte de Comisiones
+        </h6>
+      </div>
       <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <h6 class="text-white mb-1">Total Cobrado</h6>
-            <h3 class="mb-0">${{stats.totalCobradoPeriodo}}</h3>
-            <small class="text-white-50">{{periodoTexto}}</small>
+        <form id="filtrosComisiones" method="GET" action="/caja/reportes/cobros-matrizador">
+          <div class="row align-items-end">
+            <div class="col-md-3">
+              <label class="form-label text-muted small fw-bold">Período de Comisión</label>
+              <select class="form-select" name="rango" id="rango">
+                <option value="hoy" {{#eq filtros.rango 'hoy'}}selected{{/eq}}>Hoy</option>
+                <option value="ayer" {{#eq filtros.rango 'ayer'}}selected{{/eq}}>Ayer</option>
+                <option value="semana" {{#eq filtros.rango 'semana'}}selected{{/eq}}>Esta Semana</option>
+                <option value="mes" {{#eq filtros.rango 'mes'}}selected{{/eq}}>Este Mes</option>
+                <option value="ultimo_mes" {{#eq filtros.rango 'ultimo_mes'}}selected{{/eq}}>Últimos 30 Días</option>
+                <option value="personalizado" {{#eq filtros.rango 'personalizado'}}selected{{/eq}}>Personalizado</option>
+              </select>
+            </div>
+            
+            <div class="col-md-2" id="fechaInicioContainer" {{#unless (eq filtros.rango 'personalizado')}}style="display:none"{{/unless}}>
+              <label class="form-label text-muted small fw-bold">Fecha Inicio</label>
+              <input type="date" class="form-control" name="fechaInicio" id="fechaInicio" value="{{filtros.fechaInicio}}">
+            </div>
+            
+            <div class="col-md-2" id="fechaFinContainer" {{#unless (eq filtros.rango 'personalizado')}}style="display:none"{{/unless}}>
+              <label class="form-label text-muted small fw-bold">Fecha Fin</label>
+              <input type="date" class="form-control" name="fechaFin" id="fechaFin" value="{{filtros.fechaFin}}">
+            </div>
+            
+            <div class="col-md-3">
+              <label class="form-label text-muted small fw-bold">Matrizador</label>
+              <select class="form-select" name="idMatrizador" id="idMatrizador">
+                <option value="todos" {{#eq idMatrizadorSeleccionado 'todos'}}selected{{/eq}}>Todos los Matrizadores</option>
+                {{#each matrizadores}}
+                <option value="{{this.id}}" {{#eq ../idMatrizadorSeleccionado this.id}}selected{{/eq}}>{{this.nombre}}</option>
+                {{/each}}
+              </select>
+              <!-- Debug: Mostrar valor seleccionado -->
+              <small class="text-muted">Seleccionado: <code>{{idMatrizadorSeleccionado}}</code></small>
+            </div>
+            
+            <div class="col-md-2">
+              <button type="submit" class="btn btn-success w-100">
+                <i class="fas fa-search me-1"></i>Generar Reporte
+              </button>
+            </div>
           </div>
-          <i class="fas fa-dollar-sign fa-3x opacity-50"></i>
+          
+          {{!-- INDICADORES VISUALES DE FILTROS ACTIVOS --}}
+          {{#if (or (ne filtros.rango 'mes') (ne idMatrizadorSeleccionado 'todos'))}}
+          <div class="mt-3 pt-3 border-top">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <small class="text-muted fw-bold">Filtros activos:</small>
+                {{#unless (eq filtros.rango 'mes')}}
+                <span class="badge bg-info ms-1">
+                  <i class="fas fa-calendar me-1"></i>{{periodoTexto}}
+                </span>
+                {{/unless}}
+                {{#unless (eq idMatrizadorSeleccionado 'todos')}}
+                <span class="badge bg-success ms-1">
+                  <i class="fas fa-user me-1"></i>
+                  {{#if matrizadorSeleccionado}}
+                    {{matrizadorSeleccionado.nombre}}
+                  {{else}}
+                    {{#each matrizadores}}
+                      {{#eq this.id ../idMatrizadorSeleccionado}}{{this.nombre}}{{/eq}}
+                    {{/each}}
+                  {{/if}}
+                </span>
+                {{/unless}}
+              </div>
+              <button type="button" class="btn btn-outline-secondary btn-sm" onclick="limpiarFiltros()" title="Limpiar todos los filtros">
+                <i class="fas fa-times me-1"></i>Limpiar Filtros
+              </button>
+            </div>
+          </div>
+          {{else}}
+          <div class="mt-3 pt-3 border-top">
+            <div class="d-flex justify-content-between align-items-center">
+              <small class="text-muted">
+                <i class="fas fa-info-circle me-1"></i>Mostrando: <strong>Este mes</strong> • <strong>Todos los matrizadores</strong>
+              </small>
+              <small class="text-muted">
+                <i class="fas fa-lightbulb me-1"></i>Tip: Selecciona un matrizador específico para análisis detallado
+              </small>
+            </div>
+          </div>
+          {{/if}}
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{{!-- 3. RESUMEN EJECUTIVO PARA COMISIONES --}}
+{{#if cobrosMatrizador.length}}
+<div class="row mb-4">
+  <div class="col-xl-3 col-md-6 mb-3">
+    <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #28a745 !important;">
+      <div class="card-body">
+        <div class="row no-gutters align-items-center">
+          <div class="col me-2">
+            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Total Cobrado</div>
+            <div class="h5 mb-0 font-weight-bold text-dark">${{stats.totalCobradoPeriodo}}</div>
+            <small class="text-muted">{{stats.totalDocumentosCobrados}} documentos</small>
+          </div>
+          <div class="col-auto">
+            <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+          </div>
         </div>
       </div>
     </div>
   </div>
   
-  <div class="col-md-3">
-    <div class="card text-white bg-info">
+  <div class="col-xl-3 col-md-6 mb-3">
+    <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #17a2b8 !important;">
       <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <h6 class="text-white mb-1">Documentos Cobrados</h6>
-            <h3 class="mb-0">{{stats.totalDocumentosCobrados}}</h3>
-            <small class="text-white-50">Total cobrados</small>
+        <div class="row no-gutters align-items-center">
+          <div class="col me-2">
+            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Matrizadores Activos</div>
+            <div class="h5 mb-0 font-weight-bold text-dark">{{stats.matrizadoresActivos}}</div>
+            <small class="text-muted">Con cobros en período</small>
           </div>
-          <i class="fas fa-file-invoice-dollar fa-3x opacity-50"></i>
+          <div class="col-auto">
+            <i class="fas fa-users fa-2x text-gray-300"></i>
+          </div>
         </div>
       </div>
     </div>
   </div>
   
-  <div class="col-md-3">
-    <div class="card text-white bg-warning">
+  <div class="col-xl-3 col-md-6 mb-3">
+    <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #ffc107 !important;">
       <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <h6 class="text-white mb-1">Promedio por Doc.</h6>
-            <h3 class="mb-0">${{stats.promedioGeneral}}</h3>
-            <small class="text-white-50">Por documento</small>
+        <div class="row no-gutters align-items-center">
+          <div class="col me-2">
+            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Promedio por Doc.</div>
+            <div class="h5 mb-0 font-weight-bold text-dark">${{stats.promedioGeneral}}</div>
+            <small class="text-muted">Ticket promedio</small>
           </div>
-          <i class="fas fa-calculator fa-3x opacity-50"></i>
+          <div class="col-auto">
+            <i class="fas fa-chart-line fa-2x text-gray-300"></i>
+          </div>
         </div>
       </div>
     </div>
   </div>
   
-  <div class="col-md-3">
-    <div class="card text-white bg-primary">
+  <div class="col-xl-3 col-md-6 mb-3">
+    <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #20c997 !important;">
       <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <h6 class="text-white mb-1">Matrizadores Activos</h6>
-            <h3 class="mb-0">{{stats.matrizadoresActivos}}</h3>
-            <small class="text-white-50">Con cobros</small>
+        <div class="row no-gutters align-items-center">
+          <div class="col me-2">
+            <div class="text-xs font-weight-bold text-teal text-uppercase mb-1">Período</div>
+            <div class="h5 mb-0 font-weight-bold text-dark">{{filtros.rango}}</div>
+            <small class="text-muted">{{filtros.fechaInicio}} - {{filtros.fechaFin}}</small>
           </div>
-          <i class="fas fa-users fa-3x opacity-50"></i>
+          <div class="col-auto">
+            <i class="fas fa-calendar fa-2x text-gray-300"></i>
+          </div>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Gráfico de Cobros por Matrizador -->
+{{!-- 4. GRÁFICO MEJORADO --}}
 {{#if datosGrafico.nombres.length}}
 <div class="row mb-4">
   <div class="col-12">
-    <div class="card">
-      <div class="card-header">
-        <i class="fas fa-chart-bar me-2"></i> Cobros por Matrizador ({{periodoTexto}})
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white border-bottom">
+        <h6 class="mb-0 text-dark">
+          <i class="fas fa-chart-bar me-2 text-success"></i>Análisis Visual de Comisiones - {{periodoTexto}}
+        </h6>
       </div>
       <div class="card-body">
         <canvas id="cobrosChart" height="400"></canvas>
@@ -139,110 +227,155 @@
 </div>
 {{/if}}
 
-<!-- Tabla de Cobros por Matrizador -->
+{{!-- 5. TABLA MEJORADA PARA COMISIONES --}}
 <div class="row">
-  <div class="col-md-8">
-    <div class="card">
-      <div class="card-header">
-        <i class="fas fa-table me-2"></i> Cobros por Matrizador
+  <div class="col-12">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white border-bottom">
+        <div class="d-flex justify-content-between align-items-center">
+          <h6 class="mb-0 text-dark">
+            <i class="fas fa-table me-2 text-success"></i>Detalle de Comisiones por Matrizador
+          </h6>
+          <div>
+            <button class="btn btn-outline-success btn-sm" onclick="exportarExcel()">
+              <i class="fas fa-file-excel me-1"></i>Exportar Excel
+            </button>
+            <button class="btn btn-outline-primary btn-sm ms-2" onclick="imprimirReporte()">
+              <i class="fas fa-print me-1"></i>Imprimir
+            </button>
+          </div>
+        </div>
       </div>
-      <div class="card-body">
-        {{#if cobrosMatrizador.length}}
+      <div class="card-body p-0">
         <div class="table-responsive">
-          <table class="table table-striped table-hover">
+          <table class="table table-hover mb-0" id="tablaComisiones">
             <thead class="table-light">
               <tr>
-                <th>Matrizador</th>
-                <th class="text-center">Docs. Cobrados</th>
-                <th class="text-end">Total Cobrado</th>
-                <th class="text-end">Promedio por Doc.</th>
-                <th class="text-center">Primer Cobro</th>
-                <th class="text-center">Último Cobro</th>
+                <th class="border-0 ps-4">Matrizador</th>
+                <th class="border-0 text-center">Docs. Cobrados</th>
+                <th class="border-0 text-end">Total Cobrado</th>
+                <th class="border-0 text-end">Promedio por Doc.</th>
+                <th class="border-0 text-center">Primer Cobro</th>
+                <th class="border-0 text-center">Último Cobro</th>
+                <th class="border-0 text-center">Estado</th>
               </tr>
             </thead>
             <tbody>
               {{#each cobrosMatrizador}}
-              <tr>
-                <td>
-                  <strong>{{this.nombre}}</strong>
-                  {{#if (gt this.documentos_cobrados 0)}}
-                  <span class="badge bg-success ms-2">Activo</span>
-                  {{else}}
-                  <span class="badge bg-secondary ms-2">Sin cobros</span>
-                  {{/if}}
+              <tr {{#eq ../idMatrizadorSeleccionado this.id}}class="table-success"{{/eq}}>
+                <td class="ps-4">
+                  <div class="d-flex align-items-center">
+                    <div class="avatar-sm bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                      <span class="fw-bold">{{substring this.nombre 0 2}}</span>
+                    </div>
+                    <div>
+                      <div class="fw-bold text-dark">{{this.nombre}}</div>
+                      <small class="text-muted">{{this.email}}</small>
+                    </div>
+                  </div>
                 </td>
-                <td class="text-center">{{this.documentos_cobrados}}</td>
+                <td class="text-center">
+                  <span class="badge bg-info rounded-pill fs-6">{{this.documentos_cobrados}}</span>
+                </td>
                 <td class="text-end">
                   {{#if (gt this.total_cobrado 0)}}
-                  <strong class="text-success">${{formatMoney this.total_cobrado}}</strong>
+                  <span class="fw-bold text-success fs-6">${{formatMoney this.total_cobrado}}</span>
                   {{else}}
                   <span class="text-muted">$0.00</span>
                   {{/if}}
                 </td>
-                <td class="text-end">${{formatMoney this.promedio_por_documento}}</td>
+                <td class="text-end">
+                  <span class="text-muted">${{formatMoney this.promedio_por_documento}}</span>
+                </td>
                 <td class="text-center">
                   {{#if this.primer_cobro}}
-                  {{formatDate this.primer_cobro}}
+                  <small class="text-muted">{{formatDate this.primer_cobro}}</small>
                   {{else}}
                   <span class="text-muted">-</span>
                   {{/if}}
                 </td>
                 <td class="text-center">
                   {{#if this.ultimo_cobro}}
-                  {{formatDate this.ultimo_cobro}}
+                  <small class="text-muted">{{formatDate this.ultimo_cobro}}</small>
                   {{else}}
                   <span class="text-muted">-</span>
+                  {{/if}}
+                </td>
+                <td class="text-center">
+                  {{#if (gt this.documentos_cobrados 0)}}
+                  <span class="badge bg-success">Activo</span>
+                  {{else}}
+                  <span class="badge bg-secondary">Sin cobros</span>
                   {{/if}}
                 </td>
               </tr>
               {{/each}}
             </tbody>
+            <tfoot class="table-light">
+              <tr class="fw-bold">
+                <th class="ps-4 text-dark">TOTAL GENERAL</th>
+                <th class="text-center text-info">{{stats.totalDocumentosCobrados}}</th>
+                <th class="text-end text-success">${{stats.totalCobradoPeriodo}}</th>
+                <th class="text-end text-muted">-</th>
+                <th class="text-center text-muted">-</th>
+                <th class="text-center text-muted">-</th>
+                <th class="text-center text-muted">-</th>
+              </tr>
+            </tfoot>
           </table>
         </div>
-        {{else}}
-        <div class="text-center py-5">
-          <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
-          <h5>No hay datos para mostrar</h5>
-          <p>No se encontraron cobros en el período seleccionado.</p>
-        </div>
-        {{/if}}
       </div>
     </div>
   </div>
-  
-  <!-- Cobros Recientes -->
-  <div class="col-md-4">
-    <div class="card">
-      <div class="card-header">
-        <i class="fas fa-clock me-2"></i> Cobros Recientes
+</div>
+
+{{!-- 6. COBROS RECIENTES MEJORADOS --}}
+<div class="row mt-4">
+  <div class="col-12">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-light border-bottom">
+        <h6 class="mb-0 text-dark">
+          <i class="fas fa-clock me-2 text-success"></i>Cobros Recientes del Período
+          {{#if (ne idMatrizadorSeleccionado 'todos')}}
+          - {{matrizadorSeleccionado.nombre}}
+          {{/if}}
+        </h6>
       </div>
       <div class="card-body">
         {{#if cobrosRecientes.length}}
-        <div class="list-group list-group-flush">
+        <div class="row">
           {{#each cobrosRecientes}}
-          <div class="list-group-item border-0 px-0">
-            <div class="d-flex w-100 justify-content-between align-items-start">
-              <div class="flex-grow-1">
-                <h6 class="mb-1">{{this.nombre_cliente}}</h6>
-                <p class="mb-1">
-                  <small class="text-muted">{{this.tipo_documento}}</small><br>
-                  <code class="small">{{this.codigo_barras}}</code>
-                </p>
-                <small class="text-muted">{{this.matrizador_nombre}} • {{formatDateTime this.fecha_pago}}</small>
-              </div>
-              <div class="text-end">
-                <strong class="text-success">${{formatMoney this.valor_factura}}</strong><br>
-                <small class="text-muted">{{this.metodo_pago}}</small>
+          <div class="col-md-6 col-lg-4 mb-3">
+            <div class="card border-0 bg-light h-100">
+              <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                  <div class="flex-grow-1">
+                    <h6 class="mb-1 text-dark">{{this.nombre_cliente}}</h6>
+                    <p class="mb-1 small text-muted">
+                      <i class="fas fa-file me-1"></i>{{this.tipo_documento}}
+                    </p>
+                    <p class="mb-1 small text-muted">
+                      <i class="fas fa-barcode me-1"></i><code>{{this.codigo_barras}}</code>
+                    </p>
+                    <small class="text-muted">
+                      <i class="fas fa-user me-1"></i>{{this.matrizador_nombre}}
+                    </small>
+                  </div>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                  <span class="badge bg-success fs-6">${{formatMoney this.valor_factura}}</span>
+                  <small class="text-muted">{{formatDate this.fecha_pago}}</small>
+                </div>
               </div>
             </div>
           </div>
           {{/each}}
         </div>
         {{else}}
-        <div class="text-center py-3">
-          <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-          <h6>Sin cobros recientes</h6>
-          <p class="text-muted mb-0">No hay cobros en el período seleccionado</p>
+        <div class="text-center py-4">
+          <i class="fas fa-info-circle fa-3x text-muted mb-3"></i>
+          <h6 class="text-muted">No hay cobros registrados</h6>
+          <p class="text-muted mb-0">No se encontraron cobros en el período seleccionado</p>
         </div>
         {{/if}}
       </div>
@@ -250,16 +383,290 @@
   </div>
 </div>
 
-<!-- Scripts -->
+{{else}}
+{{!-- ESTADO SIN DATOS --}}
+<div class="row">
+  <div class="col-12">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body text-center py-5">
+        <i class="fas fa-chart-bar fa-4x text-gray-300 mb-4"></i>
+        <h5 class="text-gray-600 mb-3">No hay datos para el período seleccionado</h5>
+        <p class="text-muted mb-4">Ajuste los filtros para ver información de comisiones</p>
+        <button class="btn btn-success" onclick="document.getElementById('rango').value='ultimo_mes'; document.getElementById('filtrosComisiones').submit();">
+          <i class="fas fa-calendar me-1"></i>Ver Últimos 30 Días
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{{/if}}
+
+{{!-- SCRIPTS MEJORADOS --}}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-// Función para mostrar/ocultar fechas personalizadas
+document.addEventListener('DOMContentLoaded', function() {
+  // Debug: Verificar estado inicial
+  console.log('🚀 Iniciando reporte de comisiones - Caja');
+  console.log('📊 Estado inicial:');
+  console.log('- Rango:', document.getElementById('rango').value);
+  console.log('- Matrizador:', document.getElementById('idMatrizador').value);
+  console.log('- Fecha inicio:', document.getElementById('fechaInicio').value);
+  console.log('- Fecha fin:', document.getElementById('fechaFin').value);
+  
+  // Verificar opciones del select de matrizadores
+  const matrizadorSelect = document.getElementById('idMatrizador');
+  console.log('👥 Opciones de matrizadores:');
+  for (let i = 0; i < matrizadorSelect.options.length; i++) {
+    const option = matrizadorSelect.options[i];
+    console.log(`  - ${option.value}: ${option.text} ${option.selected ? '(SELECCIONADO)' : ''}`);
+  }
+  
+  // Restaurar estado de filtros desde localStorage
+  function restaurarEstadoFiltros() {
+    try {
+      const estadoGuardado = localStorage.getItem('filtrosComisionesCaja');
+      if (estadoGuardado) {
+        const estado = JSON.parse(estadoGuardado);
+        
+        // Solo restaurar si no hay parámetros en la URL (primera carga)
+        const urlParams = new URLSearchParams(window.location.search);
+        if (!urlParams.has('rango') && !urlParams.has('idMatrizador')) {
+          if (estado.rango) document.getElementById('rango').value = estado.rango;
+          if (estado.idMatrizador) document.getElementById('idMatrizador').value = estado.idMatrizador;
+          if (estado.fechaInicio) document.getElementById('fechaInicio').value = estado.fechaInicio;
+          if (estado.fechaFin) document.getElementById('fechaFin').value = estado.fechaFin;
+          
+          // Mostrar fechas personalizadas si es necesario
+          toggleFechasPersonalizadas();
+        }
+      }
+    } catch (e) {
+      console.log('Error restaurando filtros:', e);
+    }
+  }
+  
+  // Manejar cambio de período
+  document.getElementById('rango').addEventListener('change', function() {
+    const valor = this.value;
+    const fechaInicioContainer = document.getElementById('fechaInicioContainer');
+    const fechaFinContainer = document.getElementById('fechaFinContainer');
+    
+    if (valor === 'personalizado') {
+      fechaInicioContainer.style.display = 'block';
+      fechaFinContainer.style.display = 'block';
+    } else {
+      fechaInicioContainer.style.display = 'none';
+      fechaFinContainer.style.display = 'none';
+    }
+    
+    // Guardar estado inmediatamente
+    guardarEstadoFiltros();
+  });
+  
+  // Mejorar auto-submit al cambiar matrizador
+  document.getElementById('idMatrizador').addEventListener('change', function() {
+    const matrizadorSelect = this;
+    const form = document.getElementById('filtrosComisiones');
+    const selectedValue = matrizadorSelect.value;
+    
+    // Debug: Mostrar qué se está seleccionando
+    console.log('🔍 Matrizador seleccionado:', selectedValue);
+    
+    // Mostrar indicador de carga
+    matrizadorSelect.disabled = true;
+    const originalText = matrizadorSelect.options[matrizadorSelect.selectedIndex].text;
+    matrizadorSelect.options[matrizadorSelect.selectedIndex].text = '🔄 Cargando...';
+    
+    // Guardar estado antes de enviar
+    guardarEstadoFiltros();
+    
+    // Obtener todos los valores del formulario
+    const rangoValue = document.getElementById('rango').value;
+    const fechaInicioValue = document.getElementById('fechaInicio').value;
+    const fechaFinValue = document.getElementById('fechaFin').value;
+    
+    // Construir URL manualmente para mayor control
+    const params = new URLSearchParams();
+    params.append('rango', rangoValue);
+    params.append('idMatrizador', selectedValue);
+    
+    // Solo agregar fechas si están definidas
+    if (fechaInicioValue) params.append('fechaInicio', fechaInicioValue);
+    if (fechaFinValue) params.append('fechaFin', fechaFinValue);
+    
+    const finalUrl = '/caja/reportes/cobros-matrizador?' + params.toString();
+    
+    // Debug: Mostrar URL final
+    console.log('🌐 URL final:', finalUrl);
+    
+    // Enviar con todos los parámetros
+    setTimeout(() => {
+      window.location.href = finalUrl;
+    }, 300); // Pequeño delay para mejor UX
+  });
+  
+  // Guardar estado en localStorage para persistencia
+  function guardarEstadoFiltros() {
+    try {
+      const estado = {
+        rango: document.getElementById('rango').value,
+        idMatrizador: document.getElementById('idMatrizador').value,
+        fechaInicio: document.getElementById('fechaInicio').value,
+        fechaFin: document.getElementById('fechaFin').value,
+        timestamp: Date.now()
+      };
+      localStorage.setItem('filtrosComisionesCaja', JSON.stringify(estado));
+    } catch (e) {
+      console.log('Error guardando filtros:', e);
+    }
+  }
+  
+  // Event listeners para guardar estado (sin auto-submit)
+  ['fechaInicio', 'fechaFin'].forEach(id => {
+    const elemento = document.getElementById(id);
+    if (elemento) {
+      elemento.addEventListener('change', guardarEstadoFiltros);
+    }
+  });
+  
+  // Mejorar el botón de submit con feedback visual
+  const submitBtn = document.querySelector('button[type="submit"]');
+  if (submitBtn) {
+    submitBtn.addEventListener('click', function(e) {
+      // Guardar estado antes de enviar
+      guardarEstadoFiltros();
+      
+      // Feedback visual
+      const originalHTML = this.innerHTML;
+      this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Generando...';
+      this.disabled = true;
+      
+      // Permitir que el formulario se envíe normalmente
+      setTimeout(() => {
+        this.innerHTML = originalHTML;
+        this.disabled = false;
+      }, 2000);
+    });
+  }
+  
+  // Restaurar estado al cargar la página
+  restaurarEstadoFiltros();
+  
+  // Limpiar localStorage viejo (más de 24 horas)
+  try {
+    const estado = JSON.parse(localStorage.getItem('filtrosComisionesCaja') || '{}');
+    if (estado.timestamp && (Date.now() - estado.timestamp) > 24 * 60 * 60 * 1000) {
+      localStorage.removeItem('filtrosComisionesCaja');
+    }
+  } catch (e) {
+    localStorage.removeItem('filtrosComisionesCaja');
+  }
+});
+
+// Gráfico mejorado de cobros por matrizador
+{{#if datosGrafico.nombres.length}}
+const ctx = document.getElementById('cobrosChart').getContext('2d');
+new Chart(ctx, {
+  type: 'bar',
+  data: {
+    labels: {{{json datosGrafico.nombres}}},
+    datasets: [{
+      label: 'Total Cobrado ($)',
+      data: {{{json datosGrafico.montos}}},
+      backgroundColor: 'rgba(40, 167, 69, 0.8)',
+      borderColor: 'rgba(40, 167, 69, 1)',
+      borderWidth: 2,
+      borderRadius: 4
+    }, {
+      label: 'Documentos Cobrados',
+      data: {{{json datosGrafico.documentos}}},
+      type: 'line',
+      yAxisID: 'y1',
+      borderColor: 'rgba(32, 201, 151, 1)',
+      backgroundColor: 'rgba(32, 201, 151, 0.2)',
+      tension: 0.4,
+      pointBackgroundColor: 'rgba(32, 201, 151, 1)',
+      pointBorderColor: '#fff',
+      pointBorderWidth: 2,
+      pointRadius: 6
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: {
+      mode: 'index',
+      intersect: false,
+    },
+    plugins: {
+      legend: {
+        position: 'top',
+        labels: {
+          usePointStyle: true,
+          padding: 20
+        }
+      },
+      title: {
+        display: true,
+        text: 'Análisis de Comisiones - {{periodoTexto}}',
+        font: {
+          size: 16,
+          weight: 'bold'
+        }
+      }
+    },
+    scales: {
+      y: {
+        type: 'linear',
+        display: true,
+        position: 'left',
+        beginAtZero: true,
+        title: {
+          display: true,
+          text: 'Total Cobrado ($)'
+        },
+        ticks: {
+          callback: function(value) {
+            return '$' + value.toLocaleString();
+          }
+        }
+      },
+      y1: {
+        type: 'linear',
+        display: true,
+        position: 'right',
+        beginAtZero: true,
+        title: {
+          display: true,
+          text: 'Número de Documentos'
+        },
+        grid: {
+          drawOnChartArea: false,
+        },
+      }
+    }
+  }
+});
+{{/if}}
+
+// Funciones de exportación mejoradas
+function exportarExcel() {
+  const params = new URLSearchParams(window.location.search);
+  params.set('formato', 'excel');
+  window.location.href = '/caja/reportes/cobros-matrizador?' + params.toString();
+}
+
+function imprimirReporte() {
+  window.print();
+}
+
+// Función para mostrar/ocultar fechas personalizadas (compatibilidad)
 function toggleFechasPersonalizadas() {
-  const rangoSelect = document.getElementById('rango');
+  const rango = document.getElementById('rango').value;
   const fechaInicioContainer = document.getElementById('fechaInicioContainer');
   const fechaFinContainer = document.getElementById('fechaFinContainer');
   
-  if (rangoSelect.value === 'personalizado') {
+  if (rango === 'personalizado') {
     fechaInicioContainer.style.display = 'block';
     fechaFinContainer.style.display = 'block';
   } else {
@@ -268,119 +675,81 @@ function toggleFechasPersonalizadas() {
   }
 }
 
-// Función para exportar reporte
+// Función para exportar reporte (compatibilidad)
 function exportarReporte() {
-  const form = document.querySelector('form');
-  const formData = new FormData(form);
-  const params = new URLSearchParams(formData);
-  params.append('formato', 'excel');
-  
-  window.location.href = '/caja/reportes/cobros-matrizador/exportar?' + params.toString();
+  exportarExcel();
 }
 
-// Inicializar gráfico si hay datos
-document.addEventListener('DOMContentLoaded', function() {
-  {{#if datosGrafico.nombres.length}}
-  const ctx = document.getElementById('cobrosChart').getContext('2d');
-  
-  const datosGrafico = {
-    labels: {{{json datosGrafico.nombres}}},
-    datasets: [
-      {
-        label: 'Total Cobrado ($)',
-        data: {{{json datosGrafico.montos}}},
-        backgroundColor: 'rgba(40, 167, 69, 0.8)',
-        borderColor: 'rgba(40, 167, 69, 1)',
-        borderWidth: 1,
-        yAxisID: 'y'
-      },
-      {
-        label: 'Documentos Cobrados',
-        data: {{{json datosGrafico.documentos}}},
-        backgroundColor: 'rgba(255, 193, 7, 0.8)',
-        borderColor: 'rgba(255, 193, 7, 1)',
-        borderWidth: 1,
-        type: 'line',
-        yAxisID: 'y1'
-      }
-    ]
-  };
-  
-  new Chart(ctx, {
-    type: 'bar',
-    data: datosGrafico,
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: {
-        mode: 'index',
-        intersect: false,
-      },
-      plugins: {
-        title: {
-          display: true,
-          text: 'Cobros por Matrizador - {{periodoTexto}}'
-        },
-        legend: {
-          position: 'top'
-        }
-      },
-      scales: {
-        x: {
-          display: true,
-          title: {
-            display: true,
-            text: 'Matrizadores'
-          }
-        },
-        y: {
-          type: 'linear',
-          display: true,
-          position: 'left',
-          title: {
-            display: true,
-            text: 'Total Cobrado ($)'
-          },
-          ticks: {
-            callback: function(value) {
-              return '$' + value.toLocaleString();
-            }
-          }
-        },
-        y1: {
-          type: 'linear',
-          display: true,
-          position: 'right',
-          title: {
-            display: true,
-            text: 'Número de Documentos'
-          },
-          grid: {
-            drawOnChartArea: false,
-          },
-        }
-      }
-    }
-  });
-  {{/if}}
-});
+// Función para limpiar filtros y volver al estado inicial
+function limpiarFiltros() {
+  localStorage.removeItem('filtrosComisionesCaja');
+  window.location.href = '/caja/reportes/cobros-matrizador';
+}
 </script>
 
 <style>
-.border-end {
-  border-right: 1px solid #dee2e6 !important;
+.text-teal {
+  color: #20c997 !important;
 }
 
-.font-monospace {
-  font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+.avatar-sm {
+  width: 40px;
+  height: 40px;
+  font-size: 14px;
+}
+
+.border-left-success {
+  border-left: 4px solid #28a745 !important;
+}
+
+.border-left-info {
+  border-left: 4px solid #17a2b8 !important;
+}
+
+.border-left-warning {
+  border-left: 4px solid #ffc107 !important;
+}
+
+.border-left-teal {
+  border-left: 4px solid #20c997 !important;
+}
+
+.table-hover tbody tr:hover {
+  background-color: rgba(40, 167, 69, 0.05);
+}
+
+.card {
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+}
+
+@media print {
+  .btn, .card-header .d-flex > div:last-child {
+    display: none !important;
+  }
+  
+  .card {
+    border: 1px solid #dee2e6 !important;
+    box-shadow: none !important;
+  }
 }
 
 @media (max-width: 768px) {
-  .border-end {
-    border-right: none;
-    border-bottom: 1px solid #dee2e6;
-    margin-bottom: 1rem;
-    padding-bottom: 1rem;
+  .avatar-sm {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+  }
+  
+  .h5 {
+    font-size: 1.1rem;
+  }
+  
+  .table-responsive {
+    font-size: 0.875rem;
   }
 }
 </style> 

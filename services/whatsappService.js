@@ -55,7 +55,7 @@ const inicializar = (config = {}) => {
 };
 
 /**
- * Valida un número de teléfono colombiano
+ * Valida un número de teléfono ecuatoriano
  * @param {string} telefono - Número de teléfono a validar
  * @returns {string|null} Número formateado o null si es inválido
  */
@@ -63,30 +63,31 @@ const validarTelefono = (telefono) => {
   if (!telefono) return null;
   
   // Remover espacios, guiones y paréntesis
-  let numeroLimpio = telefono.replace(/[\s\-\(\)]/g, '');
+  let numeroLimpio = telefono.toString().replace(/[\s\-\(\)]/g, '');
   
   // Remover el símbolo + si existe
   if (numeroLimpio.startsWith('+')) {
     numeroLimpio = numeroLimpio.substring(1);
   }
   
-  // Validar formato colombiano
-  // Celular: 57 + 3XX + XXXXXXX (10 dígitos después del 57)
-  // Fijo: 57 + X + XXXXXXX (7-8 dígitos después del código de área)
+  // Validar formato ecuatoriano
+  // Celular Ecuador: 593 + 9XXXXXXXX (9 dígitos después del 593)
+  // Formato común: 0999801901 → +593999801901
   
-  if (numeroLimpio.startsWith('57')) {
-    // Ya tiene código de país
-    if (numeroLimpio.length >= 12 && numeroLimpio.length <= 13) {
-      return numeroLimpio;
+  if (numeroLimpio.startsWith('593')) {
+    // Ya tiene código de país Ecuador
+    if (numeroLimpio.length === 12) { // 593 + 9 dígitos
+      return '+' + numeroLimpio;
     }
-  } else if (numeroLimpio.startsWith('3') && numeroLimpio.length === 10) {
-    // Celular sin código de país
-    return '57' + numeroLimpio;
-  } else if (numeroLimpio.length >= 7 && numeroLimpio.length <= 8) {
-    // Teléfono fijo sin código de país (asumir Bogotá)
-    return '571' + numeroLimpio;
+  } else if (numeroLimpio.startsWith('0') && numeroLimpio.length === 10) {
+    // Formato nacional: 0999801901 → +593999801901
+    return '+593' + numeroLimpio.substring(1);
+  } else if (numeroLimpio.length === 9 && numeroLimpio.startsWith('9')) {
+    // Solo el número sin código: 999801901 → +593999801901
+    return '+593' + numeroLimpio;
   }
   
+  console.warn(`❌ Formato de número no reconocido para Ecuador: ${telefono} (limpio: ${numeroLimpio})`);
   return null;
 };
 

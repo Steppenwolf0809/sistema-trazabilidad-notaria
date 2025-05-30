@@ -28,4 +28,12 @@ router.post('/documentos/marcar-listo', validarAccesoConAuditoria(['recepcion'])
 // Ruta para notificar a clientes sobre documentos listos para entrega - ESTRICTO: solo recepción
 router.post('/documentos/notificar', validarAccesoConAuditoria(['recepcion']), recepcionController.notificarCliente);
 
+// ============== NUEVAS RUTAS: CONTROL DE NOTIFICACIONES ==============
+
+// Ruta para historial de notificaciones (control global) - ESTRICTO: solo recepción
+router.get('/notificaciones/historial', validarAccesoConAuditoria(['recepcion']), recepcionController.historialNotificaciones);
+
+// Ruta para detalle de notificación específica - ESTRICTO: solo recepción
+router.get('/notificaciones/detalle/:id', validarAccesoConAuditoria(['recepcion']), recepcionController.obtenerDetalleNotificacion);
+
 module.exports = router; 

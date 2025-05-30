@@ -53,13 +53,11 @@ router.get('/documentos/buscar-principales', validarAccesoConAuditoria(['matriza
 // API para obtener documentos principales (para selección de documento habilitante)
 router.get('/api/documentos/principales', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), documentoController.obtenerDocumentosPrincipales);
 
-// Rutas de notificaciones
-const notificacionController = require('../controllers/notificacionController');
-router.get('/notificaciones/historial', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), notificacionController.mostrarHistorial);
+// Rutas de notificaciones - usar función del matrizadorController
+router.get('/notificaciones/historial', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.historialNotificaciones);
 
-// APIs de notificaciones
-router.get('/api/notificaciones/:id', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), notificacionController.obtenerDetalleNotificacion);
-router.post('/api/notificaciones/:id/reintentar', validarAccesoConAuditoria(['admin']), notificacionController.reintentarNotificacion);
+// API para obtener detalles de notificación
+router.get('/api/notificaciones/:id', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.obtenerDetalleNotificacion);
 
 // Rutas de logout - Disponible para todos los usuarios
 router.get('/logout', matrizadorController.logout);

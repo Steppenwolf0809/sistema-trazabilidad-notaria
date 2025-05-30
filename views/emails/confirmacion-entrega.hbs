@@ -1,132 +1,106 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Confirmación de Entrega de Documento</title>
-  <style>
-    body {
-      font-family: Arial, Helvetica, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      margin: 0;
-      padding: 0;
-    }
-    .container {
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-    .header {
-      background-color: #198754;
-      color: white;
-      padding: 20px;
-      text-align: center;
-    }
-    .content {
-      padding: 20px;
-      background-color: #f9f9f9;
-      border: 1px solid #ddd;
-    }
-    .footer {
-      margin-top: 20px;
-      text-align: center;
-      font-size: 12px;
-      color: #777;
-    }
-    .info-box {
-      background-color: #e8f5e9;
-      border-left: 4px solid #198754;
-      padding: 15px;
-      margin: 20px 0;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 20px 0;
-    }
-    table, th, td {
-      border: 1px solid #ddd;
-    }
-    th, td {
-      padding: 10px;
-      text-align: left;
-    }
-    th {
-      background-color: #f2f2f2;
-    }
-    .success-icon {
-      text-align: center;
-      font-size: 48px;
-      color: #198754;
-      margin: 20px 0;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>Documento Entregado - Notaría 18</title>
+    <style>
+        .header { background: linear-gradient(135deg, #4CAF50, #2E7D32); color: white; padding: 25px; text-align: center; }
+        .content { padding: 30px; font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; }
+        .entrega-box { background: #E8F5E8; border-left: 4px solid #4CAF50; padding: 20px; margin: 25px 0; border-radius: 0 8px 8px 0; }
+        .datos-entrega { background: #F5F5F5; padding: 20px; border-radius: 8px; margin: 20px 0; }
+        .tabla-info { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        .tabla-info td { padding: 8px 12px; border-bottom: 1px solid #E0E0E0; }
+        .tabla-info td:first-child { font-weight: bold; width: 40%; color: #1E88E5; }
+        .footer { background: #f8f9fa; padding: 20px; font-size: 12px; color: #666; border-top: 1px solid #e9ecef; }
+        .success-icon { font-size: 48px; color: #4CAF50; text-align: center; margin: 20px 0; }
+    </style>
 </head>
 <body>
-  <div class="container">
     <div class="header">
-      <h1>Confirmación de Entrega</h1>
+        <h1>🏛️ NOTARÍA DÉCIMA OCTAVA</h1>
+        <p>Dra. Glenda Elizabeth Zapata Silva</p>
+        <p><strong>CONFIRMACIÓN DE ENTREGA</strong></p>
     </div>
     
     <div class="content">
-      <div class="success-icon">✓</div>
-      
-      <p>Estimado(a) <strong>{{cliente.nombreCliente}}</strong>,</p>
-      
-      <p>Le informamos que su documento <strong>{{documento.tipoDocumento}}</strong> ha sido entregado exitosamente.</p>
-      
-      <div class="info-box">
-        <h3>Detalles de la Entrega:</h3>
-        <table>
-          <tr>
-            <th>Tipo de Documento</th>
-            <td>{{documento.tipoDocumento}}</td>
-          </tr>
-          <tr>
-            <th>Número de Protocolo</th>
-            <td>{{documento.numeroProtocolo}}</td>
-          </tr>
-          <tr>
-            <th>Código de Barras</th>
-            <td>{{documento.codigoBarras}}</td>
-          </tr>
-          <tr>
-            <th>Fecha de Entrega</th>
-            <td>{{fechaEntrega}}</td>
-          </tr>
-          <tr>
-            <th>Hora de Entrega</th>
-            <td>{{horaEntrega}}</td>
-          </tr>
-          <tr>
-            <th>Persona que Recibió</th>
-            <td>{{receptor.nombreReceptor}}</td>
-          </tr>
-          <tr>
-            <th>Identificación del Receptor</th>
-            <td>{{receptor.identificacionReceptor}}</td>
-          </tr>
-          <tr>
-            <th>Relación con el Solicitante</th>
-            <td>{{receptor.relacionReceptor}}</td>
-          </tr>
+        <div class="success-icon">✅</div>
+        
+        <div class="entrega-box">
+            <h2 style="margin: 0; color: #2E7D32;">¡Documento Entregado Exitosamente!</h2>
+            <p style="margin: 10px 0 0 0; font-size: 16px;">Su trámite ha sido completado y entregado satisfactoriamente.</p>
+        </div>
+        
+        <h3>📄 INFORMACIÓN DEL DOCUMENTO</h3>
+        <table class="tabla-info">
+            <tr>
+                <td>Tipo de documento:</td>
+                <td>{{tipoDocumento}}</td>
+            </tr>
+            {{#if detallesAdicionales}}
+            <tr>
+                <td>Detalles del trámite:</td>
+                <td>{{detallesAdicionales}}</td>
+            </tr>
+            {{/if}}
+            <tr>
+                <td>Código del documento:</td>
+                <td><strong>{{codigoDocumento}}</strong></td>
+            </tr>
+            <tr>
+                <td>Cliente:</td>
+                <td>{{nombreCliente}}</td>
+            </tr>
         </table>
-      </div>
-      
-      <p>Si usted no autorizó esta entrega o tiene alguna duda respecto a la misma, por favor comuníquese inmediatamente a nuestras oficinas.</p>
-      
-      <p>Agradecemos su confianza en nuestros servicios y esperamos poder atenderle nuevamente en el futuro.</p>
-      
-      <p>Atentamente,</p>
-      <p><strong>Notaría Décima Octava</strong></p>
+        
+        <div class="datos-entrega">
+            <h3 style="margin-top: 0; color: #1E88E5;">📦 DETALLES DE LA ENTREGA</h3>
+            <table class="tabla-info">
+                <tr>
+                    <td>👨‍💼 Retirado por:</td>
+                    <td><strong>{{nombreReceptor}}</strong></td>
+                </tr>
+                <tr>
+                    <td>🆔 Identificación:</td>
+                    <td>{{identificacionReceptor}}</td>
+                </tr>
+                <tr>
+                    <td>👥 Relación con cliente:</td>
+                    <td>{{relacionReceptor}}</td>
+                </tr>
+                <tr>
+                    <td>📅 Fecha de entrega:</td>
+                    <td>{{fechaEntrega}}</td>
+                </tr>
+                <tr>
+                    <td>🕒 Hora de entrega:</td>
+                    <td>{{horaEntrega}}</td>
+                </tr>
+                <tr>
+                    <td>👤 Entregado por:</td>
+                    <td>{{usuarioEntrega}}</td>
+                </tr>
+            </table>
+        </div>
+        
+        <div style="background: #FFF3E0; padding: 15px; border-radius: 8px; border-left: 4px solid #FF9800;">
+            <h4 style="margin: 0 0 10px 0; color: #E65100;">📋 COMPROBANTE DE ENTREGA</h4>
+            <ul style="margin: 0; padding-left: 20px;">
+                <li>Conserve este email como comprobante de entrega oficial</li>
+                <li>La entrega fue registrada en nuestro sistema de trazabilidad</li>
+                <li>Para cualquier consulta, presente el código del documento</li>
+            </ul>
+        </div>
+        
+        <p style="text-align: center; margin-top: 30px; font-size: 18px; color: #2E7D32;">
+            <strong>¡Gracias por confiar en nuestros servicios!</strong>
+        </p>
     </div>
     
     <div class="footer">
-      <p>Este correo es generado automáticamente. Por favor no responda a este mensaje.</p>
-      <p>Si tiene alguna pregunta, comuníquese al teléfono: (593) 99-659-1682</p>
-      <p>&copy; {{currentYear}} Notaría Décima Octava. Todos los derechos reservados.</p>
+        <p><strong>Este es un comprobante oficial de entrega</strong></p>
+        <p>Notaría Décima Octava • Dra. Glenda Elizabeth Zapata Silva</p>
+        <p>Sistema ProNotary - Gestión Notarial Inteligente</p>
+        <p>Quito, Ecuador • Generado automáticamente el {{fechaGeneracion}}</p>
     </div>
-  </div>
 </body>
 </html> 

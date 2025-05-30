@@ -145,7 +145,7 @@
             <div class="text-xs font-weight-bold text-info text-uppercase">Eficiencia</div>
             <div class="h4 mb-0 font-weight-bold">
               {{#if (and metricas.totalDocumentos (gt metricas.totalDocumentos 0))}}
-                {{percentage metricas.entregados metricas.totalDocumentos}}%
+                {{percentage metricas.entregados metricas.totalDocumentos}}
               {{else}}
                 0%
               {{/if}}
