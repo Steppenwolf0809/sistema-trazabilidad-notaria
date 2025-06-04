@@ -1267,66 +1267,165 @@ const matrizadorController = {
   },
   
   detalleDocumento: async (req, res) => {
-    console.log("Accediendo al detalle de documento de matrizador");
-    console.log("Usuario:", req.matrizador?.nombre, "Rol:", req.matrizador?.rol);
-    console.log("Ruta solicitada:", req.originalUrl);
-    
     try {
       const { id } = req.params;
+      const usuarioId = req.matrizador?.id || req.user?.id;
+      const usuarioNombre = req.matrizador?.nombre || req.user?.nombre;
       
-      if (!id) {
-        return res.status(400).render('error', {
-          layout: 'matrizador',
-          title: 'Error',
-          message: 'ID de documento no proporcionado'
-        });
-      }
+      console.log(`Obteniendo detalle de documento ID: ${id} para matrizador: ${usuarioNombre}`);
       
-      // Buscar el documento y verificar que pertenezca al matrizador actual
-      const documento = await Documento.findOne({
-        where: {
-          id,
-          idMatrizador: req.matrizador.id
-        }
+      // Buscar documento con sus relaciones
+      const documento = await Documento.findByPk(id, {
+        include: [
+          {
+            model: Matrizador,
+            as: 'matrizador',
+            attributes: ['id', 'nombre', 'email']
+          }
+        ]
       });
       
       if (!documento) {
-        return res.render('matrizadores/documentos/detalle', {
-          layout: 'matrizador',
-          title: 'Detalle de Documento',
-          documento: null,
-          error: 'El documento solicitado no existe o no tienes permisos para verlo',
-          userRole: req.matrizador?.rol,
-          userName: req.matrizador?.nombre
+        return res.status(404).render('error', { 
+          message: 'Documento no encontrado',
+          layout: 'matrizador' // CORREGIDO: quitar 'layouts/'
         });
       }
       
-      console.log("Documento encontrado:", documento.id, documento.codigoBarras);
+      console.log(`Documento encontrado: ${documento.id} ${documento.codigoBarras}`);
       
-      // Si el documento tiene historial, obtenerlo
-      let historial = [];
-      if (documento.historial) {
-        historial = documento.historial;
+      // Buscar eventos del documento con información mejorada - CORREGIDO: ordenar por fecha DESC
+      const eventos = await EventoDocumento.findAll({
+        where: { 
+          documentoId: id,
+          // NUEVO: Filtrar tipos de eventos que no aportan valor al historial para matrizadores
+          tipo: {
+            [Op.notIn]: ['pago', 'vista', 'revision'] // Pagos se muestran arriba, vista/revision son spam
+          }
+        },
+        order: [['created_at', 'DESC']] // Más recientes primero
+      });
+      
+      console.log(`Encontrados ${eventos.length} eventos para el documento`);
+      
+      // Construir historial mejorado con la nueva información
+      const historialEventos = eventos.map(evento => {
+        // Usar la información mejorada o construir información útil
+        const titulo = evento.titulo || traducirTipoEvento(evento.tipo);
+        let descripcion = evento.descripcion || evento.detalles || 'Sin descripción disponible';
+        const categoria = evento.categoria || determinarCategoriaEvento(evento.tipo);
+        
+        // Procesar detalles específicos por tipo de evento
+        let detallesProcessed = {};
+        try {
+          // Si detalles es string JSON, parsearlo
+          if (typeof evento.detalles === 'string') {
+            // Verificar si es JSON válido
+            if (evento.detalles.trim().startsWith('{') || evento.detalles.trim().startsWith('[')) {
+              detallesProcessed = JSON.parse(evento.detalles);
+            } else {
+              // Si es texto plano, crear un objeto simple
+              detallesProcessed = { descripcion: evento.detalles };
+            }
+          } else if (evento.detalles && typeof evento.detalles === 'object') {
+            detallesProcessed = evento.detalles;
+          } else {
+            // Si no hay detalles válidos, usar objeto vacío
+            detallesProcessed = {};
+          }
+        } catch (e) {
+          console.log(`⚠️ Error parsing detalles para evento ${evento.id}: ${e.message}`);
+          // En caso de error, tratar como texto plano
+          detallesProcessed = { 
+            descripcion: typeof evento.detalles === 'string' ? evento.detalles : 'Sin detalles' 
+          };
+        }
+        
+        // Mejorar información del usuario
+        let usuarioInfo = evento.usuario;
+        if (evento.matrizador) {
+          usuarioInfo = `${evento.matrizador.nombre} (${evento.matrizador.rol})`;
+        } else if (!usuarioInfo) {
+          usuarioInfo = 'Sistema';
+        }
+        
+        // Construir información específica para eventos de entrega
+        if (evento.tipo === 'entrega' && documento.nombreReceptor) {
+          detallesProcessed = {
+            ...detallesProcessed,
+            receptor: documento.nombreReceptor,
+            identificacionReceptor: documento.identificacionReceptor,
+            relacion: documento.relacionReceptor || 'titular'
+          };
+          
+          // Mejorar descripción de entrega
+          descripcion = `Documento entregado a ${documento.nombreReceptor} (${documento.identificacionReceptor}) - Relación: ${documento.relacionReceptor || 'titular'}`;
+        }
+        
+        // Construir información específica para eventos de pago
+        if (evento.tipo === 'pago') {
+          if (!detallesProcessed.valor && documento.valorPagado) {
+            detallesProcessed.valor = documento.valorPagado;
+          }
+          if (!detallesProcessed.metodoPago && documento.metodoPago) {
+            detallesProcessed.metodoPago = documento.metodoPago;
+          }
+          if (!detallesProcessed.numeroFactura && documento.numeroFactura) {
+            detallesProcessed.numeroFactura = documento.numeroFactura;
+          }
+          if (!detallesProcessed.usuarioCaja) {
+            detallesProcessed.usuarioCaja = usuarioInfo;
+          }
+        }
+        
+        return {
+          id: evento.id,
+          tipo: evento.tipo,
+          categoria: categoria,
+          titulo: titulo,
+          descripcion: descripcion,
+          detalles: detallesProcessed,
+          usuario: usuarioInfo,
+          fecha: evento.created_at,
+          // ELIMINADO: tiempoTranscurrido - ya no mostraremos "Menos de un minuto"
+          icono: obtenerIconoEvento(evento.tipo),
+          color: obtenerColorEvento(evento.tipo)
+        };
+      });
+      
+      // Marcar documento como visto por el matrizador (sin crear evento)
+      if (documento.idMatrizador === usuarioId && !documento.visto_por_matrizador) {
+        await documento.update({ visto_por_matrizador: true });
+        console.log(`📖 Documento ${documento.codigoBarras} marcado como visto por primera vez por ${usuarioNombre}`);
+        
+        // NO crear evento de vista - estos eventos contaminan el historial
+        // Solo actualizamos el campo para control interno
       }
       
-      res.render('matrizadores/documentos/detalle', {
-        layout: 'matrizador',
-        title: 'Detalle de Documento',
-        documento,
-        historial,
-        userRole: req.matrizador?.rol,
-        userName: req.matrizador?.nombre
+      // Obtener lista de matrizadores para posibles reasignaciones
+      const matrizadores = await Matrizador.findAll({
+        where: { activo: true },
+        attributes: ['id', 'nombre'],
+        order: [['nombre', 'ASC']]
       });
+      
+      res.render('matrizadores/documentos/detalle', {
+        documento,
+        eventos: historialEventos, // Eventos ya ordenados por fecha DESC
+        matrizadores,
+        usuario: req.matrizador || req.user,
+        layout: 'matrizador' // CORREGIDO: quitar 'layouts/'
+      });
+      
     } catch (error) {
       console.error('Error al obtener detalle de documento:', error);
-      res.status(500).render('error', {
-        layout: 'matrizador',
-        title: 'Error',
-        message: 'Ha ocurrido un error al cargar el detalle del documento',
-        error
+      res.status(500).render('error', { 
+        message: 'Error interno del servidor al cargar detalle',
+        layout: 'matrizador' // CORREGIDO: quitar 'layouts/'
       });
     }
   },
+  
   mostrarFormularioRegistro: (req, res) => {
     console.log("Accediendo al formulario de registro de matrizador");
     console.log("Usuario:", req.matrizador?.nombre, "Rol:", req.matrizador?.rol);
@@ -1339,6 +1438,7 @@ const matrizadorController = {
       usuario: req.matrizador // Pasar el usuario completo para el campo id_matrizador
     });
   },
+
   registrarDocumento: async (req, res) => {
     console.log("Registrando documento como matrizador");
     console.log("Usuario:", req.matrizador?.nombre, "Rol:", req.matrizador?.rol);
@@ -1414,53 +1514,36 @@ const matrizadorController = {
         comparecientesJson = [];
       }
       
-      // ============== CORRECCIÓN: GENERACIÓN CONDICIONAL DE CÓDIGO DE VERIFICACIÓN ==============
-      
-      // Verificar si debe generar código de verificación
-      const debeNotificar = !documento.omitirNotificacion && 
-                           documento.emailCliente && 
-                           documento.telefonoCliente;
-      
-      const esEntregaInmediata = documento.entregadoInmediatamente || false;
-      
-      let codigoVerificacion = null;
-      let mensajeNotificacion = '';
-      
-      if (debeNotificar && !esEntregaInmediata) {
-        // Solo generar código si se va a notificar Y no es entrega inmediata
-        codigoVerificacion = Math.floor(1000 + Math.random() * 9000).toString();
-        mensajeNotificacion = 'Se enviará código de verificación al cliente';
-        console.log(`✅ Generando código de verificación: ${codigoVerificacion} para documento ${documento.codigoBarras}`);
-      } else {
-        // No generar código en estos casos:
-        // - Omitir notificación activado
-        // - Sin datos de contacto del cliente
-        // - Entrega inmediata
-        codigoVerificacion = null;
-        
-        if (documento.omitirNotificacion) {
-          mensajeNotificacion = 'Sin código - notificación omitida por configuración';
-          console.log(`⏭️ No se generará código para documento ${documento.codigoBarras}: notificación omitida`);
-        } else if (esEntregaInmediata) {
-          mensajeNotificacion = 'Sin código - entrega inmediata configurada';
-          console.log(`⚡ No se generará código para documento ${documento.codigoBarras}: entrega inmediata`);
-        } else {
-          mensajeNotificacion = 'Sin código - faltan datos de contacto del cliente';
-          console.log(`⚠️ No se generará código para documento ${documento.codigoBarras}: sin datos de contacto`);
-        }
-      }
-      
-      // Actualizar estado y código de verificación del documento principal
-      documento.estado = 'listo_para_entrega';
-      documento.codigoVerificacion = codigoVerificacion; // Puede ser null
-      await documento.save({ transaction });
+      // Crear el documento
+      const nuevoDocumento = await Documento.create({
+        codigoBarras,
+        tipoDocumento,
+        nombreCliente,
+        identificacionCliente,
+        emailCliente,
+        telefonoCliente,
+        idMatrizador: req.matrizador.id,
+        notas,
+        numeroFactura,
+        valorFactura: valorFactura ? parseFloat(valorFactura) : null,
+        fechaFactura,
+        estadoPago: estadoPago || 'pendiente',
+        metodoPago: metodoPago || 'pendiente',
+        omitirNotificacion: omitirNotificacion === 'true',
+        motivoOmision,
+        detalleOmision,
+        comparecientes: comparecientesJson,
+        estado: 'en_proceso',
+        idUsuarioCreador: req.matrizador.id,
+        rolUsuarioCreador: req.matrizador.rol
+      }, { transaction });
       
       // Registrar el evento de creación
       try {
         await EventoDocumento.create({
-          idDocumento: documento.id,
+          documentoId: nuevoDocumento.id,
           tipo: 'registro',
-          detalles: 'Documento registrado por matrizador',
+          descripcion: 'Documento registrado por matrizador',
           usuario: req.matrizador.nombre
         }, { transaction });
       } catch (eventError) {
@@ -1487,16 +1570,10 @@ const matrizadorController = {
         } else {
           errorMessage = 'Ya existe un registro con uno de los valores únicos ingresados.';
         }
-      } else if (error.message.includes('El código de barras debe comenzar con el prefijo')) {
-        // Este error ya se maneja con req.flash y render, pero podemos asegurar que no se active el modal si no es duplicado
-        // No es necesario cambiar errorMessage aquí si req.flash ya lo maneja, a menos que queramos unificar
       }
 
-      // Si no es un error de código duplicado que queramos manejar con modal, 
-      // dejamos que la lógica de req.flash y render existente continúe.
-      // Solo si errorCodeDuplicado es true, la vista mostrará el modal.
       if (!errorCodeDuplicado) {
-        req.flash('error', errorMessage); // Usar el errorMessage genérico o el específico si no es duplicado
+        req.flash('error', errorMessage);
       }
 
       res.render('matrizadores/documentos/registro', {
@@ -1506,221 +1583,10 @@ const matrizadorController = {
         userName: req.matrizador?.nombre,
         usuario: req.matrizador,
         formData: req.body,
-        error: errorCodeDuplicado ? null : errorMessage, // Solo mostrar error general si no hay modal
+        error: errorCodeDuplicado ? null : errorMessage,
         errorCodeDuplicado: errorCodeDuplicado,
-        modalErrorMessage: errorCodeDuplicado ? errorMessage : null // Mensaje específico para el modal
+        modalErrorMessage: errorCodeDuplicado ? errorMessage : null
       });
-    }
-  },
-  mostrarEntrega: async (req, res) => {
-    console.log("Accediendo a la entrega de documento de matrizador");
-    console.log("Usuario:", req.matrizador?.nombre, "Rol:", req.matrizador?.rol);
-    console.log("Ruta solicitada:", req.originalUrl);
-    
-    try {
-      const documentoId = req.params.id;
-      const codigo = req.query.codigo;
-      
-      // Si hay un ID, mostrar formulario de entrega para ese documento
-      if (documentoId) {
-        const documento = await Documento.findOne({
-          where: {
-            id: documentoId,
-            idMatrizador: req.matrizador.id,
-            estado: 'listo_para_entrega'
-          }
-        });
-        
-        if (!documento) {
-          req.flash('error', 'El documento no existe, no está listo para entrega o no tienes permisos para verlo');
-          return res.redirect('/matrizador/documentos/entrega');
-        }
-        
-        return res.render('matrizadores/documentos/entrega', {
-          layout: 'matrizador',
-          title: 'Entrega de Documento',
-          documento,
-          userRole: req.matrizador?.rol,
-          userName: req.matrizador?.nombre
-        });
-      }
-      
-      // Si hay un código de barras, buscar por código
-      if (codigo) {
-        const documento = await Documento.findOne({
-          where: {
-            codigo_barras: codigo,
-            idMatrizador: req.matrizador.id,
-            estado: 'listo_para_entrega'
-          }
-        });
-        
-        if (documento) {
-          return res.redirect(`/matrizador/documentos/entrega/${documento.id}`);
-        }
-        
-        req.flash('error', 'No se encontró un documento listo para entrega con ese código');
-      }
-      
-      // Obtener documentos listos para entrega de este matrizador
-      const documentosListos = await Documento.findAll({
-        where: {
-          idMatrizador: req.matrizador.id,
-          estado: 'listo_para_entrega'
-        },
-        order: [['created_at', 'DESC']],
-        limit: 10
-      });
-      
-      console.log(`Documentos listos para entrega: ${documentosListos.length}`);
-      
-      return res.render('matrizadores/documentos/entrega', {
-        layout: 'matrizador',
-        title: 'Entrega de Documentos',
-        documentosListos,
-        userRole: req.matrizador?.rol,
-        userName: req.matrizador?.nombre
-      });
-    } catch (error) {
-      console.error('Error al mostrar la página de entrega:', error);
-      res.status(500).render('error', {
-        layout: 'matrizador',
-        title: 'Error',
-        message: 'Ha ocurrido un error al cargar la página de entrega de documentos',
-        error
-      });
-    }
-  },
-  completarEntrega: async (req, res) => {
-    console.log("Completando entrega de documento como matrizador");
-    console.log("Usuario:", req.matrizador?.nombre, "Rol:", req.matrizador?.rol);
-    console.log("Ruta solicitada:", req.originalUrl);
-    console.log("Datos recibidos:", req.body);
-    
-    const transaction = await sequelize.transaction();
-    
-    try {
-      const { id } = req.params;
-      const { codigoVerificacion, nombreReceptor, identificacionReceptor, relacionReceptor, tipoVerificacion, observaciones } = req.body;
-      
-      if (!id) {
-        await transaction.rollback();
-        req.flash('error', 'ID de documento no proporcionado');
-        return res.redirect('/matrizador/documentos/entrega');
-      }
-      
-      // Buscar el documento y verificar que pertenezca al matrizador actual
-      const documento = await Documento.findOne({
-        where: {
-          id,
-          idMatrizador: req.matrizador.id,
-          estado: 'listo_para_entrega'
-        },
-        transaction
-      });
-      
-      if (!documento) {
-        await transaction.rollback();
-        req.flash('error', 'El documento no existe, no está listo para entrega o no tienes permisos para modificarlo');
-        return res.redirect('/matrizador/documentos/entrega');
-      }
-      
-      // Verificar código a menos que sea verificación por llamada
-      if (tipoVerificacion !== 'llamada' && documento.codigoVerificacion !== codigoVerificacion) {
-        await transaction.rollback();
-        return res.render('matrizadores/documentos/entrega', {
-          layout: 'matrizador',
-          title: 'Entrega de Documento',
-          documento,
-          error: 'El código de verificación es incorrecto, por favor verifique e intente nuevamente',
-          userRole: req.matrizador?.rol,
-          userName: req.matrizador?.nombre
-        });
-      }
-      
-      // Actualizar el documento
-      documento.estado = 'entregado';
-      documento.fechaEntrega = new Date();
-      documento.nombreReceptor = nombreReceptor;
-      documento.identificacionReceptor = identificacionReceptor;
-      documento.relacionReceptor = relacionReceptor;
-      
-      await documento.save({ transaction });
-      
-      // Registrar el evento de entrega
-      try {
-        const detalles = tipoVerificacion === 'llamada'
-          ? `Entregado a ${nombreReceptor} con verificación por llamada: ${observaciones}`
-          : `Entregado a ${nombreReceptor} con código de verificación`;
-          
-        await EventoDocumento.create({
-          idDocumento: documento.id,
-          tipo: 'entrega',
-          detalles,
-          usuario: req.matrizador.nombre
-        }, { transaction });
-      } catch (eventError) {
-        console.error('Error al registrar evento de entrega:', eventError);
-        // Continuar con la transacción aunque el registro de eventos falle
-      }
-      
-      await transaction.commit();
-      
-      // Enviar confirmación de entrega después de confirmar la transacción
-      try {
-        // Construir mensajes profesionales para confirmación de entrega
-        const mensajes = construirMensajeDocumentoEntregado(documento, {
-          nombreReceptor,
-          identificacionReceptor,
-          relacionReceptor,
-          usuarioEntrega: req.matrizador.nombre
-        });
-        
-        // Registrar evento de notificación de entrega en el historial
-        await EventoDocumento.create({
-          idDocumento: documento.id,
-          tipo: mensajes.tipo,
-          detalles: `Confirmación de entrega enviada - Entregado a: ${nombreReceptor}`,
-          usuario: req.matrizador.nombre,
-          metadatos: {
-            nombreReceptor: nombreReceptor,
-            identificacionReceptor: identificacionReceptor,
-            relacionReceptor: relacionReceptor,
-            metodoNotificacion: documento.metodoNotificacion || 'ambos',
-            canal: documento.metodoNotificacion || 'ambos',
-            estado: 'enviado',
-            tipoVerificacion: tipoVerificacion
-          }
-        });
-        
-        console.log(`📧 Confirmación de entrega enviada para documento ${documento.codigoBarras} a ${nombreReceptor}`);
-      } catch (notificationError) {
-        console.error('Error al enviar confirmación de entrega:', notificationError);
-        // No afectar el flujo principal si falla la notificación
-      }
-      
-      // Mensaje de éxito personalizado según la configuración del documento
-      let mensajeExito = '';
-      
-      if (codigoVerificacion) {
-        mensajeExito = `El documento ha sido marcado como listo para entrega y se ha enviado el código de verificación al cliente.`;
-      } else {
-        if (documento.omitirNotificacion) {
-          mensajeExito = `El documento ha sido marcado como listo para entrega. No se envió notificación según la configuración del documento.`;
-        } else if (esEntregaInmediata) {
-          mensajeExito = `El documento ha sido marcado como listo para entrega inmediata. No se requiere código de verificación.`;
-        } else {
-          mensajeExito = `El documento ha sido marcado como listo para entrega. No se pudo enviar notificación por falta de datos de contacto.`;
-        }
-      }
-      
-      req.flash('success', mensajeExito);
-      res.redirect('/matrizador/documentos');
-    } catch (error) {
-      await transaction.rollback();
-      console.error('Error al marcar documento como listo:', error);
-      req.flash('error', `Error al marcar el documento como listo: ${error.message}`);
-      res.redirect('/matrizador/documentos');
     }
   },
 
@@ -1750,20 +1616,21 @@ const matrizadorController = {
         });
       }
       
-      // Actualizar el campo visto_por_matrizador
-      await documento.update({ visto_por_matrizador: true });
-      
-      // Registrar evento
-      await EventoDocumento.create({
-        documentoId: id,
-        tipo: 'vista',
-        detalles: 'Documento visto por matrizador',
-        usuario: req.matrizador.nombre
-      });
+      // Solo actualizar si no había sido visto antes (evitar eventos repetitivos)
+      if (!documento.visto_por_matrizador) {
+        await documento.update({ visto_por_matrizador: true });
+        
+        console.log(`📖 Documento ${documento.codigoBarras} marcado como visto por primera vez por ${req.matrizador?.nombre}`);
+        
+        // NO crear evento - estos eventos contaminan el historial y no aportan valor
+        // Los eventos importantes son: creación, pagos, entregas, cambios de estado
+      } else {
+        console.log(`📖 Documento ${documento.codigoBarras} ya había sido visto por ${req.matrizador?.nombre} - sin cambios`);
+      }
       
       return res.status(200).json({
         exito: true,
-        mensaje: 'Documento marcado como visto correctamente'
+        mensaje: 'Documento procesado correctamente'
       });
     } catch (error) {
       console.error('Error al marcar documento como visto:', error);
@@ -2365,6 +2232,236 @@ _Guarde este mensaje como comprobante de entrega._`;
       res.redirect('/matrizador/documentos');
     }
   },
+
+  mostrarEntrega: async (req, res) => {
+    console.log("Accediendo a la entrega de documento de matrizador");
+    console.log("Usuario:", req.matrizador?.nombre, "Rol:", req.matrizador?.rol);
+    console.log("Ruta solicitada:", req.originalUrl);
+    
+    try {
+      const documentoId = req.params.id;
+      const codigo = req.query.codigo;
+      
+      // Si hay un ID, mostrar formulario de entrega para ese documento
+      if (documentoId) {
+        const documento = await Documento.findOne({
+          where: {
+            id: documentoId,
+            idMatrizador: req.matrizador.id,
+            estado: 'listo_para_entrega'
+          }
+        });
+        
+        if (!documento) {
+          req.flash('error', 'El documento no existe, no está listo para entrega o no tienes permisos para verlo');
+          return res.redirect('/matrizador/documentos/entrega');
+        }
+        
+        return res.render('matrizadores/documentos/entrega', {
+          layout: 'matrizador',
+          title: 'Entrega de Documento',
+          documento,
+          userRole: req.matrizador?.rol,
+          userName: req.matrizador?.nombre
+        });
+      }
+      
+      // Si hay un código de barras, buscar por código
+      if (codigo) {
+        const documento = await Documento.findOne({
+          where: {
+            codigoBarras: codigo,
+            idMatrizador: req.matrizador.id,
+            estado: 'listo_para_entrega'
+          }
+        });
+        
+        if (documento) {
+          return res.redirect(`/matrizador/documentos/entrega/${documento.id}`);
+        }
+        
+        req.flash('error', 'No se encontró un documento listo para entrega con ese código');
+      }
+      
+      // Obtener documentos listos para entrega de este matrizador
+      const documentosListos = await Documento.findAll({
+        where: {
+          idMatrizador: req.matrizador.id,
+          estado: 'listo_para_entrega'
+        },
+        order: [['created_at', 'DESC']],
+        limit: 10
+      });
+      
+      console.log(`Documentos listos para entrega: ${documentosListos.length}`);
+      
+      return res.render('matrizadores/documentos/entrega', {
+        layout: 'matrizador',
+        title: 'Entrega de Documentos',
+        documentosListos,
+        userRole: req.matrizador?.rol,
+        userName: req.matrizador?.nombre
+      });
+    } catch (error) {
+      console.error('Error al mostrar la página de entrega:', error);
+      res.status(500).render('error', {
+        layout: 'matrizador',
+        title: 'Error',
+        message: 'Ha ocurrido un error al cargar la página de entrega de documentos',
+        error
+      });
+    }
+  },
+  
+  completarEntrega: async (req, res) => {
+    console.log("Completando entrega de documento como matrizador");
+    console.log("Usuario:", req.matrizador?.nombre, "Rol:", req.matrizador?.rol);
+    console.log("Ruta solicitada:", req.originalUrl);
+    console.log("Datos recibidos:", req.body);
+    
+    const transaction = await sequelize.transaction();
+    
+    try {
+      const { id } = req.params;
+      const { codigoVerificacion, nombreReceptor, identificacionReceptor, relacionReceptor, tipoVerificacion, observaciones } = req.body;
+      
+      if (!id) {
+        await transaction.rollback();
+        req.flash('error', 'ID de documento no proporcionado');
+        return res.redirect('/matrizador/documentos/entrega');
+      }
+      
+      // Buscar el documento y verificar que pertenezca al matrizador actual
+      const documento = await Documento.findOne({
+        where: {
+          id,
+          idMatrizador: req.matrizador.id,
+          estado: 'listo_para_entrega'
+        },
+        transaction
+      });
+      
+      if (!documento) {
+        await transaction.rollback();
+        req.flash('error', 'El documento no existe, no está listo para entrega o no tienes permisos para modificarlo');
+        return res.redirect('/matrizador/documentos/entrega');
+      }
+      
+      // Verificar código a menos que sea verificación por llamada
+      if (tipoVerificacion !== 'llamada' && documento.codigoVerificacion !== codigoVerificacion) {
+        await transaction.rollback();
+        return res.render('matrizadores/documentos/entrega', {
+          layout: 'matrizador',
+          title: 'Entrega de Documento',
+          documento,
+          error: 'El código de verificación es incorrecto, por favor verifique e intente nuevamente',
+          userRole: req.matrizador?.rol,
+          userName: req.matrizador?.nombre
+        });
+      }
+      
+      // Actualizar el documento
+      documento.estado = 'entregado';
+      documento.fechaEntrega = new Date();
+      documento.nombreReceptor = nombreReceptor;
+      documento.identificacionReceptor = identificacionReceptor;
+      documento.relacionReceptor = relacionReceptor;
+      
+      await documento.save({ transaction });
+      
+      // Registrar el evento de entrega
+      try {
+        const detalles = tipoVerificacion === 'llamada'
+          ? `Entregado a ${nombreReceptor} con verificación por llamada: ${observaciones}`
+          : `Entregado a ${nombreReceptor} con código de verificación`;
+          
+        await EventoDocumento.create({
+          documentoId: documento.id,
+          tipo: 'entrega',
+          descripcion: detalles,
+          usuario: req.matrizador.nombre
+        }, { transaction });
+      } catch (eventError) {
+        console.error('Error al registrar evento de entrega:', eventError);
+        // Continuar con la transacción aunque el registro de eventos falle
+      }
+      
+      await transaction.commit();
+      
+      req.flash('success', `Documento entregado exitosamente a ${nombreReceptor}`);
+      res.redirect('/matrizador/documentos');
+    } catch (error) {
+      await transaction.rollback();
+      console.error('Error al completar entrega:', error);
+      req.flash('error', `Error al completar la entrega: ${error.message}`);
+      res.redirect('/matrizador/documentos/entrega');
+    }
+  },
 };
+
+// Funciones auxiliares para el historial de eventos
+function determinarCategoriaEvento(tipoEvento) {
+  const categorias = {
+    'pago': 'pago',
+    'confirmacion_pago': 'pago',
+    'entrega': 'entrega',
+    'documento_entregado': 'entrega',
+    'cambio_estado': 'estado',
+    'documento_listo': 'estado',
+    'asignacion': 'asignacion',
+    'notificacion_enviada': 'notificacion',
+    'registro': 'creacion',
+    'vista': 'vista'
+  };
+  return categorias[tipoEvento] || 'general';
+}
+
+function obtenerIconoEvento(tipoEvento) {
+  const iconos = {
+    'pago': 'fas fa-dollar-sign',
+    'confirmacion_pago': 'fas fa-check-circle',
+    'entrega': 'fas fa-handshake',
+    'documento_entregado': 'fas fa-hand-holding',
+    'cambio_estado': 'fas fa-edit',
+    'documento_listo': 'fas fa-check',
+    'asignacion': 'fas fa-user-tag',
+    'notificacion_enviada': 'fas fa-bell',
+    'registro': 'fas fa-file-plus',
+    'vista': 'fas fa-eye'
+  };
+  return iconos[tipoEvento] || 'fas fa-info-circle';
+}
+
+function obtenerColorEvento(tipoEvento) {
+  const colores = {
+    'pago': 'success',
+    'confirmacion_pago': 'success',
+    'entrega': 'info',
+    'documento_entregado': 'info',
+    'cambio_estado': 'warning',
+    'documento_listo': 'success',
+    'asignacion': 'primary',
+    'notificacion_enviada': 'info',
+    'registro': 'primary',
+    'vista': 'secondary'
+  };
+  return colores[tipoEvento] || 'secondary';
+}
+
+function traducirTipoEvento(tipoEvento) {
+  const traducciones = {
+    'pago': 'Pago Registrado',
+    'confirmacion_pago': 'Pago Confirmado',
+    'entrega': 'Documento Entregado',
+    'documento_entregado': 'Documento Entregado',
+    'cambio_estado': 'Cambio de Estado',
+    'documento_listo': 'Documento Listo',
+    'asignacion': 'Asignación',
+    'notificacion_enviada': 'Notificación Enviada',
+    'registro': 'Registro',
+    'vista': 'Vista'
+  };
+  return traducciones[tipoEvento] || 'General';
+}
 
 module.exports = matrizadorController;
