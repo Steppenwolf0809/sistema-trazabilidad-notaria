@@ -126,9 +126,11 @@
           <div class="row">
             <div class="col-md-6 mb-3">
               <label for="estadoPago" class="form-label">Estado de Pago</label>
-              <select class="form-select" id="estadoPago" name="estadoPago">
+              <select class="form-select" id="estadoPago" name="estadoPago" required>
                 <option value="pendiente" {{#if (eq formData.estadoPago "pendiente")}}selected{{/if}}>Pendiente</option>
-                <option value="pagado" {{#if (eq formData.estadoPago "pagado")}}selected{{/if}}>Pagado</option>
+                <option value="pago_parcial" {{#if (eq formData.estadoPago "pago_parcial")}}selected{{/if}}>Pago Parcial</option>
+                <option value="pagado_completo" {{#if (eq formData.estadoPago "pagado_completo")}}selected{{/if}}>Pagado Completo</option>
+                <option value="pagado_con_retencion" {{#if (eq formData.estadoPago "pagado_con_retencion")}}selected{{/if}}>Pagado con Retención</option>
               </select>
             </div>
             

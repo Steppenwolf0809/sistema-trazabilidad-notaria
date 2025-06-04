@@ -1,0 +1,475 @@
+<div class="card">
+  <div class="card-header">
+    <i class="fas fa-file-code me-2"></i> Cargar Documento XML
+  </div>
+  <div class="card-body">
+    <!-- Sección inicial de carga -->
+    <div id="seccion-carga" class="mb-4">
+      <div class="alert alert-info">
+        <div class="d-flex align-items-center">
+          <div class="me-3">
+            <i class="fas fa-info-circle fa-2x"></i>
+          </div>
+          <div>
+            <h5 class="alert-heading mb-1">Cargar Documento desde XML</h5>
+            <p class="mb-0">Cargue el archivo XML de facturación electrónica para extraer automáticamente los datos del documento.</p>
+            <small class="text-info">✅ Vista previa antes del registro - Podrá editar los datos antes de confirmar</small>
+          </div>
+        </div>
+      </div>
+      
+      <form id="xmlUploadForm" action="/caja/documentos/procesar-xml" method="POST" enctype="multipart/form-data">
+        <div class="mb-4">
+          <label for="xmlFile" class="form-label">Seleccionar archivo XML</label>
+          <input type="file" class="form-control" id="xmlFile" name="xmlFile" accept=".xml" required>
+          <div class="form-text">Solo se permiten archivos con extensión .xml (máximo 5MB)</div>
+        </div>
+        
+        <div class="d-flex justify-content-end">
+          <button type="button" class="btn btn-outline-secondary me-2" onclick="window.location.href='/caja/documentos'">
+            Volver a Documentos
+          </button>
+          <button type="submit" class="btn btn-primary" id="btnProcesar">
+            <i class="fas fa-search me-1"></i> Procesar y Vista Previa
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Vista previa del documento (similar al editor de matrizador) -->
+    <div id="vista-previa" style="display: none;">
+      <div class="alert alert-success">
+        <h6><i class="fas fa-check-circle me-2"></i>XML Procesado Exitosamente</h6>
+        <p class="mb-0">Revise y confirme los datos extraídos antes del registro final.</p>
+      </div>
+
+      <form id="formConfirmarRegistro">
+        <!-- Información principal del documento -->
+        <div class="row mb-4">
+          <div class="col-md-6">
+            <h6 class="text-primary">Tipo de Documento</h6>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="tipoDocumento" id="tipoProtocolo" value="Protocolo">
+              <label class="form-check-label" for="tipoProtocolo">📋 Protocolo</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="tipoDocumento" id="tipoDiligencias" value="Diligencias">
+              <label class="form-check-label" for="tipoDiligencias">📑 Diligencias</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="tipoDocumento" id="tipoCertificaciones" value="Certificaciones">
+              <label class="form-check-label" for="tipoCertificaciones">🏆 Certificaciones</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="tipoDocumento" id="tipoArrendamientos" value="Arrendamientos">
+              <label class="form-check-label" for="tipoArrendamientos">🏠 Arrendamientos</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="tipoDocumento" id="tipoOtros" value="Otros">
+              <label class="form-check-label" for="tipoOtros">📄 Otros</label>
+            </div>
+          </div>
+          
+          <div class="col-md-6">
+            <h6 class="text-primary">Código de Barras</h6>
+            <input type="text" class="form-control" id="codigoBarras" name="codigoBarras" readonly style="background-color: #f8f9fa;">
+            <small class="text-muted">El código de barras no se puede modificar</small>
+          </div>
+        </div>
+
+        <!-- Información del Cliente -->
+        <h6 class="text-primary">Información del Cliente</h6>
+        <div class="row mb-4">
+          <div class="col-md-6">
+            <label for="nombreCliente" class="form-label">Nombre del Cliente</label>
+            <input type="text" class="form-control" id="nombreCliente" name="nombreCliente" required>
+          </div>
+          <div class="col-md-6">
+            <label for="identificacionCliente" class="form-label">Identificación del Cliente</label>
+            <input type="text" class="form-control" id="identificacionCliente" name="identificacionCliente" required>
+          </div>
+        </div>
+
+        <div class="row mb-4">
+          <div class="col-md-6">
+            <label for="emailCliente" class="form-label">Email del Cliente</label>
+            <input type="email" class="form-control" id="emailCliente" name="emailCliente">
+          </div>
+          <div class="col-md-6">
+            <label for="telefonoCliente" class="form-label">Teléfono del Cliente</label>
+            <input type="text" class="form-control" id="telefonoCliente" name="telefonoCliente">
+          </div>
+        </div>
+
+        <!-- Información Financiera -->
+        <h6 class="text-primary">Información Financiera</h6>
+        <div class="row mb-4">
+          <div class="col-md-4">
+            <label for="numeroFactura" class="form-label">Número de Factura</label>
+            <input type="text" class="form-control" id="numeroFactura" name="numeroFactura">
+          </div>
+          <div class="col-md-4">
+            <label for="valorFactura" class="form-label">Valor de Factura</label>
+            <input type="number" class="form-control" id="valorFactura" name="valorFactura" step="0.01">
+          </div>
+          <div class="col-md-4">
+            <label for="fechaFactura" class="form-label">Fecha de Factura</label>
+            <input type="date" class="form-control" id="fechaFactura" name="fechaFactura">
+          </div>
+        </div>
+
+        <!-- Selección de Matrizador -->
+        <h6 class="text-primary">Asignación de Matrizador</h6>
+        <div class="row mb-4">
+          <div class="col-md-8">
+            <label for="idMatrizador" class="form-label">Seleccionar Matrizador</label>
+            <select class="form-select" id="idMatrizador" name="idMatrizador" required>
+              <option value="">Seleccione un matrizador</option>
+            </select>
+            <small class="text-info" id="matrizadorSugerido" style="display: none;">
+              💡 Matrizador sugerido del XML: <span id="nombreMatrizadorXML"></span>
+            </small>
+          </div>
+        </div>
+
+        <!-- Detalles Adicionales -->
+        <h6 class="text-primary">Detalles Adicionales</h6>
+        <div class="mb-4">
+          <label for="observaciones" class="form-label">Notas</label>
+          <textarea class="form-control" id="observaciones" name="observaciones" rows="3" placeholder="Observaciones adicionales..."></textarea>
+        </div>
+
+        <!-- Información del XML (solo lectura) -->
+        <div class="alert alert-light">
+          <h6><i class="fas fa-file-code me-2"></i>Información del XML</h6>
+          <div class="row">
+            <div class="col-md-6">
+              <strong>Razón Social Emisor:</strong> <span id="razonSocialEmisor"></span><br>
+              <strong>RUC Emisor:</strong> <span id="rucEmisor"></span>
+            </div>
+            <div class="col-md-6">
+              <strong>Archivo Original:</strong> <span id="archivoOriginal"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Botones de acción -->
+        <div class="d-flex justify-content-between">
+          <button type="button" class="btn btn-outline-secondary" onclick="volverACarga()">
+            <i class="fas fa-arrow-left me-1"></i> Cargar Otro XML
+          </button>
+          <button type="submit" class="btn btn-success" id="btnConfirmarRegistro">
+            <i class="fas fa-check me-1"></i> Confirmar y Registrar Documento
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Resultado del registro exitoso -->
+    <div id="resultado-exitoso" style="display: none;" class="mt-4">
+      <div class="alert alert-success">
+        <h6><i class="fas fa-check-circle me-2"></i>Documento Registrado Exitosamente</h6>
+        <div id="datos-documento-final"></div>
+        
+        <div class="mt-3">
+          <button type="button" class="btn btn-primary" id="btnVerDocumentoFinal">
+            <i class="fas fa-eye me-1"></i> Ver Documento
+          </button>
+          <button type="button" class="btn btn-outline-success ms-2" onclick="limpiarTodo()">
+            <i class="fas fa-plus me-1"></i> Registrar Otro Documento
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error del procesamiento -->
+    <div id="error-procesamiento" style="display: none;" class="mt-4">
+      <div class="alert alert-danger">
+        <h6><i class="fas fa-exclamation-triangle me-2"></i>Error al Procesar</h6>
+        <p id="mensaje-error"></p>
+        <button type="button" class="btn btn-outline-danger" onclick="volverACarga()">
+          <i class="fas fa-redo me-1"></i> Intentar de Nuevo
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const formUpload = document.getElementById('xmlUploadForm');
+  const formConfirmar = document.getElementById('formConfirmarRegistro');
+  const fileInput = document.getElementById('xmlFile');
+  const btnProcesar = document.getElementById('btnProcesar');
+  
+  // Secciones
+  const seccionCarga = document.getElementById('seccion-carga');
+  const vistaPrevia = document.getElementById('vista-previa');
+  const resultadoExitoso = document.getElementById('resultado-exitoso');
+  const errorProcesamiento = document.getElementById('error-procesamiento');
+  
+  let datosDocumento = null;
+  
+  // ==================== PASO 1: PROCESAR XML ====================
+  formUpload.addEventListener('submit', function(event) {
+    event.preventDefault();
+    
+    // Verificar que se haya seleccionado un archivo
+    if (!fileInput.files || fileInput.files.length === 0) {
+      alert('Por favor, seleccione un archivo XML para continuar.');
+      return false;
+    }
+    
+    // Verificar extensión del archivo
+    const fileName = fileInput.files[0].name;
+    if (!fileName.toLowerCase().endsWith('.xml')) {
+      alert('Solo se permiten archivos con extensión .xml');
+      return false;
+    }
+    
+    // Verificar tamaño del archivo (5MB máximo)
+    if (fileInput.files[0].size > 5 * 1024 * 1024) {
+      alert('El archivo es demasiado grande. Máximo 5MB permitido.');
+      return false;
+    }
+    
+    procesarXML();
+  });
+  
+  function procesarXML() {
+    const formData = new FormData(formUpload);
+    
+    // Mostrar loading
+    btnProcesar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Procesando XML...';
+    btnProcesar.disabled = true;
+    
+    // Ocultar elementos anteriores
+    ocultarTodasLasSecciones();
+    
+    fetch('/caja/documentos/procesar-xml', {
+      method: 'POST',
+      body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success && data.vistaPrevia) {
+        mostrarVistaPrevia(data);
+      } else {
+        mostrarError(data.message || 'Error desconocido al procesar XML');
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      mostrarError('Error de conexión al procesar el archivo XML');
+    })
+    .finally(() => {
+      // Restaurar botón
+      btnProcesar.innerHTML = '<i class="fas fa-search me-1"></i> Procesar y Vista Previa';
+      btnProcesar.disabled = false;
+    });
+  }
+  
+  function mostrarVistaPrevia(data) {
+    console.log('Mostrando vista previa con datos:', data);
+    datosDocumento = data.datosExtraidos;
+    
+    // Ocultar sección de carga y mostrar vista previa
+    seccionCarga.style.display = 'none';
+    vistaPrevia.style.display = 'block';
+    
+    // Llenar datos en la vista previa
+    llenarDatosVistaPrevia(data);
+  }
+  
+  function llenarDatosVistaPrevia(data) {
+    const datos = data.datosExtraidos;
+    
+    // Tipo de documento (seleccionar radio button correcto)
+    const tipoRadios = document.querySelectorAll('input[name="tipoDocumento"]');
+    tipoRadios.forEach(radio => {
+      if (radio.value === datos.tipoDocumento) {
+        radio.checked = true;
+      }
+    });
+    
+    // Código de barras (readonly)
+    document.getElementById('codigoBarras').value = datos.codigoBarras || '';
+    
+    // Información del cliente
+    document.getElementById('nombreCliente').value = datos.nombreCliente || '';
+    document.getElementById('identificacionCliente').value = datos.identificacionCliente || '';
+    document.getElementById('emailCliente').value = datos.emailCliente || '';
+    document.getElementById('telefonoCliente').value = datos.telefonoCliente || '';
+    
+    // Información financiera
+    document.getElementById('numeroFactura').value = datos.numeroFactura || '';
+    document.getElementById('valorFactura').value = datos.valorFactura || '';
+    
+    // Convertir fecha si es necesario (DD/MM/YYYY a YYYY-MM-DD)
+    if (datos.fechaFactura) {
+      let fechaFormatted = datos.fechaFactura;
+      if (datos.fechaFactura.includes('/')) {
+        const partes = datos.fechaFactura.split('/');
+        if (partes.length === 3) {
+          fechaFormatted = `${partes[2]}-${partes[1].padStart(2, '0')}-${partes[0].padStart(2, '0')}`;
+        }
+      }
+      document.getElementById('fechaFactura').value = fechaFormatted;
+    }
+    
+    // Llenar dropdown de matrizadores
+    const selectMatrizador = document.getElementById('idMatrizador');
+    selectMatrizador.innerHTML = '<option value="">Seleccione un matrizador</option>';
+    
+    data.matrizadores.forEach(matrizador => {
+      const option = document.createElement('option');
+      option.value = matrizador.id;
+      option.textContent = matrizador.nombre;
+      
+      // Seleccionar automáticamente si es el sugerido
+      if (datos.matrizadorSugerido && matrizador.id === datos.matrizadorSugerido.id) {
+        option.selected = true;
+      }
+      
+      selectMatrizador.appendChild(option);
+    });
+    
+    // Mostrar información del matrizador sugerido
+    if (datos.matrizadorSugerido) {
+      document.getElementById('matrizadorSugerido').style.display = 'block';
+      document.getElementById('nombreMatrizadorXML').textContent = datos.nombreMatrizadorXML || datos.matrizadorSugerido.nombre;
+    }
+    
+    // Información del XML (solo lectura)
+    document.getElementById('razonSocialEmisor').textContent = datos.razonSocialEmisor || 'N/A';
+    document.getElementById('rucEmisor').textContent = datos.rucEmisor || 'N/A';
+    document.getElementById('archivoOriginal').textContent = data.archivoOriginal || 'N/A';
+  }
+  
+  // ==================== PASO 2: CONFIRMAR REGISTRO ====================
+  formConfirmar.addEventListener('submit', function(event) {
+    event.preventDefault();
+    
+    // Validar campos requeridos
+    const campos = ['codigoBarras', 'nombreCliente', 'identificacionCliente', 'idMatrizador'];
+    const tipoDocumento = document.querySelector('input[name="tipoDocumento"]:checked');
+    
+    if (!tipoDocumento) {
+      alert('Por favor, seleccione un tipo de documento');
+      return false;
+    }
+    
+    for (const campo of campos) {
+      const elemento = document.getElementById(campo);
+      if (!elemento.value.trim()) {
+        alert(`El campo ${campo} es requerido`);
+        elemento.focus();
+        return false;
+      }
+    }
+    
+    confirmarRegistro();
+  });
+  
+  function confirmarRegistro() {
+    // Recopilar datos del formulario
+    const datosFormulario = {
+      codigoBarras: document.getElementById('codigoBarras').value,
+      tipoDocumento: document.querySelector('input[name="tipoDocumento"]:checked').value,
+      nombreCliente: document.getElementById('nombreCliente').value,
+      identificacionCliente: document.getElementById('identificacionCliente').value,
+      emailCliente: document.getElementById('emailCliente').value,
+      telefonoCliente: document.getElementById('telefonoCliente').value,
+      numeroFactura: document.getElementById('numeroFactura').value,
+      valorFactura: document.getElementById('valorFactura').value,
+      fechaFactura: document.getElementById('fechaFactura').value,
+      idMatrizador: document.getElementById('idMatrizador').value,
+      observaciones: document.getElementById('observaciones').value
+    };
+    
+    console.log('Enviando datos para registro:', datosFormulario);
+    
+    // Mostrar loading en el botón
+    const btnConfirmar = document.getElementById('btnConfirmarRegistro');
+    btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Registrando...';
+    btnConfirmar.disabled = true;
+    
+    fetch('/caja/documentos/registrar-desde-xml', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(datosFormulario)
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        mostrarResultadoFinal(data);
+      } else {
+        mostrarError(data.message || 'Error al registrar el documento');
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      mostrarError('Error de conexión al registrar el documento');
+    })
+    .finally(() => {
+      // Restaurar botón
+      btnConfirmar.innerHTML = '<i class="fas fa-check me-1"></i> Confirmar y Registrar Documento';
+      btnConfirmar.disabled = false;
+    });
+  }
+  
+  function mostrarResultadoFinal(data) {
+    // Ocultar vista previa y mostrar resultado
+    vistaPrevia.style.display = 'none';
+    resultadoExitoso.style.display = 'block';
+    
+    // Mostrar datos del documento registrado
+    const datosDiv = document.getElementById('datos-documento-final');
+    datosDiv.innerHTML = `
+      <div class="row">
+        <div class="col-md-6">
+          <strong>📋 ID del Documento:</strong> ${data.documento.id}<br>
+          <strong>🏷️ Código de Barras:</strong> ${data.documento.codigoBarras}<br>
+          <strong>📑 Tipo:</strong> ${data.documento.tipoDocumento}<br>
+          <strong>👤 Cliente:</strong> ${data.documento.nombreCliente}
+        </div>
+        <div class="col-md-6">
+          <strong>👨‍💼 Matrizador:</strong> ${data.documento.matrizador}<br>
+          <strong>📅 Fecha de Registro:</strong> ${new Date().toLocaleDateString()}<br>
+          <strong>✅ Estado:</strong> En Proceso
+        </div>
+      </div>
+    `;
+    
+    // Configurar botón para ver documento
+    document.getElementById('btnVerDocumentoFinal').onclick = function() {
+      window.location.href = `/caja/documentos/detalle/${data.documento.id}`;
+    };
+  }
+  
+  function mostrarError(mensaje) {
+    document.getElementById('mensaje-error').textContent = mensaje;
+    errorProcesamiento.style.display = 'block';
+  }
+  
+  function ocultarTodasLasSecciones() {
+    vistaPrevia.style.display = 'none';
+    resultadoExitoso.style.display = 'none';
+    errorProcesamiento.style.display = 'none';
+  }
+  
+  // ==================== FUNCIONES GLOBALES ====================
+  window.volverACarga = function() {
+    seccionCarga.style.display = 'block';
+    ocultarTodasLasSecciones();
+    formUpload.reset();
+    datosDocumento = null;
+  };
+  
+  window.limpiarTodo = function() {
+    volverACarga();
+  };
+});
+</script> 

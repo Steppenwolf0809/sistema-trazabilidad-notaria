@@ -116,10 +116,14 @@
             </td>
             <td>
               {{#if this.numeroFactura}}
-                {{#if (eq this.estadoPago "pagado")}}
-                <span class="badge bg-success"><i class="fas fa-check me-1"></i>Pagado</span>
+                {{#if (eq this.estadoPago "pagado_completo")}}
+                <span class="badge bg-success"><i class="fas fa-check me-1"></i>Pagado Completo</span>
+                {{else if (eq this.estadoPago "pagado_con_retencion")}}
+                <span class="badge bg-info"><i class="fas fa-receipt me-1"></i>Pagado con Retención</span>
+                {{else if (eq this.estadoPago "pago_parcial")}}
+                <span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i>Pago Parcial</span>
                 {{else}}
-                <span class="badge bg-warning"><i class="fas fa-clock me-1"></i>Pendiente</span>
+                <span class="badge bg-danger"><i class="fas fa-exclamation-triangle me-1"></i>Pendiente</span>
                 {{/if}}
               {{else}}
               <span class="badge bg-secondary">Sin Factura</span>

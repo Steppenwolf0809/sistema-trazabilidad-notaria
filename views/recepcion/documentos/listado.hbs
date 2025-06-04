@@ -25,7 +25,9 @@
             <select class="form-select form-select-sm" id="estadoPago" name="estadoPago">
               <option value="">Todos</option>
               <option value="pendiente" {{#if (eq filtros.estadoPago "pendiente")}}selected{{/if}}>Pendiente</option>
-              <option value="pagado" {{#if (eq filtros.estadoPago "pagado")}}selected{{/if}}>Pagado</option>
+              <option value="pago_parcial" {{#if (eq filtros.estadoPago "pago_parcial")}}selected{{/if}}>Pago Parcial</option>
+              <option value="pagado_completo" {{#if (eq filtros.estadoPago "pagado_completo")}}selected{{/if}}>Pagado Completo</option>
+              <option value="pagado_con_retencion" {{#if (eq filtros.estadoPago "pagado_con_retencion")}}selected{{/if}}>Pagado con Retención</option>
             </select>
           </div>
           <div class="col-md-2">
@@ -102,10 +104,14 @@
                 {{/if}}
               </td>
               <td>
-                {{#if (eq this.estadoPago "pagado")}}
-                <span class="badge bg-success"><i class="fas fa-check"></i> Pagado</span>
+                {{#if (eq this.estadoPago "pagado_completo")}}
+                <span class="badge bg-success"><i class="fas fa-check"></i> Pagado Completo</span>
+                {{else if (eq this.estadoPago "pagado_con_retencion")}}
+                <span class="badge bg-info"><i class="fas fa-receipt"></i> Pagado con Retención</span>
+                {{else if (eq this.estadoPago "pago_parcial")}}
+                <span class="badge bg-warning text-dark"><i class="fas fa-clock"></i> Pago Parcial</span>
                 {{else}}
-                <span class="badge bg-warning"><i class="fas fa-exclamation-triangle"></i> Pendiente</span>
+                <span class="badge bg-danger"><i class="fas fa-exclamation-triangle"></i> Pendiente</span>
                 {{/if}}
               </td>
               <td>

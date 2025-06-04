@@ -582,14 +582,14 @@ const recepcionController = {
         });
       }
       
-      // Buscar el documento sin restricción de matrizador
+      // Buscar el documento con relaciones
       const documento = await Documento.findOne({
         where: { id },
         include: [
           {
             model: Matrizador,
             as: 'matrizador',
-            attributes: ['id', 'nombre']
+            attributes: ['id', 'nombre', 'email']
           }
         ]
       });
@@ -609,20 +609,99 @@ const recepcionController = {
           }
         });
       }
-      
-      console.log("Documento encontrado:", documento.id, documento.codigoBarras);
-      
-      // Obtener historial del documento
-      const historial = await EventoDocumento.findAll({
-        where: { idDocumento: documento.id },
+
+      // Obtener información del usuario que registró el pago
+      let usuarioPago = null;
+      if (documento.registradoPor) {
+        usuarioPago = await Matrizador.findByPk(documento.registradoPor, {
+          attributes: ['id', 'nombre', 'rol']
+        });
+      }
+
+      // Obtener eventos del historial
+      const eventos = await EventoDocumento.findAll({
+        where: { documento_id: id },
+        include: [
+          {
+            model: Matrizador,
+            as: 'usuario',
+            attributes: ['nombre', 'rol'],
+            required: false
+          }
+        ],
         order: [['created_at', 'DESC']]
       });
+
+      // Procesar eventos para mostrar en el historial
+      const eventosFormateados = eventos.map(evento => {
+        const eventoData = {
+          id: evento.id,
+          tipo: evento.tipo,
+          categoria: evento.categoria,
+          titulo: evento.titulo,
+          descripcion: evento.descripcion,
+          fecha: evento.created_at,
+          usuario: evento.usuario ? evento.usuario.nombre : 'Sistema',
+          detalles: evento.detalles || {},
+          color: 'secondary'
+        };
+
+        // Asignar colores según el tipo de evento
+        switch (evento.tipo) {
+          case 'pago':
+            eventoData.color = 'success';
+            break;
+          case 'entrega':
+            eventoData.color = 'info';
+            break;
+          case 'estado':
+            eventoData.color = 'warning';
+            break;
+          case 'asignacion':
+            eventoData.color = 'primary';
+            break;
+          default:
+            eventoData.color = 'secondary';
+        }
+
+        // Calcular tiempo transcurrido
+        const ahora = new Date();
+        const fechaEvento = new Date(evento.created_at);
+        const diffMs = ahora - fechaEvento;
+        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+        const diffDays = Math.floor(diffHours / 24);
+
+        if (diffDays > 0) {
+          eventoData.tiempoTranscurrido = `${diffDays} día${diffDays > 1 ? 's' : ''}`;
+        } else if (diffHours > 0) {
+          eventoData.tiempoTranscurrido = `${diffHours} hora${diffHours > 1 ? 's' : ''}`;
+        } else {
+          const diffMinutes = Math.floor(diffMs / (1000 * 60));
+          eventoData.tiempoTranscurrido = diffMinutes > 0 ? `${diffMinutes} min` : 'Ahora';
+        }
+
+        return eventoData;
+      });
+
+      // Obtener lista de matrizadores para el modal de cambio
+      const matrizadores = await Matrizador.findAll({
+        where: {
+          rol: { [Op.in]: ['matrizador', 'caja_archivo'] },
+          activo: true
+        },
+        attributes: ['id', 'nombre'],
+        order: [['nombre', 'ASC']]
+      });
+      
+      console.log("Documento encontrado:", documento.id, documento.codigoBarras);
       
       res.render('recepcion/documentos/detalle', {
         layout: 'recepcion',
         title: 'Detalle de Documento',
         documento,
-        historial,
+        eventos: eventosFormateados,
+        usuarioPago,
+        matrizadores,
         userRole: req.matrizador?.rol,
         userName: req.matrizador?.nombre,
         usuario: {
@@ -718,17 +797,12 @@ const recepcionController = {
       
       // Filtro por fecha
       if (fechaDesde || fechaHasta) {
-        whereClause.fechaFactura = {};
-        
+        whereClause.created_at = {};
         if (fechaDesde) {
-          whereClause.fechaFactura[Op.gte] = new Date(fechaDesde);
+          whereClause.created_at[Op.gte] = new Date(fechaDesde + 'T00:00:00');
         }
-        
         if (fechaHasta) {
-          // Sumar un día a la fecha hasta para incluir todo el día seleccionado
-          const fechaHastaObj = new Date(fechaHasta);
-          fechaHastaObj.setDate(fechaHastaObj.getDate() + 1);
-          whereClause.fechaFactura[Op.lt] = fechaHastaObj;
+          whereClause.created_at[Op.lte] = new Date(fechaHasta + 'T23:59:59');
         }
       }
       
@@ -1264,12 +1338,12 @@ const recepcionController = {
       
       // Filtro por fechas
       if (fechaDesde || fechaHasta) {
-        whereClause.createdAt = {};
+        whereClause.created_at = {};
         if (fechaDesde) {
-          whereClause.createdAt[Op.gte] = new Date(fechaDesde + 'T00:00:00');
+          whereClause.created_at[Op.gte] = new Date(fechaDesde + 'T00:00:00');
         }
         if (fechaHasta) {
-          whereClause.createdAt[Op.lte] = new Date(fechaHasta + 'T23:59:59');
+          whereClause.created_at[Op.lte] = new Date(fechaHasta + 'T23:59:59');
         }
       }
       
@@ -1354,7 +1428,7 @@ const recepcionController = {
             required: true
           }
         ],
-        order: [['createdAt', 'DESC']],
+        order: [['created_at', 'DESC']],
         limit: 100 // Más resultados para recepción
       });
       

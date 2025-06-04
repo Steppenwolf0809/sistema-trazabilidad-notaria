@@ -52,11 +52,35 @@
             </div>
             <div class="col-md-6 d-flex flex-column justify-content-center">
               <!-- Estado de Pago -->
-              {{#if (eq documento.estadoPago "pagado")}}
+              {{#if (eq documento.estadoPago "pagado_completo")}}
               <div class="alert alert-success">
                 <i class="fas fa-check-circle me-2"></i>
                 <strong>✅ Documento pagado</strong><br>
                 <small>Proceder con entrega normal</small>
+              </div>
+              {{else if (eq documento.estadoPago "pagado_con_retencion")}}
+              <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Pagado con Retención</strong><br>
+                <small>
+                  {{#if documento.matrizador}}
+                  Consultar con matrizador <strong>{{documento.matrizador.nombre}}</strong>
+                  {{else}}
+                  Consultar con el matrizador asignado
+                  {{/if}}
+                </small>
+              </div>
+              {{else if (eq documento.estadoPago "pago_parcial")}}
+              <div class="alert alert-warning text-dark">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Pago Parcial</strong><br>
+                <small>
+                  {{#if documento.matrizador}}
+                  Consultar con matrizador <strong>{{documento.matrizador.nombre}}</strong>
+                  {{else}}
+                  Consultar con el matrizador asignado
+                  {{/if}}
+                </small>
               </div>
               {{else}}
               <div class="alert alert-warning">
@@ -294,10 +318,14 @@
           </td>
           <td>{{formatDate this.fechaFactura}}</td>
           <td>
-            {{#if (eq this.estadoPago "pagado")}}
-            <span class="badge bg-success"><i class="fas fa-check"></i> Pagado</span>
+            {{#if (eq this.estadoPago "pagado_completo")}}
+            <span class="badge bg-success">Pagado Completo</span>
+            {{else if (eq this.estadoPago "pagado_con_retencion")}}
+            <span class="badge bg-info">Pagado con Retención</span>
+            {{else if (eq this.estadoPago "pago_parcial")}}
+            <span class="badge bg-warning text-dark">Pago Parcial</span>
             {{else}}
-            <span class="badge bg-warning"><i class="fas fa-exclamation-triangle"></i> Pendiente</span>
+            <span class="badge bg-danger">Pendiente</span>
             {{/if}}
           </td>
           <td>

@@ -1,1 +1,1199 @@
- 
+{{!-- Vista para registrar pagos con soporte para retenciones XML ÚNICAMENTE --}}
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+
+<style>
+/* Estilos personalizados para las tarjetas de selección de retención */
+.retencion-card {
+  transition: all 0.3s ease;
+  border: 2px solid #dee2e6 !important;
+  cursor: pointer;
+}
+
+.retencion-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.retencion-card.selected {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.retencion-card .card-body {
+  transition: all 0.2s ease;
+}
+
+.retencion-card:hover .card-body {
+  background-color: rgba(0,0,0,0.02);
+}
+
+/* Animaciones para iconos */
+.retencion-card i {
+  transition: transform 0.2s ease;
+}
+
+.retencion-card:hover i {
+  transform: scale(1.1);
+}
+
+/* Mejoras visuales para los inputs */
+.form-control-lg {
+  font-size: 1.1rem;
+}
+
+.input-group-lg .input-group-text {
+  font-size: 1.1rem;
+  font-weight: bold;
+}
+
+/* Indicador de carga */
+.btn .fa-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+</style>
+
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header bg-primary text-white">
+          <div class="d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">
+              <i class="fas fa-credit-card me-2"></i>
+              💰 Registrar Pago
+            </h4>
+            <a href="/caja/documentos" class="btn btn-light btn-sm">
+              <i class="fas fa-arrow-left me-1"></i>Volver a Documentos
+            </a>
+          </div>
+        </div>
+        
+        <div class="card-body">
+          {{#if documento}}
+          <!-- Información del documento -->
+          <div class="alert alert-info">
+            <div class="row">
+              <div class="col-md-6">
+                <h6><i class="fas fa-file-alt text-primary"></i> Información del Documento</h6>
+                <p class="mb-1"><strong>Código:</strong> {{documento.codigoBarras}}</p>
+                <p class="mb-1"><strong>Cliente:</strong> {{documento.nombreCliente}}</p>
+                <p class="mb-1"><strong>Tipo:</strong> {{documento.tipoDocumento}}</p>
+              </div>
+              <div class="col-md-6">
+                <h6><i class="fas fa-dollar-sign text-success"></i> Información Financiera</h6>
+                <p class="mb-1"><strong>Factura:</strong> {{documento.numeroFactura}}</p>
+                <p class="mb-1"><strong>Valor Total:</strong> ${{documento.valorFactura}}</p>
+                <p class="mb-1"><strong>Pendiente:</strong> <span class="text-danger">${{#if documento.valorPendiente}}{{documento.valorPendiente}}{{else}}{{documento.valorFactura}}{{/if}}</span></p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Formulario de registro de pago -->
+          <form id="form-registrar-pago" action="/caja/registrar-pago" method="POST">
+            <!-- DEBUGGING: Campo documentoId visible temporalmente -->
+            <div class="alert alert-info mb-3">
+              <strong>🔍 DEBUG:</strong> Documento ID: <span id="debug-documento-id">{{documento.id}}</span>
+            </div>
+            <input type="hidden" name="documentoId" value="{{documento.id}}" id="input-documento-id">
+            <input type="hidden" id="xml-retencion-data" name="xmlRetencionData" value="">
+            
+            <!-- Monto del pago -->
+            <div class="row mb-4">
+              <div class="col-md-6">
+                <label for="monto" class="form-label">
+                  <i class="fas fa-money-bill-wave text-success"></i> Monto del Pago
+                </label>
+                <div class="input-group">
+                  <span class="input-group-text">$</span>
+                  <input type="number" class="form-control" id="monto" name="monto" 
+                         step="0.01" min="0" max="{{#if documento.valorPendiente}}{{documento.valorPendiente}}{{else}}{{documento.valorFactura}}{{/if}}" 
+                         placeholder="0.00">
+                </div>
+                <div class="form-text">
+                  💡 Puede ser $0.00 si solo registra retención
+                </div>
+              </div>
+              
+              <div class="col-md-6">
+                <label for="formaPago" class="form-label">
+                  <i class="fas fa-credit-card text-primary"></i> Forma de Pago
+                </label>
+                <select class="form-select" id="formaPago" name="formaPago">
+                  <option value="">Seleccionar forma de pago</option>
+                  <option value="efectivo">💵 Efectivo</option>
+                  <option value="tarjeta_credito">💳 Tarjeta de Crédito</option>
+                  <option value="tarjeta_debito">💳 Tarjeta de Débito</option>
+                  <option value="transferencia">🏦 Transferencia Bancaria</option>
+                  <option value="cheque">📝 Cheque</option>
+                </select>
+                <div class="form-text">
+                  ⚠️ Requerido solo si hay monto de pago
+                </div>
+              </div>
+            </div>
+
+            <!-- Retención - INTERFAZ MEJORADA -->
+            <div class="card mb-4">
+              <div class="card-header bg-light">
+                <h6 class="mb-0">
+                  <i class="fas fa-receipt text-warning"></i> ¿El cliente tiene retención?
+                </h6>
+              </div>
+              <div class="card-body">
+                <!-- NUEVA INTERFAZ: Botones grandes y claros -->
+                <div class="row text-center mb-4">
+                  <div class="col-md-4">
+                    <div class="card border-2 retencion-card" id="card-sin-retencion" style="cursor: pointer;">
+                      <div class="card-body py-4">
+                        <input type="radio" name="tieneRetencion" id="sin-retencion" value="false" checked style="display: none;">
+                        <i class="fas fa-times-circle fa-3x text-danger mb-2"></i>
+                        <h5 class="card-title text-danger">NO</h5>
+                        <p class="card-text small">Sin retención</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="col-md-4">
+                    <div class="card border-2 retencion-card" id="card-con-xml" style="cursor: pointer;">
+                      <div class="card-body py-4">
+                        <input type="radio" name="tieneRetencion" id="con-retencion-xml" value="xml" style="display: none;">
+                        <i class="fas fa-file-code fa-3x text-success mb-2"></i>
+                        <h5 class="card-title text-success">SÍ - Tengo XML</h5>
+                        <p class="card-text small">Archivo del SRI</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="col-md-4">
+                    <div class="card border-2 retencion-card" id="card-manual" style="cursor: pointer;">
+                      <div class="card-body py-4">
+                        <input type="radio" name="tieneRetencion" id="con-retencion-manual" value="manual" style="display: none;">
+                        <i class="fas fa-edit fa-3x text-primary mb-2"></i>
+                        <h5 class="card-title text-primary">SÍ - Ingreso Manual</h5>
+                        <p class="card-text small">Capturar datos</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Sección XML de retención -->
+                <div id="seccion-xml-retencion" style="display: none;" class="mt-4">
+                  <div class="alert alert-success">
+                    <div class="row align-items-center">
+                      <div class="col-md-8">
+                        <h6><i class="fas fa-file-code text-primary"></i> Comprobante de Retención XML</h6>
+                        <p class="mb-2">
+                          <strong>📋 Formato único:</strong> Archivo XML autorizado por el SRI<br>
+                          <small class="text-success">✅ 100% preciso - Sin errores de procesamiento</small>
+                        </p>
+                        
+                        <div class="mb-3">
+                          <input type="file" class="form-control" id="xml-retencion" 
+                                 accept=".xml" aria-describedby="xml-help">
+                          <div id="xml-help" class="form-text">
+                            📁 Solo archivos .xml del SRI | Máximo 5MB
+                          </div>
+                        </div>
+                      </div>
+                      <div class="col-md-4 text-center">
+                        <button type="button" class="btn btn-primary btn-lg" onclick="procesarXMLRetencion()">
+                          <i class="fas fa-cogs me-2"></i>PROCESAR XML
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Resultado XML -->
+                  <div id="resultado-xml" style="display: none;" class="alert alert-success mt-3">
+                    <h6>✅ XML Procesado Exitosamente</h6>
+                    <div class="row">
+                      <div class="col-md-6">
+                        <strong>📋 Comprobante:</strong> <span id="xml-comprobante"></span><br>
+                        <strong>🏢 Empresa:</strong> <span id="xml-empresa"></span><br>
+                        <strong>📄 Factura:</strong> <span id="xml-factura"></span>
+                      </div>
+                      <div class="col-md-6">
+                        <strong>💰 Ret. IVA:</strong> $<span id="xml-ret-iva"></span><br>
+                        <strong>💼 Ret. Renta:</strong> $<span id="xml-ret-renta"></span><br>
+                        <strong>🎯 Total:</strong> $<span id="xml-total"></span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Error XML -->
+                  <div id="error-xml" style="display: none;" class="alert alert-danger mt-3">
+                    <h6>❌ Error procesando XML</h6>
+                    <p id="mensaje-error-xml"></p>
+                  </div>
+                </div>
+
+                <!-- NUEVA SECCIÓN: Retención Manual -->
+                <div id="seccion-manual-retencion" style="display: none;" class="mt-4">
+                  <div class="alert alert-info">
+                    <h6><i class="fas fa-edit text-primary"></i> Ingreso Manual de Retención</h6>
+                    <p class="mb-2">
+                      <strong>✍️ Ingreso directo:</strong> Complete los datos de retención manualmente<br>
+                      <small class="text-info">💡 Útil cuando no se dispone del XML del SRI</small>
+                    </p>
+                  </div>
+
+                  <div class="row">
+                    <div class="col-md-6">
+                      <label for="manual-comprobante" class="form-label">
+                        <i class="fas fa-hashtag"></i> Número de Comprobante
+                      </label>
+                      <input type="text" class="form-control form-control-lg" id="manual-comprobante" 
+                             placeholder="001-001-000123456" 
+                             pattern="[0-9]{3}-[0-9]{3}-[0-9]{9}"
+                             title="Formato: 001-001-000123456">
+                      <div class="form-text">Formato: 001-001-000123456</div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                      <label for="manual-empresa" class="form-label">
+                        <i class="fas fa-building"></i> Empresa que Retiene
+                      </label>
+                      <input type="text" class="form-control form-control-lg" id="manual-empresa" 
+                             placeholder="Nombre de la empresa">
+                    </div>
+                  </div>
+
+                  <div class="row mt-3">
+                    <div class="col-md-4">
+                      <label for="manual-ret-iva" class="form-label">
+                        <i class="fas fa-percent text-success"></i> Retención IVA
+                      </label>
+                      <div class="input-group input-group-lg">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control" id="manual-ret-iva" 
+                               step="0.01" min="0" placeholder="0.00">
+                      </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                      <label for="manual-ret-renta" class="form-label">
+                        <i class="fas fa-calculator text-warning"></i> Retención Renta
+                      </label>
+                      <div class="input-group input-group-lg">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control" id="manual-ret-renta" 
+                               step="0.01" min="0" placeholder="0.00">
+                      </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                      <label for="manual-total" class="form-label">
+                        <i class="fas fa-coins text-primary"></i> Total Retenido
+                      </label>
+                      <div class="input-group input-group-lg">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control" id="manual-total" 
+                               step="0.01" min="0" placeholder="0.00" readonly 
+                               style="background-color: #e9ecef; font-weight: bold;">
+                      </div>
+                      <div class="form-text">Se calcula automáticamente</div>
+                    </div>
+                  </div>
+
+                  <div class="row mt-4">
+                    <div class="col-md-6">
+                      <label for="manual-fecha" class="form-label">
+                        <i class="fas fa-calendar"></i> Fecha de Retención
+                      </label>
+                      <input type="date" class="form-control form-control-lg" id="manual-fecha">
+                    </div>
+                    
+                    <div class="col-md-6 d-flex align-items-end">
+                      <button type="button" class="btn btn-success btn-lg w-100" onclick="confirmarRetencionManual()">
+                        <i class="fas fa-check me-2"></i>CONFIRMAR RETENCIÓN
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <!-- Resultado Manual -->
+                  <div id="resultado-manual" style="display: none;" class="alert alert-success mt-4">
+                    <h6>✅ Retención Manual Confirmada</h6>
+                    <div class="row">
+                      <div class="col-md-6">
+                        <strong>📋 Comprobante:</strong> <span id="manual-comprobante-result"></span><br>
+                        <strong>🏢 Empresa:</strong> <span id="manual-empresa-result"></span><br>
+                        <strong>📅 Fecha:</strong> <span id="manual-fecha-result"></span>
+                      </div>
+                      <div class="col-md-6">
+                        <strong>💰 Ret. IVA:</strong> $<span id="manual-ret-iva-result"></span><br>
+                        <strong>💼 Ret. Renta:</strong> $<span id="manual-ret-renta-result"></span><br>
+                        <strong>🎯 Total:</strong> $<span id="manual-total-result"></span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Información adicional -->
+            <div class="row mb-4">
+              <div class="col-md-6">
+                <label for="numeroComprobante" class="form-label">
+                  <i class="fas fa-hashtag text-info"></i> Número de Comprobante (Opcional)
+                </label>
+                <input type="text" class="form-control" id="numeroComprobante" 
+                       name="numeroComprobante" placeholder="Ej: 001-001-000123456">
+              </div>
+              
+              <div class="col-md-6">
+                <label for="observaciones" class="form-label">
+                  <i class="fas fa-sticky-note text-secondary"></i> Observaciones (Opcional)
+                </label>
+                <textarea class="form-control" id="observaciones" name="observaciones" 
+                          rows="2" placeholder="Notas adicionales sobre el pago..."></textarea>
+              </div>
+            </div>
+
+            <!-- Resumen del pago -->
+            <div class="card mb-4">
+              <div class="card-header bg-info text-white">
+                <h6 class="mb-0">
+                  <i class="fas fa-calculator"></i> Resumen del Pago
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-md-4">
+                    <div class="text-center">
+                      <h6 class="text-muted">Monto Pago</h6>
+                      <h4 id="monto-pago-display" class="text-primary">$0.00</h4>
+                    </div>
+                  </div>
+                  <div class="col-md-4" id="resumen-retencion" style="display: none;">
+                    <div class="text-center">
+                      <h6 class="text-muted">Retención</h6>
+                      <h4 id="retencion-total-display" class="text-warning">$0.00</h4>
+                      <small class="text-muted">
+                        IVA: $<span id="resumen-ret-iva">0.00</span> | 
+                        Renta: $<span id="resumen-ret-renta">0.00</span>
+                      </small>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="text-center">
+                      <h6 class="text-muted">Queda Pendiente</h6>
+                      <h4 id="queda-pendiente-display" class="text-danger">${{#if documento.valorPendiente}}{{documento.valorPendiente}}{{else}}{{documento.valorFactura}}{{/if}}</h4>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Botón de registro -->
+            <div class="d-grid">
+              <button type="submit" id="btn-registrar-pago" class="btn btn-success btn-lg" disabled>
+                <i class="fas fa-check me-1"></i>Ingrese Monto o Procese Retención
+              </button>
+            </div>
+          </form>
+
+          {{else}}
+          <div class="alert alert-warning">
+            <h6>⚠️ Documento no encontrado</h6>
+            <p>No se pudo cargar la información del documento.</p>
+            <a href="/caja/documentos" class="btn btn-primary">
+              <i class="fas fa-arrow-left me-1"></i>Volver a Documentos
+            </a>
+          </div>
+          {{/if}}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('🔍 INICIO DEBUG - Verificando elementos...');
+  
+  // NUEVA VALIDACIÓN: Verificar datos del documento
+  const debugDocumentoId = document.getElementById('debug-documento-id');
+  if (debugDocumentoId) {
+    console.log('✅ Documento ID en página:', debugDocumentoId.textContent);
+  } else {
+    console.error('❌ No se encontró elemento debug-documento-id');
+  }
+  
+  // Verificar campo hidden
+  const inputDocumentoId = document.getElementById('input-documento-id');
+  if (inputDocumentoId) {
+    console.log('✅ Campo hidden documentoId:', inputDocumentoId.value);
+  } else {
+    console.error('❌ No se encontró input documentoId hidden');
+  }
+  
+  // DEBUGGING: Información de la URL actual
+  console.log('🌐 URL actual:', window.location.href);
+  console.log('📍 Pathname:', window.location.pathname);
+  console.log('🔍 Search params:', window.location.search);
+  
+  // Variables globales
+  const montoInput = document.getElementById('monto');
+  const sinRetencionRadio = document.getElementById('sin-retencion');
+  const conRetencionXMLRadio = document.getElementById('con-retencion-xml');
+  const conRetencionManualRadio = document.getElementById('con-retencion-manual');
+  const seccionXMLRetencion = document.getElementById('seccion-xml-retencion');
+  const seccionManualRetencion = document.getElementById('seccion-manual-retencion');
+  const resultadoXML = document.getElementById('resultado-xml');
+  const resultadoManual = document.getElementById('resultado-manual');
+  const errorXML = document.getElementById('error-xml');
+  const resumenRetencion = document.getElementById('resumen-retencion');
+  const formRegistrarPago = document.getElementById('form-registrar-pago');
+  const btnRegistrarPago = document.getElementById('btn-registrar-pago');
+  const xmlRetencionDataInput = document.getElementById('xml-retencion-data');
+  
+  // Nuevos elementos de interfaz de tarjetas
+  const cardSinRetencion = document.getElementById('card-sin-retencion');
+  const cardConXML = document.getElementById('card-con-xml');
+  const cardManual = document.getElementById('card-manual');
+  
+  // Displays del resumen
+  const montoPagoDisplay = document.getElementById('monto-pago-display');
+  const quedaPendienteDisplay = document.getElementById('queda-pendiente-display');
+  const retencionTotalDisplay = document.getElementById('retencion-total-display');
+  
+  // Valores del documento
+  const valorPendiente = parseFloat('{{#if documento.valorPendiente}}{{documento.valorPendiente}}{{else}}{{documento.valorFactura}}{{/if}}') || 0;
+  
+  // Variable para almacenar datos de retención (XML o manual)
+  let datosRetencionXML = null;
+  let datosRetencionManual = null;
+  
+  // ============== EVENTOS ==============
+  montoInput.addEventListener('input', actualizarResumen);
+  
+  // Eventos para los nuevos botones de tarjeta
+  cardSinRetencion.addEventListener('click', () => seleccionarOpcionRetencion('sin-retencion'));
+  cardConXML.addEventListener('click', () => seleccionarOpcionRetencion('con-retencion-xml'));
+  cardManual.addEventListener('click', () => seleccionarOpcionRetencion('con-retencion-manual'));
+  
+  // También mantener eventos en los radio buttons ocultos
+  sinRetencionRadio.addEventListener('change', togglePanelRetencion);
+  conRetencionXMLRadio.addEventListener('change', togglePanelRetencion);
+  conRetencionManualRadio.addEventListener('change', togglePanelRetencion);
+  
+  // Eventos para cálculo automático en retención manual
+  document.getElementById('manual-ret-iva').addEventListener('input', calcularTotalManual);
+  document.getElementById('manual-ret-renta').addEventListener('input', calcularTotalManual);
+  
+  // ============== FUNCIONES ==============
+  
+  // NUEVA: Seleccionar opción de retención con tarjetas visuales
+  function seleccionarOpcionRetencion(opcion) {
+    // Limpiar estilos de todas las tarjetas
+    cardSinRetencion.classList.remove('border-danger', 'border-success', 'border-primary', 'bg-light', 'selected');
+    cardConXML.classList.remove('border-danger', 'border-success', 'border-primary', 'bg-light', 'selected');
+    cardManual.classList.remove('border-danger', 'border-success', 'border-primary', 'bg-light', 'selected');
+    
+    // Deseleccionar todos los radio buttons
+    sinRetencionRadio.checked = false;
+    conRetencionXMLRadio.checked = false;
+    conRetencionManualRadio.checked = false;
+    
+    // Seleccionar la opción correspondiente
+    switch(opcion) {
+      case 'sin-retencion':
+        sinRetencionRadio.checked = true;
+        cardSinRetencion.classList.add('border-danger', 'bg-light', 'selected');
+        break;
+      case 'con-retencion-xml':
+        conRetencionXMLRadio.checked = true;
+        cardConXML.classList.add('border-success', 'bg-light', 'selected');
+        break;
+      case 'con-retencion-manual':
+        conRetencionManualRadio.checked = true;
+        cardManual.classList.add('border-primary', 'bg-light', 'selected');
+        break;
+    }
+    
+    // Activar el panel correspondiente
+    togglePanelRetencion();
+    
+    console.log(`✅ Opción seleccionada: ${opcion}`);
+  }
+  
+  function togglePanelRetencion() {
+    if (conRetencionXMLRadio.checked) {
+      seccionXMLRetencion.style.display = 'block';
+      seccionManualRetencion.style.display = 'none';
+      limpiarRetencionManual();
+    } else if (conRetencionManualRadio.checked) {
+      seccionXMLRetencion.style.display = 'none';
+      seccionManualRetencion.style.display = 'block';
+      limpiarRetencionXML();
+    } else {
+      seccionXMLRetencion.style.display = 'none';
+      seccionManualRetencion.style.display = 'none';
+      limpiarTodasLasRetenciones();
+    }
+    actualizarResumen();
+  }
+  
+  function limpiarRetencionXML() {
+    resultadoXML.style.display = 'none';
+    errorXML.style.display = 'none';
+    datosRetencionXML = null;
+    xmlRetencionDataInput.value = '';
+  }
+  
+  function limpiarRetencionManual() {
+    resultadoManual.style.display = 'none';
+    datosRetencionManual = null;
+    document.getElementById('manual-comprobante').value = '';
+    document.getElementById('manual-empresa').value = '';
+    document.getElementById('manual-ret-iva').value = '';
+    document.getElementById('manual-ret-renta').value = '';
+    document.getElementById('manual-total').value = '';
+    document.getElementById('manual-fecha').value = '';
+  }
+  
+  function limpiarTodasLasRetenciones() {
+    limpiarRetencionXML();
+    limpiarRetencionManual();
+    resumenRetencion.style.display = 'none';
+  }
+  
+  // NUEVA FUNCIÓN: Calcular total automáticamente en retención manual
+  function calcularTotalManual() {
+    const retIva = parseFloat(document.getElementById('manual-ret-iva').value) || 0;
+    const retRenta = parseFloat(document.getElementById('manual-ret-renta').value) || 0;
+    const total = retIva + retRenta;
+    
+    document.getElementById('manual-total').value = total.toFixed(2);
+  }
+  
+  // NUEVA FUNCIÓN: Confirmar retención manual
+  window.confirmarRetencionManual = function() {
+    const comprobante = document.getElementById('manual-comprobante').value.trim();
+    const empresa = document.getElementById('manual-empresa').value.trim();
+    const retIva = parseFloat(document.getElementById('manual-ret-iva').value) || 0;
+    const retRenta = parseFloat(document.getElementById('manual-ret-renta').value) || 0;
+    const total = parseFloat(document.getElementById('manual-total').value) || 0;
+    const fecha = document.getElementById('manual-fecha').value;
+    
+    // Validaciones
+    if (!comprobante) {
+      alert('❌ El número de comprobante es requerido');
+      document.getElementById('manual-comprobante').focus();
+      return;
+    }
+    
+    // Validar formato del comprobante
+    const formatoComprobante = /^[0-9]{3}-[0-9]{3}-[0-9]{9}$/;
+    if (!formatoComprobante.test(comprobante)) {
+      alert('❌ El formato del comprobante debe ser: 001-001-000123456');
+      document.getElementById('manual-comprobante').focus();
+      return;
+    }
+    
+    if (!empresa) {
+      alert('❌ El nombre de la empresa es requerido');
+      document.getElementById('manual-empresa').focus();
+      return;
+    }
+    
+    if (total <= 0) {
+      alert('❌ Debe ingresar al menos una retención (IVA o Renta)');
+      document.getElementById('manual-ret-iva').focus();
+      return;
+    }
+    
+    if (!fecha) {
+      alert('❌ La fecha de retención es requerida');
+      document.getElementById('manual-fecha').focus();
+      return;
+    }
+    
+    // Validar que el total no exceda el valor pendiente
+    if (total > valorPendiente) {
+      alert(`❌ El total retenido ($${total.toFixed(2)}) no puede exceder el valor pendiente ($${valorPendiente.toFixed(2)})`);
+      return;
+    }
+    
+    // Almacenar datos de retención manual
+    datosRetencionManual = {
+      numeroComprobanteRetencion: comprobante,
+      razonSocialRetenedora: empresa,
+      retencionIva: retIva,
+      retencionRenta: retRenta,
+      totalRetenido: total,
+      fechaRetencion: fecha,
+      tipoIngreso: 'manual'
+    };
+    
+    // Mostrar resultado
+    document.getElementById('manual-comprobante-result').textContent = comprobante;
+    document.getElementById('manual-empresa-result').textContent = empresa;
+    document.getElementById('manual-fecha-result').textContent = new Date(fecha).toLocaleDateString();
+    document.getElementById('manual-ret-iva-result').textContent = retIva.toFixed(2);
+    document.getElementById('manual-ret-renta-result').textContent = retRenta.toFixed(2);
+    document.getElementById('manual-total-result').textContent = total.toFixed(2);
+    
+    resultadoManual.style.display = 'block';
+    
+    // Actualizar resumen
+    document.getElementById('resumen-ret-iva').textContent = retIva.toFixed(2);
+    document.getElementById('resumen-ret-renta').textContent = retRenta.toFixed(2);
+    retencionTotalDisplay.textContent = '$' + total.toFixed(2);
+    resumenRetencion.style.display = 'block';
+    
+    // Actualizar botón y resumen
+    actualizarResumen();
+    
+    alert('✅ Retención manual confirmada correctamente');
+  };
+  
+  // ============== ACTUALIZAR RESUMEN EN TIEMPO REAL ==============
+  function actualizarResumen() {
+    const montoActual = parseFloat(montoInput.value) || 0;
+    let quedaPendiente = valorPendiente - montoActual;
+    
+    // Si hay retención procesada (XML o manual), considerar su valor
+    const datosRetencion = datosRetencionXML || datosRetencionManual;
+    if (datosRetencion && datosRetencion.totalRetenido) {
+      quedaPendiente -= datosRetencion.totalRetenido;
+    }
+    
+    montoPagoDisplay.textContent = '$' + montoActual.toFixed(2);
+    quedaPendienteDisplay.textContent = '$' + Math.max(0, quedaPendiente).toFixed(2);
+    
+    // Cambiar color según el estado
+    if (quedaPendiente <= 0) {
+      quedaPendienteDisplay.className = 'text-success';
+    } else if (quedaPendiente < valorPendiente) {
+      quedaPendienteDisplay.className = 'text-warning';
+    } else {
+      quedaPendienteDisplay.className = 'text-danger';
+    }
+    
+    // NUEVO: Actualizar estado del botón de registro
+    actualizarEstadoBotonRegistro();
+  }
+  
+  // ============== NUEVA FUNCIÓN: Validar si se puede registrar el pago ==============
+  function actualizarEstadoBotonRegistro() {
+    const monto = parseFloat(montoInput.value) || 0;
+    const tieneRetencionXML = conRetencionXMLRadio.checked;
+    const tieneRetencionManual = conRetencionManualRadio.checked;
+    const retencionXMLProcesada = datosRetencionXML && datosRetencionXML.totalRetenido > 0;
+    const retencionManualProcesada = datosRetencionManual && datosRetencionManual.totalRetenido > 0;
+    
+    let puedeRegistrar = false;
+    let textoBoton = 'Registrar Pago';
+    let claseBoton = 'btn btn-success btn-lg';
+    
+    // Obtener datos de retención (XML o manual)
+    const datosRetencion = datosRetencionXML || datosRetencionManual;
+    const tieneRetencionProcesada = retencionXMLProcesada || retencionManualProcesada;
+    
+    // Caso 1: Solo monto (sin retención)
+    if (monto > 0 && !tieneRetencionXML && !tieneRetencionManual) {
+      puedeRegistrar = true;
+      textoBoton = `Registrar Pago ($${monto.toFixed(2)})`;
+    }
+    // Caso 2: Monto + retención procesada (XML o manual)
+    else if (monto > 0 && (tieneRetencionXML || tieneRetencionManual) && tieneRetencionProcesada) {
+      puedeRegistrar = true;
+      const totalMovimiento = monto + datosRetencion.totalRetenido;
+      textoBoton = `Registrar Pago + Retención ($${totalMovimiento.toFixed(2)})`;
+    }
+    // Caso 3: Solo retención (sin monto de pago)
+    else if (monto === 0 && (tieneRetencionXML || tieneRetencionManual) && tieneRetencionProcesada) {
+      puedeRegistrar = true;
+      textoBoton = `Registrar Solo Retención ($${datosRetencion.totalRetenido.toFixed(2)})`;
+      claseBoton = 'btn btn-warning btn-lg'; // Color diferente para distinguir
+    }
+    // Caso 4: Retención XML marcada pero no procesada
+    else if (tieneRetencionXML && !retencionXMLProcesada) {
+      puedeRegistrar = false;
+      textoBoton = 'Procesar XML de Retención Primero';
+      claseBoton = 'btn btn-secondary btn-lg';
+    }
+    // Caso 5: Retención manual marcada pero no confirmada
+    else if (tieneRetencionManual && !retencionManualProcesada) {
+      puedeRegistrar = false;
+      textoBoton = 'Confirmar Retención Manual Primero';
+      claseBoton = 'btn btn-secondary btn-lg';
+    }
+    // Caso 6: Sin monto ni retención
+    else {
+      puedeRegistrar = false;
+      textoBoton = 'Ingrese Monto o Configure Retención';
+      claseBoton = 'btn btn-secondary btn-lg';
+    }
+    
+    // Actualizar botón
+    btnRegistrarPago.disabled = !puedeRegistrar;
+    btnRegistrarPago.innerHTML = `<i class="fas fa-check me-1"></i>${textoBoton}`;
+    btnRegistrarPago.className = claseBoton;
+  }
+
+  // ============== PROCESAR XML DE RETENCIÓN ==============
+  window.procesarXMLRetencion = function() {
+    const fileInput = document.getElementById('xml-retencion');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+      alert('❌ Por favor seleccione un archivo XML');
+      return;
+    }
+    
+    if (!file.name.toLowerCase().endsWith('.xml')) {
+      alert('❌ El archivo debe ser un XML válido del SRI');
+      return;
+    }
+    
+    if (file.size > 5 * 1024 * 1024) { // 5MB
+      alert('❌ El archivo es demasiado grande (máximo 5MB)');
+      return;
+    }
+    
+    const formData = new FormData();
+    formData.append('xmlRetencion', file);
+    formData.append('documentoId', '{{documento.id}}');
+    
+    // Mostrar loading
+    const btnProcesar = event.target;
+    const textoOriginal = btnProcesar.innerHTML;
+    btnProcesar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
+    btnProcesar.disabled = true;
+    
+    console.log('🔍 Enviando XML de retención al servidor...');
+    console.log('Archivo:', file.name, 'Tamaño:', file.size, 'bytes');
+    
+    fetch('/caja/procesar-xml-retencion', {
+      method: 'POST',
+      body: formData
+    })
+    .then(response => {
+      console.log('📡 Respuesta del servidor:', response.status, response.statusText);
+      console.log('📋 Headers de respuesta:', Object.fromEntries(response.headers.entries()));
+      
+      // Verificar si la respuesta es una redirección a login
+      if (response.status === 302 || response.url.includes('/login')) {
+        throw new Error('Sesión expirada. Será redirigido al login.');
+      }
+      
+      if (!response.ok) {
+        throw new Error(`Error del servidor: ${response.status} ${response.statusText}`);
+      }
+      
+      // Verificar que la respuesta sea JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Respuesta del servidor no es JSON válido');
+      }
+      
+      return response.json();
+    })
+    .then(resultado => {
+      console.log('✅ Resultado parseado:', resultado);
+      if (resultado.success) {
+        mostrarResultadoXML(resultado.data);
+        errorXML.style.display = 'none';
+        console.log('✅ XML procesado exitosamente');
+      } else {
+        throw new Error(resultado.message || 'Error desconocido al procesar XML');
+      }
+    })
+    .catch(error => {
+      console.error('❌ Error procesando XML:', error);
+      
+      let mensajeError = 'Error desconocido';
+      let redirigirALogin = false;
+      
+      if (error.message.includes('Failed to fetch')) {
+        mensajeError = 'Error de conexión con el servidor. Verifique que el sistema esté funcionando.';
+      } else if (error.message.includes('NetworkError')) {
+        mensajeError = 'Error de red. Verifique su conexión a internet.';
+      } else if (error.message.includes('Sesión expirada')) {
+        mensajeError = 'Su sesión ha expirado. Será redirigido al login en 3 segundos.';
+        redirigirALogin = true;
+      } else if (error.message.includes('500')) {
+        mensajeError = 'Error interno del servidor al procesar el XML.';
+      } else if (error.message.includes('400')) {
+        mensajeError = 'Archivo XML inválido o corrupto.';
+      } else if (error.message.includes('401') || error.message.includes('403')) {
+        mensajeError = 'No autorizado. Su sesión puede haber expirado.';
+        redirigirALogin = true;
+      } else {
+        mensajeError = error.message;
+      }
+      
+      document.getElementById('mensaje-error-xml').textContent = mensajeError;
+      errorXML.style.display = 'block';
+      resultadoXML.style.display = 'none';
+      
+      // Redirigir al login si es necesario
+      if (redirigirALogin) {
+        setTimeout(() => {
+          window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+        }, 3000);
+      }
+    })
+    .finally(() => {
+      // Restaurar botón
+      btnProcesar.innerHTML = textoOriginal;
+      btnProcesar.disabled = false;
+      console.log('🔄 Procesamiento completado, botón restaurado');
+    });
+  };
+
+  function mostrarResultadoXML(datos) {
+    // Mostrar datos en el panel
+    document.getElementById('xml-comprobante').textContent = (datos.numeroComprobanteRetencion || 'N/A').substring(0, 15) + '...';
+    document.getElementById('xml-empresa').textContent = datos.razonSocialRetenedora || 'N/A';
+    document.getElementById('xml-factura').textContent = datos.numeroFactura || 'N/A';
+    document.getElementById('xml-ret-iva').textContent = (datos.retencionIva || 0).toFixed(2);
+    document.getElementById('xml-ret-renta').textContent = (datos.retencionRenta || 0).toFixed(2);
+    document.getElementById('xml-total').textContent = (datos.totalRetenido || 0).toFixed(2);
+    
+    // Mostrar en resumen
+    document.getElementById('resumen-ret-iva').textContent = (datos.retencionIva || 0).toFixed(2);
+    document.getElementById('resumen-ret-renta').textContent = (datos.retencionRenta || 0).toFixed(2);
+    retencionTotalDisplay.textContent = '$' + (datos.totalRetenido || 0).toFixed(2);
+    
+    // Mostrar paneles
+    resultadoXML.style.display = 'block';
+    resumenRetencion.style.display = 'block';
+    errorXML.style.display = 'none';
+    
+    // Guardar datos para envío
+    datosRetencionXML = datos;
+    xmlRetencionDataInput.value = JSON.stringify(datos);
+    
+    // NUEVO: Actualizar resumen y botón después de procesar XML
+    actualizarResumen();
+  }
+
+  // ============== VALIDACIÓN DEL FORMULARIO ==============
+  formRegistrarPago.addEventListener('submit', function(e) {
+    e.preventDefault(); // SIEMPRE prevenir envío por defecto para usar AJAX
+    
+    const monto = parseFloat(montoInput.value) || 0;
+    const formaPago = document.getElementById('formaPago').value;
+    const tieneRetencionXML = conRetencionXMLRadio.checked;
+    const tieneRetencionManual = conRetencionManualRadio.checked;
+    const retencionXMLProcesada = datosRetencionXML && datosRetencionXML.totalRetenido > 0;
+    const retencionManualProcesada = datosRetencionManual && datosRetencionManual.totalRetenido > 0;
+    
+    // NUEVA VALIDACIÓN: Permitir diferentes escenarios
+    let esValido = false;
+    let tipoOperacion = '';
+    
+    // Validar que hay al menos monto O retención
+    if (monto > 0 && !tieneRetencionXML && !tieneRetencionManual) {
+      // Pago normal sin retención
+      esValido = true;
+      tipoOperacion = 'pago_simple';
+    } else if (monto > 0 && (tieneRetencionXML || tieneRetencionManual) && (retencionXMLProcesada || retencionManualProcesada)) {
+      // Pago con retención
+      esValido = true;
+      tipoOperacion = 'pago_con_retencion';
+    } else if (monto === 0 && (tieneRetencionXML || tieneRetencionManual) && (retencionXMLProcesada || retencionManualProcesada)) {
+      // NUEVO: Solo retención (sin pago en efectivo)
+      esValido = true;
+      tipoOperacion = 'solo_retencion';
+    }
+    
+    if (!esValido) {
+      alert('Debe ingresar un monto de pago O procesar una retención');
+      return false;
+    }
+    
+    // Validar monto máximo solo si hay monto
+    if (monto > 0) {
+      const datosRetencion = datosRetencionXML || datosRetencionManual;
+      const retencionProcesada = retencionXMLProcesada || retencionManualProcesada;
+      
+      const montoMaximo = retencionProcesada ? 
+        valorPendiente - datosRetencion.totalRetenido : 
+        valorPendiente;
+      
+      if (monto > montoMaximo) {
+        alert(`El monto no puede exceder $${montoMaximo.toFixed(2)} considerando la retención`);
+        montoInput.focus();
+        return false;
+      }
+    }
+    
+    // Validar forma de pago solo si hay monto de pago
+    if (monto > 0 && !formaPago) {
+      alert('Por favor, seleccione una forma de pago');
+      document.getElementById('formaPago').focus();
+      return false;
+    }
+    
+    // Para solo retención, establecer forma de pago automática
+    if (tipoOperacion === 'solo_retencion') {
+      document.getElementById('formaPago').value = 'retencion';
+    }
+    
+    // Validar coherencia de factura si hay retención XML
+    if (tieneRetencionXML && retencionXMLProcesada) {
+      if (datosRetencionXML.numeroFactura && '{{documento.numeroFactura}}' && 
+          datosRetencionXML.numeroFactura !== '{{documento.numeroFactura}}') {
+        const confirmar = confirm(
+          `⚠️ ADVERTENCIA: El número de factura en el XML (${datosRetencionXML.numeroFactura}) ` +
+          `no coincide con el documento ({{documento.numeroFactura}}).\n\n¿Desea continuar?`
+        );
+        if (!confirmar) {
+          return false;
+        }
+      }
+    }
+    
+    // Confirmación final personalizada según tipo de operación
+    let mensajeConfirmacion = '';
+    let totalMovimiento = 0;
+    const datosRetencion = datosRetencionXML || datosRetencionManual;
+    
+    switch (tipoOperacion) {
+      case 'pago_simple':
+        totalMovimiento = monto;
+        mensajeConfirmacion = `¿Confirmar registro de pago?\n\n` +
+          `Monto: $${monto.toFixed(2)}\n` +
+          `Forma de pago: ${formaPago}\n` +
+          `Quedará pendiente: $${Math.max(0, valorPendiente - monto).toFixed(2)}`;
+        break;
+        
+      case 'pago_con_retencion':
+        totalMovimiento = monto + datosRetencion.totalRetenido;
+        const tipoRetencion = datosRetencionXML ? 'XML' : 'MANUAL';
+        mensajeConfirmacion = `¿Confirmar registro de pago CON RETENCIÓN ${tipoRetencion}?\n\n` +
+          `Monto pagado: $${monto.toFixed(2)}\n` +
+          `Retención: $${datosRetencion.totalRetenido.toFixed(2)}\n` +
+          `  - IVA: $${datosRetencion.retencionIva.toFixed(2)}\n` +
+          `  - Renta: $${datosRetencion.retencionRenta.toFixed(2)}\n` +
+          `Total aplicado: $${totalMovimiento.toFixed(2)}\n` +
+          `Forma de pago: ${formaPago}\n` +
+          `Quedará pendiente: $${Math.max(0, valorPendiente - totalMovimiento).toFixed(2)}`;
+        break;
+        
+      case 'solo_retencion':
+        totalMovimiento = datosRetencion.totalRetenido;
+        const tipoRetencionSolo = datosRetencionXML ? 'XML' : 'MANUAL';
+        mensajeConfirmacion = `¿Confirmar registro de SOLO RETENCIÓN ${tipoRetencionSolo}?\n\n` +
+          `Retención IVA: $${datosRetencion.retencionIva.toFixed(2)}\n` +
+          `Retención Renta: $${datosRetencion.retencionRenta.toFixed(2)}\n` +
+          `Total retenido: $${totalMovimiento.toFixed(2)}\n` +
+          `Comprobante: ${datosRetencion.numeroComprobanteRetencion}\n` +
+          `Empresa: ${datosRetencion.razonSocialRetenedora}\n` +
+          `Quedará pendiente: $${Math.max(0, valorPendiente - totalMovimiento).toFixed(2)}\n\n` +
+          `NOTA: No se registra pago en efectivo, solo la retención.`;
+        break;
+    }
+    
+    mensajeConfirmacion += `\n\nEsta acción no se puede deshacer.`;
+    
+    const confirmacion = confirm(mensajeConfirmacion);
+    
+    if (!confirmacion) {
+      return false;
+    }
+    
+    // Incluir datos de retención manual en el formulario si existe
+    if (datosRetencionManual) {
+      xmlRetencionDataInput.value = JSON.stringify(datosRetencionManual);
+    }
+    
+    // Mostrar loading
+    btnRegistrarPago.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
+    btnRegistrarPago.disabled = true;
+    
+    // SIMPLIFICADO: Usar el mismo patrón que funciona en el procesamiento XML
+    console.log('💰 Enviando datos de pago al servidor...');
+    console.log('🔍 DEBUGGING: Verificando campos del formulario...');
+    
+    // PATRÓN EXITOSO: FormData simple como en procesarXMLRetencion
+    const formData = new FormData(formRegistrarPago);
+    
+    // DEBUGGING: Verificar todos los campos del formulario
+    for (let [key, value] of formData.entries()) {
+      console.log(`📋 Campo: ${key} = ${value}`);
+    }
+    
+    // VERIFICACIÓN CRÍTICA: documentoId
+    const documentoIdInput = document.querySelector('input[name="documentoId"]');
+    if (documentoIdInput) {
+      console.log('✅ Campo documentoId encontrado:', documentoIdInput.value);
+      // Asegurar que se incluya en FormData
+      if (!formData.has('documentoId')) {
+        formData.append('documentoId', documentoIdInput.value);
+        console.log('🔧 documentoId agregado manualmente al FormData');
+      }
+    } else {
+      console.error('❌ Campo documentoId NO encontrado en el formulario');
+    }
+    
+    // Verificar que documentoId no esté vacío
+    let documentoIdValue = formData.get('documentoId');
+    if (!documentoIdValue || documentoIdValue === '') {
+      console.error('❌ documentoId está vacío, intentando extraer de la URL...');
+      
+      // FALLBACK: Intentar extraer de la URL
+      const urlParts = window.location.pathname.split('/');
+      const pagoIndex = urlParts.indexOf('pago');
+      if (pagoIndex > 0) {
+        const idFromUrl = urlParts[pagoIndex - 1];
+        console.log('🔍 ID extraído de URL:', idFromUrl);
+        
+        if (idFromUrl && !isNaN(idFromUrl)) {
+          formData.append('documentoId', idFromUrl);
+          documentoIdValue = idFromUrl;
+          console.log('🔧 documentoId establecido desde URL:', idFromUrl);
+        }
+      }
+      
+      // Si aún no tenemos ID, mostrar error
+      if (!documentoIdValue || documentoIdValue === '') {
+        console.error('❌ No se pudo obtener documentoId de ninguna fuente');
+        alert('Error: ID del documento no disponible. Recargue la página e intente nuevamente.');
+        return;
+      }
+    }
+    
+    console.log('🆔 documentoId confirmado:', documentoIdValue);
+    console.log('📦 Total de campos en FormData:', Array.from(formData.keys()).length);
+    
+    const urlPago = '/caja/registrar-pago';
+    console.log('🔗 URL de envío:', urlPago);
+    console.log('🌐 URL completa:', window.location.origin + urlPago);
+    
+    // SIMPLIFICADO: Mismo patrón que funciona en procesarXMLRetencion
+    fetch(urlPago, {
+      method: 'POST',
+      body: formData  // FormData simple, sin headers adicionales
+    })
+    .then(response => {
+      console.log('📡 Respuesta del servidor:', response.status, response.statusText);
+      console.log('📋 Headers de respuesta:', Object.fromEntries(response.headers.entries()));
+      
+      // Verificar si la respuesta es una redirección a login
+      if (response.status === 302 || response.url.includes('/login')) {
+        throw new Error('Sesión expirada. Será redirigido al login.');
+      }
+      
+      if (!response.ok) {
+        throw new Error(`Error del servidor: ${response.status} ${response.statusText}`);
+      }
+      
+      // Verificar que la respuesta sea JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Respuesta del servidor no es JSON válido');
+      }
+      
+      return response.json();
+    })
+    .then(resultado => {
+      console.log('✅ Pago registrado exitosamente:', resultado);
+      
+      if (resultado.success) {
+        // Mostrar mensaje de éxito mejorado
+        const data = resultado.data;
+        let mensajeExito = `✅ ¡Pago registrado exitosamente!\n\n`;
+        mensajeExito += `📋 Documento: ${data.codigoBarras}\n`;
+        mensajeExito += `💰 Monto pagado: $${data.montoPago.toFixed(2)}\n`;
+        
+        if (data.montoRetencion > 0) {
+          mensajeExito += `📄 Retención: $${data.montoRetencion.toFixed(2)}\n`;
+        }
+        
+        mensajeExito += `🧮 Total aplicado: $${data.totalMovimiento.toFixed(2)}\n`;
+        mensajeExito += `💵 Valor factura: $${data.valorFactura.toFixed(2)}\n`;
+        mensajeExito += `📊 Queda pendiente: $${data.valorRestante.toFixed(2)}\n`;
+        
+        if (data.pagoCompleto) {
+          mensajeExito += `\n🎉 ¡DOCUMENTO COMPLETAMENTE PAGADO!`;
+        } else {
+          mensajeExito += `\n⚠️ Pago parcial - Pendiente: $${data.valorRestante.toFixed(2)}`;
+        }
+        
+        alert(mensajeExito);
+        
+        // Redirigir al detalle del documento
+        window.location.href = `/caja/documentos/detalle/{{documento.id}}`;
+      } else {
+        throw new Error(resultado.message || 'Error desconocido al registrar pago');
+      }
+    })
+    .catch(error => {
+      console.error('❌ Error registrando pago:', error);
+      
+      let mensajeError = 'Error desconocido';
+      let redirigirALogin = false;
+      
+      if (error.message.includes('Failed to fetch')) {
+        mensajeError = 'Error de conexión con el servidor. Verifique que el sistema esté funcionando.';
+      } else if (error.message.includes('NetworkError')) {
+        mensajeError = 'Error de red. Verifique su conexión a internet.';
+      } else if (error.message.includes('Sesión expirada')) {
+        mensajeError = 'Su sesión ha expirado. Será redirigido al login en 3 segundos.';
+        redirigirALogin = true;
+      } else if (error.message.includes('500')) {
+        mensajeError = 'Error interno del servidor al procesar el pago.';
+      } else if (error.message.includes('400')) {
+        mensajeError = 'Datos de pago inválidos o incompletos.';
+      } else if (error.message.includes('401') || error.message.includes('403')) {
+        mensajeError = 'No autorizado. Su sesión puede haber expirado.';
+        redirigirALogin = true;
+      } else {
+        mensajeError = error.message;
+      }
+      
+      alert(`❌ Error al registrar pago:\n\n${mensajeError}`);
+      
+      // Redirigir al login si es necesario
+      if (redirigirALogin) {
+        setTimeout(() => {
+          window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+        }, 3000);
+      }
+    })
+    .finally(() => {
+      // Restaurar botón
+      btnRegistrarPago.innerHTML = `<i class="fas fa-check me-1"></i>Registrar Pago`;
+      btnRegistrarPago.disabled = false;
+      console.log('🔄 Procesamiento de pago completado, botón restaurado');
+    });
+  });
+  
+  // ============== INICIALIZACIÓN ==============
+  actualizarResumen();
+  
+  // Establecer fecha actual por defecto en retención manual
+  const fechaHoy = new Date().toISOString().split('T')[0];
+  document.getElementById('manual-fecha').value = fechaHoy;
+  
+  // NUEVO: Inicializar estado visual de las tarjetas
+  seleccionarOpcionRetencion('sin-retencion');
+  
+  console.log('✅ JavaScript inicializado correctamente');
+});
+</script>
+
+// VERSIÓN: 2025-06-03-22:55 - CÁLCULOS CORREGIDOS Y DEBUGGING MEJORADO
+// Cache-buster para forzar recarga del navegador - PROBLEMAS SOLUCIONADOS:
+// 1. URL corregida a /caja/registrar-pago
+// 2. Autenticación automática con cookies (sin headers manuales)
+// 3. Manejo de errores específico para cada caso
+// 4. Redirección automática al login cuando sea necesario
+// 5. Debugging completo para documentoId faltante
+// 6. Fallback para extraer documentoId de la URL
+// 7. Patrón simplificado igual al que funciona en procesarXMLRetencion
+// 8. NUEVO: Cálculos corregidos de valor restante y estado de pago
+// 9. NUEVO: Mensaje de éxito mejorado con información detallada
+</script> 

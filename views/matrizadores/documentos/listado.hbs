@@ -71,6 +71,7 @@
             <th class="ordenable" data-columna="cliente" data-tipo="texto">Cliente</th>
             <th class="ordenable" data-columna="fecha" data-tipo="fecha">Fecha Registro Sistema</th>
             <th class="ordenable" data-columna="estado" data-tipo="estado">Estado</th>
+            <th>Estado Pago</th>
             <th>Código Entrega</th>
             <th>Acciones</th>
           </tr>
@@ -99,6 +100,21 @@
               <span class="badge bg-info">Entregado</span>
               {{else}}
               <span class="badge bg-secondary">{{this.estado}}</span>
+              {{/if}}
+            </td>
+            <td>
+              {{#if this.numeroFactura}}
+                {{#if (eq this.estadoPago "pagado_completo")}}
+                <span class="badge bg-success"><i class="fas fa-check"></i> Pagado Completo</span>
+                {{else if (eq this.estadoPago "pagado_con_retencion")}}
+                <span class="badge bg-info"><i class="fas fa-receipt"></i> Pagado con Retención</span>
+                {{else if (eq this.estadoPago "pago_parcial")}}
+                <span class="badge bg-warning text-dark"><i class="fas fa-clock"></i> Pago Parcial</span>
+                {{else}}
+                <span class="badge bg-danger"><i class="fas fa-exclamation-triangle"></i> Pendiente</span>
+                {{/if}}
+              {{else}}
+              <span class="badge bg-secondary">Sin Factura</span>
               {{/if}}
             </td>
             <td>
@@ -140,7 +156,7 @@
           </tr>
           {{else}}
           <tr>
-            <td colspan="7" class="text-center py-4">
+            <td colspan="8" class="text-center py-4">
               <i class="fas fa-search me-2"></i> No se encontraron documentos con los filtros actuales
             </td>
           </tr>

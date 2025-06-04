@@ -491,14 +491,28 @@ const cajaController = {
         let detallesProcessed = {};
         try {
           // Si detalles es string JSON, parsearlo
-          if (typeof evento.detalles === 'string') {
-            detallesProcessed = JSON.parse(evento.detalles);
+          if (typeof evento.detalles === 'string' && evento.detalles.trim().length > 0) {
+            // Verificar si el string parece ser JSON válido
+            if (evento.detalles.trim().startsWith('{') || evento.detalles.trim().startsWith('[')) {
+              detallesProcessed = JSON.parse(evento.detalles);
+            } else {
+              // Si no es JSON, crear un objeto con la descripción
+              detallesProcessed = {
+                descripcionTexto: evento.detalles,
+                procesadoComoTexto: true
+              };
+            }
           } else if (evento.detalles && typeof evento.detalles === 'object') {
             detallesProcessed = evento.detalles;
           }
         } catch (e) {
-          console.log('Error parsing detalles:', e);
-          detallesProcessed = {};
+          // Manejo silencioso del error - crear objeto con información disponible
+          console.warn('⚠️ Evento con detalles no parseables:', evento.id, '- Usando fallback');
+          detallesProcessed = {
+            descripcionTexto: typeof evento.detalles === 'string' ? evento.detalles : 'Información de evento legacy',
+            errorParsing: true,
+            eventoId: evento.id
+          };
         }
         
         // Construir información específica para eventos de entrega
@@ -511,8 +525,21 @@ const cajaController = {
           };
         }
         
-        // Construir información específica para eventos de pago
+        // MEJORADO: Construir información específica para eventos de pago
         if (evento.tipo === 'pago') {
+          // Primero usar los datos del evento si están disponibles
+          if (!detallesProcessed.valor && evento.metadatos) {
+            try {
+              const metadatos = typeof evento.metadatos === 'string' ? JSON.parse(evento.metadatos) : evento.metadatos;
+              if (metadatos.montoPago) {
+                detallesProcessed.valor = metadatos.montoPago;
+              }
+            } catch (e) {
+              // Fallback silencioso
+            }
+          }
+          
+          // Fallback a los datos del documento si no hay datos específicos del evento
           if (!detallesProcessed.valor && documento.valorPagado) {
             detallesProcessed.valor = documento.valorPagado;
           }
@@ -524,6 +551,11 @@ const cajaController = {
           }
           if (!detallesProcessed.usuarioCaja) {
             detallesProcessed.usuarioCaja = evento.matrizador ? evento.matrizador.nombre : 'Sistema';
+          }
+          
+          // Asegurar que el valor sea numérico y válido
+          if (detallesProcessed.valor) {
+            detallesProcessed.valor = parseFloat(detallesProcessed.valor) || 0;
           }
         }
         
@@ -832,6 +864,35 @@ const cajaController = {
         
         // Si hay datos de retención, incluirlos
         if (datosRetencion) {
+          // Procesar fecha de retención correctamente
+          let fechaRetencion = null;
+          if (datosRetencion.fechaRetencion) {
+            // Intentar diferentes formatos de fecha
+            const fechaString = datosRetencion.fechaRetencion.toString();
+            
+            // Si viene en formato DD/MM/YYYY (del XML)
+            if (fechaString.includes('/')) {
+              const partes = fechaString.split('/');
+              if (partes.length === 3) {
+                // Convertir DD/MM/YYYY a YYYY-MM-DD
+                fechaRetencion = new Date(`${partes[2]}-${partes[1]}-${partes[0]}`);
+              }
+            } 
+            // Si viene en formato YYYY-MM-DD (del formulario manual)
+            else if (fechaString.includes('-')) {
+              fechaRetencion = new Date(fechaString);
+            }
+            
+            // Validar que la fecha sea válida
+            if (fechaRetencion && isNaN(fechaRetencion.getTime())) {
+              console.log('⚠️ Fecha de retención inválida, usando fecha actual');
+              fechaRetencion = new Date();
+            }
+          } else {
+            // Si no hay fecha, usar la fecha actual
+            fechaRetencion = new Date();
+          }
+          
           datosActualizacion.tieneRetencion = true;
           datosActualizacion.numeroComprobanteRetencion = datosRetencion.numeroComprobanteRetencion;
           datosActualizacion.razonSocialRetenedora = datosRetencion.razonSocialRetenedora;
@@ -839,7 +900,7 @@ const cajaController = {
           datosActualizacion.retencionIva = parseFloat(datosRetencion.retencionIva) || 0;
           datosActualizacion.retencionRenta = parseFloat(datosRetencion.retencionRenta) || 0;
           datosActualizacion.valorRetenido = parseFloat(datosRetencion.totalRetenido) || 0;
-          datosActualizacion.fechaRetencion = datosRetencion.fechaRetencion ? new Date(datosRetencion.fechaRetencion) : new Date();
+          datosActualizacion.fechaRetencion = fechaRetencion;
         }
         
         console.log('📦 Datos para actualización:', JSON.stringify(datosActualizacion, null, 2));
@@ -924,7 +985,7 @@ const cajaController = {
           descripcion: descripcionEvento,
           detalles: JSON.stringify(detallesEvento),
           usuario: detallesEvento.usuarioCaja,
-          metadatos: {
+          metadatos: JSON.stringify({
             montoPago,
             montoRetencion,
             totalMovimiento,
@@ -933,7 +994,7 @@ const cajaController = {
             estadoPagoNuevo: nuevoEstadoPago,
             procesadoPor: detallesEvento.usuarioCaja,
             fechaProcesamiento: new Date().toISOString()
-          }
+          })
         });
         
         console.log('✅ Evento de pago creado con información detallada');

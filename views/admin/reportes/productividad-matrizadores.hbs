@@ -20,7 +20,7 @@
   </div>
 </div>
 
-<!-- Filtros -->
+<!-- Filtros Mejorados -->
 <div class="row mb-4">
   <div class="col-md-12">
     <div class="card">
@@ -28,29 +28,70 @@
         <i class="fas fa-filter me-2"></i> Filtros de Búsqueda
       </div>
       <div class="card-body">
-        <form method="GET" action="/admin/reportes/productividad-matrizadores">
+        <form method="GET" action="/admin/reportes/productividad-matrizadores" id="formFiltros">
           <div class="row">
+            <!-- Filtros de Rango Rápido -->
             <div class="col-md-3">
+              <label for="rango" class="form-label">Período</label>
+              <select class="form-select" id="rango" name="rango" onchange="manejarCambioRango()">
+                <option value="hoy" {{#if (eq filtros.rango "hoy")}}selected{{/if}}>Hoy</option>
+                <option value="ayer" {{#if (eq filtros.rango "ayer")}}selected{{/if}}>Ayer</option>
+                <option value="semana" {{#if (eq filtros.rango "semana")}}selected{{/if}}>Esta Semana</option>
+                <option value="mes" {{#if (eq filtros.rango "mes")}}selected{{/if}}>Este Mes</option>
+                <option value="ultimo_mes" {{#if (eq filtros.rango "ultimo_mes")}}selected{{/if}}>Últimos 30 días</option>
+                <option value="personalizado" {{#if (eq filtros.rango "personalizado")}}selected{{/if}}>Personalizado</option>
+              </select>
+            </div>
+            
+            <!-- Fechas Personalizadas (solo visible cuando se selecciona "personalizado") -->
+            <div class="col-md-2" id="fechaInicioContainer" style="{{#unless (eq filtros.rango "personalizado")}}display: none;{{/unless}}">
               <label for="fechaInicio" class="form-label">Fecha Inicio</label>
               <input type="date" class="form-control" id="fechaInicio" name="fechaInicio" value="{{filtros.fechaInicio}}">
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2" id="fechaFinContainer" style="{{#unless (eq filtros.rango "personalizado")}}display: none;{{/unless}}">
               <label for="fechaFin" class="form-label">Fecha Fin</label>
               <input type="date" class="form-control" id="fechaFin" name="fechaFin" value="{{filtros.fechaFin}}">
             </div>
-            <div class="col-md-4">
+            
+            <!-- Filtro por Matrizador -->
+            <div class="col-md-3" id="matrizadorContainer">
               <label for="idMatrizador" class="form-label">Matrizador</label>
               <select class="form-select" id="idMatrizador" name="idMatrizador">
-                <option value="todos" {{#if (eq filtros.idMatrizador "todos")}}selected{{/if}}>Todos los matrizadores</option>
+                <option value="todos" {{#if (eq idMatrizadorSeleccionado "todos")}}selected{{/if}}>Todos los matrizadores</option>
                 {{#each matrizadores}}
-                <option value="{{this.id}}" {{#if (eq ../filtros.idMatrizador this.id)}}selected{{/if}}>{{this.nombre}}</option>
+                <option value="{{this.id}}" {{#if (eq ../idMatrizadorSeleccionado this.id)}}selected{{/if}}>{{this.nombre}}</option>
                 {{/each}}
               </select>
             </div>
-            <div class="col-md-2 d-flex align-items-end">
-              <button type="submit" class="btn btn-primary w-100">
-                <i class="fas fa-search me-1"></i> Filtrar
-              </button>
+            
+            <!-- Botones de Acción -->
+            <div class="col-md-2 d-flex align-items-end" id="botonesContainer">
+              <div class="btn-group w-100">
+                <button type="submit" class="btn btn-primary">
+                  <i class="fas fa-search me-1"></i> Filtrar
+                </button>
+                <button type="button" class="btn btn-outline-secondary" onclick="limpiarFiltros()">
+                  <i class="fas fa-times me-1"></i> Limpiar
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Información del período seleccionado -->
+          <div class="row mt-3">
+            <div class="col-md-12">
+              <div class="alert alert-info mb-0">
+                <i class="fas fa-calendar me-2"></i>
+                <strong>Período seleccionado:</strong> {{periodoTexto}}
+                {{#if idMatrizadorSeleccionado}}
+                {{#unless (eq idMatrizadorSeleccionado "todos")}}
+                | <strong>Matrizador:</strong> 
+                {{#each matrizadores}}
+                {{#if (eq this.id ../idMatrizadorSeleccionado)}}{{this.nombre}}{{/if}}
+                {{/each}}
+                {{/unless}}
+                {{/if}}
+              </div>
             </div>
           </div>
         </form>
@@ -250,74 +291,315 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  // Datos para gráficos
+  // Configurar gráficos
+  configurarGraficos();
+  
+  // Configurar filtros dinámicos
+  configurarFiltrosDinamicos();
+});
+
+// ============== FUNCIONES DE FILTROS DINÁMICOS ==============
+
+function manejarCambioRango() {
+  const rangoSelect = document.getElementById('rango');
+  const fechaInicioContainer = document.getElementById('fechaInicioContainer');
+  const fechaFinContainer = document.getElementById('fechaFinContainer');
+  const matrizadorContainer = document.getElementById('matrizadorContainer');
+  const botonesContainer = document.getElementById('botonesContainer');
+  
+  if (rangoSelect.value === 'personalizado') {
+    // Mostrar campos de fecha personalizada
+    fechaInicioContainer.style.display = 'block';
+    fechaFinContainer.style.display = 'block';
+    
+    // Ajustar columnas
+    matrizadorContainer.className = 'col-md-3';
+    botonesContainer.className = 'col-md-2 d-flex align-items-end';
+  } else {
+    // Ocultar campos de fecha personalizada
+    fechaInicioContainer.style.display = 'none';
+    fechaFinContainer.style.display = 'none';
+    
+    // Ajustar columnas para dar más espacio
+    matrizadorContainer.className = 'col-md-5';
+    botonesContainer.className = 'col-md-4 d-flex align-items-end';
+    
+    // Auto-enviar formulario para rangos predefinidos
+    if (rangoSelect.value !== '') {
+      setTimeout(() => {
+        document.getElementById('formFiltros').submit();
+      }, 100);
+    }
+  }
+}
+
+function limpiarFiltros() {
+  // Resetear todos los filtros
+  document.getElementById('rango').value = 'mes';
+  document.getElementById('idMatrizador').value = 'todos';
+  document.getElementById('fechaInicio').value = '';
+  document.getElementById('fechaFin').value = '';
+  
+  // Manejar cambio de rango
+  manejarCambioRango();
+  
+  // Enviar formulario
+  document.getElementById('formFiltros').submit();
+}
+
+function configurarFiltrosDinamicos() {
+  // Configurar auto-submit para cambios en matrizador
+  const matrizadorSelect = document.getElementById('idMatrizador');
+  if (matrizadorSelect) {
+    matrizadorSelect.addEventListener('change', function() {
+      // Solo auto-enviar si no es rango personalizado
+      const rango = document.getElementById('rango').value;
+      if (rango !== 'personalizado') {
+        document.getElementById('formFiltros').submit();
+      }
+    });
+  }
+  
+  // Configurar validación de fechas personalizadas
+  const fechaInicio = document.getElementById('fechaInicio');
+  const fechaFin = document.getElementById('fechaFin');
+  
+  if (fechaInicio && fechaFin) {
+    fechaInicio.addEventListener('change', function() {
+      // Asegurar que fecha fin no sea menor que fecha inicio
+      if (fechaFin.value && fechaInicio.value > fechaFin.value) {
+        fechaFin.value = fechaInicio.value;
+      }
+      fechaFin.min = fechaInicio.value;
+    });
+    
+    fechaFin.addEventListener('change', function() {
+      // Asegurar que fecha inicio no sea mayor que fecha fin
+      if (fechaInicio.value && fechaFin.value < fechaInicio.value) {
+        fechaInicio.value = fechaFin.value;
+      }
+      fechaInicio.max = fechaFin.value;
+    });
+  }
+}
+
+// ============== FUNCIONES DE GRÁFICOS ==============
+
+function configurarGraficos() {
+  // Datos del servidor
   const datosGrafico = {{{json datosGrafico}}};
   
-  // Gráfico de Documentos
-  const ctxDocumentos = document.getElementById('graficoDocumentos').getContext('2d');
-  new Chart(ctxDocumentos, {
+  if (!datosGrafico || !datosGrafico.nombres || datosGrafico.nombres.length === 0) {
+    mostrarMensajeSinDatos();
+    return;
+  }
+  
+  // Configurar gráfico de documentos
+  configurarGraficoDocumentos(datosGrafico);
+  
+  // Configurar gráfico de facturación
+  configurarGraficoFacturacion(datosGrafico);
+}
+
+function configurarGraficoDocumentos(datos) {
+  const ctx = document.getElementById('graficoDocumentos');
+  if (!ctx) return;
+  
+  // Tomar solo los top 10
+  const top10Nombres = datos.nombres.slice(0, 10);
+  const top10Registrados = datos.registrados.slice(0, 10);
+  const top10Completados = datos.completados.slice(0, 10);
+  const top10Entregados = datos.entregados.slice(0, 10);
+  
+  new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: datosGrafico.nombres,
-      datasets: [{
-        label: 'Documentos Procesados',
-        data: datosGrafico.documentos,
-        backgroundColor: 'rgba(54, 162, 235, 0.8)',
-        borderColor: 'rgba(54, 162, 235, 1)',
-        borderWidth: 1
-      }]
+      labels: top10Nombres,
+      datasets: [
+        {
+          label: 'Registrados',
+          data: top10Registrados,
+          backgroundColor: 'rgba(54, 162, 235, 0.8)',
+          borderColor: 'rgba(54, 162, 235, 1)',
+          borderWidth: 1
+        },
+        {
+          label: 'Completados',
+          data: top10Completados,
+          backgroundColor: 'rgba(75, 192, 192, 0.8)',
+          borderColor: 'rgba(75, 192, 192, 1)',
+          borderWidth: 1
+        },
+        {
+          label: 'Entregados',
+          data: top10Entregados,
+          backgroundColor: 'rgba(255, 206, 86, 0.8)',
+          borderColor: 'rgba(255, 206, 86, 1)',
+          borderWidth: 1
+        }
+      ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      plugins: {
+        title: {
+          display: true,
+          text: 'Top 10 - Documentos por Matrizador'
+        },
+        legend: {
+          position: 'top'
+        }
+      },
       scales: {
         y: {
           beginAtZero: true,
           ticks: {
             stepSize: 1
           }
-        }
-      },
-      plugins: {
-        legend: {
-          display: false
+        },
+        x: {
+          ticks: {
+            maxRotation: 45,
+            minRotation: 45
+          }
         }
       }
     }
   });
+}
+
+function configurarGraficoFacturacion(datos) {
+  const ctx = document.getElementById('graficoFacturacion');
+  if (!ctx) return;
   
-  // Gráfico de Facturación
-  const ctxFacturacion = document.getElementById('graficoFacturacion').getContext('2d');
-  new Chart(ctxFacturacion, {
+  // Tomar solo los top 10
+  const top10Nombres = datos.nombres.slice(0, 10);
+  const top10Facturacion = datos.facturacion.slice(0, 10);
+  
+  // Generar colores dinámicos
+  const colores = generarColoresDinamicos(top10Nombres.length);
+  
+  new Chart(ctx, {
     type: 'doughnut',
     data: {
-      labels: datosGrafico.nombres,
+      labels: top10Nombres,
       datasets: [{
-        data: datosGrafico.facturacion,
-        backgroundColor: [
-          '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
-          '#FF9F40', '#FF6384', '#C9CBCF', '#4BC0C0', '#FF6384'
-        ]
+        data: top10Facturacion,
+        backgroundColor: colores.background,
+        borderColor: colores.border,
+        borderWidth: 2
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
+        title: {
+          display: true,
+          text: 'Top 10 - Facturación por Matrizador'
+        },
         legend: {
-          position: 'bottom'
+          position: 'right'
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              const valor = context.parsed;
+              const total = context.dataset.data.reduce((a, b) => a + b, 0);
+              const porcentaje = ((valor / total) * 100).toFixed(1);
+              return `${context.label}: $${valor.toFixed(2)} (${porcentaje}%)`;
+            }
+          }
         }
       }
     }
   });
-});
-
-// Función para exportar a Excel
-function exportarExcel() {
-  const tabla = document.querySelector('table');
-  const wb = XLSX.utils.table_to_book(tabla, {sheet: "Productividad"});
-  XLSX.writeFile(wb, 'productividad_matrizadores.xlsx');
 }
+
+function mostrarMensajeSinDatos() {
+  const contenedorDocumentos = document.getElementById('graficoDocumentos');
+  const contenedorFacturacion = document.getElementById('graficoFacturacion');
+  
+  const mensaje = '<div class="text-center text-muted p-4"><i class="fas fa-chart-bar fa-3x mb-3"></i><h5>Sin datos para mostrar</h5><p>No hay información disponible para el período seleccionado.</p></div>';
+  
+  if (contenedorDocumentos) {
+    contenedorDocumentos.parentElement.innerHTML = mensaje;
+  }
+  
+  if (contenedorFacturacion) {
+    contenedorFacturacion.parentElement.innerHTML = mensaje;
+  }
+}
+
+function generarColoresDinamicos(cantidad) {
+  const coloresBase = [
+    'rgba(255, 99, 132, 0.8)',
+    'rgba(54, 162, 235, 0.8)',
+    'rgba(255, 206, 86, 0.8)',
+    'rgba(75, 192, 192, 0.8)',
+    'rgba(153, 102, 255, 0.8)',
+    'rgba(255, 159, 64, 0.8)',
+    'rgba(199, 199, 199, 0.8)',
+    'rgba(83, 102, 255, 0.8)',
+    'rgba(255, 99, 255, 0.8)',
+    'rgba(99, 255, 132, 0.8)'
+  ];
+  
+  const coloresBorde = coloresBase.map(color => color.replace('0.8', '1'));
+  
+  return {
+    background: coloresBase.slice(0, cantidad),
+    border: coloresBorde.slice(0, cantidad)
+  };
+}
+
+// ============== FUNCIONES DE EXPORTACIÓN ==============
+
+function exportarExcel() {
+  // Crear tabla para exportar
+  const tabla = document.querySelector('.table-responsive table');
+  if (!tabla) {
+    alert('No hay datos para exportar');
+    return;
+  }
+  
+  // Usar SheetJS para exportar (si está disponible)
+  if (typeof XLSX !== 'undefined') {
+    const wb = XLSX.utils.table_to_book(tabla);
+    const fecha = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(wb, `productividad_matrizadores_${fecha}.xlsx`);
+  } else {
+    // Fallback: abrir en nueva ventana para copiar
+    const contenido = tabla.outerHTML;
+    const ventana = window.open('', '_blank');
+    ventana.document.write(`
+      <html>
+        <head>
+          <title>Productividad de Matrizadores</title>
+          <style>
+            table { border-collapse: collapse; width: 100%; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+          </style>
+        </head>
+        <body>
+          <h2>Productividad de Matrizadores</h2>
+          <p>Período: {{periodoTexto}}</p>
+          ${contenido}
+        </body>
+      </html>
+    `);
+    ventana.document.close();
+  }
+}
+
+// ============== INICIALIZACIÓN ==============
+
+// Configurar filtros al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+  manejarCambioRango();
+});
 </script>
 
 <!-- Incluir SheetJS para exportación Excel -->

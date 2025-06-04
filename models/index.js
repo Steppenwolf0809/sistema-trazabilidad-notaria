@@ -25,14 +25,24 @@ Documento.belongsTo(Matrizador, {
   as: 'matrizador'
 });
 
-// Relación Documento - EventoDocumento (Un documento puede tener muchos eventos)
+// CORREGIDO: Relación Documento - EventoDocumento (Un documento puede tener muchos eventos)
 Documento.hasMany(EventoDocumento, { 
-  foreignKey: 'idDocumento',
+  foreignKey: 'documentoId', // CORREGIDO: usar documentoId en lugar de idDocumento
   as: 'eventos'
 });
 EventoDocumento.belongsTo(Documento, {
-  foreignKey: 'idDocumento',
+  foreignKey: 'documentoId', // CORREGIDO: usar documentoId en lugar de idDocumento
   as: 'documento'
+});
+
+// AGREGADO: Relación Matrizador - EventoDocumento (Un matrizador puede crear muchos eventos)
+Matrizador.hasMany(EventoDocumento, {
+  foreignKey: 'usuarioId',
+  as: 'eventosCreados'
+});
+EventoDocumento.belongsTo(Matrizador, {
+  foreignKey: 'usuarioId',
+  as: 'matrizador' // Usar alias 'matrizador' para consistencia
 });
 
 // Relación Documento - RegistroAuditoria

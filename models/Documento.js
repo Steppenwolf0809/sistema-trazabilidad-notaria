@@ -53,7 +53,7 @@ const Documento = sequelize.define('Documento', {
     type: DataTypes.DATE, // Timestamp completo con timezone
     field: 'fecha_pago',
     allowNull: true,
-    comment: 'Timestamp de cuando se registró el pago en el sistema'
+    comment: 'Timestamp de cuando se registró el pago en el sistema (LEGACY - usar fechaUltimoPago)'
   },
   
   // 3. FECHA DE ENTREGA - Timestamp cuando se entrega al cliente
@@ -177,28 +177,98 @@ const Documento = sequelize.define('Documento', {
     allowNull: true
   },
   
+  // ============== NUEVOS CAMPOS PARA SISTEMA DE PAGOS CON RETENCIONES ==============
+  
+  // Información de pagos
+  valorPagado: {
+    type: DataTypes.DECIMAL(10, 2),
+    field: 'valor_pagado',
+    defaultValue: 0.00,
+    allowNull: false,
+    comment: 'Monto total pagado por el cliente'
+  },
+  
+  valorPendiente: {
+    type: DataTypes.DECIMAL(10, 2),
+    field: 'valor_pendiente',
+    defaultValue: 0.00,
+    allowNull: false,
+    comment: 'Monto pendiente de pago'
+  },
+  
   estadoPago: {
-    type: DataTypes.ENUM('pagado', 'pendiente'),
+    type: DataTypes.ENUM('pendiente', 'pago_parcial', 'pagado_completo', 'pagado_con_retencion'),
     field: 'estado_pago',
-    defaultValue: 'pendiente'
-  },
-  
-  metodoPago: {
-    type: DataTypes.ENUM('pendiente', 'efectivo', 'tarjeta_credito', 'tarjeta_debito', 'transferencia', 'otro'),
-    field: 'metodo_pago',
     defaultValue: 'pendiente',
-    allowNull: true
+    comment: 'Estado detallado del pago del documento'
   },
   
-  // Usuario que registró el pago (para auditoría)
-  registradoPor: {
-    type: DataTypes.INTEGER,
-    field: 'registrado_por',
+  fechaUltimoPago: {
+    type: DataTypes.DATE,
+    field: 'fecha_ultimo_pago',
     allowNull: true,
-    references: {
-      model: 'matrizadores',
-      key: 'id'
-    }
+    comment: 'Timestamp del último pago registrado'
+  },
+  
+  // Información de retenciones
+  tieneRetencion: {
+    type: DataTypes.BOOLEAN,
+    field: 'tiene_retencion',
+    defaultValue: false,
+    allowNull: false,
+    comment: 'Indica si el documento tiene retención asociada'
+  },
+  
+  numeroComprobanteRetencion: {
+    type: DataTypes.STRING(50),
+    field: 'numero_comprobante_retencion',
+    allowNull: true,
+    comment: 'Número del comprobante de retención'
+  },
+  
+  valorRetenido: {
+    type: DataTypes.DECIMAL(10, 2),
+    field: 'valor_retenido',
+    defaultValue: 0.00,
+    allowNull: false,
+    comment: 'Monto total retenido'
+  },
+  
+  retencionIva: {
+    type: DataTypes.DECIMAL(10, 2),
+    field: 'retencion_iva',
+    defaultValue: 0.00,
+    allowNull: false,
+    comment: 'Monto de retención de IVA'
+  },
+  
+  retencionRenta: {
+    type: DataTypes.DECIMAL(10, 2),
+    field: 'retencion_renta',
+    defaultValue: 0.00,
+    allowNull: false,
+    comment: 'Monto de retención de renta'
+  },
+  
+  rucEmpresaRetenedora: {
+    type: DataTypes.STRING(13),
+    field: 'ruc_empresa_retenedora',
+    allowNull: true,
+    comment: 'RUC de la empresa que realiza la retención'
+  },
+  
+  razonSocialRetenedora: {
+    type: DataTypes.STRING(200),
+    field: 'razon_social_retenedora',
+    allowNull: true,
+    comment: 'Razón social de la empresa que retiene'
+  },
+  
+  fechaRetencion: {
+    type: DataTypes.DATE,
+    field: 'fecha_retencion',
+    allowNull: true,
+    comment: 'Fecha de la retención'
   },
   
   // ============== CONFIGURACIÓN DE NOTIFICACIONES ==============
@@ -329,7 +399,29 @@ const Documento = sequelize.define('Documento', {
     type: DataTypes.TEXT,
     field: 'justificacion_eliminacion',
     allowNull: true
-  }
+  },
+  
+  // ============== CAMPOS LEGACY MANTENIDOS PARA COMPATIBILIDAD ==============
+  
+  metodoPago: {
+    type: DataTypes.ENUM('pendiente', 'efectivo', 'tarjeta_credito', 'tarjeta_debito', 'transferencia', 'cheque', 'otro'),
+    field: 'metodo_pago',
+    defaultValue: 'pendiente',
+    allowNull: true,
+    comment: 'Método de pago principal (LEGACY - ver tabla pagos para detalle completo)'
+  },
+  
+  // Usuario que registró el pago (para auditoría)
+  registradoPor: {
+    type: DataTypes.INTEGER,
+    field: 'registrado_por',
+    allowNull: true,
+    references: {
+      model: 'matrizadores',
+      key: 'id'
+    },
+    comment: 'Usuario que registró el último pago (LEGACY)'
+  },
 }, {
   // Opciones del modelo SIMPLIFICADAS
   tableName: 'documentos',

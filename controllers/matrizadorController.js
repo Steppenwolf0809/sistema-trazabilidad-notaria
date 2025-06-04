@@ -1727,12 +1727,12 @@ const matrizadorController = {
       
       // Filtros de fecha
       if (fechaDesde || fechaHasta) {
-        whereClause.createdAt = {};
+        whereClause.created_at = {};
         if (fechaDesde) {
-          whereClause.createdAt[Op.gte] = new Date(fechaDesde + 'T00:00:00');
+          whereClause.created_at[Op.gte] = new Date(fechaDesde + 'T00:00:00');
         }
         if (fechaHasta) {
-          whereClause.createdAt[Op.lte] = new Date(fechaHasta + 'T23:59:59');
+          whereClause.created_at[Op.lte] = new Date(fechaHasta + 'T23:59:59');
         }
       }
       
@@ -1773,7 +1773,7 @@ const matrizadorController = {
           where: documentoWhereClause,
           required: true
         }],
-        order: [['createdAt', 'DESC']], // Más recientes primero
+        order: [['created_at', 'DESC']], // Más recientes primero
         limit: 50 // Limitar para performance
       });
       

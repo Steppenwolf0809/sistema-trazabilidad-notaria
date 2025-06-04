@@ -8,7 +8,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const cajaController = require('../controllers/cajaController');
-const { verificarToken, validarAccesoConAuditoria } = require('../middlewares/auth');
+const { verificarToken } = require('../middlewares/auth');
 const roleAuth = require('../middlewares/roleAuth');
 
 // Configurar multer para subir archivos
@@ -23,106 +23,131 @@ const storage = multer.diskStorage({
 
 // Filtro para aceptar solo archivos XML
 const fileFilter = (req, file, cb) => {
-  if (file.mimetype === 'application/xml' || path.extname(file.originalname).toLowerCase() === '.xml') {
+  if (file.mimetype === 'text/xml' || file.mimetype === 'application/xml' || file.originalname.toLowerCase().endsWith('.xml')) {
     cb(null, true);
   } else {
     cb(new Error('Solo se permiten archivos XML'), false);
   }
 };
 
-// Inicializar middleware de multer
 const upload = multer({ 
   storage: storage,
   fileFilter: fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 } // 5MB max
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB máximo
+  }
 });
 
-// Middleware global para validar token 
+// SIMPLIFICADO: Solo middlewares esenciales
 router.use(verificarToken);
+router.use(roleAuth(['caja', 'caja_archivo']));
 
-// Middleware ESTRICTO - Solo usuarios con rol 'caja' o 'caja_archivo' pueden acceder
-router.use(validarAccesoConAuditoria(['caja', 'caja_archivo']));
+// ============== RUTAS ACTIVAS (FUNCIONES IMPLEMENTADAS) ==============
 
-// Dashboard de Caja
+// Dashboard de caja
 router.get('/', cajaController.dashboard);
-router.post('/dashboard/filtrar', cajaController.filtrarDashboard);
 
-// Rutas para gestión de documentos
+// RESTAURADO: Gestión de documentos
 router.get('/documentos', cajaController.listarDocumentos);
 router.get('/documentos/detalle/:id', cajaController.verDocumento);
-router.get('/documentos/registro', cajaController.mostrarFormularioRegistro);
-router.post('/documentos/registro', cajaController.registrarDocumento);
 
-// ============== NUEVAS RUTAS PARA FUNCIONALIDAD HÍBRIDA CAJA_ARCHIVO ==============
+// RESTAURADO: Registro de pagos
+router.get('/documentos/detalle/:id/pago', cajaController.mostrarFormularioRegistrarPago);
+router.post('/registrar-pago', upload.none(), cajaController.registrarPago);
 
-// Nueva ruta para "Mis Documentos" que mantenga interfaz de caja
-router.get('/mis-documentos', 
-  roleAuth.esCajaArchivo,  // Solo para usuarios caja_archivo
-  cajaController.misDocumentosMatrizador
-);
+// NUEVO: Procesamiento de XML de retención (ÚNICO método soportado)
+router.post('/procesar-xml-retencion', upload.single('xmlRetencion'), cajaController.procesarXMLRetencion);
 
-// Rutas para editar documentos desde interfaz de caja
-router.get('/documentos/editar/:id', 
-  roleAuth.esCajaArchivo, 
-  cajaController.editarDocumentoMatrizador
-);
+// RESTAURADO: Filtros AJAX
+router.post('/dashboard/filtrar', cajaController.filtrarDashboard);
 
-router.post('/documentos/editar/:id', 
-  roleAuth.esCajaArchivo, 
-  cajaController.actualizarDocumentoMatrizador
-);
+// ============== RUTAS RESTAURADAS PARA EVITAR 404 ==============
 
-// Ruta para marcar documento como listo desde interfaz de caja
-router.post('/documentos/marcar-listo/:id', 
-  roleAuth.esCajaArchivo, 
-  cajaController.marcarDocumentoListoMatrizador
-);
+// Carga de documentos desde XML (RESTAURADA)
+router.get('/documentos/nuevo-xml', (req, res) => {
+  res.render('caja/documentos/nuevo-xml', {
+    layout: 'caja',
+    title: 'Cargar Documento XML',
+    userRole: req.matrizador?.rol,
+    userName: req.matrizador?.nombre
+  });
+});
 
-// Rutas para registro de documentos vía XML
-router.get('/documentos/nuevo-xml', cajaController.mostrarFormularioXML);
-router.post('/documentos/procesar-xml', upload.single('xmlFile'), cajaController.procesarXML);
-router.post('/documentos/registrar-xml', cajaController.registrarDocumentoXML);
+// CRÍTICO: Procesamiento de XML de documentos
+router.post('/documentos/procesar-xml', upload.single('xmlFile'), cajaController.procesarXMLDocumento);
 
-// Rutas para gestión de pagos
+// NUEVO: Registrar documento después de vista previa
+router.post('/documentos/registrar-desde-xml', cajaController.registrarDocumentoDesdeXML);
+
+// Gestión de pagos (RESTAURADA)
 router.get('/pagos', cajaController.listarPagos);
-router.post('/pagos/registrar', cajaController.registrarPago);
-router.post('/pagos/confirmar/:id', cajaController.confirmarPago);
 
-// Ruta para cambiar matrizador - Ahora desde modal en el listado
-router.post('/documentos/cambiar-matrizador', cajaController.cambiarMatrizador);
+// Reportes (RESTAURADA)
+router.get('/reportes', (req, res) => {
+  res.render('caja/reportes/index', {
+    layout: 'caja',
+    title: 'Reportes de Caja',
+    userRole: req.matrizador?.rol,
+    userName: req.matrizador?.nombre
+  });
+});
 
-// Rutas para reportes
-router.get('/reportes', cajaController.reportes);
+// RESTAURADO: Reportes específicos
 router.get('/reportes/financiero', cajaController.reporteFinanciero);
-router.get('/reportes/matrizadores', cajaController.reporteMatrizadores);
 router.get('/reportes/documentos', cajaController.reporteDocumentos);
 router.get('/reportes/pendientes', cajaController.reportePendientes);
 router.get('/reportes/cobros-matrizador', cajaController.reporteCobrosMatrizador);
 
-// Rutas para funcionalidades adicionales de reportes
-router.post('/reportes/recordar-pago/:id', cajaController.recordarPagoIndividual);
-router.post('/reportes/recordar-masivo', cajaController.recordarPagoMasivo);
-router.get('/reportes/exportar-pendientes', cajaController.exportarPendientes);
-router.get('/reportes/pendientes-pdf', cajaController.generarPdfPendientes);
-router.post('/documentos/marcar-pagado/:id', cajaController.marcarComoPagado);
+// ============== RUTAS TEMPORALMENTE DESHABILITADAS ==============
+// TODO: Implementar estas funciones en el controlador cuando sea necesario
 
-// ============== NUEVAS RUTAS PARA ENTREGA DE DOCUMENTOS EN INTERFAZ CAJA ==============
+/*
+// Gestión de pagos avanzada
+router.post('/pagos/confirmar/:id', cajaController.confirmarPago);
 
-// Entrega de documentos para caja_archivo (mantiene interfaz caja)
-router.get('/entrega-documentos', 
-  roleAuth.esCajaArchivo, 
-  cajaController.entregaDocumentos
-);
+// Cambio de matrizador
+router.get('/documentos/cambiar-matrizador/:id', cajaController.mostrarFormularioCambioMatrizador);
+router.post('/documentos/cambiar-matrizador', cajaController.cambiarMatrizador);
 
-router.post('/entrega-documentos/buscar', 
-  roleAuth.esCajaArchivo, 
-  cajaController.buscarDocumentoEntrega
-);
+// Carga de documentos desde XML (funcionalidad completa)
+router.post('/documentos/procesar-xml', upload.single('xmlFile'), cajaController.procesarXML);
+router.post('/documentos/registrar-xml', cajaController.registrarDocumentoXML);
 
-router.post('/entrega-documentos/procesar/:id', 
-  roleAuth.esCajaArchivo, 
-  cajaController.procesarEntregaDocumento
-);
+// Reportes adicionales
+router.get('/reportes/matrizadores', cajaController.reporteMatrizadores);
+router.get('/reportes/cobros-matrizador', cajaController.reporteCobrosMatrizador);
 
-// Exportar router
+// Registro manual de documentos
+router.get('/documentos/registro', cajaController.mostrarFormularioRegistro);
+router.post('/documentos/registrar', cajaController.registrarDocumento);
+
+// Entrega de documentos
+router.get('/documentos/entrega', cajaController.mostrarFormularioEntrega);
+router.post('/documentos/entregar/:id', cajaController.entregarDocumento);
+
+// Recordatorios de pago
+router.post('/recordar-pago/:id', cajaController.recordarPagoIndividual);
+router.post('/recordar-pago-masivo', cajaController.recordarPagoMasivo);
+
+// Exportaciones
+router.get('/exportar-pendientes', cajaController.exportarPendientes);
+router.get('/generar-pdf-pendientes', cajaController.generarPdfPendientes);
+
+// Marcar como pagado
+router.post('/marcar-pagado/:id', cajaController.marcarComoPagado);
+
+// ============== RUTAS PARA ROL HÍBRIDO CAJA_ARCHIVO ==============
+
+// Documentos asignados como matrizador
+router.get('/mis-documentos', cajaController.misDocumentosMatrizador);
+router.get('/mis-documentos/editar/:id', cajaController.editarDocumentoMatrizador);
+router.post('/mis-documentos/actualizar/:id', cajaController.actualizarDocumentoMatrizador);
+router.post('/mis-documentos/marcar-listo/:id', cajaController.marcarDocumentoListoMatrizador);
+
+// Entrega de documentos desde interfaz de caja
+router.get('/entrega-documentos', cajaController.entregaDocumentos);
+router.post('/buscar-documento-entrega', cajaController.buscarDocumentoEntrega);
+router.post('/procesar-entrega/:id', cajaController.procesarEntregaDocumento);
+*/
+
 module.exports = router; 

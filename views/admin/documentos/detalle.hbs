@@ -1,3 +1,5 @@
+{{! Detalle de Documento - Admin - VISTA LIMPIA BASADA EN MATRIZADORES }}
+{{#if documento}}
 <div class="card">
   <div class="card-header d-flex justify-content-between align-items-center">
     <div>
@@ -7,17 +9,20 @@
       <a href="/admin/documentos/listado" class="btn btn-sm btn-outline-secondary">
         <i class="fas fa-arrow-left me-1"></i> Volver
       </a>
-      <a href="/admin/documentos/editar/{{documento.id}}" class="btn btn-sm btn-primary">
+      
+      <a href="/admin/documentos/editar/{{documento.id}}" class="btn btn-sm btn-primary ms-1">
         <i class="fas fa-edit me-1"></i> Editar
       </a>
+      
       {{#if (eq documento.estado "en_proceso")}}
-      <button type="button" class="btn btn-sm btn-success" onclick="marcarListo({{documento.id}})">
-        <i class="fas fa-check me-1"></i> Marcar Listo
+      <button type="button" class="btn btn-sm btn-success ms-1" onclick="marcarListo({{documento.id}})">
+        <i class="fas fa-check me-1"></i> Marcar como listo
       </button>
       {{/if}}
+      
       {{#if (eq documento.estado "listo_para_entrega")}}
-      <a href="/admin/documentos/entrega/{{documento.id}}" class="btn btn-sm btn-primary">
-        <i class="fas fa-hand-holding me-1"></i> Entregar
+      <a href="/admin/documentos/entrega/{{documento.id}}" class="btn btn-sm btn-info ms-1">
+        <i class="fas fa-hand-holding me-1"></i> Entrega
       </a>
       {{/if}}
     </div>
@@ -77,18 +82,37 @@
           {{#if documento.matrizador}}
           <p><strong>Nombre:</strong> {{documento.matrizador.nombre}}</p>
           <p><strong>Email:</strong> {{documento.matrizador.email}}</p>
+          <p><strong>Estado del Proceso:</strong> 
+            {{#if (eq documento.estado "en_proceso")}}
+            <span class="badge bg-warning text-dark fs-6">⚠️ En proceso</span>
+            {{else if (eq documento.estado "listo_para_entrega")}}
+            <span class="badge bg-success fs-6">✅ Listo para entrega</span>
+            {{else if (eq documento.estado "entregado")}}
+            <span class="badge bg-info fs-6">📦 Entregado</span>
+            {{else}}
+            <span class="badge bg-secondary fs-6">{{translateEstado documento.estado}}</span>
+            {{/if}}
+          </p>
+          {{#if (eq documento.estado "listo_para_entrega")}}
+          <p><strong>🔑 Código de Entrega:</strong> 
+            <span class="badge bg-success fs-4">{{documento.codigoVerificacion}}</span>
+          </p>
+          {{/if}}
           {{else}}
           <p>No hay matrizador asignado</p>
+          <div class="alert alert-warning py-2">
+            <small><i class="fas fa-exclamation-triangle me-1"></i>Este documento requiere asignación de matrizador</small>
+          </div>
           {{/if}}
         </div>
       </div>
     </div>
     
-    <!-- Información de facturación -->
+    <!-- Información de facturación y pagos -->
     <div class="row mb-4">
       <div class="col-12">
         <div class="card">
-          <div class="card-header d-flex justify-content-between align-items-center">
+          <div class="card-header">
             <h5 class="mb-0"><i class="fas fa-money-bill-wave me-2"></i>Información de Facturación y Pagos</h5>
           </div>
           <div class="card-body">
@@ -223,361 +247,228 @@
       </div>
     </div>
     
-    <!-- Información de comparecientes -->
+    <!-- Notas -->
+    {{#if documento.notas}}
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">Notas</h5>
+          </div>
+          <div class="card-body">
+            <p>{{documento.notas}}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    {{/if}}
+    
+    <!-- Comparecientes -->
     {{#if documento.comparecientes.length}}
     <div class="row mb-4">
       <div class="col-12">
-        <h5 class="border-bottom pb-2">Comparecientes</h5>
-      </div>
-      
-      {{#each documento.comparecientes}}
-      <div class="col-md-4 mb-3">
         <div class="card">
-          <div class="card-body p-3">
-            <h6 class="mb-2">{{this.nombre}}</h6>
-            <div class="small mb-1"><strong>Identificación:</strong> {{this.identificacion}}</div>
-            {{#if this.rol}}
-            <div class="small"><strong>Rol:</strong> {{this.rol}}</div>
-            {{/if}}
+          <div class="card-header">
+            <h5 class="mb-0">Comparecientes</h5>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-hover">
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Identificación</th>
+                    <th>Rol</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {{#each documento.comparecientes}}
+                  <tr>
+                    <td>{{this.nombre}}</td>
+                    <td>{{this.identificacion}}</td>
+                    <td>{{this.rol}}</td>
+                  </tr>
+                  {{/each}}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
-      {{/each}}
     </div>
     {{/if}}
     
-    <!-- Información de entrega -->
+    <!-- Información de entrega (solo si está entregado) -->
     {{#if (eq documento.estado "entregado")}}
     <div class="row mb-4">
       <div class="col-12">
-        <h5 class="border-bottom pb-2">Datos de Entrega</h5>
-      </div>
-      
-      <div class="col-md-6">
-        <div class="mb-3">
-          <label class="fw-bold">Receptor:</label>
-          <div>{{documento.nombreReceptor}}</div>
-        </div>
-        
-        <div class="mb-3">
-          <label class="fw-bold">Identificación:</label>
-          <div>{{documento.identificacionReceptor}}</div>
-        </div>
-      </div>
-      
-      <div class="col-md-6">
-        <div class="mb-3">
-          <label class="fw-bold">Relación:</label>
-          <div>
-            {{#if (eq documento.relacionReceptor "titular")}}
-            Titular
-            {{else if (eq documento.relacionReceptor "familiar")}}
-            Familiar
-            {{else if (eq documento.relacionReceptor "mandatario")}}
-            Mandatario
-            {{else}}
-            {{documento.relacionReceptor}}
-            {{/if}}
-          </div>
-        </div>
-        
-        <div class="mb-3">
-          <label class="fw-bold">Fecha de Entrega:</label>
-          <div>{{formatDate documento.fechaEntrega}}</div>
-        </div>
-      </div>
-    </div>
-    {{/if}}
-    
-    <!-- Panel de Documentos Relacionados -->
-    <div class="row mt-4">
-      <div class="col-12">
         <div class="card">
-          <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Documentos Relacionados</h5>
+          <div class="card-header">
+            <h5 class="mb-0">Datos de Entrega</h5>
           </div>
           <div class="card-body">
             <div class="row">
-              {{!-- Documentos Principales --}}
               <div class="col-md-6">
-                <h6 class="mb-3">Documentos Principales</h6>
-                {{#if documentosPrincipales.length}}
-                  <div class="list-group">
-                    {{#each documentosPrincipales}}
-                      <div class="list-group-item">
-                        <div class="d-flex justify-content-between align-items-center">
-                          <div>
-                            <h6 class="mb-1">{{this.codigoBarras}}</h6>
-                            <p class="mb-1">{{this.tipoDocumento}} - {{this.nombreCliente}}</p>
-                            <small class="text-muted">
-                              {{this.tipoRelacion}} - {{this.descripcion}}
-                            </small>
-                          </div>
-                          <div class="btn-group">
-                            <a href="/admin/documentos/detalle/{{this.id}}" class="btn btn-sm btn-info">
-                              <i class="fas fa-eye"></i>
-                            </a>
-                          </div>
-                        </div>
-                      </div>
-                    {{/each}}
-                  </div>
-                {{else}}
-                  <p class="text-muted">No hay documentos principales relacionados</p>
-                {{/if}}
+                <div class="mb-3">
+                  <label class="fw-bold">Receptor:</label>
+                  <div>{{documento.nombreReceptor}}</div>
+                </div>
+                
+                <div class="mb-3">
+                  <label class="fw-bold">Identificación:</label>
+                  <div>{{documento.identificacionReceptor}}</div>
+                </div>
               </div>
-
-              {{!-- Componentes --}}
+              
               <div class="col-md-6">
-                <h6 class="mb-3">Componentes</h6>
-                {{#if componentes.length}}
-                  <div class="list-group">
-                    {{#each componentes}}
-                      <div class="list-group-item">
-                        <div class="d-flex justify-content-between align-items-center">
-                          <div>
-                            <h6 class="mb-1">{{this.codigoBarras}}</h6>
-                            <p class="mb-1">{{this.tipoDocumento}} - {{this.nombreCliente}}</p>
-                            <small class="text-muted">
-                              {{this.tipoRelacion}} - {{this.descripcion}}
-                            </small>
-                          </div>
-                          <div class="btn-group">
-                            <a href="/admin/documentos/detalle/{{this.id}}" class="btn btn-sm btn-info">
-                              <i class="fas fa-eye"></i>
-                            </a>
-                          </div>
-                        </div>
-                      </div>
-                    {{/each}}
+                <div class="mb-3">
+                  <label class="fw-bold">Relación:</label>
+                  <div>
+                    {{#if (eq documento.relacionReceptor "titular")}}
+                    Titular
+                    {{else if (eq documento.relacionReceptor "familiar")}}
+                    Familiar
+                    {{else if (eq documento.relacionReceptor "mandatario")}}
+                    Mandatario
+                    {{else}}
+                    {{documento.relacionReceptor}}
+                    {{/if}}
                   </div>
-                {{else}}
-                  <p class="text-muted">No hay componentes relacionados</p>
-                {{/if}}
+                </div>
+                
+                <div class="mb-3">
+                  <label class="fw-bold">Fecha de Entrega:</label>
+                  <div>{{formatDate documento.fechaEntrega}}</div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
+    {{/if}}
     
-    <!-- Historial de eventos ADMIN COMPLETO -->
+    <!-- Historial de eventos LIMPIO Y ORGANIZADO -->
     {{#if eventos.length}}
     <div class="row">
       <div class="col-12">
         <div class="card">
           <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0">
-              <i class="fas fa-history me-2"></i>Historial Completo del Documento
+              <i class="fas fa-history me-2"></i>Historial del Documento
             </h5>
-            <div class="d-flex align-items-center gap-2">
-              <small class="text-muted">Trazabilidad completa</small>
-              {{#if historialCompleto}}
-              <span class="badge bg-primary">{{eventos.length}} eventos visibles</span>
-              {{/if}}
+            <div class="d-flex align-items-center">
+              <span class="badge bg-primary me-2">{{eventos.length}} eventos</span>
+              <small class="text-muted">Más recientes primero</small>
             </div>
           </div>
           <div class="card-body">
+            <!-- Timeline limpio para admin -->
             <div class="timeline-admin">
               {{#each eventos}}
-              <div class="timeline-item-admin" data-categoria="{{this.categoria}}" data-tipo="{{this.tipo}}">
-                <!-- Marcador con icono y color -->
-                <div class="timeline-marker-admin bg-{{this.color}}">
-                  <i class="{{this.icono}} text-white"></i>
+              <div class="timeline-item mb-4">
+                <div class="timeline-marker bg-{{this.color}}">
+                  {{#if (eq this.tipo "pago")}}
+                  <i class="fas fa-dollar-sign text-white"></i>
+                  {{else if (eq this.tipo "entrega")}}
+                  <i class="fas fa-handshake text-white"></i>
+                  {{else if (eq this.categoria "estado")}}
+                  <i class="fas fa-edit text-white"></i>
+                  {{else}}
+                  <i class="fas fa-info text-white"></i>
+                  {{/if}}
                 </div>
                 
-                <!-- Contenido del evento -->
-                <div class="timeline-content-admin">
-                  <div class="d-flex justify-content-between align-items-start mb-3">
-                    <div class="flex-grow-1">
-                      <div class="d-flex align-items-center mb-2">
-                        <i class="{{this.icono}} text-{{this.color}} me-2"></i>
-                        <h6 class="mb-0 fw-bold">{{this.titulo}}</h6>
-                        <span class="badge bg-{{this.color}} bg-opacity-20 text-{{this.color}} ms-2">
-                          {{this.categoria}}
-                        </span>
-                      </div>
-                      <p class="mb-0 text-dark">{{this.descripcion}}</p>
-                    </div>
-                    <div class="text-end">
-                      <div class="small text-muted">
-                        <i class="fas fa-calendar me-1"></i>{{formatDate this.fecha}}
-                      </div>
-                      <div class="small text-muted">
-                        <i class="fas fa-clock me-1"></i>{{formatTime this.fecha}}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <!-- Información específica por tipo de evento -->
-                  {{#if (eq this.tipo "pago")}}
-                  <div class="alert alert-success border-start border-success border-4 mb-3">
-                    <div class="row">
-                      <div class="col-md-3">
-                        <strong>💰 Valor Pagado:</strong><br>
-                        <span class="h5 text-success">${{formatMoney this.detalles.valor}}</span>
-                      </div>
-                      <div class="col-md-3">
-                        <strong>💳 Método:</strong><br>
-                        <span class="badge bg-info">{{this.detalles.metodoPago}}</span>
-                      </div>
-                      <div class="col-md-3">
-                        {{#if this.detalles.numeroFactura}}
-                        <strong>📄 N° Factura:</strong><br>
-                        <code>{{this.detalles.numeroFactura}}</code>
-                        {{else}}
-                        <strong>📄 Factura:</strong><br>
-                        <span class="text-muted">No registrada</span>
-                        {{/if}}
-                      </div>
-                      <div class="col-md-3">
-                        <strong>👤 Cajero:</strong><br>
-                        <span class="fw-bold">{{this.detalles.usuarioCaja}}</span>
-                      </div>
-                    </div>
-                  </div>
-                  {{/if}}
-                  
-                  {{#if (eq this.tipo "entrega")}}
-                  <div class="alert alert-info border-start border-info border-4 mb-3">
-                    <div class="row">
-                      <div class="col-md-4">
-                        <strong>📋 Receptor:</strong><br>
-                        <span class="fw-bold">{{this.detalles.receptor}}</span>
-                      </div>
-                      <div class="col-md-4">
-                        <strong>🆔 Identificación:</strong><br>
-                        <code>{{this.detalles.identificacionReceptor}}</code>
-                      </div>
-                      <div class="col-md-4">
-                        <strong>👥 Relación:</strong><br>
-                        <span class="badge bg-secondary">{{this.detalles.relacion}}</span>
-                      </div>
-                    </div>
-                  </div>
-                  {{/if}}
-                  
-                  {{#if (eq this.tipo "creacion")}}
-                  <div class="alert alert-primary border-start border-primary border-4 mb-3">
-                    <div class="row">
-                      <div class="col-md-6">
-                        <strong>📄 Tipo de Documento:</strong><br>
-                        <span class="badge bg-primary">{{this.detalles.tipoDocumento}}</span>
-                      </div>
-                      <div class="col-md-6">
-                        <strong>🏷️ Código de Barras:</strong><br>
-                        <code class="bg-light p-1 rounded">{{this.detalles.codigoBarras}}</code>
-                      </div>
-                    </div>
-                  </div>
-                  {{/if}}
-                  
-                  {{#if (eq this.tipo "eliminacion")}}
-                  <div class="alert alert-danger border-start border-danger border-4 mb-3">
-                    <div class="row">
-                      <div class="col-md-4">
-                        <strong>⚠️ Acción:</strong><br>
-                        <span class="badge bg-danger">{{this.detalles.accion}}</span>
-                      </div>
-                      <div class="col-md-4">
-                        <strong>✅ Resultado:</strong><br>
-                        <span class="badge bg-{{#if (eq this.detalles.resultado "exitoso")}}success{{else}}warning{{/if}}">
-                          {{this.detalles.resultado}}
-                        </span>
-                      </div>
-                      <div class="col-md-4">
-                        <strong>🌐 IP:</strong><br>
-                        <code>{{this.detalles.ip}}</code>
-                      </div>
-                    </div>
-                  </div>
-                  {{/if}}
-                  
-                  <!-- Footer con información del usuario y tiempo -->
-                  <div class="d-flex justify-content-between align-items-center pt-3 border-top">
-                    <div class="d-flex align-items-center text-muted">
-                      <div class="d-flex align-items-center me-4">
-                        <i class="fas fa-user-circle me-2"></i>
-                        <div>
-                          <small class="fw-bold d-block">{{this.usuario}}</small>
-                          <small class="text-muted">Usuario responsable</small>
+                <div class="timeline-content">
+                  <div class="card border-{{this.color}} shadow-sm">
+                    <div class="card-header bg-{{this.color}}-subtle border-{{this.color}}">
+                      <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 text-{{this.color}}-emphasis">
+                          <strong>{{this.titulo}}</strong>
+                        </h6>
+                        <div class="text-end">
+                          <div class="small text-muted">
+                            <i class="fas fa-calendar me-1"></i>{{formatDate this.fecha}}
+                          </div>
+                          <div class="small text-muted">
+                            <i class="fas fa-clock me-1"></i>{{formatTime this.fecha}}
+                          </div>
                         </div>
                       </div>
-                      <div class="d-flex align-items-center">
-                        <i class="fas fa-calendar-alt me-2"></i>
-                        <div>
-                          <small class="d-block">{{formatDateTime this.fecha}}</small>
-                          <small class="text-muted">Fecha y hora</small>
+                    </div>
+                    
+                    <div class="card-body py-3">
+                      {{#if (eq this.tipo "pago")}}
+                      <!-- Evento de Pago -->
+                      <div class="row">
+                        <div class="col-md-8">
+                          <div class="d-flex flex-wrap gap-3">
+                            <div>
+                              <small class="text-muted d-block">MONTO</small>
+                              <span class="badge bg-success fs-6">${{formatMoney this.detalles.valor}}</span>
+                            </div>
+                            <div>
+                              <small class="text-muted d-block">MÉTODO</small>
+                              <span class="badge bg-info">{{this.detalles.metodoPago}}</span>
+                            </div>
+                            {{#if this.detalles.numeroFactura}}
+                            <div>
+                              <small class="text-muted d-block">FACTURA</small>
+                              <span class="badge bg-secondary">{{this.detalles.numeroFactura}}</span>
+                            </div>
+                            {{/if}}
+                          </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                          <small class="text-muted d-block">REGISTRADO POR</small>
+                          <span class="badge bg-primary">{{this.usuario}}</span>
                         </div>
                       </div>
+                      
+                      {{else if (eq this.tipo "entrega")}}
+                      <!-- Evento de Entrega -->
+                      <div class="row">
+                        <div class="col-md-8">
+                          <div class="d-flex flex-wrap gap-3">
+                            <div>
+                              <small class="text-muted d-block">RECEPTOR</small>
+                              <span class="badge bg-info">{{#if this.detalles.receptor}}{{this.detalles.receptor}}{{else}}{{documento.nombreReceptor}}{{/if}}</span>
+                            </div>
+                            {{#if (or this.detalles.identificacionReceptor documento.identificacionReceptor)}}
+                            <div>
+                              <small class="text-muted d-block">IDENTIFICACIÓN</small>
+                              <span class="badge bg-secondary">{{#if this.detalles.identificacionReceptor}}{{this.detalles.identificacionReceptor}}{{else}}{{documento.identificacionReceptor}}{{/if}}</span>
+                            </div>
+                            {{/if}}
+                            <div>
+                              <small class="text-muted d-block">RELACIÓN</small>
+                              <span class="badge bg-secondary">{{#if this.detalles.relacion}}{{this.detalles.relacion}}{{else if documento.relacionReceptor}}{{documento.relacionReceptor}}{{else}}titular{{/if}}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                          <small class="text-muted d-block">ENTREGADO POR</small>
+                          <span class="badge bg-primary">{{this.usuario}}</span>
+                        </div>
+                      </div>
+                      
+                      {{else}}
+                      <!-- Otros Eventos -->
+                      <div class="row">
+                        <div class="col-md-8">
+                          <div class="text-dark">{{this.descripcion}}</div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                          <small class="text-muted d-block">POR</small>
+                          <span class="badge bg-primary">{{this.usuario}}</span>
+                        </div>
+                      </div>
+                      {{/if}}
                     </div>
                   </div>
                 </div>
               </div>
               {{/each}}
-            </div>
-            
-            <!-- Panel de estadísticas del historial -->
-            <div class="row mt-4">
-              <div class="col-12">
-                <div class="card bg-light">
-                  <div class="card-body">
-                    <h6 class="card-title mb-3">
-                      <i class="fas fa-chart-bar me-2"></i>Resumen de Eventos
-                    </h6>
-                    <div class="row text-center">
-                      <div class="col-md-2">
-                        <div class="d-flex flex-column align-items-center">
-                          <i class="fas fa-file-plus text-primary fa-2x mb-2"></i>
-                          <span class="badge bg-primary px-3 py-2">
-                            {{contarEventosPorTipo eventos "creacion"}} Creación
-                          </span>
-                        </div>
-                      </div>
-                      <div class="col-md-2">
-                        <div class="d-flex flex-column align-items-center">
-                          <i class="fas fa-money-bill-wave text-success fa-2x mb-2"></i>
-                          <span class="badge bg-success px-3 py-2">
-                            {{contarEventosPorTipo eventos "pago"}} Pagos
-                          </span>
-                        </div>
-                      </div>
-                      <div class="col-md-2">
-                        <div class="d-flex flex-column align-items-center">
-                          <i class="fas fa-exchange-alt text-info fa-2x mb-2"></i>
-                          <span class="badge bg-info px-3 py-2">
-                            {{contarEventosPorCategoria eventos "estado"}} Estados
-                          </span>
-                        </div>
-                      </div>
-                      <div class="col-md-2">
-                        <div class="d-flex flex-column align-items-center">
-                          <i class="fas fa-hand-holding text-warning fa-2x mb-2"></i>
-                          <span class="badge bg-warning text-dark px-3 py-2">
-                            {{contarEventosPorCategoria eventos "entrega"}} Entregas
-                          </span>
-                        </div>
-                      </div>
-                      <div class="col-md-2">
-                        <div class="d-flex flex-column align-items-center">
-                          <i class="fas fa-user-tag text-secondary fa-2x mb-2"></i>
-                          <span class="badge bg-secondary px-3 py-2">
-                            {{contarEventosPorCategoria eventos "matrizador"}} Matrizador
-                          </span>
-                        </div>
-                      </div>
-                      <div class="col-md-2">
-                        <div class="d-flex flex-column align-items-center">
-                          <i class="fas fa-trash text-danger fa-2x mb-2"></i>
-                          <span class="badge bg-danger px-3 py-2">
-                            {{contarEventosPorCategoria eventos "eliminacion"}} Eliminaciones
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -592,10 +483,10 @@
               <i class="fas fa-history me-2"></i>Historial del Documento
             </h5>
           </div>
-          <div class="card-body text-center text-muted">
-            <i class="fas fa-clock fa-4x mb-3"></i>
+          <div class="card-body text-center text-muted py-5">
+            <i class="fas fa-clock fa-4x mb-3 text-muted"></i>
             <h5>Sin eventos registrados</h5>
-            <p>Este documento no tiene eventos en el historial.</p>
+            <p class="mb-0">No hay pagos, entregas ni cambios de estado registrados para este documento.</p>
           </div>
         </div>
       </div>
@@ -618,7 +509,7 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <form id="marcarListoForm" action="/admin/documentos/marcar-listo" method="POST">
+        <form id="marcarListoForm" action="/admin/documentos/marcar-listo" method="POST" style="display: inline;">
           <input type="hidden" id="documentoId" name="documentoId" value="{{documento.id}}">
           <button type="submit" class="btn btn-success">Confirmar</button>
         </form>
@@ -627,250 +518,143 @@
   </div>
 </div>
 
+<style>
+  /* Estilos específicos para la vista limpia de admin */
+  .timeline-admin {
+    position: relative;
+    padding-left: 30px;
+  }
+  
+  .timeline-admin::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(to bottom, #007bff, #6c757d);
+  }
+  
+  .timeline-item {
+    position: relative;
+  }
+  
+  .timeline-marker {
+    position: absolute;
+    left: -22px;
+    top: 10px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 3px solid white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    z-index: 2;
+  }
+  
+  .timeline-content {
+    margin-left: 20px;
+  }
+  
+  /* Colores de fondo sutiles */
+  .bg-success-subtle {
+    background-color: rgba(25, 135, 84, 0.1) !important;
+  }
+  
+  .bg-info-subtle {
+    background-color: rgba(13, 202, 240, 0.1) !important;
+  }
+  
+  .bg-warning-subtle {
+    background-color: rgba(255, 193, 7, 0.1) !important;
+  }
+  
+  .bg-danger-subtle {
+    background-color: rgba(220, 53, 69, 0.1) !important;
+  }
+  
+  .bg-primary-subtle {
+    background-color: rgba(13, 110, 253, 0.1) !important;
+  }
+  
+  .bg-secondary-subtle {
+    background-color: rgba(108, 117, 125, 0.1) !important;
+  }
+  
+  /* Colores de texto enfatizados */
+  .text-success-emphasis {
+    color: #0a3622 !important;
+  }
+  
+  .text-info-emphasis {
+    color: #055160 !important;
+  }
+  
+  .text-warning-emphasis {
+    color: #664d03 !important;
+  }
+  
+  .text-danger-emphasis {
+    color: #58151c !important;
+  }
+  
+  .text-primary-emphasis {
+    color: #052c65 !important;
+  }
+  
+  .text-secondary-emphasis {
+    color: #2b2f32 !important;
+  }
+  
+  /* Efectos hover */
+  .timeline-content .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
+    transition: all 0.3s ease;
+  }
+  
+  .badge.fs-6 {
+    font-size: 0.9rem !important;
+    padding: 0.5rem 0.75rem;
+  }
+  
+  @media (max-width: 768px) {
+    .timeline-admin {
+      padding-left: 20px;
+    }
+    
+    .timeline-marker {
+      left: -15px;
+      width: 25px;
+      height: 25px;
+    }
+    
+    .timeline-content {
+      margin-left: 15px;
+    }
+    
+    .border-end {
+      border-right: none !important;
+      border-bottom: 1px solid #dee2e6 !important;
+      padding-bottom: 1rem;
+      margin-bottom: 1rem;
+    }
+  }
+</style>
+
 <script>
-  // Función para mostrar el modal de marcar como listo
   function marcarListo(id) {
     document.getElementById('documentoId').value = id;
     const modal = new bootstrap.Modal(document.getElementById('marcarListoModal'));
     modal.show();
   }
 
-  document.addEventListener('DOMContentLoaded', function() {
-    // Inicializar tooltips para información adicional
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.map(function (tooltipTriggerEl) {
-      return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-  });
+  console.log('📖 Vista admin limpia cargada para documento {{documento.codigoBarras}}');
 </script>
-
-<style>
-  /* === ESTILOS PARA TIMELINE ADMIN === */
-  .timeline-admin {
-    position: relative;
-    padding-left: 70px;
-    margin-top: 20px;
-  }
-  
-  .timeline-item-admin {
-    position: relative;
-    margin-bottom: 40px;
-    transition: all 0.3s ease;
-  }
-  
-  .timeline-item-admin:hover {
-    transform: translateY(-3px);
-  }
-  
-  .timeline-marker-admin {
-    position: absolute;
-    left: -70px;
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    border: 4px solid #fff;
-    z-index: 2;
-    transition: all 0.3s ease;
-  }
-  
-  .timeline-marker-admin:hover {
-    transform: scale(1.15);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.25);
-  }
-  
-  /* Línea conectora vertical */
-  .timeline-item-admin:before {
-    content: '';
-    position: absolute;
-    left: -48px;
-    top: 50px;
-    bottom: -20px;
-    width: 4px;
-    background: linear-gradient(to bottom, #dee2e6, #adb5bd);
-    border-radius: 2px;
-    z-index: 1;
-  }
-  
-  .timeline-item-admin:last-child:before {
-    display: none;
-  }
-  
-  .timeline-content-admin {
-    background: #ffffff;
-    padding: 25px;
-    border-radius: 15px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    border: 1px solid #e9ecef;
-    position: relative;
-    transition: all 0.3s ease;
-  }
-  
-  .timeline-content-admin:hover {
-    box-shadow: 0 8px 30px rgba(0,0,0,0.15);
-    border-color: #dee2e6;
-  }
-  
-  /* Flecha apuntando al marcador */
-  .timeline-content-admin:before {
-    content: '';
-    position: absolute;
-    left: -12px;
-    top: 25px;
-    width: 0;
-    height: 0;
-    border-top: 12px solid transparent;
-    border-bottom: 12px solid transparent;
-    border-right: 12px solid #fff;
-    filter: drop-shadow(-1px 0 1px rgba(0,0,0,0.1));
-  }
-  
-  /* Colores específicos para categorías en admin */
-  .timeline-item-admin[data-categoria="creacion"] .timeline-content-admin {
-    border-left: 5px solid #0d6efd;
-    background: linear-gradient(135deg, #f8f9ff 0%, #ffffff 100%);
-  }
-  
-  .timeline-item-admin[data-categoria="pago"] .timeline-content-admin {
-    border-left: 5px solid #198754;
-    background: linear-gradient(135deg, #f8fff9 0%, #ffffff 100%);
-  }
-  
-  .timeline-item-admin[data-categoria="estado"] .timeline-content-admin {
-    border-left: 5px solid #0dcaf0;
-    background: linear-gradient(135deg, #f8feff 0%, #ffffff 100%);
-  }
-  
-  .timeline-item-admin[data-categoria="entrega"] .timeline-content-admin {
-    border-left: 5px solid #fd7e14;
-    background: linear-gradient(135deg, #fffcf8 0%, #ffffff 100%);
-  }
-  
-  .timeline-item-admin[data-categoria="matrizador"] .timeline-content-admin {
-    border-left: 5px solid #6c757d;
-    background: linear-gradient(135deg, #fafafa 0%, #ffffff 100%);
-  }
-  
-  .timeline-item-admin[data-categoria="eliminacion"] .timeline-content-admin {
-    border-left: 5px solid #dc3545;
-    background: linear-gradient(135deg, #fff8f8 0%, #ffffff 100%);
-  }
-  
-  /* Animaciones de entrada escalonadas */
-  .timeline-item-admin {
-    opacity: 0;
-    animation: slideInRight 0.8s ease forwards;
-  }
-  
-  .timeline-item-admin:nth-child(1) { animation-delay: 0.1s; }
-  .timeline-item-admin:nth-child(2) { animation-delay: 0.2s; }
-  .timeline-item-admin:nth-child(3) { animation-delay: 0.3s; }
-  .timeline-item-admin:nth-child(4) { animation-delay: 0.4s; }
-  .timeline-item-admin:nth-child(5) { animation-delay: 0.5s; }
-  .timeline-item-admin:nth-child(n+6) { animation-delay: 0.6s; }
-  
-  @keyframes slideInRight {
-    from {
-      opacity: 0;
-      transform: translateX(50px);
-    }
-    to {
-      opacity: 1;
-      transform: translateX(0);
-    }
-  }
-  
-  /* Mejorar badges con opacidad */
-  .bg-opacity-20 {
-    --bs-bg-opacity: 0.2 !important;
-  }
-  
-  /* Estilos para las alertas de información específica */
-  .alert.border-start {
-    border-left-width: 4px !important;
-    background: rgba(var(--bs-success-rgb), 0.05);
-  }
-  
-  .alert-success.border-start {
-    background: rgba(var(--bs-success-rgb), 0.05);
-  }
-  
-  .alert-info.border-start {
-    background: rgba(var(--bs-info-rgb), 0.05);
-  }
-  
-  .alert-primary.border-start {
-    background: rgba(var(--bs-primary-rgb), 0.05);
-  }
-  
-  .alert-danger.border-start {
-    background: rgba(var(--bs-danger-rgb), 0.05);
-  }
-  
-  /* Responsive para admin */
-  @media (max-width: 768px) {
-    .timeline-admin {
-      padding-left: 50px;
-    }
-    
-    .timeline-marker-admin {
-      left: -50px;
-      width: 40px;
-      height: 40px;
-    }
-    
-    .timeline-item-admin:before {
-      left: -33px;
-    }
-    
-    .timeline-content-admin {
-      padding: 20px;
-    }
-    
-    .timeline-content-admin:before {
-      left: -8px;
-      border-right-width: 8px;
-      border-top-width: 8px;
-      border-bottom-width: 8px;
-    }
-    
-    /* Hacer las estadísticas más compactas en mobile */
-    .row.text-center .col-md-2 {
-      margin-bottom: 15px;
-    }
-    
-    .fa-2x {
-      font-size: 1.5em !important;
-    }
-  }
-  
-  /* Mejorar la presentación de códigos */
-  code {
-    background-color: #f8f9fa;
-    color: #d63384;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 0.9em;
-  }
-  
-  /* Hover effects para las estadísticas */
-  .card.bg-light .col-md-2:hover {
-    transform: translateY(-3px);
-    transition: transform 0.3s ease;
-  }
-  
-  .card.bg-light .col-md-2:hover .badge {
-    transform: scale(1.05);
-    transition: transform 0.3s ease;
-  }
-  
-  /* Personalización de badges de tiempo */
-  .badge.bg-light.text-dark.border {
-    background-color: #f8f9fa !important;
-    border-color: #dee2e6 !important;
-    font-weight: 500;
-  }
-</style> 
+{{else}}
+<div class="alert alert-warning">
+  <i class="fas fa-exclamation-triangle me-2"></i> El documento solicitado no existe o no tienes permisos para verlo.
+</div>
+{{/if}} 

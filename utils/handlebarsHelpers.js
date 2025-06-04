@@ -26,6 +26,14 @@ module.exports = {
   },
   
   /**
+   * Formatear solo hora
+   */
+  formatTime: (date) => {
+    if (!date) return 'No registrada';
+    return moment(date).format('HH:mm');
+  },
+  
+  /**
    * Calcular días transcurridos desde una fecha
    */
   daysAgo: (date) => {

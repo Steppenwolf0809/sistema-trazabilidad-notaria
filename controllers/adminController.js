@@ -177,8 +177,8 @@ exports.dashboard = async (req, res) => {
     const [ingresosPeriodoResult] = await sequelize.query(`
       SELECT COALESCE(SUM(valor_factura), 0) as total
       FROM documentos
-      WHERE fecha_pago BETWEEN :fechaInicio AND :fechaFin
-      AND estado_pago = 'pagado'
+      WHERE fecha_ultimo_pago BETWEEN :fechaInicio AND :fechaFin
+      AND estado_pago IN ('pagado_completo', 'pagado_con_retencion')
       AND estado NOT IN ('eliminado', 'nota_credito')
     `, {
       replacements: { fechaInicio: fechaInicioSQL, fechaFin: fechaFinSQL },
@@ -190,8 +190,8 @@ exports.dashboard = async (req, res) => {
     const [ingresosHoyResult] = await sequelize.query(`
       SELECT COALESCE(SUM(valor_factura), 0) as total
       FROM documentos
-      WHERE DATE(fecha_pago) = :hoy
-      AND estado_pago = 'pagado'
+      WHERE DATE(fecha_ultimo_pago) = :hoy
+      AND estado_pago IN ('pagado_completo', 'pagado_con_retencion')
       AND estado NOT IN ('eliminado', 'nota_credito')
     `, {
       replacements: { hoy: hoySQL },
@@ -202,8 +202,8 @@ exports.dashboard = async (req, res) => {
     // Documentos cobrados en el período
     const documentosCobradosPeriodo = await Documento.count({
       where: {
-        estado_pago: 'pagado',
-        fecha_pago: {
+        estado_pago: { [Op.in]: ['pagado_completo', 'pagado_con_retencion'] },
+        fecha_ultimo_pago: {
           [Op.between]: [fechaInicio.toDate(), fechaFin.toDate()]
         }
       }
@@ -212,8 +212,8 @@ exports.dashboard = async (req, res) => {
     // Documentos cobrados hoy
     const documentosCobradosHoy = await Documento.count({
       where: {
-        estado_pago: 'pagado',
-        fecha_pago: {
+        estado_pago: { [Op.in]: ['pagado_completo', 'pagado_con_retencion'] },
+        fecha_ultimo_pago: {
           [Op.gte]: hoy.toDate(),
           [Op.lt]: moment().endOf('day').toDate()
         }
@@ -250,7 +250,7 @@ exports.dashboard = async (req, res) => {
       SELECT 
         m.nombre,
         COUNT(d.id) as documentos_procesados,
-        SUM(CASE WHEN d.estado_pago = 'pagado' THEN d.valor_factura ELSE 0 END) as dinero_cobrado,
+        SUM(CASE WHEN d.estado_pago IN ('pagado_completo', 'pagado_con_retencion') THEN d.valor_factura ELSE 0 END) as dinero_cobrado,
         SUM(CASE WHEN d.estado = 'entregado' THEN 1 ELSE 0 END) as documentos_entregados
       FROM matrizadores m
       LEFT JOIN documentos d ON m.id = d.id_matrizador
@@ -273,20 +273,20 @@ exports.dashboard = async (req, res) => {
     // ============== ÚLTIMOS PAGOS REGISTRADOS ==============
     const ultimosPagos = await Documento.findAll({
       where: {
-        estadoPago: 'pagado', // CORREGIDO: usar camelCase
-        fechaPago: { [Op.not]: null },
-        valorFactura: { [Op.not]: null, [Op.gt]: 0 } // AÑADIDO: valor mayor a 0
+        estadoPago: { [Op.in]: ['pagado_completo', 'pagado_con_retencion'] },
+        fechaUltimoPago: { [Op.not]: null },
+        valorFactura: { [Op.not]: null, [Op.gt]: 0 }
       },
       attributes: [
         'id',
-        'codigoBarras', // CORREGIDO: usar camelCase
-        'nombreCliente', // CORREGIDO: usar camelCase
-        'valorFactura', // CORREGIDO: usar camelCase
-        'fechaPago', // CORREGIDO: usar camelCase
-        'metodoPago', // CORREGIDO: usar camelCase
-        'numeroFactura' // CORREGIDO: usar camelCase
+        'codigoBarras',
+        'nombreCliente',
+        'valorFactura',
+        'fechaUltimoPago',
+        'metodoPago',
+        'numeroFactura'
       ],
-      order: [['fechaPago', 'DESC']], // CORREGIDO: usar camelCase
+      order: [['fechaUltimoPago', 'DESC']],
       limit: 8
     });
     
@@ -298,7 +298,7 @@ exports.dashboard = async (req, res) => {
         codigoBarras: pagoData.codigoBarras || 'N/A',
         nombreCliente: pagoData.nombreCliente || 'Cliente no especificado',
         valorFactura: pagoData.valorFactura ? parseFloat(pagoData.valorFactura).toFixed(2) : '0.00',
-        fechaPago: pagoData.fechaPago,
+        fechaUltimoPago: pagoData.fechaUltimoPago,
         metodoPago: pagoData.metodoPago && pagoData.metodoPago !== 'pendiente' ? 
           pagoData.metodoPago.replace('_', ' ').toUpperCase() : 'EFECTIVO',
         numeroFactura: pagoData.numeroFactura || 'N/A'
@@ -1321,7 +1321,7 @@ exports.reporteDocumentos = async (req, res) => {
         COUNT(*) as total_documentos,
         COUNT(CASE WHEN numero_factura IS NOT NULL THEN 1 END) as con_factura,
         COUNT(CASE WHEN estado_pago = 'pendiente' THEN 1 END) as pendientes,
-        COUNT(CASE WHEN estado_pago = 'pagado' THEN 1 END) as pagados,
+        COUNT(CASE WHEN estado_pago IN ('pagado_completo', 'pagado_con_retencion') THEN 1 END) as pagados,
         COALESCE(SUM(valor_factura), 0) as total_facturado,
         CASE 
           WHEN COUNT(*) > 0 THEN COALESCE(AVG(valor_factura), 0)
@@ -1548,10 +1548,10 @@ exports.reporteMatrizadores = async (req, res) => {
         m.id,
         m.nombre,
         COUNT(d.id) as documentos_totales,
-        SUM(CASE WHEN d.estado_pago = 'pagado' THEN 1 ELSE 0 END) as documentos_pagados,
+        SUM(CASE WHEN d.estado_pago IN ('pagado_completo', 'pagado_con_retencion') THEN 1 ELSE 0 END) as documentos_pagados,
         SUM(CASE WHEN d.estado_pago = 'pendiente' THEN 1 ELSE 0 END) as documentos_pendientes,
         COALESCE(SUM(d.valor_factura), 0) as facturacion_total,
-        COALESCE(SUM(CASE WHEN d.estado_pago = 'pagado' THEN d.valor_factura ELSE 0 END), 0) as ingresos_cobrados
+        COALESCE(SUM(CASE WHEN d.estado_pago IN ('pagado_completo', 'pagado_con_retencion') THEN d.valor_factura ELSE 0 END), 0) as ingresos_cobrados
       FROM matrizadores m
       LEFT JOIN documentos d ON m.id = d.id_matrizador
         AND d.created_at BETWEEN :fechaInicio AND :fechaFin
@@ -1654,7 +1654,7 @@ exports.reporteFinanciero = async (req, res) => {
     
     // Obtener estadísticas financieras generales usando Sequelize ORM
     const whereClause = {
-      valorFactura: { [Op.not]: null }, // CORREGIDO: usar camelCase
+      valor_factura: { [Op.not]: null }, // CORREGIDO: usar snake_case como en DB
       estado: { [Op.ne]: 'cancelado' },
       created_at: {
         [Op.between]: [fechaInicioSQL, fechaFinSQL]
@@ -1663,17 +1663,17 @@ exports.reporteFinanciero = async (req, res) => {
     
     // Añadir filtro por matrizador si se seleccionó uno
     if (idMatrizador && idMatrizador !== 'todos' && idMatrizador !== '') {
-      whereClause.idMatrizador = parseInt(idMatrizador, 10); // CORREGIDO: usar camelCase
+      whereClause.id_matrizador = parseInt(idMatrizador, 10); // CORREGIDO: usar snake_case como en DB
     }
     
-    const totalFacturado = await Documento.sum('valorFactura', { // CORREGIDO: usar camelCase
+    const totalFacturado = await Documento.sum('valor_factura', { // CORREGIDO: usar snake_case como en DB
       where: whereClause
     }) || 0;
     
-    const totalCobrado = await Documento.sum('valorFactura', { // CORREGIDO: usar camelCase
+    const totalCobrado = await Documento.sum('valor_factura', { // CORREGIDO: usar snake_case como en DB
       where: {
         ...whereClause,
-        estadoPago: 'pagado' // CORREGIDO: usar camelCase
+        estado_pago: { [Op.in]: ['pagado_completo', 'pagado_con_retencion'] } // CORREGIDO: usar valores correctos del ENUM
       }
     }) || 0;
     
@@ -1688,9 +1688,9 @@ exports.reporteFinanciero = async (req, res) => {
       where: whereClause,
       attributes: [
         [sequelize.fn('DATE', sequelize.col('created_at')), 'fecha'],
-        [sequelize.fn('SUM', sequelize.col('valorFactura')), 'totalFacturado'], // CORREGIDO: usar camelCase
+        [sequelize.fn('SUM', sequelize.col('valor_factura')), 'totalFacturado'], // CORREGIDO: usar snake_case como en DB
         [sequelize.fn('SUM', 
-          sequelize.literal("CASE WHEN estado_pago = 'pagado' THEN valor_factura ELSE 0 END") // MANTENER: SQL literal usa snake_case
+          sequelize.literal("CASE WHEN estado_pago IN ('pagado_completo', 'pagado_con_retencion') THEN valor_factura ELSE 0 END") // CORREGIDO: usar valores correctos del ENUM
         ), 'totalCobrado']
       ],
       group: [sequelize.fn('DATE', sequelize.col('created_at'))],
@@ -1822,7 +1822,7 @@ exports.reporteRegistrosAuditoria = async (req, res) => {
           WHEN d.created_at = d.updated_at THEN 'CREACIÓN'
           WHEN d.estado = 'listo_para_entrega' THEN 'PROCESAMIENTO_COMPLETADO'
           WHEN d.estado = 'entregado' THEN 'ENTREGA'
-          WHEN d.estado_pago = 'pagado' THEN 'PAGO_REGISTRADO'
+          WHEN d.estado_pago IN ('pagado_completo', 'pagado_con_retencion') THEN 'PAGO_REGISTRADO'
           WHEN d.estado = 'cancelado' THEN 'CANCELACIÓN'
           ELSE 'MODIFICACIÓN'
         END as accion,
@@ -1907,7 +1907,7 @@ exports.reporteRegistrosAuditoria = async (req, res) => {
             WHEN d.created_at = d.updated_at THEN 'CREACIÓN'
             WHEN d.estado = 'listo_para_entrega' THEN 'PROCESAMIENTO_COMPLETADO'
             WHEN d.estado = 'entregado' THEN 'ENTREGA'
-            WHEN d.estado_pago = 'pagado' THEN 'PAGO_REGISTRADO'
+            WHEN d.estado_pago IN ('pagado_completo', 'pagado_con_retencion') THEN 'PAGO_REGISTRADO'
             WHEN d.estado = 'cancelado' THEN 'CANCELACIÓN'
             ELSE 'MODIFICACIÓN'
           END as accion
@@ -2196,12 +2196,12 @@ exports.reporteCobrosMatrizador = async (req, res) => {
         COUNT(d.id) as documentos_cobrados,
         COALESCE(SUM(d.valor_factura), 0) as total_cobrado,
         COALESCE(AVG(d.valor_factura), 0) as promedio_por_documento,
-        MIN(d.fecha_pago) as primer_cobro,
-        MAX(d.fecha_pago) as ultimo_cobro
+        MIN(d.fecha_ultimo_pago) as primer_cobro,
+        MAX(d.fecha_ultimo_pago) as ultimo_cobro
       FROM matrizadores m
       LEFT JOIN documentos d ON m.id = d.id_matrizador
-        AND d.estado_pago = 'pagado'
-        AND d.fecha_pago BETWEEN :fechaInicio AND :fechaFin
+        AND d.estado_pago IN ('pagado_completo', 'pagado_con_retencion')
+        AND d.fecha_ultimo_pago BETWEEN :fechaInicio AND :fechaFin
         AND d.estado NOT IN ('eliminado', 'nota_credito')
       WHERE m.rol IN ('matrizador', 'caja_archivo')
       AND m.activo = true
@@ -2222,8 +2222,8 @@ exports.reporteCobrosMatrizador = async (req, res) => {
     
     // Obtener detalles de cobros recientes (últimos 20)
     let whereDetalles = `
-      WHERE d.estado_pago = 'pagado'
-      AND d.fecha_pago BETWEEN :fechaInicio AND :fechaFin
+      WHERE d.estado_pago IN ('pagado_completo', 'pagado_con_retencion')
+      AND d.fecha_ultimo_pago BETWEEN :fechaInicio AND :fechaFin
       AND d.estado NOT IN ('eliminado', 'nota_credito')
     `;
     if (idMatrizador && idMatrizador !== 'todos' && idMatrizador !== '') {
@@ -2237,13 +2237,13 @@ exports.reporteCobrosMatrizador = async (req, res) => {
         d.tipo_documento,
         d.nombre_cliente,
         d.valor_factura,
-        d.fecha_pago,
+        d.fecha_ultimo_pago,
         d.metodo_pago,
         m.nombre as matrizador_nombre
       FROM documentos d
       JOIN matrizadores m ON d.id_matrizador = m.id
       ${whereDetalles}
-      ORDER BY d.fecha_pago DESC
+      ORDER BY d.fecha_ultimo_pago DESC
       LIMIT 20
     `;
     
@@ -2411,11 +2411,11 @@ exports.reporteProductividadMatrizadores = async (req, res) => {
         -- Documentos entregados
         COUNT(CASE WHEN d.estado = 'entregado' AND d.fecha_entrega BETWEEN :fechaInicio AND :fechaFin THEN d.id END) as documentos_entregados,
         -- Documentos cobrados
-        COUNT(CASE WHEN d.estado_pago = 'pagado' AND d.fecha_pago BETWEEN :fechaInicio AND :fechaFin THEN d.id END) as documentos_cobrados,
+        COUNT(CASE WHEN d.estado_pago IN ('pagado_completo', 'pagado_con_retencion') AND d.fecha_ultimo_pago BETWEEN :fechaInicio AND :fechaFin THEN d.id END) as documentos_cobrados,
         -- Facturación total
         COALESCE(SUM(CASE WHEN d.created_at BETWEEN :fechaInicio AND :fechaFin THEN d.valor_factura END), 0) as facturacion_total,
         -- Ingresos cobrados
-        COALESCE(SUM(CASE WHEN d.estado_pago = 'pagado' AND d.fecha_pago BETWEEN :fechaInicio AND :fechaFin THEN d.valor_factura END), 0) as ingresos_cobrados,
+        COALESCE(SUM(CASE WHEN d.estado_pago IN ('pagado_completo', 'pagado_con_retencion') AND d.fecha_ultimo_pago BETWEEN :fechaInicio AND :fechaFin THEN d.valor_factura END), 0) as ingresos_cobrados,
         -- Documentos pendientes actuales
         COUNT(CASE WHEN d.estado IN ('en_proceso') THEN d.id END) as documentos_pendientes
       FROM matrizadores m
@@ -2525,6 +2525,161 @@ exports.reporteProductividadMatrizadores = async (req, res) => {
       layout: 'admin',
       title: 'Error',
       message: 'Error al generar el reporte de productividad de matrizadores',
+      error
+    });
+  }
+};
+
+// ============== FUNCIONES AUXILIARES ==============
+
+/**
+ * TRANSFERIDO DESDE CAJA: Reporte de documentos sin pago
+ * Solo para administradores - información sensible sobre cobranza
+ */
+exports.reporteDocumentosSinPago = async (req, res) => {
+  try {
+    // Obtener parámetros de filtrado
+    const { antiguedad, matrizador, ordenar, page = 1 } = req.query;
+    const limit = 50;
+    const offset = (page - 1) * limit;
+    
+    // CORREGIDO: Usar valores correctos del ENUM para estado_pago
+    const whereConditions = {
+      [Op.or]: [
+        { estado_pago: 'pendiente' },
+        { estado_pago: 'pago_parcial' } // NUEVO: Incluir pagos parciales
+      ],
+      numero_factura: { [Op.not]: null },
+      estado: { [Op.notIn]: ['eliminado', 'nota_credito', 'cancelado'] }
+    };
+    
+    if (matrizador && matrizador !== 'todos') {
+      whereConditions.id_matrizador = parseInt(matrizador);
+    }
+    
+    // Filtro por antigüedad
+    if (antiguedad) {
+      const diasAtras = parseInt(antiguedad);
+      const fechaLimite = moment().subtract(diasAtras, 'days').format('YYYY-MM-DD');
+      whereConditions.created_at = { [Op.lte]: fechaLimite };
+    }
+    
+    // Construir ORDER BY según el filtro
+    let order = [['created_at', 'ASC']]; // Por defecto más antiguos
+    if (ordenar === 'monto') {
+      order = [['valor_pendiente', 'DESC']]; // CORREGIDO: Ordenar por valor pendiente
+    } else if (ordenar === 'fecha') {
+      order = [['created_at', 'DESC']];
+    }
+    
+    // Obtener documentos sin pago completo
+    const { count, rows: documentosSinPago } = await Documento.findAndCountAll({
+      where: whereConditions,
+      include: [{
+        model: Matrizador,
+        as: 'matrizador',
+        attributes: ['id', 'nombre']
+      }],
+      order,
+      limit,
+      offset
+    });
+    
+    // CORREGIDO: Calcular estadísticas usando valores correctos del ENUM
+    const statsQuery = `
+      SELECT 
+        COUNT(CASE WHEN EXTRACT(DAY FROM NOW() - created_at) BETWEEN 1 AND 7 THEN 1 END) as rango1_7,
+        COUNT(CASE WHEN EXTRACT(DAY FROM NOW() - created_at) BETWEEN 8 AND 15 THEN 1 END) as rango8_15,
+        COUNT(CASE WHEN EXTRACT(DAY FROM NOW() - created_at) BETWEEN 16 AND 60 THEN 1 END) as rango16_60,
+        COUNT(CASE WHEN EXTRACT(DAY FROM NOW() - created_at) > 60 THEN 1 END) as rango60,
+        SUM(CASE WHEN EXTRACT(DAY FROM NOW() - created_at) BETWEEN 1 AND 7 THEN valor_pendiente ELSE 0 END) as monto1_7,
+        SUM(CASE WHEN EXTRACT(DAY FROM NOW() - created_at) BETWEEN 8 AND 15 THEN valor_pendiente ELSE 0 END) as monto8_15,
+        SUM(CASE WHEN EXTRACT(DAY FROM NOW() - created_at) BETWEEN 16 AND 60 THEN valor_pendiente ELSE 0 END) as monto16_60,
+        SUM(CASE WHEN EXTRACT(DAY FROM NOW() - created_at) > 60 THEN valor_pendiente ELSE 0 END) as monto60,
+        COUNT(*) as totalSinPago,
+        SUM(valor_pendiente) as montoTotalPendiente
+      FROM documentos
+      WHERE (estado_pago = 'pendiente' OR estado_pago = 'pago_parcial')
+      AND numero_factura IS NOT NULL
+      AND estado NOT IN ('eliminado', 'nota_credito', 'cancelado')
+      ${matrizador && matrizador !== 'todos' ? `AND id_matrizador = ${parseInt(matrizador)}` : ''}
+    `;
+    
+    const stats = await sequelize.query(statsQuery, {
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    const statsResult = stats[0];
+    
+    // Obtener lista de matrizadores para filtros
+    const matrizadores = await Matrizador.findAll({
+      where: {
+        rol: { [Op.in]: ['matrizador', 'caja_archivo'] },
+        activo: true
+      },
+      attributes: ['id', 'nombre'],
+      order: [['nombre', 'ASC']]
+    });
+    
+    // Agregar días de antigüedad y datos calculados a cada documento
+    const documentosConDatos = documentosSinPago.map(doc => {
+      const diasAntiguedad = moment().diff(moment(doc.created_at), 'days');
+      return {
+        ...doc.toJSON(),
+        diasAntiguedad,
+        matrizador: doc.matrizador?.nombre || 'Sin asignar',
+        // NUEVO: Mostrar información de pago parcial
+        esPagoParcial: doc.estadoPago === 'pago_parcial',
+        valorPagadoFormato: formatearValorMonetario(doc.valorPagado || 0),
+        valorPendienteFormato: formatearValorMonetario(doc.valorPendiente || doc.valorFactura),
+        valorFacturaFormato: formatearValorMonetario(doc.valorFactura || 0)
+      };
+    });
+    
+    // Calcular paginación
+    const totalPages = Math.ceil(count / limit);
+    
+    // Renderizar la vista con los datos
+    res.render('admin/reportes/documentos-sin-pago', {
+      layout: 'admin',
+      title: 'Documentos Sin Pago Completo',
+      activeReportes: true,
+      userRole: req.matrizador?.rol,
+      userName: req.matrizador?.nombre,
+      documentosSinPago: documentosConDatos,
+      stats: {
+        rango1_7: parseInt(statsResult.rango1_7) || 0,
+        rango8_15: parseInt(statsResult.rango8_15) || 0,
+        rango16_60: parseInt(statsResult.rango16_60) || 0,
+        rango60: parseInt(statsResult.rango60) || 0,
+        monto1_7: parseFloat(statsResult.monto1_7) || 0,
+        monto8_15: parseFloat(statsResult.monto8_15) || 0,
+        monto16_60: parseFloat(statsResult.monto16_60) || 0,
+        monto60: parseFloat(statsResult.monto60) || 0,
+        totalSinPago: parseInt(statsResult.totalsinpago) || 0,
+        montoTotalPendiente: parseFloat(statsResult.montototalpendiente) || 0
+      },
+      matrizadores,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+        nextPage: parseInt(page) + 1,
+        prevPage: parseInt(page) - 1
+      },
+      filtros: {
+        antiguedad,
+        matrizador,
+        ordenar
+      }
+    });
+  } catch (error) {
+    console.error('Error al generar reporte de documentos sin pago:', error);
+    return res.status(500).render('error', {
+      layout: 'admin',
+      title: 'Error',
+      message: 'Error al generar el reporte de documentos sin pago',
       error
     });
   }

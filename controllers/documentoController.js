@@ -725,7 +725,7 @@ exports.mostrarDetalle = async (req, res) => {
     
     // Buscar eventos del documento con ordenamiento cronológico (más reciente primero)
     const eventos = await EventoDocumento.findAll({
-      where: { idDocumento: id },
+      where: { documentoId: id }, // CORREGIDO: usar documentoId en lugar de idDocumento
       order: [['created_at', 'DESC']]
     });
 
