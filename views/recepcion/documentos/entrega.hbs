@@ -59,16 +59,10 @@
                 <small>Proceder con entrega normal</small>
               </div>
               {{else if (eq documento.estadoPago "pagado_con_retencion")}}
-              <div class="alert alert-info">
-                <i class="fas fa-info-circle me-2"></i>
-                <strong>Pagado con Retención</strong><br>
-                <small>
-                  {{#if documento.matrizador}}
-                  Consultar con matrizador <strong>{{documento.matrizador.nombre}}</strong>
-                  {{else}}
-                  Consultar con el matrizador asignado
-                  {{/if}}
-                </small>
+              <div class="alert alert-success">
+                <i class="fas fa-check-circle me-2"></i>
+                <strong>✅ Pagado con Retención</strong><br>
+                <small>Documento completamente pagado. Proceder con entrega normal.</small>
               </div>
               {{else if (eq documento.estadoPago "pago_parcial")}}
               <div class="alert alert-warning text-dark">
