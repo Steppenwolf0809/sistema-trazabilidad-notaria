@@ -139,21 +139,16 @@ const cajaController = {
         }),
         
         // Total cobrado
-        Documento.sum('valor_factura', {
+        Documento.sum('valor_pagado', {
           where: {
             ...whereClause,
-            estado_pago: 'pagado',
-            estado: { [Op.notIn]: ['eliminado', 'nota_credito', 'cancelado'] }
+            estado_pago: { [Op.in]: ['pagado_completo', 'pagado_con_retencion', 'pago_parcial'] }
           }
         }),
         
         // Total pendiente
-        Documento.sum('valor_factura', {
-          where: {
-            ...whereClause,
-            estado_pago: 'pendiente',
-            estado: { [Op.notIn]: ['eliminado', 'nota_credito', 'cancelado'] }
-          }
+        Documento.sum('valor_pendiente', {
+          where: whereClause
         }),
         
         // Cantidad documentos facturados
@@ -200,15 +195,15 @@ const cajaController = {
       // Obtener pagos recientes
       const documentosPagadosRecientes = await Documento.findAll({
         where: {
-          estado_pago: 'pagado',
+          estado_pago: { [Op.in]: ['pagado_completo', 'pagado_con_retencion'] },
           estado: { [Op.notIn]: ['eliminado', 'nota_credito', 'cancelado'] },
-          fecha_pago: {
+          fecha_ultimo_pago: {
             [Op.between]: [fechaDesdeObj, fechaHastaObj]
           }
         },
-        attributes: ['id', 'codigoBarras', 'nombreCliente', 'valor_factura', 'metodo_pago', 'fecha_pago'],
+        attributes: ['id', 'codigoBarras', 'nombreCliente', 'valor_factura', 'metodo_pago', 'fecha_ultimo_pago'],
         limit: 10,
-        order: [['fecha_pago', 'DESC']]
+        order: [['fecha_ultimo_pago', 'DESC']]
       });
       
       // Función auxiliar simple para formatear dinero
@@ -243,7 +238,7 @@ const cajaController = {
             nombreCliente: doc.nombreCliente,
             valor_factura: doc.valor_factura ? parseFloat(doc.valor_factura).toFixed(2) : '0.00',
             metodo_pago: doc.metodo_pago || 'N/A',
-            fecha_pago: doc.fecha_pago
+            fecha_ultimo_pago: doc.fecha_ultimo_pago
           }))
         }
       });
@@ -442,12 +437,13 @@ const cajaController = {
   },
 
   /**
-   * RESTAURADO: Ver detalle de documento
+   * MEJORADO: Ver detalle de documento con historial completo
    */
   verDocumento: async (req, res) => {
     try {
       const documentoId = req.params.id;
       
+      // Obtener documento con relaciones
       const documento = await Documento.findByPk(documentoId, {
         include: [
           {
@@ -465,11 +461,125 @@ const cajaController = {
           message: 'El documento solicitado no existe'
         });
       }
+
+      // Obtener información del usuario que registró el pago
+      let usuarioPago = null;
+      if (documento.registradoPor) {
+        usuarioPago = await Matrizador.findByPk(documento.registradoPor, {
+          attributes: ['id', 'nombre', 'rol']
+        });
+      }
+
+      // Obtener eventos del historial
+      const EventoDocumento = require('../models/EventoDocumento');
+      const eventos = await EventoDocumento.findAll({
+        where: { documentoId: documentoId }, // CORREGIDO: usar documentoId en lugar de documento_id
+        include: [
+          {
+            model: Matrizador,
+            as: 'matrizador', // CORREGIDO: usar 'matrizador' en lugar de 'usuario'
+            attributes: ['nombre', 'rol'],
+            required: false
+          }
+        ],
+        order: [['created_at', 'DESC']]
+      });
+
+      // Procesar eventos para mostrar en el historial
+      const eventosFormateados = eventos.map(evento => {
+        // Procesar detalles específicos por tipo de evento
+        let detallesProcessed = {};
+        try {
+          // Si detalles es string JSON, parsearlo
+          if (typeof evento.detalles === 'string') {
+            detallesProcessed = JSON.parse(evento.detalles);
+          } else if (evento.detalles && typeof evento.detalles === 'object') {
+            detallesProcessed = evento.detalles;
+          }
+        } catch (e) {
+          console.log('Error parsing detalles:', e);
+          detallesProcessed = {};
+        }
+        
+        // Construir información específica para eventos de entrega
+        if (evento.tipo === 'entrega' && documento.nombreReceptor) {
+          detallesProcessed = {
+            ...detallesProcessed,
+            receptor: documento.nombreReceptor,
+            identificacionReceptor: documento.identificacionReceptor,
+            relacion: documento.relacionReceptor || 'titular'
+          };
+        }
+        
+        // Construir información específica para eventos de pago
+        if (evento.tipo === 'pago') {
+          if (!detallesProcessed.valor && documento.valorPagado) {
+            detallesProcessed.valor = documento.valorPagado;
+          }
+          if (!detallesProcessed.metodoPago && documento.metodoPago) {
+            detallesProcessed.metodoPago = documento.metodoPago;
+          }
+          if (!detallesProcessed.numeroFactura && documento.numeroFactura) {
+            detallesProcessed.numeroFactura = documento.numeroFactura;
+          }
+          if (!detallesProcessed.usuarioCaja) {
+            detallesProcessed.usuarioCaja = evento.matrizador ? evento.matrizador.nombre : 'Sistema';
+          }
+        }
+        
+        const eventoData = {
+          id: evento.id,
+          tipo: evento.tipo,
+          categoria: evento.categoria || 'general',
+          titulo: evento.titulo || 'Evento del Sistema',
+          descripcion: evento.descripcion || 'Sin descripción disponible',
+          fecha: evento.created_at,
+          usuario: evento.matrizador ? evento.matrizador.nombre : 'Sistema',
+          detalles: detallesProcessed,
+          color: 'secondary'
+        };
+
+        // Asignar icono y color según el tipo de evento
+        switch (evento.tipo) {
+          case 'creacion':
+            eventoData.color = 'primary';
+            break;
+          case 'pago':
+            eventoData.color = 'success';
+            break;
+          case 'entrega':
+            eventoData.color = 'info';
+            break;
+          case 'estado':
+            eventoData.color = 'warning';
+            break;
+          case 'asignacion':
+            eventoData.color = 'primary';
+            break;
+          default:
+            eventoData.color = 'secondary';
+        }
+
+        return eventoData;
+      });
+
+      // Obtener lista de matrizadores para el modal de cambio
+      const matrizadores = await Matrizador.findAll({
+        where: {
+          rol: { [Op.in]: ['matrizador', 'caja_archivo'] },
+          activo: true
+        },
+        attributes: ['id', 'nombre'],
+        order: [['nombre', 'ASC']]
+      });
       
       res.render('caja/documentos/detalle', {
         layout: 'caja',
         title: 'Detalle del Documento',
         documento,
+        eventos: eventosFormateados,
+        usuarioPago,
+        matrizadores,
         userRole: req.matrizador?.rol,
         userName: req.matrizador?.nombre
       });
@@ -761,6 +871,73 @@ const cajaController = {
           fechaPago: documento.fechaPago
         });
 
+        // NUEVO: Crear evento mejorado del pago
+        const EventoDocumento = require('../models/EventoDocumento');
+        
+        // Preparar información detallada del evento
+        let tituloEvento = '💰 Pago Registrado';
+        let descripcionEvento = '';
+        let detallesEvento = {
+          monto: montoPago,
+          metodoPago: formaPago,
+          numeroFactura: documento.numeroFactura,
+          estadoPagoAnterior: documento.estadoPago === nuevoEstadoPago ? 'pendiente' : documento.estadoPago,
+          estadoPagoNuevo: nuevoEstadoPago,
+          usuarioCaja: req.user?.nombre || req.matrizador?.nombre || 'Sistema',
+          rolUsuario: req.user?.rol || req.matrizador?.rol || 'sistema',
+          numeroComprobante: numeroComprobante,
+          observaciones: observaciones
+        };
+        
+        // Construir descripción según el tipo de pago
+        if (montoPago > 0 && montoRetencion > 0) {
+          descripcionEvento = `Pago de $${montoPago.toFixed(2)} más retención de $${montoRetencion.toFixed(2)} (Total: $${totalMovimiento.toFixed(2)}) registrado por ${detallesEvento.usuarioCaja}`;
+          tituloEvento = '💰 Pago con Retención';
+          detallesEvento.tipoOperacion = 'pago_con_retencion';
+          detallesEvento.retencion = datosRetencion;
+        } else if (montoPago > 0) {
+          descripcionEvento = `Pago de $${montoPago.toFixed(2)} registrado por ${detallesEvento.usuarioCaja} mediante ${formaPago}`;
+          detallesEvento.tipoOperacion = 'pago_simple';
+        } else if (montoRetencion > 0) {
+          descripcionEvento = `Retención de $${montoRetencion.toFixed(2)} procesada por ${detallesEvento.usuarioCaja}`;
+          tituloEvento = '🧾 Retención Procesada';
+          detallesEvento.tipoOperacion = 'solo_retencion';
+          detallesEvento.retencion = datosRetencion;
+        }
+        
+        // Agregar información de estado
+        if (nuevoEstadoPago === 'pagado_completo') {
+          descripcionEvento += ' - ✅ DOCUMENTO PAGADO COMPLETAMENTE';
+        } else if (nuevoEstadoPago === 'pagado_con_retencion') {
+          descripcionEvento += ' - ✅ DOCUMENTO PAGADO CON RETENCIÓN';
+        } else if (nuevoEstadoPago === 'pago_parcial') {
+          descripcionEvento += ` - ⚠️ Pago parcial (Pendiente: $${nuevoValorPendiente.toFixed(2)})`;
+        }
+        
+        // Crear el evento con información detallada
+        await EventoDocumento.create({
+          documentoId: documento.id,
+          usuarioId: req.user?.id || req.matrizador?.id || null,
+          tipo: 'pago',
+          categoria: 'financiero',
+          titulo: tituloEvento,
+          descripcion: descripcionEvento,
+          detalles: JSON.stringify(detallesEvento),
+          usuario: detallesEvento.usuarioCaja,
+          metadatos: {
+            montoPago,
+            montoRetencion,
+            totalMovimiento,
+            metodoPago: formaPago,
+            estadoPagoAnterior: detallesEvento.estadoPagoAnterior,
+            estadoPagoNuevo: nuevoEstadoPago,
+            procesadoPor: detallesEvento.usuarioCaja,
+            fechaProcesamiento: new Date().toISOString()
+          }
+        });
+        
+        console.log('✅ Evento de pago creado con información detallada');
+
         // Preparar respuesta con datos completos
         const tipoOperacion = montoPago > 0 && montoRetencion > 0 ? 'pago_con_retencion' :
                              montoPago > 0 ? 'pago_simple' : 'solo_retencion';
@@ -972,14 +1149,16 @@ const cajaController = {
         where: whereClause
       }) || 0;
       
-      const totalCobrado = await Documento.sum('valor_factura', {
+      const totalCobrado = await Documento.sum('valor_pagado', {
         where: {
           ...whereClause,
-          estado_pago: 'pagado'
+          estado_pago: { [Op.in]: ['pagado_completo', 'pagado_con_retencion', 'pago_parcial'] }
         }
       }) || 0;
       
-      const totalPendiente = totalFacturado - totalCobrado;
+      const totalPendiente = await Documento.sum('valor_pendiente', {
+        where: whereClause
+      }) || 0;
       
       // Calcular porcentaje de recuperación
       const porcentajeRecuperacion = totalFacturado > 0 ? 
@@ -991,9 +1170,7 @@ const cajaController = {
         attributes: [
           [sequelize.fn('DATE', sequelize.col('created_at')), 'fecha'],
           [sequelize.fn('SUM', sequelize.col('valor_factura')), 'totalFacturado'],
-          [sequelize.fn('SUM', 
-            sequelize.literal("CASE WHEN estado_pago = 'pagado' THEN valor_factura ELSE 0 END")
-          ), 'totalCobrado']
+          [sequelize.fn('SUM', sequelize.col('valor_pagado')), 'totalCobrado']
         ],
         group: [sequelize.fn('DATE', sequelize.col('created_at'))],
         order: [[sequelize.fn('DATE', sequelize.col('created_at')), 'ASC']],
@@ -1270,12 +1447,12 @@ const cajaController = {
           COUNT(d.id) as documentos_cobrados,
           COALESCE(SUM(d.valor_factura), 0) as total_cobrado,
           COALESCE(AVG(d.valor_factura), 0) as promedio_por_documento,
-          MIN(d.fecha_pago) as primer_cobro,
-          MAX(d.fecha_pago) as ultimo_cobro
+          MIN(d.fecha_ultimo_pago) as primer_cobro,
+          MAX(d.fecha_ultimo_pago) as ultimo_cobro
         FROM matrizadores m
         LEFT JOIN documentos d ON m.id = d.id_matrizador
-          AND d.estado_pago = 'pagado'
-          AND d.fecha_pago BETWEEN :fechaInicio AND :fechaFin
+          AND d.estado_pago IN ('pagado_completo', 'pagado_con_retencion')
+          AND d.fecha_ultimo_pago BETWEEN :fechaInicio AND :fechaFin
           AND d.estado NOT IN ('eliminado', 'nota_credito')
         WHERE m.rol IN ('matrizador', 'caja_archivo')
         AND m.activo = true
@@ -1296,8 +1473,8 @@ const cajaController = {
       
       // Obtener detalles de cobros recientes (últimos 20)
       let whereDetalles = `
-        WHERE d.estado_pago = 'pagado'
-        AND d.fecha_pago BETWEEN :fechaInicio AND :fechaFin
+        WHERE d.estado_pago IN ('pagado_completo', 'pagado_con_retencion')
+        AND d.fecha_ultimo_pago BETWEEN :fechaInicio AND :fechaFin
         AND d.estado NOT IN ('eliminado', 'nota_credito')
       `;
       if (idMatrizador && idMatrizador !== 'todos' && idMatrizador !== '') {
@@ -1311,13 +1488,13 @@ const cajaController = {
           d.tipo_documento,
           d.nombre_cliente,
           d.valor_factura,
-          d.fecha_pago,
+          d.fecha_ultimo_pago,
           d.metodo_pago,
           m.nombre as matrizador_nombre
         FROM documentos d
         JOIN matrizadores m ON d.id_matrizador = m.id
         ${whereDetalles}
-        ORDER BY d.fecha_pago DESC
+        ORDER BY d.fecha_ultimo_pago DESC
         LIMIT 20
       `;
       
