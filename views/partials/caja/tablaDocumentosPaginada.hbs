@@ -37,8 +37,12 @@
           <span class="badge bg-secondary">{{translateEstado this.estado}}</span>
           {{/if}}
           
-          {{#if (eq this.estadoPago "pagado")}}
-          <span class="badge bg-success ms-1">Pagado</span>
+          {{#if (eq this.estadoPago "pagado_completo")}}
+          <span class="badge bg-success ms-1">Pagado Completo</span>
+          {{else if (eq this.estadoPago "pagado_con_retencion")}}
+          <span class="badge bg-info ms-1">Pagado con Retención</span>
+          {{else if (eq this.estadoPago "pago_parcial")}}
+          <span class="badge bg-warning text-dark ms-1">Pago Parcial</span>
           {{else}}
           <span class="badge bg-danger ms-1">Pendiente</span>
           {{/if}}

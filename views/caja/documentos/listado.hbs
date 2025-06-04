@@ -32,7 +32,9 @@
           <select class="form-select" id="estadoPago" name="estadoPago">
             <option value="">Todos</option>
             <option value="pendiente" {{#if (eq filtros.estadoPago "pendiente")}}selected{{/if}}>Pendiente</option>
-            <option value="pagado" {{#if (eq filtros.estadoPago "pagado")}}selected{{/if}}>Pagado</option>
+            <option value="pago_parcial" {{#if (eq filtros.estadoPago "pago_parcial")}}selected{{/if}}>Pago Parcial</option>
+            <option value="pagado_completo" {{#if (eq filtros.estadoPago "pagado_completo")}}selected{{/if}}>Pagado Completo</option>
+            <option value="pagado_con_retencion" {{#if (eq filtros.estadoPago "pagado_con_retencion")}}selected{{/if}}>Pagado con Retención</option>
           </select>
         </div>
         <div class="col-md-2">

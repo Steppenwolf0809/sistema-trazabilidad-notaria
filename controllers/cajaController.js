@@ -1,453 +1,264 @@
 /**
  * Controlador para gestionar operaciones de caja
- * SIMPLIFICADO - Solo funciones esenciales con fechas correctas
+ * SIMPLIFICADO - Solo funciones esenciales
  */
 
 const { sequelize } = require('../config/database');
 const Documento = require('../models/Documento');
 const Matrizador = require('../models/Matrizador');
-const EventoDocumento = require('../models/EventoDocumento');
 const { Op } = require('sequelize');
-const fs = require('fs');
-const path = require('path');
-const util = require('util');
-const xml2js = require('xml2js');
 const moment = require('moment');
 const { 
-  inferirTipoDocumentoPorCodigo, 
-  detectarTipoDocumento,
-  procesarFechaDocumento,
   formatearValorMonetario,
-  mapearMetodoPago,
-  mapearMetodoPagoInverso,
-  obtenerTimestampEcuador,
-  convertirRangoParaSQL,
-  formatearFechaSinHora,
-  formatearTimestamp
+  mapearMetodoPagoInverso
 } = require('../utils/documentoUtils');
-
-// NUEVO: Importar sistema de logging
-const { logger, logPayment, logTimestamp } = require('../utils/logger');
 
 // Objeto que contendrá todas las funciones del controlador
 const cajaController = {
   
   /**
-   * Dashboard principal para rol de caja
+   * Dashboard principal para rol de caja - VERSIÓN ULTRA SIMPLIFICADA PARA DEBUG
    */
   dashboard: async (req, res) => {
     try {
-      console.log('Accediendo al dashboard de caja');
+      console.log('🚀 DASHBOARD CAJA - INICIO ULTRA SIMPLIFICADO');
       console.log('Usuario:', req.matrizador?.nombre, 'Rol:', req.matrizador?.rol);
       
-      // 🎯 MEJORADO: Cambiar filtro por defecto de 'mes' a 'hoy' para mejor UX inicial
-      const tipoPeriodo = req.query.tipoPeriodo || 'hoy'; // 🔧 CAMBIO: era 'mes', ahora 'hoy'
-      let fechaInicio, fechaFin;
-      
-      // 🔧 CORREGIDO: Usar timezone de Ecuador para cálculos consistentes
-      const moment = require('moment-timezone');
-      const TIMEZONE_ECUADOR = 'America/Guayaquil';
-      const ahora = moment().tz(TIMEZONE_ECUADOR);
-      
-      // 🔧 CORREGIDO: Establecer fechas según el período seleccionado con lógica correcta
-      switch (tipoPeriodo) {
-        case 'hoy':
-          fechaInicio = ahora.clone().startOf('day');
-          fechaFin = ahora.clone().endOf('day');
-          break;
-        case 'semana':
-          // 🔧 CORREGIDO: Semana completa desde lunes hasta hoy
-          fechaInicio = ahora.clone().startOf('week').add(1, 'day'); // Lunes
-          fechaFin = ahora.clone().endOf('day');
-          break;
-        case 'mes':
-          // 🔧 CORREGIDO: Mes completo desde el día 1 hasta hoy
-          fechaInicio = ahora.clone().startOf('month');
-          fechaFin = ahora.clone().endOf('day');
-          break;
-        case 'ultimo_mes':
-          // 🔧 CORREGIDO: Últimos 30 días completos
-          fechaInicio = ahora.clone().subtract(30, 'days').startOf('day');
-          fechaFin = ahora.clone().endOf('day');
-          break;
-        case 'ano':
-          // 🔧 NUEVO: Año actual desde enero 1 hasta hoy
-          fechaInicio = ahora.clone().startOf('year');
-          fechaFin = ahora.clone().endOf('day');
-          break;
-        case 'personalizado':
-          fechaInicio = req.query.fechaInicio ? 
-            moment.tz(req.query.fechaInicio, TIMEZONE_ECUADOR).startOf('day') : 
-            ahora.clone().startOf('day'); // 🔧 CAMBIO: por defecto usar hoy en lugar de mes
-          fechaFin = req.query.fechaFin ? 
-            moment.tz(req.query.fechaFin, TIMEZONE_ECUADOR).endOf('day') : 
-            ahora.clone().endOf('day');
-          break;
-        default:
-          // 🎯 MEJORADO: Caso por defecto también usa 'hoy' en lugar de mes
-          fechaInicio = ahora.clone().startOf('day');
-          fechaFin = ahora.clone().endOf('day');
-      }
-      
-      // 🔧 NUEVO: Logging para debugging
-      console.log('=== DEBUG FILTROS CAJA ===');
-      console.log('Filtro aplicado:', tipoPeriodo);
-      console.log('Fecha inicio:', fechaInicio.format('YYYY-MM-DD HH:mm:ss'));
-      console.log('Fecha fin:', fechaFin.format('YYYY-MM-DD HH:mm:ss'));
-      console.log('Timezone:', TIMEZONE_ECUADOR);
-      console.log('========================');
-      
-      // 🔧 CORREGIDO: Formatear fechas para consultas SQL con timezone correcto
-      const fechaInicioSQL = fechaInicio.format('YYYY-MM-DD HH:mm:ss');
-      const fechaFinSQL = fechaFin.format('YYYY-MM-DD HH:mm:ss');
-      
-      // ============== MÉTRICAS FINANCIERAS CORREGIDAS ==============
-      // 🔧 CORREGIDO: Usar created_at para métricas del período (cuándo se registraron)
-      
-      // Dinero Facturado: Suma de todos los documentos con monto definido
-      const [totalFacturadoResult] = await sequelize.query(`
-        SELECT COALESCE(SUM(valor_factura), 0) as total
-        FROM documentos
-        WHERE valor_factura IS NOT NULL
-          AND estado NOT IN ('eliminado', 'nota_credito')
-          AND created_at BETWEEN :fechaInicio AND :fechaFin
-      `, {
-        replacements: { 
-          fechaInicio: fechaInicioSQL,
-          fechaFin: fechaFinSQL
-        },
-        type: sequelize.QueryTypes.SELECT
-      });
-      const totalFacturado = parseFloat(totalFacturadoResult.total);
-
-      // Dinero Cobrado: Solo documentos marcados como "pagado"
-      const [totalCobradoResult] = await sequelize.query(`
-        SELECT COALESCE(SUM(valor_factura), 0) as total
-        FROM documentos
-        WHERE estado_pago = 'pagado'
-          AND estado NOT IN ('eliminado', 'nota_credito')
-          AND created_at BETWEEN :fechaInicio AND :fechaFin
-      `, {
-        replacements: { 
-          fechaInicio: fechaInicioSQL,
-          fechaFin: fechaFinSQL
-        },
-        type: sequelize.QueryTypes.SELECT
-      });
-      const totalCobrado = parseFloat(totalCobradoResult.total);
-
-      // Dinero Pendiente
-      const totalPendiente = totalFacturado - totalCobrado;
-      
-      // 🔧 NUEVO: Validación de lógica temporal
-      console.log('=== VALIDACIÓN LÓGICA TEMPORAL ===');
-      console.log('Total Facturado:', totalFacturado);
-      console.log('Total Cobrado:', totalCobrado);
-      console.log('Total Pendiente:', totalPendiente);
-      
-      // Obtener cantidad de documentos facturados
-      const [documentosFacturadosResult] = await sequelize.query(`
-        SELECT COUNT(*) as total
-        FROM documentos
-        WHERE numero_factura IS NOT NULL
-          AND estado NOT IN ('eliminado', 'nota_credito')
-          AND created_at BETWEEN :fechaInicio AND :fechaFin
-      `, {
-        replacements: { 
-          fechaInicio: fechaInicioSQL,
-          fechaFin: fechaFinSQL
-        },
-        type: sequelize.QueryTypes.SELECT
-      });
-      const documentosFacturados = parseInt(documentosFacturadosResult.total);
-      
-      // Obtener cantidad de documentos pendientes de pago
-      const [documentosPendientesPagoResult] = await sequelize.query(`
-        SELECT COUNT(*) as total
-        FROM documentos
-        WHERE estado_pago = 'pendiente'
-          AND numero_factura IS NOT NULL
-          AND estado NOT IN ('eliminado', 'nota_credito')
-          AND created_at BETWEEN :fechaInicio AND :fechaFin 
-      `, {
-        replacements: {
-            fechaInicio: fechaInicioSQL,
-            fechaFin: fechaFinSQL
-        },
-        type: sequelize.QueryTypes.SELECT
-      });
-      const documentosPendientesPago = parseInt(documentosPendientesPagoResult.total);
-
-      console.log('Documentos Facturados:', documentosFacturados);
-      console.log('Documentos Pendientes:', documentosPendientesPago);
-      console.log('================================');
-
-      // Documentos pendientes de pago para la lista
-      const documentosPendientesLista = await Documento.findAll({
-        where: {
-          estadoPago: 'pendiente',
-          numeroFactura: { [Op.not]: null },
-          estado: { [Op.notIn]: ['eliminado', 'nota_credito'] }
-        },
-        order: [['created_at', 'DESC']], // Usar created_at
-        limit: 10
-      });
-      
-      // Documentos pagados recientemente
-      // Usar fecha_pago para ordenar por cuándo se pagaron realmente
-      const documentosPagadosRecientesLista = await Documento.findAll({
-        where: {
-          estadoPago: 'pagado',
-          numeroFactura: { [Op.not]: null },
-          estado: { [Op.notIn]: ['eliminado', 'nota_credito'] }
-        },
-        order: [['fecha_pago', 'DESC']], // Usar fecha_pago
-        limit: 10
-      });
-      
-      // 🔧 CORREGIDO: Preparar datos de período para la plantilla con información de debugging
-      const periodoData = {
-        esHoy: tipoPeriodo === 'hoy',
-        esSemana: tipoPeriodo === 'semana',
-        esMes: tipoPeriodo === 'mes',
-        esUltimoMes: tipoPeriodo === 'ultimo_mes',
-        esAno: tipoPeriodo === 'ano', // 🔧 NUEVO
-        esPersonalizado: tipoPeriodo === 'personalizado',
-        fechaInicio: fechaInicio.format('YYYY-MM-DD'),
-        fechaFin: fechaFin.format('YYYY-MM-DD'),
-        // 🔧 NUEVO: Información de debugging
-        periodoTexto: tipoPeriodo,
-        rangoCalculado: `${fechaInicio.format('DD/MM/YYYY')} - ${fechaFin.format('DD/MM/YYYY')}`,
-        // 🎯 NUEVO: Texto descriptivo para el indicador global
-        periodoDescriptivo: obtenerTextoDescriptivoPeriodo(tipoPeriodo, fechaInicio, fechaFin),
-        fechaInicioFormateada: fechaInicio.format('DD/MM/YYYY'),
-        fechaFinFormateada: fechaFin.format('DD/MM/YYYY'),
-        filtroActivo: tipoPeriodo
-      };
-      
-      // ============== ESTADÍSTICAS ADICIONALES PARA CAJA_ARCHIVO ==============
-      let estadisticasMatrizador = null;
-      if (req.matrizador?.rol === 'caja_archivo') {
-        const userId = req.matrizador.id;
-        
-        // Obtener estadísticas como matrizador
-        const [statsMatrizador] = await sequelize.query(`
-          SELECT 
-            COUNT(*) as total_asignados,
-            COUNT(CASE WHEN estado = 'en_proceso' THEN 1 END) as en_proceso,
-            COUNT(CASE WHEN estado = 'listo_para_entrega' THEN 1 END) as listos,
-            COUNT(CASE WHEN estado = 'entregado' THEN 1 END) as entregados,
-            COUNT(CASE WHEN estado = 'entregado' AND DATE(fecha_entrega) = CURRENT_DATE THEN 1 END) as entregados_hoy
-          FROM documentos
-          WHERE id_matrizador = :userId
-            AND estado NOT IN ('eliminado', 'nota_credito')
-        `, {
-          replacements: { userId },
-          type: sequelize.QueryTypes.SELECT
-        });
-        
-        estadisticasMatrizador = {
-          asignados: parseInt(statsMatrizador.total_asignados) || 0,
-          enProceso: parseInt(statsMatrizador.en_proceso) || 0,
-          listos: parseInt(statsMatrizador.listos) || 0,
-          entregados: parseInt(statsMatrizador.entregados) || 0,
-          entregadosHoy: parseInt(statsMatrizador.entregados_hoy) || 0
-        };
-      }
-      
-      // Renderizar el dashboard
-      res.render('caja/dashboard', {
+      // Datos mínimos para el dashboard
+      const datosRender = {
         layout: 'caja',
         title: 'Dashboard de Caja',
         userRole: req.matrizador?.rol,
         userName: req.matrizador?.nombre,
         stats: {
-          totalFacturado: formatearValorMonetario(totalFacturado),
-          totalCobrado: formatearValorMonetario(totalCobrado),
-          totalPendiente: formatearValorMonetario(totalPendiente),
-          documentosFacturados: documentosFacturados,
-          documentosPendientesPago: documentosPendientesPago
+          totalFacturado: '0.00',
+          totalCobrado: '0.00',
+          totalPendiente: '0.00',
+          documentosFacturados: 0,
+          documentosPendientesPago: 0
         },
-        estadisticasMatrizador, // Nuevas estadísticas para caja_archivo
-        documentosPendientes: documentosPendientesLista,
-        documentosPagadosRecientes: documentosPagadosRecientesLista,
-        periodo: periodoData
-      });
-    } catch (error) {
-      console.error('Error al cargar dashboard de caja:', error);
-      return res.status(500).render('error', {
-        layout: 'caja',
-        title: 'Error',
-        message: 'Error al cargar el dashboard de caja',
-        error
-      });
-    }
-  },
-  
-  /**
-   * Registra un nuevo pago para un documento
-   * SIMPLIFICADO - Solo usar fecha_pago
-   */
-  registrarPago: async (req, res) => {
-    const documentoId = req.body.documentoId;
-    
-    // 🔍 INICIO DE DEBUGGING - Logging detallado
-    logger.separator('PAYMENT', 'REGISTRO DE PAGO');
-    logger.start('PAYMENT', 'registrarPago', {
-      documentoId,
-      usuario: req.matrizador?.nombre,
-      datosRecibidos: req.body
-    });
-    
-    try {
-      // Iniciar transacción
-      const transaction = await sequelize.transaction();
+        documentosPendientes: [],
+        documentosPagadosRecientes: [],
+        periodo: {
+          esHoy: true,
+          esSemana: false,
+          esMes: false,
+          fechaInicio: new Date().toISOString().split('T')[0],
+          fechaFin: new Date().toISOString().split('T')[0],
+          periodoTexto: 'hoy',
+          periodoDescriptivo: 'HOY - ' + new Date().toLocaleDateString(),
+          fechaInicioFormateada: new Date().toLocaleDateString(),
+          fechaFinFormateada: new Date().toLocaleDateString(),
+          filtroActivo: 'hoy'
+        }
+      };
       
-      try {
-        const { 
-          numeroFactura, 
-          valorFactura, 
-          metodoPago, 
-          observaciones 
-        } = req.body;
-        
-        logPayment('VALIDACION_INICIAL', documentoId, {
-          numeroFactura,
-          valorFactura,
-          metodoPago,
-          observaciones
-        });
-        
-        // Validar que el documento existe
-        const documento = await Documento.findByPk(documentoId, { transaction });
-        
-        if (!documento) {
-          await transaction.rollback();
-          logger.error('PAYMENT', 'Documento no encontrado', { documentoId });
-          req.flash('error', 'El documento no existe');
-          return res.redirect('/caja/documentos');
-        }
-        
-        logger.info('PAYMENT', 'Documento encontrado', {
-          documentoId,
-          estadoActual: documento.estado,
-          estadoPagoActual: documento.estadoPago,
-          fechaPagoActual: documento.fechaPago
-        });
-        
-        // Validaciones de seguridad
-        if (documento.estado === 'eliminado') {
-          await transaction.rollback();
-          logger.warning('PAYMENT', 'Intento de pago en documento eliminado', { documentoId });
-          req.flash('error', 'No se puede procesar pago - el documento ha sido eliminado definitivamente');
-          return res.redirect('/caja/documentos');
-        }
-        
-        if (documento.estado === 'nota_credito') {
-          await transaction.rollback();
-          logger.warning('PAYMENT', 'Intento de pago en documento con nota de crédito', { documentoId });
-          req.flash('error', 'No se puede procesar pago - el documento tiene una nota de crédito asociada');
-          return res.redirect('/caja/documentos');
-        }
-        
-        if (documento.estadoPago === 'pagado') {
-          await transaction.rollback();
-          logger.warning('PAYMENT', 'Intento de pago en documento ya pagado', { documentoId });
-          req.flash('error', 'El documento ya está marcado como pagado');
-          return res.redirect(`/caja/documentos/detalle/${documentoId}`);
-        }
-        
-        // 🔍 PUNTO CRÍTICO: Generar timestamp de Ecuador
-        logger.info('PAYMENT', 'Generando timestamp de Ecuador...');
-        const timestampPago = obtenerTimestampEcuador();
-        
-        logTimestamp('GENERAR_TIMESTAMP_PAGO', timestampPago, {
-          funcion: 'obtenerTimestampEcuador',
-          resultado: timestampPago,
-          tipo: typeof timestampPago,
-          esDate: timestampPago instanceof Date,
-          iso: timestampPago ? timestampPago.toISOString() : 'null'
-        });
-        
-        // 🔍 PUNTO CRÍTICO: Preparar datos para actualización
-        const datosActualizacion = {
-          numeroFactura,
-          valorFactura,
-          fechaFactura: documento.fechaFactura || procesarFechaDocumento(new Date().toLocaleDateString('es-EC')),
-          estadoPago: 'pagado',
-          metodoPago: mapearMetodoPago(metodoPago),
-          registradoPor: req.matrizador.id,
-          fechaPago: timestampPago // 🔍 CAMPO CRÍTICO
-        };
-        
-        logger.info('PAYMENT', 'Datos preparados para actualización', {
-          datosActualizacion,
-          timestampPagoType: typeof timestampPago,
-          timestampPagoValue: timestampPago
-        });
-        
-        // 🔍 PUNTO CRÍTICO: Actualizar documento
-        logger.info('PAYMENT', 'Iniciando actualización de documento...');
-        await documento.update(datosActualizacion, { transaction });
-        
-        // 🔍 VERIFICACIÓN INMEDIATA: Recargar documento para verificar
-        logger.info('PAYMENT', 'Verificando actualización...');
-        await documento.reload({ transaction });
-        
-        logPayment('VERIFICACION_ACTUALIZACION', documentoId, {
-          fechaPagoGuardada: documento.fechaPago,
-          estadoPagoGuardado: documento.estadoPago,
-          registradoPorGuardado: documento.registradoPor,
-          fechaPagoTipo: typeof documento.fechaPago,
-          fechaPagoISO: documento.fechaPago ? documento.fechaPago.toISOString() : 'null'
-        });
-        
-        // Registrar evento de pago
-        await EventoDocumento.create({
-          idDocumento: documentoId,
-          tipo: 'pago',
-          detalles: `Pago registrado por ${req.matrizador.nombre}. Método: ${metodoPago}. Factura: ${numeroFactura}. Valor: ${valorFactura}`,
-          usuario: req.matrizador.nombre,
-          metadatos: JSON.stringify({
-            numeroFactura,
-            valorFactura,
-            metodoPago,
-            observaciones,
-            registradoPor: req.matrizador.id,
-            timestampPago: timestampPago.toISOString()
-          })
-        }, { transaction });
-        
-        logger.info('PAYMENT', 'Evento de pago registrado');
-        
-        // 🔍 PUNTO CRÍTICO: Confirmar transacción
-        logger.info('PAYMENT', 'Confirmando transacción...');
-        await transaction.commit();
-        
-        logger.end('PAYMENT', 'registrarPago', {
-          documentoId,
-          exitoso: true,
-          fechaPagoFinal: documento.fechaPago
-        });
-        
-        req.flash('success', 'Pago registrado correctamente');
-        return res.redirect(`/caja/documentos/detalle/${documentoId}`);
-      } catch (error) {
-        await transaction.rollback();
-        logger.error('PAYMENT', 'Error en transacción de pago', error);
-        throw error;
-      }
+      console.log('🔍 EJECUTANDO RENDER ULTRA SIMPLIFICADO...');
+      console.log('Datos básicos:', {
+        layout: datosRender.layout,
+        title: datosRender.title,
+        userRole: datosRender.userRole,
+        userName: datosRender.userName
+      });
+      
+      // Renderizar el dashboard
+      res.render('caja/dashboard', datosRender);
+      
+      console.log('✅ RENDER ULTRA SIMPLIFICADO COMPLETADO');
+      
     } catch (error) {
-      logger.error('PAYMENT', 'Error general en registro de pago', error);
-      req.flash('error', 'Error al registrar el pago: ' + error.message);
-      return res.redirect('/caja/documentos');
+      console.error('❌ ERROR EN DASHBOARD ULTRA SIMPLIFICADO:', error);
+      console.error('Stack trace completo:', error.stack);
+      
+      // Respuesta de emergencia
+      return res.status(500).send(`
+        <h1>Error en Dashboard de Caja</h1>
+        <p>Error: ${error.message}</p>
+        <p>Usuario: ${req.matrizador?.nombre} (${req.matrizador?.rol})</p>
+        <pre>${error.stack}</pre>
+        <a href="/login">Volver al Login</a>
+      `);
     }
   },
-  
+
   /**
-   * Lista los documentos gestionados por caja
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
+   * RESTAURADO: Filtrar dashboard con AJAX
+   */
+  filtrarDashboard: async (req, res) => {
+    try {
+      const { fechaDesde, fechaHasta } = req.body;
+      
+      // Validar fechas
+      if (!fechaDesde || !fechaHasta) {
+        return res.json({
+          success: false,
+          message: 'Las fechas son requeridas'
+        });
+      }
+      
+      // Crear fechas con timezone correcto
+      const fechaDesdeObj = new Date(fechaDesde + 'T00:00:00');
+      const fechaHastaObj = new Date(fechaHasta + 'T23:59:59');
+      
+      if (fechaDesdeObj > fechaHastaObj) {
+        return res.json({
+          success: false,
+          message: 'La fecha desde no puede ser mayor a la fecha hasta'
+        });
+      }
+      
+      console.log('=== DEBUG FILTROS AJAX ===');
+      console.log('Fecha desde recibida:', fechaDesde);
+      console.log('Fecha hasta recibida:', fechaHasta);
+      console.log('Fecha desde procesada:', fechaDesdeObj);
+      console.log('Fecha hasta procesada:', fechaHastaObj);
+      console.log('========================');
+      
+      // Configurar filtros de fecha
+      const whereClause = {
+        created_at: {
+          [Op.between]: [fechaDesdeObj, fechaHastaObj]
+        }
+      };
+      
+      // Obtener métricas filtradas
+      const [
+        totalFacturado,
+        totalCobrado,
+        totalPendiente,
+        documentosFacturados,
+        documentosPendientesPago
+      ] = await Promise.all([
+        // Total facturado
+        Documento.sum('valor_factura', {
+          where: {
+            ...whereClause,
+            valor_factura: { [Op.not]: null },
+            estado: { [Op.notIn]: ['eliminado', 'nota_credito', 'cancelado'] }
+          }
+        }),
+        
+        // Total cobrado
+        Documento.sum('valor_factura', {
+          where: {
+            ...whereClause,
+            estado_pago: 'pagado',
+            estado: { [Op.notIn]: ['eliminado', 'nota_credito', 'cancelado'] }
+          }
+        }),
+        
+        // Total pendiente
+        Documento.sum('valor_factura', {
+          where: {
+            ...whereClause,
+            estado_pago: 'pendiente',
+            estado: { [Op.notIn]: ['eliminado', 'nota_credito', 'cancelado'] }
+          }
+        }),
+        
+        // Cantidad documentos facturados
+        Documento.count({
+          where: {
+            ...whereClause,
+            numero_factura: { [Op.not]: null },
+            estado: { [Op.notIn]: ['eliminado', 'nota_credito', 'cancelado'] }
+          }
+        }),
+        
+        // Cantidad documentos pendientes de pago
+        Documento.count({
+          where: {
+            ...whereClause,
+            estado_pago: 'pendiente',
+            numero_factura: { [Op.not]: null },
+            estado: { [Op.notIn]: ['eliminado', 'nota_credito', 'cancelado'] }
+          }
+        })
+      ]);
+      
+      console.log('=== VALIDACIÓN AJAX ===');
+      console.log('Total Facturado AJAX:', totalFacturado || 0);
+      console.log('Total Cobrado AJAX:', totalCobrado || 0);
+      console.log('Total Pendiente AJAX:', totalPendiente || 0);
+      console.log('Documentos Facturados AJAX:', documentosFacturados || 0);
+      console.log('Documentos Pendientes AJAX:', documentosPendientesPago || 0);
+      console.log('====================');
+      
+      // Obtener documentos pendientes para la tabla
+      const documentosPendientes = await Documento.findAll({
+        where: {
+          ...whereClause,
+          estado_pago: 'pendiente',
+          numero_factura: { [Op.not]: null },
+          estado: { [Op.notIn]: ['eliminado', 'nota_credito', 'cancelado'] }
+        },
+        attributes: ['id', 'codigoBarras', 'nombreCliente', 'numero_factura', 'valor_factura'],
+        limit: 10,
+        order: [['created_at', 'DESC']]
+      });
+      
+      // Obtener pagos recientes
+      const documentosPagadosRecientes = await Documento.findAll({
+        where: {
+          estado_pago: 'pagado',
+          estado: { [Op.notIn]: ['eliminado', 'nota_credito', 'cancelado'] },
+          fecha_pago: {
+            [Op.between]: [fechaDesdeObj, fechaHastaObj]
+          }
+        },
+        attributes: ['id', 'codigoBarras', 'nombreCliente', 'valor_factura', 'metodo_pago', 'fecha_pago'],
+        limit: 10,
+        order: [['fecha_pago', 'DESC']]
+      });
+      
+      // Función auxiliar simple para formatear dinero
+      function formatearValor(valor) {
+        if (!valor) return '0.00';
+        return parseFloat(valor).toFixed(2);
+      }
+      
+      // Formatear los valores
+      const stats = {
+        totalFacturado: formatearValor(totalFacturado || 0),
+        totalCobrado: formatearValor(totalCobrado || 0),
+        totalPendiente: formatearValor(totalPendiente || 0),
+        documentosFacturados: documentosFacturados || 0,
+        documentosPendientesPago: documentosPendientesPago || 0
+      };
+      
+      return res.json({
+        success: true,
+        datos: {
+          stats,
+          documentosPendientes: documentosPendientes.map(doc => ({
+            id: doc.id,
+            codigoBarras: doc.codigoBarras,
+            nombreCliente: doc.nombreCliente,
+            numero_factura: doc.numero_factura,
+            valor_factura: doc.valor_factura ? parseFloat(doc.valor_factura).toFixed(2) : '0.00'
+          })),
+          documentosPagadosRecientes: documentosPagadosRecientes.map(doc => ({
+            id: doc.id,
+            codigoBarras: doc.codigoBarras,
+            nombreCliente: doc.nombreCliente,
+            valor_factura: doc.valor_factura ? parseFloat(doc.valor_factura).toFixed(2) : '0.00',
+            metodo_pago: doc.metodo_pago || 'N/A',
+            fecha_pago: doc.fecha_pago
+          }))
+        }
+      });
+      
+    } catch (error) {
+      console.error('Error al filtrar dashboard:', error);
+      return res.json({
+        success: false,
+        message: 'Error interno del servidor'
+      });
+    }
+  },
+
+  /**
+   * RESTAURADO: Listar documentos con filtros y paginación
    */
   listarDocumentos: async (req, res) => {
     try {
@@ -464,8 +275,8 @@ const cajaController = {
       const tipoDocumento = req.query.tipoDocumento || '';
       const matrizadorId = req.query.matrizadorId || '';
       const busqueda = req.query.busqueda || '';
-      const fechaDesde = req.query.fechaDesde || ''; // Nuevo
-      const fechaHasta = req.query.fechaHasta || ''; // Nuevo
+      const fechaDesde = req.query.fechaDesde || '';
+      const fechaHasta = req.query.fechaHasta || '';
       
       // Construir condiciones de filtrado
       const where = {};
@@ -474,37 +285,40 @@ const cajaController = {
         where.estado = estado;
       }
       
+      // CORREGIDO: Usar el nombre de campo correcto para el filtro
       if (estadoPago) {
-        where.estadoPago = estadoPago;
+        // El modelo tiene underscored: true, por lo que en consultas WHERE 
+        // debe usar el nombre de campo de la base de datos (snake_case)
+        where.estado_pago = estadoPago;
       }
       
       if (tipoDocumento) {
-        where.tipoDocumento = tipoDocumento;
+        where.tipo_documento = tipoDocumento;
       }
       
       if (matrizadorId) {
-        where.idMatrizador = matrizadorId;
+        where.id_matrizador = matrizadorId;
       }
       
       if (busqueda) {
         where[Op.or] = [
           { codigoBarras: { [Op.iLike]: `%${busqueda}%` } },
           { nombreCliente: { [Op.iLike]: `%${busqueda}%` } },
-          { numeroFactura: { [Op.iLike]: `%${busqueda}%` } }
+          { numero_factura: { [Op.iLike]: `%${busqueda}%` } }
         ];
       }
       
-      // Filtro de rango de fechas (usar fecha_factura para fechas de documento)
+      // Filtro de rango de fechas
       if (fechaDesde && fechaHasta) {
-        where.fechaFactura = {
+        where.fecha_factura = {
           [Op.between]: [moment(fechaDesde).startOf('day').toDate(), moment(fechaHasta).endOf('day').toDate()]
         };
       } else if (fechaDesde) {
-        where.fechaFactura = {
+        where.fecha_factura = {
           [Op.gte]: moment(fechaDesde).startOf('day').toDate()
         };
       } else if (fechaHasta) {
-        where.fechaFactura = {
+        where.fecha_factura = {
           [Op.lte]: moment(fechaHasta).endOf('day').toDate()
         };
       }
@@ -526,11 +340,11 @@ const cajaController = {
       
       // Transformar métodos de pago para la vista
       documentos.forEach(doc => {
-        if (doc.metodoPago === null) {
-          doc.metodoPago = 'pendiente';
+        if (doc.metodo_pago === null) {
+          doc.metodo_pago = 'pendiente';
         }
-        if (doc.metodoPago === 'tarjeta') {
-          doc.metodoPago = 'tarjeta_credito';
+        if (doc.metodo_pago === 'tarjeta') {
+          doc.metodo_pago = 'tarjeta_credito';
         }
       });
       
@@ -568,8 +382,8 @@ const cajaController = {
       if (tipoDocumento) queryParams.append('tipoDocumento', tipoDocumento);
       if (matrizadorId) queryParams.append('matrizadorId', matrizadorId);
       if (busqueda) queryParams.append('busqueda', busqueda);
-      if (fechaDesde) queryParams.append('fechaDesde', fechaDesde); // Nuevo
-      if (fechaHasta) queryParams.append('fechaHasta', fechaHasta); // Nuevo
+      if (fechaDesde) queryParams.append('fechaDesde', fechaDesde);
+      if (fechaHasta) queryParams.append('fechaHasta', fechaHasta);
       
       // Generar enlaces de paginación
       for (let i = 1; i <= totalPages; i++) {
@@ -597,48 +411,25 @@ const cajaController = {
       }
       
       // Renderizar la vista
-      if (req.xhr || (req.headers.accept && req.headers.accept.indexOf('html') === -1 && req.headers['x-requested-with'] == 'XMLHttpRequest')) {
-        // Si es una solicitud AJAX, renderizar solo el partial de la tabla
-        res.render('partials/caja/tablaDocumentosPaginada', {
-          layout: false, 
-          documentos,
-          matrizadores, 
-          tiposDocumento,
-          pagination,
-          filtros: {
-            estado: estado || '',
-            estadoPago: estadoPago || '',
-            tipoDocumento: tipoDocumento || '',
-            matrizadorId: matrizadorId || '',
-            busqueda: busqueda || '',
-            fechaDesde: fechaDesde || '',
-            fechaHasta: fechaHasta || ''
-          },
-          userRole: req.matrizador?.rol, 
-          userName: req.matrizador?.nombre
-        });
-      } else {
-        // Si es una solicitud normal, renderizar la página completa
-        res.render('caja/documentos/listado', {
-          layout: 'caja',
-          title: 'Documentos',
-          documentos,
-          matrizadores,
-          tiposDocumento,
-          pagination,
-          filtros: {
-            estado: estado || '',
-            estadoPago: estadoPago || '',
-            tipoDocumento: tipoDocumento || '',
-            matrizadorId: matrizadorId || '',
-            busqueda: busqueda || '',
-            fechaDesde: fechaDesde || '',
-            fechaHasta: fechaHasta || ''
-          },
-          userRole: req.matrizador?.rol,
-          userName: req.matrizador?.nombre
-        });
-      }
+      res.render('caja/documentos/listado', {
+        layout: 'caja',
+        title: 'Documentos',
+        documentos,
+        matrizadores,
+        tiposDocumento,
+        pagination,
+        filtros: {
+          estado: estado || '',
+          estadoPago: estadoPago || '',
+          tipoDocumento: tipoDocumento || '',
+          matrizadorId: matrizadorId || '',
+          busqueda: busqueda || '',
+          fechaDesde: fechaDesde || '',
+          fechaHasta: fechaHasta || ''
+        },
+        userRole: req.matrizador?.rol,
+        userName: req.matrizador?.nombre
+      });
     } catch (error) {
       console.error('Error al listar documentos:', error);
       return res.status(500).render('error', {
@@ -649,434 +440,15 @@ const cajaController = {
       });
     }
   },
-  
+
   /**
-   * Muestra los detalles de un documento específico
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
+   * RESTAURADO: Ver detalle de documento
    */
   verDocumento: async (req, res) => {
     try {
-      const { id } = req.params;
+      const documentoId = req.params.id;
       
-      // Buscar el documento con toda la información necesaria
-      const documento = await Documento.findByPk(id, {
-        include: [{
-          model: Matrizador,
-          as: 'matrizador',
-          attributes: ['id', 'nombre', 'email']
-        }]
-      });
-      
-      if (!documento) {
-        req.flash('error', 'Documento no encontrado');
-        return res.redirect('/caja/documentos');
-      }
-      
-      // Buscar eventos del documento
-      const eventos = await EventoDocumento.findAll({
-        where: { idDocumento: id },
-        order: [['created_at', 'DESC']]
-      });
-      
-      // Buscar información del usuario que registró el pago (si está pagado)
-      let usuarioPago = null;
-      if (documento.estadoPago === 'pagado' && documento.registradoPor) {
-        usuarioPago = await Matrizador.findByPk(documento.registradoPor, {
-          attributes: ['id', 'nombre', 'email', 'rol']
-        });
-      }
-      
-      // Crear historial simplificado para caja
-      let historialCaja = [];
-      
-      // Agregar evento de pago si está pagado
-      if (documento.estadoPago === 'pagado') {
-        historialCaja.push({
-          tipo: 'pago',
-          categoria: 'pago',
-          titulo: 'Pago Registrado',
-          descripcion: `Pago por $${documento.valorFactura} via ${documento.metodoPago}`,
-          fecha: documento.fechaPago || documento.updated_at, // CORREGIDO: usar fechaPago
-          usuario: usuarioPago?.nombre || 'Usuario de Caja',
-          color: 'success',
-          detalles: {
-            valor: documento.valorFactura,
-            metodoPago: documento.metodoPago,
-            numeroFactura: documento.numeroFactura,
-            usuarioCaja: usuarioPago?.nombre || 'Usuario de Caja',
-            fechaPago: documento.fechaPago || documento.updated_at // CORREGIDO: usar fechaPago
-          }
-        });
-      }
-      
-      // Agregar evento de entrega si está entregado
-      if (documento.estado === 'entregado' && documento.fechaEntrega) {
-        historialCaja.push({
-          tipo: 'entrega',
-          categoria: 'entrega',
-          titulo: 'Documento Entregado',
-          descripcion: `Entregado a ${documento.nombreReceptor} (${documento.relacionReceptor})`,
-          fecha: documento.fechaEntrega,
-          usuario: 'Matrizador',
-          color: 'info',
-          detalles: {
-            receptor: documento.nombreReceptor,
-            identificacionReceptor: documento.identificacionReceptor,
-            relacion: documento.relacionReceptor
-          }
-        });
-      }
-      
-      // Agregar eventos relevantes de EventoDocumento
-      eventos.forEach(evento => {
-        // Solo agregar eventos relevantes para caja
-        const eventosRelevantes = ['cambio_estado', 'entrega', 'confirmacion_pago'];
-        if (eventosRelevantes.includes(evento.tipo)) {
-          // Filtrar cambios de estado solo si son relevantes
-          if (evento.tipo === 'cambio_estado') {
-            const detalles = evento.detalles?.toLowerCase() || '';
-            if (!detalles.includes('listo') && !detalles.includes('entrega') && !detalles.includes('pagado')) {
-              return; // Skip este evento
-            }
-          }
-          
-          historialCaja.push({
-            tipo: evento.tipo,
-            categoria: evento.tipo === 'cambio_estado' ? 'estado' : evento.tipo,
-            titulo: evento.tipo === 'cambio_estado' ? 'Estado Cambiado' : 
-                   evento.tipo === 'entrega' ? 'Documento Entregado' : 'Pago Confirmado',
-            descripcion: evento.detalles || 'Sin descripción',
-            fecha: evento.created_at,
-            usuario: evento.usuario || 'Sistema',
-            color: evento.tipo === 'entrega' ? 'info' : 
-                  evento.tipo === 'cambio_estado' ? 'warning' : 'success'
-          });
-        }
-      });
-      
-      // Ordenar historial por fecha (más reciente primero)
-      historialCaja.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-      
-      // Transformar el método de pago para la vista
-      if (documento.metodoPago === null) {
-        documento.metodoPago = 'pendiente';
-      }
-      
-      // Si el metodoPago es tarjeta, determinar si es crédito o débito basado en otra información
-      // Por simplicidad, asumiremos que es tarjeta_credito por defecto
-      if (documento.metodoPago === 'tarjeta') {
-        documento.metodoPago = 'tarjeta_credito';
-      }
-      
-      // Obtener matrizadores para el formulario de cambio
-      const matrizadores = await Matrizador.findAll({
-        where: {
-          rol: {
-            [Op.in]: ['matrizador', 'caja_archivo']
-          },
-          activo: true
-        },
-        attributes: ['id', 'nombre']
-      });
-      
-      // Renderizar la vista de detalle
-      res.render('caja/documentos/detalle', {
-        layout: 'caja',
-        title: 'Detalle de Documento',
-        documento,
-        eventos: historialCaja, // Pasar historial específico para caja
-        matrizadores,
-        usuarioPago, // Información del usuario que registró el pago
-        userRole: req.matrizador?.rol,
-        userName: req.matrizador?.nombre
-      });
-    } catch (error) {
-      console.error('Error al ver documento:', error);
-      return res.status(500).render('error', {
-        layout: 'caja',
-        title: 'Error',
-        message: 'Error al cargar los detalles del documento',
-        error
-      });
-    }
-  },
-  
-  /**
-   * Muestra el listado de pagos registrados
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
-   */
-  listarPagos: async (req, res) => {
-    try {
-      console.log('Listando pagos');
-      
-      // Parámetros de paginación
-      const page = parseInt(req.query.page) || 1;
-      const limit = 10;
-      const offset = (page - 1) * limit;
-      
-      // Parámetros de filtrado
-      const fechaInicio = req.query.fechaInicio ? moment(req.query.fechaInicio).startOf('day') : moment().subtract(30, 'days').startOf('day');
-      const fechaFin = req.query.fechaFin ? moment(req.query.fechaFin).endOf('day') : moment().endOf('day');
-      const metodoPago = req.query.metodoPago || '';
-      const busqueda = req.query.busqueda || '';
-      
-      // Construir condiciones de filtrado
-      // Para listado de pagos, usar fecha_pago (cuándo se procesaron)
-      const where = {
-        estadoPago: 'pagado',
-        fechaPago: { // CORREGIDO: usar fechaPago
-          [Op.between]: [fechaInicio.toDate(), fechaFin.toDate()]
-        }
-      };
-      
-      if (metodoPago) {
-        where.metodoPago = metodoPago;
-      }
-      
-      if (busqueda) {
-        where[Op.or] = [
-          { codigoBarras: { [Op.iLike]: `%${busqueda}%` } },
-          { nombreCliente: { [Op.iLike]: `%${busqueda}%` } },
-          { numeroFactura: { [Op.iLike]: `%${busqueda}%` } }
-        ];
-      }
-      
-      // Obtener documentos pagados con paginación
-      const { count, rows: pagos } = await Documento.findAndCountAll({
-        where,
-        include: [
-          {
-            model: Matrizador,
-            as: 'matrizador',
-            attributes: ['id', 'nombre', 'email']
-          }
-        ],
-        order: [['created_at', 'DESC']], // CORREGIDO: Ordenar por cuándo se registró el pago
-        limit,
-        offset
-      });
-      
-      // Calcular total recaudado usando fecha_pago
-      const [totalRecaudado] = await sequelize.query(`
-        SELECT COALESCE(SUM(valor_factura), 0) as total
-        FROM documentos
-        WHERE estado_pago = 'pagado'
-        AND fecha_pago BETWEEN :fechaInicio AND :fechaFin
-        ${metodoPago ? "AND metodo_pago = :metodoPago" : ""}
-      `, {
-        replacements: { 
-          fechaInicio: fechaInicio.format('YYYY-MM-DD HH:mm:ss'),
-          fechaFin: fechaFin.format('YYYY-MM-DD HH:mm:ss'),
-          metodoPago
-        },
-        type: sequelize.QueryTypes.SELECT
-      });
-      
-      // Preparar datos para la paginación
-      const totalPages = Math.ceil(count / limit);
-      const pagination = {
-        pages: []
-      };
-      
-      // Generar URLs para la paginación
-      const baseUrl = '/caja/pagos?';
-      const queryParams = new URLSearchParams();
-      
-      queryParams.append('fechaInicio', fechaInicio.format('YYYY-MM-DD'));
-      queryParams.append('fechaFin', fechaFin.format('YYYY-MM-DD'));
-      if (metodoPago) queryParams.append('metodoPago', metodoPago);
-      if (busqueda) queryParams.append('busqueda', busqueda);
-      
-      // Generar enlaces de paginación
-      for (let i = 1; i <= totalPages; i++) {
-        const params = new URLSearchParams(queryParams);
-        params.set('page', i);
-        
-        pagination.pages.push({
-          num: i,
-          url: baseUrl + params.toString(),
-          active: i === page
-        });
-      }
-      
-      // Enlaces de anterior y siguiente
-      if (page > 1) {
-        const params = new URLSearchParams(queryParams);
-        params.set('page', page - 1);
-        pagination.prev = baseUrl + params.toString();
-      }
-      
-      if (page < totalPages) {
-        const params = new URLSearchParams(queryParams);
-        params.set('page', page + 1);
-        pagination.next = baseUrl + params.toString();
-      }
-      
-      // Renderizar la vista
-      res.render('caja/pagos/listado', {
-        layout: 'caja',
-        title: 'Listado de Pagos',
-        pagos,
-        pagination,
-        filtros: {
-          fechaInicio: fechaInicio.format('YYYY-MM-DD'),
-          fechaFin: fechaFin.format('YYYY-MM-DD'),
-          metodoPago: metodoPago || '',
-          busqueda: busqueda || ''
-        },
-        totalRecaudado: parseFloat(totalRecaudado.total).toFixed(2),
-        userRole: req.matrizador?.rol,
-        userName: req.matrizador?.nombre
-      });
-    } catch (error) {
-      console.error('Error al listar pagos:', error);
-      return res.status(500).render('error', {
-        layout: 'caja',
-        title: 'Error',
-        message: 'Error al cargar el listado de pagos',
-        error
-      });
-    }
-  },
-  
-  /**
-   * Muestra el formulario para registrar un nuevo pago
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
-   */
-  mostrarFormularioRegistrarPago: async (req, res) => {
-    try {
-      // Obtener documentos pendientes de pago para el dropdown
-      const documentosPendientes = await Documento.findAll({
-        where: {
-          estadoPago: 'pendiente'
-        },
-        include: [
-          {
-            model: Matrizador,
-            as: 'matrizador',
-            attributes: ['id', 'nombre']
-          }
-        ],
-        order: [['created_at', 'DESC']],
-        limit: 100 // Limitar para no sobrecargar la vista
-      });
-      
-      // Renderizar la vista del formulario
-      res.render('caja/pagos/registrar', {
-        layout: 'caja',
-        title: 'Registrar Pago',
-        activeRegistrarPago: true,
-        documentosPendientes,
-        userRole: req.matrizador?.rol,
-        userName: req.matrizador?.nombre
-      });
-    } catch (error) {
-      console.error('Error al mostrar formulario de registrar pago:', error);
-      return res.status(500).render('error', {
-        layout: 'caja',
-        title: 'Error',
-        message: 'Error al cargar el formulario de registro de pago',
-        error
-      });
-    }
-  },
-  
-  /**
-   * Confirma un pago previamente registrado
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
-   */
-  confirmarPago: async (req, res) => {
-    try {
-      const { id } = req.params;
-      const { observaciones } = req.body;
-      
-      // Iniciar transacción
-      const transaction = await sequelize.transaction();
-      
-      try {
-        // Buscar el documento
-        const documento = await Documento.findByPk(id, { transaction });
-        
-        if (!documento) {
-          await transaction.rollback();
-          req.flash('error', 'Documento no encontrado');
-          return res.redirect('/caja/documentos');
-        }
-        
-        // VALIDACIÓN CRÍTICA FINANCIERA: Impedir confirmación de pagos a documentos eliminados o notas de crédito
-        if (documento.estado === 'eliminado') {
-          await transaction.rollback();
-          req.flash('error', 'No se puede confirmar pago - el documento ha sido eliminado definitivamente');
-          return res.redirect('/caja/documentos');
-        }
-        
-        if (documento.estado === 'nota_credito') {
-          await transaction.rollback();
-          req.flash('error', 'No se puede confirmar pago - el documento tiene una nota de crédito asociada');
-          return res.redirect('/caja/documentos');
-        }
-        
-        // Verificar que el documento tenga factura
-        if (!documento.numeroFactura) {
-          await transaction.rollback();
-          req.flash('error', 'El documento no tiene número de factura');
-          return res.redirect(`/caja/documentos/detalle/${id}`);
-        }
-        
-        // Usar timestamp de Ecuador para la confirmación
-        const timestampConfirmacion = obtenerTimestampEcuador();
-        
-        // Actualizar el estado de pago
-        await documento.update({
-          estadoPago: 'pagado',
-          registradoPor: req.matrizador.id, // Auditoría: quién confirmó el pago
-          fechaPago: timestampConfirmacion // CORREGIDO: Auditoría cuándo se confirmó en zona horaria de Ecuador
-        }, { transaction });
-        
-        // Registrar evento de confirmación de pago
-        await EventoDocumento.create({
-          idDocumento: id,
-          tipo: 'confirmacion_pago',
-          detalles: `Pago confirmado por ${req.matrizador.nombre}`,
-          usuario: req.matrizador.nombre,
-          metadatos: JSON.stringify({
-            observaciones,
-            confirmadoPor: req.matrizador.id
-          })
-        }, { transaction });
-        
-        // Confirmar la transacción
-        await transaction.commit();
-        
-        req.flash('success', 'Pago confirmado correctamente');
-        return res.redirect(`/caja/documentos/detalle/${id}`);
-      } catch (error) {
-        // Revertir la transacción en caso de error
-        await transaction.rollback();
-        throw error;
-      }
-    } catch (error) {
-      console.error('Error al confirmar pago:', error);
-      req.flash('error', 'Error al confirmar el pago: ' + error.message);
-      return res.redirect('/caja/documentos');
-    }
-  },
-  
-  /**
-   * Muestra el formulario para cambiar el matrizador asignado a un documento
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
-   */
-  mostrarFormularioCambioMatrizador: async (req, res) => {
-    try {
-      const { id } = req.params;
-      
-      // Buscar el documento
-      const documento = await Documento.findByPk(id, {
+      const documento = await Documento.findByPk(documentoId, {
         include: [
           {
             model: Matrizador,
@@ -1087,549 +459,449 @@ const cajaController = {
       });
       
       if (!documento) {
-        req.flash('error', 'Documento no encontrado');
-        return res.redirect('/caja/documentos');
+        return res.status(404).render('error', {
+          layout: 'caja',
+          title: 'Documento no encontrado',
+          message: 'El documento solicitado no existe'
+        });
       }
       
-      // Obtener matrizadores activos
-      const matrizadores = await Matrizador.findAll({
-        where: {
-          rol: {
-            [Op.in]: ['matrizador', 'caja_archivo']
-          },
-          activo: true
-        },
-        attributes: ['id', 'nombre', 'email']
-      });
-      
-      // Renderizar el formulario
-      res.render('caja/documentos/cambiar-matrizador', {
+      res.render('caja/documentos/detalle', {
         layout: 'caja',
-        title: 'Cambiar Matrizador',
+        title: 'Detalle del Documento',
         documento,
-        matrizadores,
         userRole: req.matrizador?.rol,
         userName: req.matrizador?.nombre
       });
     } catch (error) {
-      console.error('Error al mostrar formulario de cambio de matrizador:', error);
-      req.flash('error', 'Error al mostrar el formulario');
-      return res.redirect('/caja/documentos');
-    }
-  },
-  
-  /**
-   * Procesa el cambio de matrizador para un documento
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
-   */
-  cambiarMatrizador: async (req, res) => {
-    try {
-      // Iniciar transacción
-      const transaction = await sequelize.transaction();
-      
-      try {
-        const { documentoId, matrizadorId, justificacion } = req.body;
-        
-        // Validar campos requeridos
-        if (!documentoId || !matrizadorId || !justificacion) {
-          await transaction.rollback();
-          req.flash('error', 'Todos los campos son obligatorios');
-          return res.redirect('/caja/documentos');
-        }
-        
-        // Validar que el documento existe
-        const documento = await Documento.findByPk(documentoId, { transaction });
-        
-        if (!documento) {
-          await transaction.rollback();
-          req.flash('error', 'El documento no existe');
-          return res.redirect('/caja/documentos');
-        }
-        
-        // Validar que el matrizador existe
-        const matrizador = await Matrizador.findByPk(matrizadorId, { transaction });
-        
-        if (!matrizador) {
-          await transaction.rollback();
-          req.flash('error', 'El matrizador seleccionado no existe');
-          return res.redirect('/caja/documentos');
-        }
-        
-        // Validar que no es el mismo matrizador
-        if (documento.idMatrizador === parseInt(matrizadorId)) {
-          await transaction.rollback();
-          req.flash('error', 'El documento ya está asignado a este matrizador');
-          return res.redirect('/caja/documentos');
-        }
-        
-        // Guardar el matrizador anterior
-        const matrizadorAnteriorId = documento.idMatrizador;
-        
-        // Actualizar el documento
-        await documento.update({
-          idMatrizador: matrizadorId
-        }, { transaction });
-        
-        // Registrar el cambio en la tabla de cambios
-        await CambioMatrizador.create({
-          documentoId,
-          matrizadorAnteriorId,
-          matrizadorNuevoId: matrizadorId,
-          usuarioId: req.matrizador.id,
-          fechaCambio: obtenerTimestampEcuador(),
-          justificacion
-        }, { transaction });
-        
-        // Registrar el evento en la tabla de eventos con los campos correctos
-        await EventoDocumento.create({
-          idDocumento: documentoId,
-          tipo: 'cambio_estado',
-          detalles: `Cambio de matrizador realizado por ${req.matrizador.nombre}. Motivo: ${justificacion}`,
-          usuario: req.matrizador.nombre,
-          metadatos: JSON.stringify({
-            matrizadorAnteriorId,
-            matrizadorNuevoId: matrizadorId,
-            justificacion,
-            cambiadoPor: req.matrizador.id
-          })
-        }, { transaction });
-        
-        // Confirmar la transacción
-        await transaction.commit();
-        
-        req.flash('success', 'Matrizador cambiado correctamente');
-        return res.redirect(`/caja/documentos/detalle/${documentoId}`);
-      } catch (error) {
-        // Revertir la transacción en caso de error
-        await transaction.rollback();
-        throw error;
-      }
-    } catch (error) {
-      console.error('Error al cambiar matrizador:', error);
-      req.flash('error', 'Error al cambiar el matrizador: ' + error.message);
-      return res.redirect('/caja/documentos');
-    }
-  },
-  
-  /**
-   * Muestra el formulario para cargar un archivo XML
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
-   */
-  mostrarFormularioXML: async (req, res) => {
-    try {
-      // Obtener matrizadores para la asignación
-      const matrizadores = await Matrizador.findAll({
-        where: {
-          rol: {
-            [Op.in]: ['matrizador', 'caja_archivo']
-          },
-          activo: true
-        },
-        attributes: ['id', 'nombre']
-      });
-      
-      // Renderizar la vista con el formulario
-      res.render('caja/documentos/formulario-xml', {
-        layout: 'caja',
-        title: 'Cargar XML',
-        matrizadores,
-        userRole: req.matrizador?.rol,
-        userName: req.matrizador?.nombre
-      });
-    } catch (error) {
-      console.error('Error al mostrar formulario XML:', error);
-      req.flash('error', 'Error al cargar el formulario');
-      return res.redirect('/caja/documentos');
-    }
-  },
-  
-  /**
-   * Procesa el archivo XML cargado
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
-   */
-  procesarXML: async (req, res) => {
-    try {
-      // Verificar si se ha cargado un archivo usando multer
-      if (!req.file) {
-        req.flash('error', 'No se ha cargado ningún archivo');
-        return res.redirect('/caja/documentos/nuevo-xml');
-      }
-      
-      const tempPath = req.file.path;
-      const xmlFileName = req.file.originalname;
-      
-      // Leer el contenido del archivo
-      const xmlData = fs.readFileSync(tempPath, 'utf8');
-      
-      // Parsear el XML
-      const parser = new xml2js.Parser({ explicitArray: false });
-      const result = await parser.parseStringPromise(xmlData);
-      
-      // Extraer datos de documento
-      let documentoData = {};
-      let matrizadorEncontrado = null;
-      let mensajeMatrizador = '';
-      
-      if (result.factura) {
-        const infoFactura = result.factura.infoFactura;
-        const infoTributaria = result.factura.infoTributaria;
-        
-        // Procesamiento de campos adicionales
-        const camposAdicionales = {};
-        if (result.factura.infoAdicional && result.factura.infoAdicional.campoAdicional) {
-          const campos = Array.isArray(result.factura.infoAdicional.campoAdicional) ? 
-            result.factura.infoAdicional.campoAdicional : [result.factura.infoAdicional.campoAdicional];
-          
-          campos.forEach(campo => {
-            if (campo.$ && campo.$.nombre) {
-              camposAdicionales[campo.$.nombre] = campo._;
-            }
-          });
-        }
-        
-        // Extraer descripción de servicios
-        let descripcionServicios = '';
-        let tipoDocumentoDetectado = 'Otros';
-        
-        // 🔍 NUEVA DETECCIÓN AUTOMÁTICA: Usar código completo del documento
-        const numeroLibro = camposAdicionales['NÚMERO DE LIBRO'] || '';
-        if (numeroLibro) {
-          // Usar nueva función de detección automática basada en posición 11
-          tipoDocumentoDetectado = detectarTipoDocumento(numeroLibro);
-          console.log(`🔍 DETECCIÓN AUTOMÁTICA: Código "${numeroLibro}" → Tipo "${tipoDocumentoDetectado}"`);
-        }
-        
-        if (result.factura.detalles && result.factura.detalles.detalle) {
-          const detalles = Array.isArray(result.factura.detalles.detalle) ? 
-            result.factura.detalles.detalle : [result.factura.detalles.detalle];
-          
-          // Si la detección automática falló, usar método legacy como fallback
-          if (tipoDocumentoDetectado === 'Otros' && numeroLibro) {
-            console.log(`⚠️ FALLBACK: Usando detección legacy para código "${numeroLibro}"`);
-            tipoDocumentoDetectado = inferirTipoDocumentoPorCodigo(numeroLibro);
-          }
-          
-          // Construir descripción completa
-          for (const detalle of detalles) {
-            descripcionServicios += `- ${detalle.descripcion}: ${detalle.cantidad} x $${detalle.precioUnitario}\n`;
-          }
-        }
-        
-        // Obtener nombre del matrizador
-        const nombreMatrizador = camposAdicionales['Matrizador'] || '';
-        
-        // Buscar el matrizador en la base de datos por nombre
-        if (nombreMatrizador) {
-          matrizadorEncontrado = await Matrizador.findOne({
-            where: {
-              nombre: {
-                [Op.iLike]: `%${nombreMatrizador}%`
-              },
-              rol: {
-                [Op.in]: ['matrizador', 'caja_archivo']
-              },
-              activo: true
-            }
-          });
-          
-          if (matrizadorEncontrado) {
-            mensajeMatrizador = `Se ha encontrado automáticamente al matrizador: ${matrizadorEncontrado.nombre}`;
-          } else {
-            mensajeMatrizador = `No se encontró al matrizador "${nombreMatrizador}" en el sistema. Por favor, seleccione uno manualmente.`;
-          }
-        }
-        
-        documentoData = {
-          tipoDocumento: tipoDocumentoDetectado,
-          nombreCliente: infoFactura.razonSocialComprador || '',
-          identificacionCliente: infoFactura.identificacionComprador || '',
-          emailCliente: camposAdicionales['Email Cliente'] || '',
-          telefonoCliente: camposAdicionales['CELULAR'] || camposAdicionales['TELÉFONO'] || '',
-          valorFactura: infoFactura.importeTotal || 0,
-          numeroFactura: `${infoTributaria.estab}-${infoTributaria.ptoEmi}-${infoTributaria.secuencial}`,
-          fechaEmision: infoFactura.fechaEmision || '',
-          numeroLibro: camposAdicionales['NÚMERO DE LIBRO'] || '',
-          descripcionServicios: descripcionServicios,
-          nombreMatrizador: nombreMatrizador,
-          idMatrizador: matrizadorEncontrado ? matrizadorEncontrado.id : null
-        };
-      }
-      
-      // Eliminar el archivo temporal
-      fs.unlinkSync(tempPath);
-      
-      // Obtener todos los matrizadores para la asignación
-      const matrizadores = await Matrizador.findAll({
-        where: {
-          rol: {
-            [Op.in]: ['matrizador', 'caja_archivo']
-          },
-          activo: true
-        },
-        attributes: ['id', 'nombre'],
-        order: [['nombre', 'ASC']]
-      });
-      
-      // Renderizar vista de confirmación
-      res.render('caja/documentos/confirmar-xml', {
-        layout: 'caja',
-        title: 'Confirmar Datos XML',
-        documento: documentoData,
-        xmlFileName: xmlFileName,
-        matrizadores,
-        matrizadorEncontrado,
-        mensajeMatrizador,
-        userRole: req.matrizador?.rol,
-        userName: req.matrizador?.nombre
-      });
-    } catch (error) {
-      console.error('Error al procesar XML:', error);
-      req.flash('error', 'Error al procesar el archivo XML: ' + error.message);
-      return res.redirect('/caja/documentos/nuevo-xml');
-    }
-  },
-  
-  /**
-   * Registra un nuevo documento a partir de datos XML
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
-   */
-  registrarDocumentoXML: async (req, res) => {
-    try {
-      // Iniciar transacción
-      const transaction = await sequelize.transaction();
-      
-      try {
-        const {
-          tipoDocumento,
-          nombreCliente,
-          identificacionCliente,
-          emailCliente,
-          telefonoCliente,
-          valorFactura,
-          numeroFactura,
-          idMatrizador,
-          metodoPago,
-          estadoPago,
-          comparecientes,
-          numeroLibro,
-          fechaEmision,
-          notas = '',  // Agregar notas con valor por defecto
-          omitirNotificacion = false  // Agregar omitirNotificacion con valor por defecto
-        } = req.body;
-        
-        // Validar campos obligatorios
-        if (!tipoDocumento || !nombreCliente || !identificacionCliente) {
-          await transaction.rollback();
-          req.flash('error', 'Faltan campos obligatorios');
-          return res.redirect('/caja/documentos/nuevo-xml');
-        }
-        
-        // Validar que el matrizador existe si se proporcionó un ID
-        if (idMatrizador) {
-          const matrizador = await Matrizador.findByPk(idMatrizador);
-          if (!matrizador) {
-            await transaction.rollback();
-            req.flash('error', 'El matrizador seleccionado no existe');
-            return res.redirect('/caja/documentos/nuevo-xml');
-          }
-        }
-        
-        // Usar el número de libro como código de barras si está disponible
-        let codigoBarras = numeroLibro || '';
-        
-        // Si no hay número de libro, generar un código de barras único
-        if (!codigoBarras) {
-          let codigoExiste = true;
-          
-          while (codigoExiste) {
-            const timestamp = Date.now().toString().slice(-8);
-            const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-            codigoBarras = `DOC${timestamp}${random}`;
-            
-            // Verificar que no exista ya
-            const documentoExistente = await Documento.findOne({
-              where: { codigoBarras },
-              transaction
-            });
-            
-            codigoExiste = !!documentoExistente;
-          }
-        }
-        
-        // Generar código de verificación para entrega
-        const codigoVerificacion = Math.floor(1000 + Math.random() * 9000).toString();
-        
-        // 🔧 CORREGIDO: Procesar la fecha del XML usando la función especializada
-        let fechaFactura = null;
-        if (fechaEmision) {
-          console.log(`🔧 PROCESANDO FECHA XML: ${fechaEmision}`);
-          
-          // 🎯 USAR FUNCIÓN ESPECIALIZADA: procesarFechaDocumento maneja timezone correctamente
-          fechaFactura = procesarFechaDocumento(fechaEmision);
-          
-          if (fechaFactura) {
-            console.log(`✅ FECHA XML PROCESADA CORRECTAMENTE: ${fechaEmision} → ${fechaFactura.toISOString()}`);
-          } else {
-            console.log(`⚠️ FECHA XML NO VÁLIDA: ${fechaEmision}, usando fallback`);
-          }
-        }
-        
-        // Si no se pudo convertir la fecha del XML, usar la fecha actual
-        if (!fechaFactura) {
-          console.log('🔧 USANDO FECHA ACTUAL COMO FALLBACK');
-          const hoy = new Date();
-          const dia = String(hoy.getDate()).padStart(2, '0');
-          const mes = String(hoy.getMonth() + 1).padStart(2, '0');
-          const año = hoy.getFullYear();
-          const fechaString = `${dia}/${mes}/${año}`;
-          fechaFactura = procesarFechaDocumento(fechaString);
-          console.log(`✅ FALLBACK APLICADO: ${fechaString} → ${fechaFactura?.toISOString()}`);
-        }
-        
-        // 🔧 NUEVO: Logging de debugging para verificar corrección
-        console.log('=== DEBUG CORRECCIÓN FECHA XML ===');
-        console.log('Fecha original del XML:', fechaEmision);
-        console.log('Fecha procesada final:', fechaFactura);
-        console.log('Fecha ISO final:', fechaFactura?.toISOString());
-        console.log('Timezone del servidor:', Intl.DateTimeFormat().resolvedOptions().timeZone);
-        console.log('================================');
-        
-        // CORREGIDO: Preparar datos del documento con fecha de pago si es necesario
-        const datosDocumento = {
-          codigoBarras,
-          tipoDocumento,
-          nombreCliente,
-          identificacionCliente,
-          emailCliente,
-          telefonoCliente,
-          notas,
-          estado: 'en_proceso',
-          codigoVerificacion,
-          idMatrizador: idMatrizador || null,
-          comparecientes: JSON.parse(comparecientes || '[]'),
-          // Campos de facturación
-          numeroFactura: numeroFactura || null,
-          valorFactura: valorFactura ? parseFloat(valorFactura) : null,
-          fechaFactura: fechaFactura, // 🎯 CORREGIDO: Usar fecha ya procesada correctamente
-          estadoPago: estadoPago || 'pendiente',
-          metodoPago: mapearMetodoPago(metodoPago),
-          omitirNotificacion: omitirNotificacion === 'on',
-          idUsuarioCreador: req.matrizador.id,
-          rolUsuarioCreador: req.matrizador.rol
-        };
-
-        // CORREGIDO: Si se está creando como pagado, asignar fecha de pago y usuario que registró
-        if (estadoPago === 'pagado') {
-          datosDocumento.fechaPago = obtenerTimestampEcuador();
-          datosDocumento.registradoPor = req.matrizador.id;
-          console.log(`🔧 DOCUMENTO CREADO COMO PAGADO: Asignando fechaPago = ${datosDocumento.fechaPago}`);
-        }
-        
-        // Crear el documento
-        const nuevoDocumento = await Documento.create(datosDocumento, { transaction });
-        
-        // Registrar evento de creación
-        await EventoDocumento.create({
-          idDocumento: nuevoDocumento.id,
-          tipo: 'creacion',
-          detalles: `Documento creado desde XML por ${req.matrizador.nombre}`,
-          usuario: req.matrizador.nombre,
-          metadatos: JSON.stringify({
-            creadoPor: req.matrizador.id,
-            metodoPago,
-            estadoPago,
-            valorFactura,
-            numeroFactura,
-            numeroLibro
-          })
-        }, { transaction });
-        
-        // Confirmar la transacción
-        await transaction.commit();
-        
-        req.flash('success', 'Documento registrado correctamente');
-        return res.redirect(`/caja/documentos/detalle/${nuevoDocumento.id}`);
-      } catch (error) {
-        // Revertir la transacción en caso de error
-        await transaction.rollback();
-        throw error;
-      }
-    } catch (error) {
-      console.error('Error al registrar documento desde XML:', error);
-      
-      // Detectar error específico de código de barras duplicado
-      let errorMessage = 'Error al registrar documento: ' + error.message;
-      
-      if (error.name === 'SequelizeUniqueConstraintError') {
-        const esErrorCodigoBarras = error.errors && error.errors.some(e => 
-          e.path === 'codigo_barras' || e.path === 'codigoBarras'
-        );
-        
-        if (esErrorCodigoBarras) {
-          const codigoDuplicado = error.fields?.codigo_barras || req.body.numeroLibro || 'desconocido';
-          errorMessage = `⚠️ Documento ya registrado: El código de barras '${codigoDuplicado}' ya existe en el sistema. Este documento ya fue procesado anteriormente.`;
-        } else {
-          errorMessage = 'Ya existe un registro con uno de los valores únicos ingresados (ej. email, identificación).';
-        }
-      }
-      
-      req.flash('error', errorMessage);
-      return res.redirect('/caja/documentos/nuevo-xml');
-    }
-  },
-  
-  /**
-   * Muestra la página principal de reportes con opciones de selección
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
-   */
-  reportes: async (req, res) => {
-    try {
-      // Obtener matrizadores para los filtros
-      const matrizadores = await Matrizador.findAll({
-        where: {
-          rol: {
-            [Op.in]: ['matrizador', 'caja_archivo']
-          },
-          activo: true
-        },
-        attributes: ['id', 'nombre'],
-        order: [['nombre', 'ASC']]
-      });
-      
-      // Determinar el reporte activo (si lo hay)
-      const reporteActivo = '';
-      
-      // Renderizar la vista principal de reportes
-      res.render('caja/reportes/index', {
-        layout: 'caja',
-        title: 'Reportes y Estadísticas',
-        activeReportes: true,
-        matrizadores,
-        userRole: req.matrizador?.rol,
-        userName: req.matrizador?.nombre,
-        reporteActivo,
-        formAction: '/caja/reportes'
-      });
-    } catch (error) {
-      console.error('Error al mostrar página de reportes:', error);
+      console.error('Error al ver documento:', error);
       return res.status(500).render('error', {
         layout: 'caja',
         title: 'Error',
-        message: 'Error al cargar la página de reportes',
+        message: 'Error al cargar el documento',
         error
       });
     }
   },
+
+  /**
+   * RESTAURADO: Mostrar formulario de registro de pago
+   */
+  mostrarFormularioRegistrarPago: async (req, res) => {
+    try {
+      const documentoId = req.params.id;
+      
+      console.log('🔍 DEBUGGING - mostrarFormularioRegistrarPago:');
+      console.log('📋 documentoId recibido en params:', documentoId);
+      console.log('📋 req.params completo:', req.params);
+      console.log('📋 URL completa:', req.originalUrl);
+      
+      const documento = await Documento.findByPk(documentoId);
+      
+      if (!documento) {
+        console.error('❌ Documento no encontrado para ID:', documentoId);
+        req.flash('error', 'Documento no encontrado');
+        return res.redirect('/caja/documentos');
+      }
+      
+      console.log('✅ Documento encontrado:');
+      console.log('  - ID:', documento.id);
+      console.log('  - Código:', documento.codigoBarras);
+      console.log('  - Cliente:', documento.nombreCliente);
+      console.log('  - Estado pago:', documento.estado_pago);
+      
+      if (documento.estadoPago === 'pagado') {
+        console.log('⚠️ Documento ya está pagado, redirigiendo...');
+        req.flash('warning', 'Este documento ya está pagado');
+        return res.redirect(`/caja/documentos/detalle/${documentoId}`);
+      }
+      
+      console.log('🎭 Renderizando vista registrar.hbs con documento ID:', documento.id);
+      
+      res.render('caja/pagos/registrar', {
+        layout: 'caja',
+        title: 'Registrar Pago',
+        documento,
+        userRole: req.matrizador?.rol,
+        userName: req.matrizador?.nombre
+      });
+    } catch (error) {
+      console.error('❌ Error al mostrar formulario de pago:', error);
+      req.flash('error', 'Error al cargar el formulario de pago');
+      return res.redirect('/caja/documentos');
+    }
+  },
   
   /**
-   * Genera y muestra el reporte financiero
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
+   * IMPLEMENTACIÓN COMPLETA: Registrar pago con soporte para retenciones XML y manuales
+   */
+  registrarPago: async (req, res) => {
+    try {
+      console.log('💰 Registrando pago completo...');
+      console.log('🔍 DEBUGGING SERVIDOR - Análisis completo de la petición:');
+      console.log('📋 req.body:', req.body);
+      console.log('📋 req.params:', req.params);
+      console.log('📋 req.query:', req.query);
+      console.log('📋 Content-Type:', req.headers['content-type']);
+      console.log('📋 Method:', req.method);
+      
+      // Listar todos los campos recibidos
+      console.log('📦 Campos en req.body:');
+      Object.keys(req.body || {}).forEach(key => {
+        console.log(`  - ${key}: ${req.body[key]} (tipo: ${typeof req.body[key]})`);
+      });
+
+      const {
+        documentoId,
+        monto,
+        formaPago,
+        numeroComprobante,
+        observaciones,
+        xmlRetencionData
+      } = req.body;
+      
+      console.log('🔍 Variables extraídas:');
+      console.log(`  - documentoId: "${documentoId}" (tipo: ${typeof documentoId})`);
+      console.log(`  - monto: "${monto}" (tipo: ${typeof monto})`);
+      console.log(`  - formaPago: "${formaPago}" (tipo: ${typeof formaPago})`);
+
+      // Validaciones básicas
+      if (!documentoId) {
+        console.error('❌ documentoId está vacío, null o undefined');
+        return res.status(400).json({
+          success: false,
+          message: 'ID del documento es requerido'
+        });
+      }
+
+      // Buscar el documento
+      const documento = await Documento.findByPk(documentoId);
+      if (!documento) {
+        return res.status(404).json({
+          success: false,
+          message: 'Documento no encontrado'
+        });
+      }
+
+      console.log('🔍 DEBUG - ANÁLISIS COMPLETO DEL DOCUMENTO:');
+      console.log('📋 Documento encontrado:', {
+        id: documento.id,
+        codigoBarras: documento.codigoBarras,
+        valorFactura: documento.valorFactura,
+        valorPagado: documento.valorPagado,
+        valorPendiente: documento.valorPendiente,
+        estadoPago: documento.estadoPago,
+        numeroFactura: documento.numeroFactura
+      });
+
+      if (documento.estadoPago === 'pagado_completo') {
+        return res.status(400).json({
+          success: false,
+          message: 'Este documento ya está pagado completamente'
+        });
+      }
+
+      // Procesar datos de retención si existen
+      let datosRetencion = null;
+      if (xmlRetencionData) {
+        try {
+          datosRetencion = JSON.parse(xmlRetencionData);
+          console.log('📋 Datos de retención procesados:', datosRetencion);
+        } catch (error) {
+          console.error('Error parseando datos de retención:', error);
+          return res.status(400).json({
+            success: false,
+            message: 'Datos de retención inválidos'
+          });
+        }
+      }
+
+      // Validar montos
+      const montoPago = parseFloat(monto) || 0;
+      const montoRetencion = datosRetencion ? (parseFloat(datosRetencion.totalRetenido) || 0) : 0;
+      const totalMovimiento = montoPago + montoRetencion;
+
+      console.log('💵 Análisis de montos:', {
+        montoPago,
+        montoRetencion,
+        totalMovimiento,
+        valorFacturaActual: documento.valorFactura,
+        valorPagadoActual: documento.valorPagado || 0
+      });
+
+      // Validar que hay al menos un monto
+      if (totalMovimiento <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Debe ingresar un monto de pago o procesar una retención'
+        });
+      }
+
+      // Obtener valor de factura válido
+      const valorFacturaDocumento = parseFloat(documento.valorFactura) || 0;
+      const valorPagadoAnterior = parseFloat(documento.valorPagado) || 0;
+      const valorPendienteReal = valorFacturaDocumento - valorPagadoAnterior;
+
+      console.log('🔍 CÁLCULOS DE PAGO:', {
+        valorFacturaDocumento,
+        valorPagadoAnterior,
+        valorPendienteReal,
+        montoPago,
+        montoRetencion,
+        totalMovimiento
+      });
+
+      if (valorFacturaDocumento <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: `El documento no tiene un valor de factura válido. Valor actual: $${valorFacturaDocumento}`
+        });
+      }
+
+      // Validar que no exceda el valor pendiente
+      if (totalMovimiento > valorPendienteReal) {
+        return res.status(400).json({
+          success: false,
+          message: `El total del pago ($${totalMovimiento.toFixed(2)}) no puede exceder el valor pendiente ($${valorPendienteReal.toFixed(2)})`
+        });
+      }
+
+      // Validar forma de pago si hay monto de pago
+      if (montoPago > 0 && !formaPago) {
+        return res.status(400).json({
+          success: false,
+          message: 'Forma de pago es requerida cuando hay monto de pago'
+        });
+      }
+
+      // Calcular nuevos valores
+      const nuevoValorPagado = valorPagadoAnterior + montoPago;
+      const nuevoValorPendiente = Math.max(0, valorFacturaDocumento - nuevoValorPagado - montoRetencion);
+      
+      // CORREGIDO: Usar valores correctos del ENUM del modelo
+      let nuevoEstadoPago;
+      if (nuevoValorPendiente <= 0.01) {
+        // Pago completo
+        if (montoRetencion > 0) {
+          nuevoEstadoPago = 'pagado_con_retencion';
+        } else {
+          nuevoEstadoPago = 'pagado_completo';
+        }
+      } else {
+        // Pago parcial
+        nuevoEstadoPago = 'pago_parcial';
+      }
+
+      console.log('🧮 Cálculos finales:', {
+        valorFacturaDocumento,
+        valorPagadoAnterior,
+        montoPago,
+        montoRetencion,
+        nuevoValorPagado,
+        nuevoValorPendiente,
+        nuevoEstadoPago
+      });
+
+      // ACTUALIZACIÓN MEJORADA: Usar Sequelize con transacción
+      const transaction = await sequelize.transaction();
+      
+      try {
+        console.log('🔄 Iniciando actualización del documento con transacción...');
+        
+        // Preparar datos de actualización
+        const datosActualizacion = {
+          estadoPago: nuevoEstadoPago,
+          metodoPago: formaPago || 'retencion',
+          fechaPago: new Date(),
+          fechaUltimoPago: new Date(),
+          valorPagado: nuevoValorPagado,
+          valorPendiente: nuevoValorPendiente,
+          numeroComprobante: numeroComprobante || null,
+          observaciones: observaciones || null
+        };
+        
+        // Si hay datos de retención, incluirlos
+        if (datosRetencion) {
+          datosActualizacion.tieneRetencion = true;
+          datosActualizacion.numeroComprobanteRetencion = datosRetencion.numeroComprobanteRetencion;
+          datosActualizacion.razonSocialRetenedora = datosRetencion.razonSocialRetenedora;
+          datosActualizacion.rucEmpresaRetenedora = datosRetencion.rucRetenedor;
+          datosActualizacion.retencionIva = parseFloat(datosRetencion.retencionIva) || 0;
+          datosActualizacion.retencionRenta = parseFloat(datosRetencion.retencionRenta) || 0;
+          datosActualizacion.valorRetenido = parseFloat(datosRetencion.totalRetenido) || 0;
+          datosActualizacion.fechaRetencion = datosRetencion.fechaRetencion ? new Date(datosRetencion.fechaRetencion) : new Date();
+        }
+        
+        console.log('📦 Datos para actualización:', JSON.stringify(datosActualizacion, null, 2));
+        
+        // Actualizar el documento usando Sequelize
+        const [numRowsUpdated] = await Documento.update(datosActualizacion, {
+          where: { id: documento.id },
+          transaction
+        });
+        
+        if (numRowsUpdated === 0) {
+          throw new Error('No se pudo actualizar el documento');
+        }
+        
+        console.log(`✅ Documento actualizado: ${numRowsUpdated} filas afectadas`);
+        
+        // Confirmar transacción
+        await transaction.commit();
+        
+        // Refrescar la instancia del documento
+        await documento.reload();
+        
+        console.log('📋 Estado final del documento:', {
+          id: documento.id,
+          estadoPago: documento.estadoPago,
+          metodoPago: documento.metodoPago,
+          valorPagado: documento.valorPagado,
+          valorPendiente: documento.valorPendiente,
+          fechaPago: documento.fechaPago
+        });
+
+        // Preparar respuesta con datos completos
+        const tipoOperacion = montoPago > 0 && montoRetencion > 0 ? 'pago_con_retencion' :
+                             montoPago > 0 ? 'pago_simple' : 'solo_retencion';
+
+        const respuesta = {
+          success: true,
+          message: 'Pago registrado exitosamente',
+          data: {
+            documentoId: documento.id,
+            codigoBarras: documento.codigoBarras,
+            tipoOperacion,
+            montoPago,
+            montoRetencion,
+            totalMovimiento,
+            valorFactura: valorFacturaDocumento,
+            valorPagado: documento.valorPagado,
+            valorPendiente: documento.valorPendiente,
+            estadoPago: documento.estadoPago,
+            fechaPago: documento.fechaPago,
+            pagoCompleto: nuevoValorPendiente <= 0.01
+          }
+        };
+
+        console.log('📊 Respuesta preparada:', respuesta);
+
+        // MEJORADO: Redirigir con mensaje de éxito
+        if (req.headers['content-type'] && req.headers['content-type'].includes('application/json')) {
+          // Si es una petición AJAX, devolver JSON
+          res.json(respuesta);
+        } else {
+          // Si es una petición de formulario normal, redirigir con mensaje flash
+          req.flash('success', `Pago registrado exitosamente. Documento ${documento.codigoBarras} - Estado: ${documento.estadoPago.toUpperCase()}`);
+          res.redirect(`/caja/documentos/detalle/${documento.id}`);
+        }
+
+      } catch (updateError) {
+        // Rollback en caso de error
+        await transaction.rollback();
+        throw updateError;
+      }
+
+    } catch (error) {
+      console.error('❌ Error registrando pago:', error);
+      
+      // MEJORADO: Manejar errores según el tipo de petición
+      if (req.headers['content-type'] && req.headers['content-type'].includes('application/json')) {
+        res.status(500).json({
+          success: false,
+          message: 'Error interno del servidor: ' + error.message
+        });
+      } else {
+        req.flash('error', 'Error al registrar el pago: ' + error.message);
+        res.redirect('back');
+      }
+    }
+  },
+  
+  /**
+   * NUEVO: Procesar XML de retención y extraer datos específicos
+   */
+  procesarXMLRetencion: async (req, res) => {
+    const fs = require('fs');
+    const xml2js = require('xml2js');
+    
+    try {
+      console.log('🔍 Procesando XML de retención...');
+      
+      if (!req.file) {
+        return res.status(400).json({
+          success: false, 
+          message: 'No se recibió ningún archivo XML de retención'
+        });
+      }
+
+      console.log('📁 Archivo XML recibido:', req.file.originalname);
+      console.log('📍 Ruta temporal:', req.file.path);
+
+      // Leer el archivo XML
+      const xmlContent = fs.readFileSync(req.file.path, 'utf8');
+      console.log('📄 Contenido XML leído, tamaño:', xmlContent.length, 'caracteres');
+
+      // Parsear XML
+      const parser = new xml2js.Parser({ explicitArray: false });
+      const result = await parser.parseStringPromise(xmlContent);
+      
+      console.log('✅ XML parseado exitosamente');
+      console.log('🔍 Estructura raíz:', Object.keys(result));
+
+      // Extraer datos del XML de retención
+      let datosRetencionXML = {};
+      
+      // Buscar estructura de retención
+      if (result.autorizacion && result.autorizacion.comprobante) {
+        // XML viene dentro de autorización con CDATA
+        console.log('🔍 Estructura: autorizacion > comprobante (CDATA)');
+        
+        // Parsear el contenido CDATA
+        const comprobanteContent = result.autorizacion.comprobante;
+        const comprobanteResult = await parser.parseStringPromise(comprobanteContent);
+        
+        if (comprobanteResult.comprobanteRetencion) {
+          datosRetencionXML = extraerDatosRetencionXML(comprobanteResult.comprobanteRetencion);
+        }
+      } else if (result.comprobanteRetencion) {
+        // XML directo de comprobante de retención
+        console.log('🔍 Estructura: comprobanteRetencion directo');
+        datosRetencionXML = extraerDatosRetencionXML(result.comprobanteRetencion);
+      } else {
+        throw new Error('Estructura de XML de retención no reconocida');
+      }
+
+      console.log('📊 Datos de retención extraídos:', datosRetencionXML);
+
+      // Limpiar archivo temporal
+      fs.unlinkSync(req.file.path);
+      console.log('🗑️ Archivo temporal eliminado');
+
+      // Respuesta exitosa con datos extraídos
+      res.json({
+        success: true,
+        message: 'XML de retención procesado exitosamente',
+        data: datosRetencionXML
+      });
+
+    } catch (error) {
+      console.error('❌ Error procesando XML de retención:', error);
+      
+      // Limpiar archivo temporal en caso de error
+      if (req.file && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+
+      res.status(500).json({
+        success: false, 
+        message: 'Error al procesar el archivo XML de retención: ' + error.message
+      });
+    }
+  },
+
+  /**
+   * IMPORTADO DESDE ADMIN: Reporte financiero funcional
    */
   reporteFinanciero: async (req, res) => {
     try {
@@ -1713,7 +985,7 @@ const cajaController = {
       const porcentajeRecuperacion = totalFacturado > 0 ? 
         Math.round((totalCobrado / totalFacturado) * 100) : 0;
       
-      // Obtener datos diarios para el gráfico y tabla
+      // CORREGIDO: Obtener datos diarios usando nombres de columna correctos
       const documentosPorDia = await Documento.findAll({
         where: whereClause,
         attributes: [
@@ -1756,254 +1028,54 @@ const cajaController = {
       
       // Obtener todos los matrizadores para el dropdown
       const matrizadores = await Matrizador.findAll({
-        attributes: ['id', 'nombre'],
-        where: { 
-          activo: true, 
+        where: {
           rol: {
             [Op.in]: ['matrizador', 'caja_archivo']
-          }
+          },
+          activo: true
         },
-        order: [['nombre', 'ASC']],
-        raw: true
+        attributes: ['id', 'nombre'],
+        order: [['nombre', 'ASC']]
       });
       
-      // Convertir IDs a string para comparación en la vista
-      const matrizadoresConIdString = matrizadores.map(m => ({
-        ...m,
-        id: String(m.id)
-      }));
-      
-      // Renderizar la vista con los datos
+      // Renderizar la vista con los datos - ADAPTADO PARA CAJA
       res.render('caja/reportes/financiero', {
-        layout: 'caja',
+        layout: 'caja', // CAMBIO: usar layout de caja
         title: 'Reporte Financiero',
         activeReportes: true,
         userRole: req.matrizador?.rol,
         userName: req.matrizador?.nombre,
-        matrizadores, // Pasar lista de matrizadores
-        idMatrizadorSeleccionado: idMatrizador || 'todos', // Pasar ID seleccionado
+        matrizadores,
+        idMatrizadorSeleccionado: idMatrizador || 'todos',
         stats: {
-          totalFacturado: formatearValorMonetario(totalFacturado), // Corregido
-          totalCobrado: formatearValorMonetario(totalCobrado),   // Corregido
-          totalPendiente: formatearValorMonetario(totalPendiente), // Corregido
-          porcentajeRecuperacion: porcentajeRecuperacion
+          totalFacturado: formatearValorMonetario(totalFacturado),
+          totalCobrado: formatearValorMonetario(totalCobrado),
+          totalPendiente: formatearValorMonetario(totalPendiente),
+          porcentajeRecuperacion
         },
         datosTabla,
         graficoTendencia,
-        periodoTexto,
         filtros: {
           rango,
           fechaInicio: fechaInicio.format('YYYY-MM-DD'),
-          fechaFin: fechaFin.format('YYYY-MM-DD')
-        }
+          fechaFin: fechaFin.format('YYYY-MM-DD'),
+          idMatrizador: idMatrizador || 'todos'
+        },
+        periodoTexto
       });
     } catch (error) {
       console.error('Error al generar reporte financiero:', error);
       return res.status(500).render('error', {
-        layout: 'caja',
+        layout: 'caja', // CAMBIO: usar layout de caja
         title: 'Error',
         message: 'Error al generar el reporte financiero',
         error
       });
     }
   },
-  
+
   /**
-   * Genera y muestra el reporte de documentos
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
-   */
-  reporteDocumentos: async (req, res) => {
-    try {
-      // Procesar parámetros de filtrado
-      const rango = req.query.rango || 'mes';
-      let fechaInicio, fechaFin, periodoTexto;
-      
-      // Establecer fechas según el rango seleccionado
-      const hoy = moment().startOf('day');
-      
-      switch (rango) {
-        case 'hoy':
-          fechaInicio = hoy.clone();
-          fechaFin = moment().endOf('day');
-          periodoTexto = 'Hoy ' + fechaInicio.format('DD/MM/YYYY');
-          break;
-        case 'ayer':
-          fechaInicio = hoy.clone().subtract(1, 'days');
-          fechaFin = hoy.clone().subtract(1, 'days').endOf('day');
-          periodoTexto = 'Ayer ' + fechaInicio.format('DD/MM/YYYY');
-          break;
-        case 'semana':
-          fechaInicio = hoy.clone().startOf('week');
-          fechaFin = moment().endOf('day');
-          periodoTexto = 'Esta semana (desde ' + fechaInicio.format('DD/MM/YYYY') + ')';
-          break;
-        case 'mes':
-          fechaInicio = hoy.clone().startOf('month');
-          fechaFin = moment().endOf('day');
-          periodoTexto = 'Este mes (desde ' + fechaInicio.format('DD/MM/YYYY') + ')';
-          break;
-        case 'ultimo_mes':
-          fechaInicio = hoy.clone().subtract(30, 'days');
-          fechaFin = moment().endOf('day');
-          periodoTexto = 'Últimos 30 días';
-          break;
-        case 'personalizado':
-          fechaInicio = req.query.fechaInicio ? moment(req.query.fechaInicio).startOf('day') : hoy.clone().startOf('month');
-          fechaFin = req.query.fechaFin ? moment(req.query.fechaFin).endOf('day') : moment().endOf('day');
-          periodoTexto = 'Del ' + fechaInicio.format('DD/MM/YYYY') + ' al ' + fechaFin.format('DD/MM/YYYY');
-          break;
-        default:
-          fechaInicio = hoy.clone().startOf('month');
-          fechaFin = moment().endOf('day');
-          periodoTexto = 'Este mes (desde ' + fechaInicio.format('DD/MM/YYYY') + ')';
-      }
-      
-      // Formatear fechas para consultas SQL
-      const fechaInicioSQL = fechaInicio.format('YYYY-MM-DD HH:mm:ss');
-      const fechaFinSQL = fechaFin.format('YYYY-MM-DD HH:mm:ss');
-      
-      // Obtener estadísticas de documentos
-      const [statsResult] = await sequelize.query(`
-        SELECT 
-          COUNT(*) as total_documentos,
-          COUNT(CASE WHEN numero_factura IS NOT NULL THEN 1 END) as con_factura,
-          COUNT(CASE WHEN estado_pago = 'pendiente' THEN 1 END) as pendientes,
-          COUNT(CASE WHEN estado_pago = 'pagado' THEN 1 END) as pagados,
-          COALESCE(SUM(valor_factura), 0) as total_facturado,
-          CASE 
-            WHEN COUNT(*) > 0 THEN COALESCE(AVG(valor_factura), 0)
-            ELSE 0
-          END as promedio_facturado
-        FROM documentos
-        WHERE fecha_factura BETWEEN :fechaInicio AND :fechaFin
-          AND estado != 'cancelado'
-      `, {
-        replacements: { fechaInicio: fechaInicioSQL, fechaFin: fechaFinSQL },
-        type: sequelize.QueryTypes.SELECT
-      });
-      
-      // Obtener estadísticas por tipo de documento
-      const estadisticasPorTipo = await sequelize.query(`
-        SELECT 
-          tipo_documento as "tipoDocumento", 
-          COUNT(*) as cantidad, 
-          COALESCE(SUM(valor_factura), 0) as "totalFacturado",
-          CASE 
-            WHEN COUNT(*) > 0 THEN COALESCE(AVG(valor_factura), 0)
-            ELSE 0
-          END as promedio
-        FROM documentos
-        WHERE fecha_factura BETWEEN :fechaInicio AND :fechaFin
-          AND estado != 'cancelado'
-        GROUP BY tipo_documento
-        ORDER BY cantidad DESC
-      `, {
-        replacements: { fechaInicio: fechaInicioSQL, fechaFin: fechaFinSQL },
-        type: sequelize.QueryTypes.SELECT
-      });
-      
-      // Formatear valores numéricos para estadísticas por tipo
-      estadisticasPorTipo.forEach(item => {
-        item.totalFacturado = formatearValorMonetario(item.totalFacturado);
-        item.promedio = formatearValorMonetario(item.promedio);
-      });
-      
-      // Preparar datos para gráficos
-      const graficoTipoDocumento = {
-        tipos: estadisticasPorTipo.map(item => item.tipoDocumento),
-        cantidades: estadisticasPorTipo.map(item => parseInt(item.cantidad))
-      };
-      
-      // Tendencia de documentos por día
-      const tendenciaDiaria = await sequelize.query(`
-        SELECT 
-          TO_CHAR(fecha_factura, 'YYYY-MM-DD') as fecha,
-          COUNT(*) as cantidad
-        FROM documentos
-        WHERE fecha_factura BETWEEN :fechaInicio AND :fechaFin
-          AND estado != 'cancelado'
-        GROUP BY TO_CHAR(fecha_factura, 'YYYY-MM-DD')
-        ORDER BY fecha
-      `, {
-        replacements: { fechaInicio: fechaInicioSQL, fechaFin: fechaFinSQL },
-        type: sequelize.QueryTypes.SELECT
-      });
-      
-      const graficoTendencia = {
-        fechas: tendenciaDiaria.map(item => moment(item.fecha).format('DD/MM/YYYY')),
-        cantidades: tendenciaDiaria.map(item => parseInt(item.cantidad))
-      };
-      
-      // Obtener lista de documentos
-      const documentos = await Documento.findAll({
-        where: {
-          fechaFactura: {
-            [Op.between]: [fechaInicio.toDate(), fechaFin.toDate()]
-          },
-          estado: {
-            [Op.ne]: 'cancelado'
-          }
-        },
-        order: [['created_at', 'DESC']], // Ordenar por fecha de registro del sistema (operacional)
-        limit: 100 // Limitar a 100 documentos para no sobrecargar la vista
-      });
-      
-      // Calcular porcentajes para las estadísticas
-      const totalDocumentos = parseInt(statsResult.total_documentos);
-      const conFactura = parseInt(statsResult.con_factura);
-      const pendientes = parseInt(statsResult.pendientes);
-      const pagados = parseInt(statsResult.pagados);
-      
-      const porcentajeFacturados = totalDocumentos > 0 ? Math.round((conFactura / totalDocumentos) * 100) : 0;
-      const porcentajePendientes = totalDocumentos > 0 ? Math.round((pendientes / totalDocumentos) * 100) : 0;
-      const porcentajePagados = totalDocumentos > 0 ? Math.round((pagados / totalDocumentos) * 100) : 0;
-      
-      // Renderizar la vista con los datos
-      res.render('caja/reportes/documentos', {
-        layout: 'caja',
-        title: 'Reporte de Documentos',
-        activeReportes: true,
-        userRole: req.matrizador?.rol,
-        userName: req.matrizador?.nombre,
-        stats: {
-          totalDocumentos,
-          conFactura,
-          pendientes,
-          pagados,
-          totalFacturado: formatearValorMonetario(statsResult.total_facturado),
-          promedioFacturado: formatearValorMonetario(statsResult.promedio_facturado),
-          porcentajeFacturados,
-          porcentajePendientes,
-          porcentajePagados
-        },
-        estadisticasPorTipo,
-        graficoTipoDocumento,
-        graficoTendencia,
-        documentos,
-        periodoTexto,
-        filtros: {
-          rango,
-          fechaInicio: fechaInicio.format('YYYY-MM-DD'),
-          fechaFin: fechaFin.format('YYYY-MM-DD')
-        }
-      });
-    } catch (error) {
-      console.error('Error al generar reporte de documentos:', error);
-      return res.status(500).render('error', {
-        layout: 'caja',
-        title: 'Error',
-        message: 'Error al generar el reporte de documentos',
-        error
-      });
-    }
-  },
-  
-  /**
-   * Genera y muestra el reporte de documentos pendientes
-   * CORREGIDO: Usar created_at para calcular días atrasados (cuándo se registró vs hoy)
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
+   * IMPORTADO DESDE ADMIN: Reporte de documentos pendientes funcional
    */
   reportePendientes: async (req, res) => {
     try {
@@ -2014,21 +1086,21 @@ const cajaController = {
       
       // Construir condiciones de filtrado
       const whereConditions = {
-        estadoPago: 'pendiente',
-        numeroFactura: { [Op.not]: null }, // Solo documentos con factura
-        estado: { [Op.notIn]: ['eliminado', 'nota_credito'] } // Excluir estados especiales
+        estado_pago: 'pendiente', // CAMBIO: usar camelCase
+        numero_factura: { [Op.not]: null }, // CAMBIO: usar camelCase
+        estado: { [Op.notIn]: ['eliminado', 'nota_credito'] }
       };
       
       if (matrizador) {
-        whereConditions.idMatrizador = matrizador;
+        whereConditions.id_matrizador = matrizador; // CAMBIO: usar camelCase
       }
       
       // Construir ORDER BY según el filtro
-      let order = [['created_at', 'ASC']]; // Por defecto más antiguos (cuándo se registraron)
+      let order = [['created_at', 'ASC']]; // Por defecto más antiguos
       if (ordenar === 'monto') {
-        order = [['valorFactura', 'DESC']];
+        order = [['valor_factura', 'DESC']]; // CAMBIO: usar camelCase
       } else if (ordenar === 'fecha') {
-        order = [['created_at', 'DESC']]; // CORREGIDO: usar created_at
+        order = [['created_at', 'DESC']];
       }
       
       // Obtener documentos pendientes
@@ -2044,17 +1116,17 @@ const cajaController = {
         offset
       });
       
-      // CORREGIDO: Calcular estadísticas por rangos de antigüedad usando created_at (PostgreSQL syntax)
+      // Calcular estadísticas por rangos de antigüedad
       const statsQuery = `
         SELECT 
-          COUNT(CASE WHEN EXTRACT(DAY FROM NOW() - created_at) BETWEEN 1 AND 7 THEN 1 END) as rango1_7,
-          COUNT(CASE WHEN EXTRACT(DAY FROM NOW() - created_at) BETWEEN 8 AND 15 THEN 1 END) as rango8_15,
-          COUNT(CASE WHEN EXTRACT(DAY FROM NOW() - created_at) BETWEEN 16 AND 60 THEN 1 END) as rango16_60,
-          COUNT(CASE WHEN EXTRACT(DAY FROM NOW() - created_at) > 60 THEN 1 END) as rango60,
-          SUM(CASE WHEN EXTRACT(DAY FROM NOW() - created_at) BETWEEN 1 AND 7 THEN valor_factura ELSE 0 END) as monto1_7,
-          SUM(CASE WHEN EXTRACT(DAY FROM NOW() - created_at) BETWEEN 8 AND 15 THEN valor_factura ELSE 0 END) as monto8_15,
-          SUM(CASE WHEN EXTRACT(DAY FROM NOW() - created_at) BETWEEN 16 AND 60 THEN valor_factura ELSE 0 END) as monto16_60,
-          SUM(CASE WHEN EXTRACT(DAY FROM NOW() - created_at) > 60 THEN valor_factura ELSE 0 END) as monto60,
+          COUNT(CASE WHEN EXTRACT(DAY FROM NOW() - COALESCE(fecha_factura::timestamp, created_at)) BETWEEN 1 AND 7 THEN 1 END) as rango1_7,
+          COUNT(CASE WHEN EXTRACT(DAY FROM NOW() - COALESCE(fecha_factura::timestamp, created_at)) BETWEEN 8 AND 15 THEN 1 END) as rango8_15,
+          COUNT(CASE WHEN EXTRACT(DAY FROM NOW() - COALESCE(fecha_factura::timestamp, created_at)) BETWEEN 16 AND 60 THEN 1 END) as rango16_60,
+          COUNT(CASE WHEN EXTRACT(DAY FROM NOW() - COALESCE(fecha_factura::timestamp, created_at)) > 60 THEN 1 END) as rango60,
+          SUM(CASE WHEN EXTRACT(DAY FROM NOW() - COALESCE(fecha_factura::timestamp, created_at)) BETWEEN 1 AND 7 THEN valor_factura ELSE 0 END) as monto1_7,
+          SUM(CASE WHEN EXTRACT(DAY FROM NOW() - COALESCE(fecha_factura::timestamp, created_at)) BETWEEN 8 AND 15 THEN valor_factura ELSE 0 END) as monto8_15,
+          SUM(CASE WHEN EXTRACT(DAY FROM NOW() - COALESCE(fecha_factura::timestamp, created_at)) BETWEEN 16 AND 60 THEN valor_factura ELSE 0 END) as monto16_60,
+          SUM(CASE WHEN EXTRACT(DAY FROM NOW() - COALESCE(fecha_factura::timestamp, created_at)) > 60 THEN valor_factura ELSE 0 END) as monto60,
           COUNT(*) as totalPendientes
         FROM documentos
         WHERE estado_pago = 'pendiente'
@@ -2073,7 +1145,7 @@ const cajaController = {
       const matrizadores = await Matrizador.findAll({
         where: {
           rol: {
-            [Op.in]: ['matrizador', 'caja_archivo']
+            [Op.in]: ['matrizador', 'caja_archivo'] // CAMBIO: incluir caja_archivo
           },
           activo: true
         },
@@ -2081,62 +1153,26 @@ const cajaController = {
         order: [['nombre', 'ASC']]
       });
       
-      // CORREGIDO: Agregar días de antigüedad basado en created_at (cuándo se registró el documento)
+      // Agregar días de antigüedad a cada documento
       const documentosConDatos = documentosPendientes.map(doc => {
-        const diasAntiguedad = moment().diff(moment(doc.created_at), 'days'); // CORREGIDO: usar created_at
+        // Usar fechaFactura para calcular días de atraso (no created_at)
+        const fechaBase = doc.fecha_factura || doc.created_at;
+        const diasAntiguedad = moment().diff(moment(fechaBase), 'days');
         return {
           ...doc.toJSON(),
           diasAntiguedad,
-          matrizador: doc.matrizador?.nombre || 'Sin asignar',
-          // Para debugging: también mostrar fecha de registro
-          fechaRegistro: doc.created_at,
-          fechaDocumento: doc.fechaFactura
+          matrizador: doc.matrizador?.nombre || 'Sin asignar'
         };
       });
       
-      // Filtrar por antigüedad si se especifica
-      let documentosFiltrados = documentosConDatos;
-      if (antiguedad) {
-        documentosFiltrados = documentosConDatos.filter(doc => {
-          const dias = doc.diasAntiguedad;
-          switch (antiguedad) {
-            case '1-7': return dias >= 1 && dias <= 7;
-            case '8-15': return dias >= 8 && dias <= 15;
-            case '16-60': return dias >= 16 && dias <= 60;
-            case '60+': return dias > 60;
-            default: return true;
-          }
-        });
-      }
-      
-      // Preparar paginación
-      const totalPages = Math.ceil(count / limit);
-      const pagination = {
-        currentPage: parseInt(page),
-        totalPages,
-        hasNext: page < totalPages,
-        hasPrev: page > 1,
-        next: page < totalPages ? parseInt(page) + 1 : null,
-        prev: page > 1 ? parseInt(page) - 1 : null,
-        pages: []
-      };
-      
-      // Generar números de página para mostrar
-      for (let i = Math.max(1, page - 2); i <= Math.min(totalPages, parseInt(page) + 2); i++) {
-        pagination.pages.push({
-          page: i,
-          active: i === parseInt(page)
-        });
-      }
-      
-      // Renderizar la vista con los datos
+      // Renderizar la vista con los datos - ADAPTADO PARA CAJA
       res.render('caja/reportes/pendientes', {
-        layout: 'caja',
+        layout: 'caja', // CAMBIO: usar layout de caja
         title: 'Reporte de Pagos Atrasados',
         activeReportes: true,
         userRole: req.matrizador?.rol,
         userName: req.matrizador?.nombre,
-        documentosPendientes: documentosFiltrados,
+        documentosPendientes: documentosConDatos,
         stats: {
           rango1_7: parseInt(statsResult.rango1_7) || 0,
           rango8_15: parseInt(statsResult.rango8_15) || 0,
@@ -2153,795 +1189,27 @@ const cajaController = {
           antiguedad,
           matrizador,
           ordenar
-        },
-        pagination: totalPages > 1 ? pagination : null
+        }
       });
     } catch (error) {
       console.error('Error al generar reporte de documentos pendientes:', error);
       return res.status(500).render('error', {
-        layout: 'caja',
+        layout: 'caja', // CAMBIO: usar layout de caja
         title: 'Error',
         message: 'Error al generar el reporte de documentos pendientes',
         error
       });
     }
   },
-  
-  /**
-   * Genera y muestra el reporte de productividad por matrizador
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
-   */
-  reporteMatrizadores: async (req, res) => {
-    try {
-      // Procesar parámetros
-      const fechaInicio = req.query.fechaInicio ? moment(req.query.fechaInicio).startOf('day') : moment().subtract(30, 'days').startOf('day');
-      const fechaFin = req.query.fechaFin ? moment(req.query.fechaFin).endOf('day') : moment().endOf('day');
-      
-      // Formatear fechas para SQL
-      const fechaInicioSQL = fechaInicio.format('YYYY-MM-DD HH:mm:ss');
-      const fechaFinSQL = fechaFin.format('YYYY-MM-DD HH:mm:ss');
-      
-      // Obtener datos por matrizador
-      const datosMatrizadores = await sequelize.query(`
-        SELECT 
-          m.id,
-          m.nombre,
-          COUNT(d.id) as documentos_totales,
-          SUM(CASE WHEN d.estado_pago = 'pagado' THEN 1 ELSE 0 END) as documentos_pagados,
-          SUM(CASE WHEN d.estado_pago = 'pendiente' THEN 1 ELSE 0 END) as documentos_pendientes,
-          COALESCE(SUM(d.valor_factura), 0) as facturacion_total,
-          COALESCE(SUM(CASE WHEN d.estado_pago = 'pagado' THEN d.valor_factura ELSE 0 END), 0) as ingresos_cobrados
-        FROM matrizadores m
-        LEFT JOIN documentos d ON m.id = d.id_matrizador
-          AND d.fecha_factura BETWEEN :fechaInicio AND :fechaFin
-        WHERE m.rol IN ('matrizador', 'caja_archivo')
-        GROUP BY m.id, m.nombre
-        ORDER BY facturacion_total DESC
-      `, {
-        replacements: { fechaInicio: fechaInicioSQL, fechaFin: fechaFinSQL },
-        type: sequelize.QueryTypes.SELECT
-      });
-      
-      // Calcular porcentajes y tamaño promedio de factura
-      datosMatrizadores.forEach(item => {
-        item.porcentaje_pagados = item.documentos_totales > 0 ? 
-          (item.documentos_pagados / item.documentos_totales * 100).toFixed(2) : 0;
-        
-        item.factura_promedio = item.documentos_totales > 0 ? 
-          (item.facturacion_total / item.documentos_totales).toFixed(2) : 0;
-          
-        item.pendiente_cobro = (item.facturacion_total - item.ingresos_cobrados).toFixed(2);
-      });
-      
-      // Calcular totales generales
-      const totales = {
-        documentos_totales: datosMatrizadores.reduce((sum, item) => sum + parseInt(item.documentos_totales || 0), 0),
-        documentos_pagados: datosMatrizadores.reduce((sum, item) => sum + parseInt(item.documentos_pagados || 0), 0),
-        documentos_pendientes: datosMatrizadores.reduce((sum, item) => sum + parseInt(item.documentos_pendientes || 0), 0),
-        facturacion_total: datosMatrizadores.reduce((sum, item) => sum + parseFloat(item.facturacion_total || 0), 0),
-        ingresos_cobrados: datosMatrizadores.reduce((sum, item) => sum + parseFloat(item.ingresos_cobrados || 0), 0),
-        pendiente_cobro: datosMatrizadores.reduce((sum, item) => sum + parseFloat(item.pendiente_cobro || 0), 0)
-      };
-      
-      // Calcular porcentaje global de pagados
-      totales.porcentaje_pagados = totales.documentos_totales > 0 ? 
-        (totales.documentos_pagados / totales.documentos_totales * 100).toFixed(2) : "0.00";
-      
-      // Datos para gráfico
-      const datosGrafico = {
-        nombres: datosMatrizadores.map(d => d.nombre),
-        documentos: datosMatrizadores.map(d => parseInt(d.documentos_totales)),
-        facturacion: datosMatrizadores.map(d => parseFloat(d.facturacion_total)),
-        pagados: datosMatrizadores.map(d => parseInt(d.documentos_pagados)),
-        pendientes: datosMatrizadores.map(d => parseInt(d.documentos_pendientes))
-      };
-      
-      // Renderizar el reporte
-      res.render('caja/reportes/matrizadores', {
-        layout: 'caja',
-        title: 'Reporte de Matrizadores',
-        fechaInicio: fechaInicio.format('YYYY-MM-DD'),
-        fechaFin: fechaFin.format('YYYY-MM-DD'),
-        datosMatrizadores,
-        totales,
-        datosGrafico,
-        userRole: req.matrizador?.rol,
-        userName: req.matrizador?.nombre
-      });
-    } catch (error) {
-      console.error('Error al generar reporte de matrizadores:', error);
-      return res.status(500).render('error', {
-        layout: 'caja',
-        title: 'Error',
-        message: 'Error al generar el reporte de matrizadores',
-        error
-      });
-    }
-  },
-  
-  /**
-   * Muestra el formulario para registrar un nuevo documento en caja
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
-   */
-  mostrarFormularioRegistro: async (req, res) => {
-    try {
-      // Obtener lista de matrizadores para el formulario
-      const matrizadores = await Matrizador.findAll({
-        where: {
-          rol: {
-            [Op.in]: ['matrizador', 'caja_archivo']
-          },
-          activo: true
-        },
-        order: [['nombre', 'ASC']]
-      });
-      
-      // Obtener posibles clientes para mostrar documentos existentes
-      const clientes = await Documento.findAll({
-        attributes: ['nombreCliente', 'identificacionCliente'],
-        group: ['nombreCliente', 'identificacionCliente'],
-        raw: true
-      });
-      
-      // Renderizar la vista
-      res.render('caja/documentos/registro', {
-        layout: 'caja',
-        title: 'Registro de Documento',
-        activeRegistro: true,
-        matrizadores,
-        clientes,
-        userRole: req.matrizador?.rol,
-        userName: req.matrizador?.nombre
-      });
-    } catch (error) {
-      console.error('Error al mostrar formulario de registro:', error);
-      return res.status(500).render('error', {
-        layout: 'caja',
-        title: 'Error',
-        message: 'Error al cargar el formulario de registro',
-        error
-      });
-    }
-  },
-  
-  /**
-   * Procesa el registro de un nuevo documento desde caja
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
-   */
-  registrarDocumento: async (req, res) => {
-    // Iniciar transacción
-    const transaction = await sequelize.transaction();
-    
-    try {
-      const {
-        codigoBarras,
-        tipoDocumento,
-        nombreCliente,
-        identificacionCliente,
-        emailCliente,
-        telefonoCliente,
-        notas,
-        idMatrizador,
-        comparecientes,
-        // Campos específicos de facturación
-        numeroFactura,
-        valorFactura,
-        fechaFactura,
-        estadoPago,
-        metodoPago,
-        omitirNotificacion
-      } = req.body;
-      
-      // Validaciones básicas
-      if (!tipoDocumento || !nombreCliente || !identificacionCliente) {
-        await transaction.rollback();
-        req.flash('error', 'Los campos Tipo de Documento, Nombre del Cliente e Identificación son obligatorios');
-        return res.redirect('/caja/documentos/registro');
-      }
-      
-      // Generar código de verificación para entrega
-      const codigoVerificacion = Math.floor(1000 + Math.random() * 9000).toString();
-      
-      // Crear el documento con el mapeo de metodoPago
-      const datosDocumento = {
-        codigoBarras,
-        tipoDocumento,
-        nombreCliente,
-        identificacionCliente,
-        emailCliente,
-        telefonoCliente,
-        notas,
-        estado: 'en_proceso',
-        codigoVerificacion,
-        idMatrizador: idMatrizador || null,
-        comparecientes: JSON.parse(comparecientes || '[]'),
-        // Campos de facturación
-        numeroFactura: numeroFactura || null,
-        valorFactura: valorFactura ? parseFloat(valorFactura) : null,
-        fechaFactura: fechaFactura ? new Date(fechaFactura) : null,
-        estadoPago: estadoPago || 'pendiente',
-        metodoPago: mapearMetodoPago(metodoPago),
-        omitirNotificacion: omitirNotificacion === 'on',
-        idUsuarioCreador: req.matrizador.id,
-        rolUsuarioCreador: req.matrizador.rol
-      };
-
-      // CORREGIDO: Si se está creando como pagado, asignar fecha de pago y usuario que registró
-      if (estadoPago === 'pagado') {
-        datosDocumento.fechaPago = obtenerTimestampEcuador();
-        datosDocumento.registradoPor = req.matrizador.id;
-        console.log(`🔧 DOCUMENTO CREADO COMO PAGADO: Asignando fechaPago = ${datosDocumento.fechaPago}`);
-      }
-      
-      const nuevoDocumento = await Documento.create(datosDocumento, { transaction });
-      
-      // Registrar evento de creación
-      await EventoDocumento.create({
-        idDocumento: nuevoDocumento.id,
-        tipo: 'creacion',
-        detalles: `Documento creado por ${req.matrizador.nombre} (Caja)`,
-        usuario: req.matrizador.nombre,
-        metadatos: JSON.stringify({
-          creadoPor: req.matrizador.id,
-          metodoPago,
-          estadoPago,
-          valorFactura,
-          numeroFactura
-        })
-      }, { transaction });
-      
-      // Confirmar la transacción
-      await transaction.commit();
-      
-      req.flash('success', `Documento ${tipoDocumento} registrado exitosamente con código ${codigoBarras}`);
-      return res.redirect('/caja/documentos');
-    } catch (error) {
-      // Revertir la transacción en caso de error
-      await transaction.rollback();
-      console.error('Error al registrar documento:', error);
-      
-      let errorMessage = error.message;
-      if (error.name === 'SequelizeUniqueConstraintError') {
-        errorMessage = 'Ya existe un documento con ese código de barras';
-      }
-      
-      req.flash('error', 'Error al registrar el documento: ' + errorMessage);
-      return res.redirect('/caja/documentos/registro');
-    }
-  },
-  
-  /**
-   * Muestra el formulario para entrega de documentos desde caja
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
-   */
-  mostrarFormularioEntrega: async (req, res) => {
-    try {
-      res.render('caja/documentos/entrega', {
-        layout: 'caja',
-        title: 'Entrega de Documentos',
-        activeEntrega: true,
-        userRole: req.matrizador?.rol,
-        userName: req.matrizador?.nombre
-      });
-    } catch (error) {
-      console.error('Error al mostrar formulario de entrega:', error);
-      return res.status(500).render('error', {
-        layout: 'caja',
-        title: 'Error',
-        message: 'Error al cargar el formulario de entrega',
-        error
-      });
-    }
-  },
-  
-  /**
-   * Procesa la entrega de un documento
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
-   */
-  entregarDocumento: async (req, res) => {
-    // Iniciar transacción
-    const transaction = await sequelize.transaction();
-    
-    try {
-      const { codigoBarras, codigoVerificacion, nombreRecibe, identificacionRecibe } = req.body;
-      
-      // Validaciones básicas
-      if (!codigoBarras || !codigoVerificacion) {
-        await transaction.rollback();
-        req.flash('error', 'Debe ingresar el código de barras y el código de verificación');
-        return res.redirect('/caja/documentos/entrega');
-      }
-      
-      // Buscar el documento
-      const documento = await Documento.findOne({
-        where: {
-          codigoBarras,
-          codigoVerificacion
-        },
-        transaction
-      });
-      
-      if (!documento) {
-        await transaction.rollback();
-        req.flash('error', 'No se encontró un documento con los códigos ingresados');
-        return res.redirect('/caja/documentos/entrega');
-      }
-      
-      // Verificar que el documento esté listo para entrega
-      if (documento.estado !== 'listo_para_entrega') {
-        await transaction.rollback();
-        req.flash('error', 'El documento no está listo para ser entregado');
-        return res.redirect('/caja/documentos/entrega');
-      }
-      
-      // Actualizar el estado del documento
-      await documento.update({
-        estado: 'entregado',
-        fechaEntrega: new Date(),
-        nombreRecibe: nombreRecibe || null,
-        identificacionRecibe: identificacionRecibe || null
-      }, { transaction });
-      
-      // Registrar evento de entrega
-      await EventoDocumento.create({
-        idDocumento: documento.id,
-        tipo: 'entrega',
-        detalles: `Documento entregado por ${req.matrizador.nombre} (Caja)`,
-        usuario: req.matrizador.nombre,
-        metadatos: JSON.stringify({
-          entregadoPor: req.matrizador.id,
-          nombreRecibe,
-          identificacionRecibe
-        })
-      }, { transaction });
-      
-      // Confirmar la transacción
-      await transaction.commit();
-      
-      req.flash('success', `Documento ${codigoBarras} entregado exitosamente`);
-      return res.redirect('/caja/documentos/entrega');
-    } catch (error) {
-      // Revertir la transacción en caso de error
-      await transaction.rollback();
-      console.error('Error al entregar documento:', error);
-      
-      req.flash('error', 'Error al entregar el documento: ' + error.message);
-      return res.redirect('/caja/documentos/entrega');
-    }
-  },
-  
-  /**
-   * Filtrar métricas del dashboard por rango de fechas (AJAX)
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
-   */
-  filtrarDashboard: async (req, res) => {
-    try {
-      const { fechaDesde, fechaHasta } = req.body;
-      
-      // Validar fechas
-      if (!fechaDesde || !fechaHasta) {
-        return res.json({
-          success: false,
-          message: 'Las fechas son requeridas'
-        });
-      }
-      
-      // 🔧 CORREGIDO: Usar timezone de Ecuador para consistencia
-      const moment = require('moment-timezone');
-      const TIMEZONE_ECUADOR = 'America/Guayaquil';
-      
-      // 🔧 CORREGIDO: Crear fechas con timezone correcto
-      const fechaDesdeObj = moment.tz(fechaDesde, TIMEZONE_ECUADOR).startOf('day').toDate();
-      const fechaHastaObj = moment.tz(fechaHasta, TIMEZONE_ECUADOR).endOf('day').toDate();
-      
-      if (fechaDesdeObj > fechaHastaObj) {
-        return res.json({
-          success: false,
-          message: 'La fecha desde no puede ser mayor a la fecha hasta'
-        });
-      }
-      
-      // 🔧 NUEVO: Logging para debugging
-      console.log('=== DEBUG FILTROS AJAX ===');
-      console.log('Fecha desde recibida:', fechaDesde);
-      console.log('Fecha hasta recibida:', fechaHasta);
-      console.log('Fecha desde procesada:', fechaDesdeObj);
-      console.log('Fecha hasta procesada:', fechaHastaObj);
-      console.log('Timezone:', TIMEZONE_ECUADOR);
-      console.log('========================');
-      
-      // 🔧 CORREGIDO: Configurar filtros de fecha con campos correctos
-      const whereClause = {
-        created_at: {
-          [Op.between]: [fechaDesdeObj, fechaHastaObj]
-        }
-      };
-      
-      // 🔧 CORREGIDO: Obtener métricas filtradas con validaciones adicionales
-      const [
-        totalFacturado,
-        totalCobrado,
-        totalPendiente,
-        documentosFacturados,
-        documentosPendientesPago
-      ] = await Promise.all([
-        // Total facturado
-        Documento.sum('valorFactura', {
-          where: {
-            ...whereClause,
-            valorFactura: { [Op.not]: null },
-            estado: { [Op.notIn]: ['eliminado', 'nota_credito', 'cancelado'] } // 🔧 CORREGIDO
-          }
-        }),
-        
-        // Total cobrado
-        Documento.sum('valorFactura', {
-          where: {
-            ...whereClause,
-            estadoPago: 'pagado',
-            estado: { [Op.notIn]: ['eliminado', 'nota_credito', 'cancelado'] } // 🔧 CORREGIDO
-          }
-        }),
-        
-        // Total pendiente
-        Documento.sum('valorFactura', {
-          where: {
-            ...whereClause,
-            estadoPago: 'pendiente',
-            estado: { [Op.notIn]: ['eliminado', 'nota_credito', 'cancelado'] } // 🔧 CORREGIDO
-          }
-        }),
-        
-        // Cantidad documentos facturados
-        Documento.count({
-          where: {
-            ...whereClause,
-            numeroFactura: { [Op.not]: null }, // 🔧 CORREGIDO: Usar numeroFactura en lugar de valorFactura
-            estado: { [Op.notIn]: ['eliminado', 'nota_credito', 'cancelado'] } // 🔧 CORREGIDO
-          }
-        }),
-        
-        // Cantidad documentos pendientes de pago
-        Documento.count({
-          where: {
-            ...whereClause,
-            estadoPago: 'pendiente',
-            numeroFactura: { [Op.not]: null }, // 🔧 NUEVO: Solo documentos con factura
-            estado: { [Op.notIn]: ['eliminado', 'nota_credito', 'cancelado'] } // 🔧 CORREGIDO
-          }
-        })
-      ]);
-      
-      // 🔧 NUEVO: Validación de lógica temporal para AJAX
-      console.log('=== VALIDACIÓN AJAX ===');
-      console.log('Total Facturado AJAX:', totalFacturado || 0);
-      console.log('Total Cobrado AJAX:', totalCobrado || 0);
-      console.log('Total Pendiente AJAX:', totalPendiente || 0);
-      console.log('Documentos Facturados AJAX:', documentosFacturados || 0);
-      console.log('Documentos Pendientes AJAX:', documentosPendientesPago || 0);
-      console.log('====================');
-      
-      // Obtener documentos pendientes para la tabla
-      const documentosPendientes = await Documento.findAll({
-        where: {
-          ...whereClause,
-          estadoPago: 'pendiente',
-          numeroFactura: { [Op.not]: null }, // 🔧 NUEVO: Solo documentos con factura
-          estado: { [Op.notIn]: ['eliminado', 'nota_credito', 'cancelado'] } // 🔧 CORREGIDO
-        },
-        attributes: ['id', 'codigoBarras', 'nombreCliente', 'numeroFactura', 'valorFactura'],
-        limit: 10,
-        order: [['created_at', 'DESC']]
-      });
-      
-      // 🔧 CORREGIDO: Obtener pagos recientes usando fecha_pago en lugar de updated_at
-      const documentosPagadosRecientes = await Documento.findAll({
-        where: {
-          estadoPago: 'pagado',
-          estado: { [Op.notIn]: ['eliminado', 'nota_credito', 'cancelado'] },
-          fechaPago: { // 🔧 CORREGIDO: Usar fechaPago en lugar de updated_at
-            [Op.between]: [fechaDesdeObj, fechaHastaObj]
-          }
-        },
-        attributes: ['id', 'codigoBarras', 'nombreCliente', 'valorFactura', 'metodoPago', 'fechaPago'], // 🔧 CORREGIDO
-        limit: 10,
-        order: [['fechaPago', 'DESC']] // 🔧 CORREGIDO
-      });
-      
-      // Formatear los valores
-      const stats = {
-        totalFacturado: formatearValorMonetario(totalFacturado || 0),
-        totalCobrado: formatearValorMonetario(totalCobrado || 0),
-        totalPendiente: formatearValorMonetario(totalPendiente || 0),
-        documentosFacturados: documentosFacturados || 0,
-        documentosPendientesPago: documentosPendientesPago || 0
-      };
-      
-      return res.json({
-        success: true,
-        datos: {
-          stats,
-          documentosPendientes: documentosPendientes.map(doc => ({
-            id: doc.id,
-            codigoBarras: doc.codigoBarras,
-            nombreCliente: doc.nombreCliente,
-            numeroFactura: doc.numeroFactura,
-            valorFactura: doc.valorFactura ? parseFloat(doc.valorFactura).toFixed(2) : '0.00'
-          })),
-          documentosPagadosRecientes: documentosPagadosRecientes.map(doc => ({
-            id: doc.id,
-            codigoBarras: doc.codigoBarras,
-            nombreCliente: doc.nombreCliente,
-            valorFactura: doc.valorFactura ? parseFloat(doc.valorFactura).toFixed(2) : '0.00',
-            metodoPago: mapearMetodoPagoInverso(doc.metodoPago),
-            fechaPago: doc.fechaPago // 🔧 CORREGIDO: Usar fechaPago
-          }))
-        }
-      });
-      
-    } catch (error) {
-      console.error('Error al filtrar dashboard:', error);
-      return res.json({
-        success: false,
-        message: 'Error interno del servidor'
-      });
-    }
-  },
 
   /**
-   * Envía recordatorio de pago individual
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
-   */
-  recordarPagoIndividual: async (req, res) => {
-    try {
-      const documentoId = req.params.id;
-      
-      // Obtener el documento con información del cliente
-      const documento = await Documento.findByPk(documentoId, {
-        include: [{
-          model: Matrizador,
-          as: 'matrizador',
-          attributes: ['nombre', 'email']
-        }]
-      });
-      
-      if (!documento) {
-        return res.status(404).json({
-          success: false,
-          message: 'Documento no encontrado'
-        });
-      }
-      
-      // Aquí puedes implementar la lógica real de envío de email
-      // Por ahora, simularemos el envío
-      console.log(`Enviando recordatorio para documento ${documento.codigoBarras} a ${documento.emailCliente}`);
-      
-      res.json({
-        success: true,
-        message: 'Recordatorio enviado exitosamente'
-      });
-    } catch (error) {
-      console.error('Error al enviar recordatorio individual:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Error interno del servidor'
-      });
-    }
-  },
-
-  /**
-   * Envía recordatorios de pago masivos
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
-   */
-  recordarPagoMasivo: async (req, res) => {
-    try {
-      const { documentosIds, tipo } = req.body;
-      
-      if (!documentosIds || documentosIds.length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: 'No se especificaron documentos'
-        });
-      }
-      
-      // Obtener documentos
-      const documentos = await Documento.findAll({
-        where: {
-          id: documentosIds,
-          estadoPago: 'pendiente'
-        },
-        include: [{
-          model: Matrizador,
-          as: 'matrizador',
-          attributes: ['nombre', 'email']
-        }]
-      });
-      
-      let enviados = 0;
-      
-      // Simular envío de recordatorios
-      for (const documento of documentos) {
-        if (documento.emailCliente) {
-          console.log(`Enviando recordatorio masivo para documento ${documento.codigoBarras} a ${documento.emailCliente}`);
-          enviados++;
-        }
-      }
-      
-      res.json({
-        success: true,
-        message: `Recordatorios enviados exitosamente`,
-        enviados
-      });
-    } catch (error) {
-      console.error('Error al enviar recordatorios masivos:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Error interno del servidor'
-      });
-    }
-  },
-
-  /**
-   * Exporta documentos pendientes a Excel
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
-   */
-  exportarPendientes: async (req, res) => {
-    try {
-      const { ids } = req.query;
-      
-      // Construir condiciones de consulta
-      const whereConditions = {
-        estadoPago: 'pendiente'
-      };
-      
-      if (ids) {
-        whereConditions.id = ids.split(',');
-      }
-      
-      // Obtener documentos pendientes
-      const documentos = await Documento.findAll({
-        where: whereConditions,
-        include: [{
-          model: Matrizador,
-          as: 'matrizador',
-          attributes: ['nombre']
-        }],
-        order: [['fechaFactura', 'ASC']]
-      });
-      
-      // Crear contenido CSV
-      let csvContent = 'Código,Cliente,Tipo,Fecha Factura,Valor,Días Pendiente,Matrizador\n';
-      
-      documentos.forEach(doc => {
-        const diasPendiente = moment().diff(moment(doc.fechaFactura), 'days');
-        csvContent += `"${doc.codigoBarras}","${doc.nombreCliente}","${doc.tipoDocumento}","${moment(doc.fechaFactura).format('DD/MM/YYYY')}","${doc.valorFactura}","${diasPendiente}","${doc.matrizador?.nombre || 'Sin asignar'}"\n`;
-      });
-      
-      // Configurar headers para descarga
-      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-      res.setHeader('Content-Disposition', `attachment; filename="documentos_pendientes_${moment().format('YYYY-MM-DD')}.csv"`);
-      
-      res.send('\ufeff' + csvContent); // BOM para UTF-8
-    } catch (error) {
-      console.error('Error al exportar pendientes:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Error al exportar datos'
-      });
-    }
-  },
-
-  /**
-   * Genera reporte PDF de documentos pendientes
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
-   */
-  generarPdfPendientes: async (req, res) => {
-    try {
-      // Por ahora, redirigir a una página de "en desarrollo"
-      res.status(501).json({
-        success: false,
-        message: 'Generación de PDF en desarrollo'
-      });
-    } catch (error) {
-      console.error('Error al generar PDF:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Error al generar PDF'
-      });
-    }
-  },
-
-  /**
-   * Marca un documento como pagado
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
-   */
-  marcarComoPagado: async (req, res) => {
-    try {
-      const documentoId = req.params.id;
-      
-      // Buscar el documento
-      const documento = await Documento.findByPk(documentoId);
-      
-      if (!documento) {
-        return res.status(404).json({
-          success: false,
-          message: 'Documento no encontrado'
-        });
-      }
-      
-      // VALIDACIÓN CRÍTICA FINANCIERA: Impedir marcar como pagado documentos eliminados o notas de crédito
-      if (documento.estado === 'eliminado') {
-        return res.status(400).json({
-          success: false,
-          message: 'No se puede marcar como pagado - el documento ha sido eliminado definitivamente'
-        });
-      }
-      
-      if (documento.estado === 'nota_credito') {
-        return res.status(400).json({
-          success: false,
-          message: 'No se puede marcar como pagado - el documento tiene una nota de crédito asociada'
-        });
-      }
-      
-      if (documento.estadoPago === 'pagado') {
-        return res.status(400).json({
-          success: false,
-          message: 'El documento ya está marcado como pagado'
-        });
-      }
-      
-      // Actualizar el estado del documento con auditoría
-      await documento.update({
-        estadoPago: 'pagado',
-        registradoPor: req.matrizador.id, // Auditoría: quién marcó como pagado
-        fechaPago: obtenerTimestampEcuador(), // CORREGIDO: Auditoría cuándo se marcó y consistencia de timezone
-        observacionesPago: 'Marcado como pagado manualmente desde reportes'
-      });
-      
-      res.json({
-        success: true,
-        message: 'Documento marcado como pagado exitosamente'
-      });
-    } catch (error) {
-      console.error('Error al marcar como pagado:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Error interno del servidor'
-      });
-    }
-  },
-  
-  /**
-   * NUEVO: Reporte de Cobros por Matrizador
-   * Muestra cuánto dinero ha cobrado cada matrizador en un período específico
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
+   * IMPORTADO DESDE ADMIN: Reporte de cobros por matrizador funcional
    */
   reporteCobrosMatrizador: async (req, res) => {
     try {
       // Procesar parámetros de filtrado
       const rango = req.query.rango || 'mes';
       const idMatrizador = req.query.idMatrizador; // Filtro por matrizador específico
-      
-      // Debug: Mostrar parámetros recibidos
-      console.log('🔍 REPORTE CAJA - Parámetros recibidos:');
-      console.log('- rango:', rango);
-      console.log('- idMatrizador:', idMatrizador, '(tipo:', typeof idMatrizador, ')');
-      console.log('- fechaInicio:', req.query.fechaInicio);
-      console.log('- fechaFin:', req.query.fechaFin);
-      
       let fechaInicio, fechaFin, periodoTexto;
       
       // Establecer fechas según el rango seleccionado
@@ -3071,20 +1339,12 @@ const cajaController = {
         raw: true
       });
       
-      // Convertir IDs a string para comparación en la vista
-      const matrizadoresConIdString = matrizadores.map(m => ({
-        ...m,
-        id: String(m.id)
-      }));
-      
-      // NUEVO: Obtener información del matrizador seleccionado
+      // Obtener información del matrizador seleccionado
       let matrizadorSeleccionado = null;
       if (idMatrizador && idMatrizador !== 'todos' && idMatrizador !== '') {
-        console.log('🔍 Buscando matrizador con ID:', idMatrizador);
         matrizadorSeleccionado = await Matrizador.findByPk(parseInt(idMatrizador), {
           attributes: ['id', 'nombre', 'email']
         });
-        console.log('👤 Matrizador encontrado:', matrizadorSeleccionado ? matrizadorSeleccionado.nombre : 'NO ENCONTRADO');
       }
       
       // Preparar datos para gráfico
@@ -3094,10 +1354,10 @@ const cajaController = {
         documentos: cobrosMatrizador.map(item => parseInt(item.documentos_cobrados || 0))
       };
       
-      // NUEVO: Preparar datos mejorados para la vista
+      // Preparar datos para la vista - ADAPTADO PARA CAJA
       const datosVista = {
-        layout: 'caja',
-        title: 'Reporte de Comisiones por Matrizador - Caja',
+        layout: 'caja', // CAMBIO: usar layout de caja
+        title: 'Reporte de Comisiones por Matrizador',
         activeReportes: true,
         userRole: req.matrizador?.rol,
         userName: req.matrizador?.nombre,
@@ -3105,13 +1365,13 @@ const cajaController = {
         // Datos principales
         cobrosMatrizador,
         cobrosRecientes,
-        matrizadores: matrizadoresConIdString, // Usar IDs como string
+        matrizadores,
         datosGrafico,
         
         // Información del contexto
         periodoTexto,
         matrizadorSeleccionado,
-        idMatrizadorSeleccionado: idMatrizador ? String(idMatrizador) : 'todos', // Convertir a string
+        idMatrizadorSeleccionado: idMatrizador || 'todos',
         
         // Estadísticas mejoradas
         stats: {
@@ -3124,7 +1384,7 @@ const cajaController = {
         // Filtros con información adicional
         filtros: {
           rango,
-          idMatrizador: idMatrizador ? String(idMatrizador) : 'todos', // Convertir a string
+          idMatrizador,
           fechaInicio: fechaInicio.format('YYYY-MM-DD'),
           fechaFin: fechaFin.format('YYYY-MM-DD'),
           // Flags para la vista
@@ -3137,19 +1397,13 @@ const cajaController = {
         }
       };
       
-      // Debug: Mostrar datos finales
-      console.log('📊 Datos para la vista:');
-      console.log('- idMatrizadorSeleccionado:', datosVista.idMatrizadorSeleccionado);
-      console.log('- matrizadorSeleccionado:', datosVista.matrizadorSeleccionado?.nombre || 'null');
-      console.log('- Total matrizadores:', datosVista.matrizadores.length);
-      
       // Renderizar la vista con datos mejorados
       res.render('caja/reportes/cobros-matrizador', datosVista);
       
     } catch (error) {
       console.error('Error al generar reporte de cobros por matrizador:', error);
       return res.status(500).render('error', {
-        layout: 'caja',
+        layout: 'caja', // CAMBIO: usar layout de caja
         title: 'Error',
         message: 'Error al generar el reporte de cobros por matrizador',
         error
@@ -3157,532 +1411,573 @@ const cajaController = {
     }
   },
 
-  // ============== NUEVOS MÉTODOS PARA FUNCIONALIDAD HÍBRIDA CAJA_ARCHIVO ==============
-
   /**
-   * Mostrar documentos asignados al usuario como matrizador (interfaz de caja)
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
+   * CRÍTICO: Procesar XML de documento para extraer datos Y MOSTRAR VISTA PREVIA (NO registro automático)
    */
-  misDocumentosMatrizador: async (req, res) => {
+  procesarXMLDocumento: async (req, res) => {
+    const fs = require('fs');
+    const xml2js = require('xml2js');
+    
     try {
-      const userId = req.matrizador.id;
+      console.log('🔍 Procesando XML de documento para vista previa...');
       
-      // Parámetros de filtrado
-      const estado = req.query.estado || '';
-      const estadoPago = req.query.estadoPago || '';
-      const busqueda = req.query.busqueda || '';
-      
-      // Construir condiciones de filtrado
-      const whereConditions = {
-        idMatrizador: userId  // Solo documentos asignados a este usuario
-      };
-      
-      if (estado) {
-        whereConditions.estado = estado;
-      }
-      
-      if (estadoPago) {
-        whereConditions.estadoPago = estadoPago;
-      }
-      
-      if (busqueda) {
-        whereConditions[Op.or] = [
-          { codigoBarras: { [Op.iLike]: `%${busqueda}%` } },
-          { nombreCliente: { [Op.iLike]: `%${busqueda}%` } },
-          { numeroFactura: { [Op.iLike]: `%${busqueda}%` } }
-        ];
-      }
-      
-      // Obtener documentos asignados al usuario
-      const documentos = await Documento.findAll({
-        where: whereConditions,
-        include: [
-          {
-            model: Matrizador,
-            as: 'matrizador',
-            attributes: ['id', 'nombre', 'email']
-          }
-        ],
-        order: [['created_at', 'DESC']]
-      });
-      
-      // Estadísticas rápidas
-      const stats = {
-        total: documentos.length,
-        enProceso: documentos.filter(d => d.estado === 'en_proceso').length,
-        listos: documentos.filter(d => d.estado === 'listo_para_entrega').length,
-        entregados: documentos.filter(d => d.estado === 'entregado').length,
-        pendientesPago: documentos.filter(d => d.estadoPago === 'pendiente').length
-      };
-
-      res.render('caja/mis-documentos-matrizador', {
-        layout: 'caja',
-        title: 'Mis Documentos como Matrizadora',
-        activeMisDocumentos: true,
-        documentos,
-        stats,
-        filtros: {
-          estado: estado || '',
-          estadoPago: estadoPago || '',
-          busqueda: busqueda || ''
-        },
-        userRole: req.matrizador?.rol,
-        userName: req.matrizador?.nombre
-      });
-    } catch (error) {
-      console.error('Error obteniendo documentos de matrizador:', error);
-      return res.status(500).render('error', {
-        layout: 'caja',
-        title: 'Error',
-        message: 'Error al cargar sus documentos como matrizadora',
-        error
-      });
-    }
-  },
-
-  /**
-   * Mostrar formulario para editar documento (interfaz de caja)
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
-   */
-  editarDocumentoMatrizador: async (req, res) => {
-    try {
-      const { id } = req.params;
-      const userId = req.matrizador.id;
-      
-      const documento = await Documento.findOne({
-        where: { 
-          id,
-          idMatrizador: userId  // Solo puede editar documentos asignados a él
-        },
-        include: [
-          {
-            model: Matrizador,
-            as: 'matrizador',
-            attributes: ['id', 'nombre', 'email']
-          }
-        ]
-      });
-
-      if (!documento) {
-        req.flash('error', 'Documento no encontrado o no asignado a usted');
-        return res.redirect('/caja/mis-documentos');
-      }
-
-      res.render('caja/editar-documento-matrizador', {
-        layout: 'caja',
-        title: 'Editar Documento',
-        activeEditarDocumento: true,
-        documento,
-        userRole: req.matrizador?.rol,
-        userName: req.matrizador?.nombre
-      });
-    } catch (error) {
-      console.error('Error obteniendo documento para editar:', error);
-      req.flash('error', 'Error al cargar el documento');
-      return res.redirect('/caja/mis-documentos');
-    }
-  },
-
-  /**
-   * Actualizar documento desde interfaz de caja
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
-   */
-  actualizarDocumentoMatrizador: async (req, res) => {
-    try {
-      const { id } = req.params;
-      const userId = req.matrizador.id;
-      const {
-        notificarAutomatico,
-        metodoNotificacion,
-        razonSinNotificar,
-        notas,
-        estado
-      } = req.body;
-
-      const documento = await Documento.findOne({
-        where: { 
-          id,
-          idMatrizador: userId
-        }
-      });
-
-      if (!documento) {
-        return res.status(404).json({ 
+      if (!req.file) {
+        return res.status(400).json({
           success: false, 
-          message: 'Documento no encontrado o no asignado a usted' 
+          message: 'No se recibió ningún archivo XML'
         });
       }
 
-      // Actualizar campos que puede modificar
-      const datosActualizacion = {
-        notificarAutomatico: notificarAutomatico === 'true' || notificarAutomatico === true,
-        metodoNotificacion: metodoNotificacion || 'ninguno',
-        razonSinNotificar: razonSinNotificar || null,
-        notas: notas || documento.notas
-      };
+      console.log('📁 Archivo recibido:', req.file.originalname);
+      console.log('📍 Ruta temporal:', req.file.path);
 
-      // Si se está cambiando el estado, validar
-      if (estado && estado !== documento.estado) {
-        const estadosPermitidos = ['en_proceso', 'listo_para_entrega'];
-        if (estadosPermitidos.includes(estado)) {
-          datosActualizacion.estado = estado;
-        }
-      }
+      // Leer el archivo XML
+      const xmlContent = fs.readFileSync(req.file.path, 'utf8');
+      console.log('📄 Contenido XML leído, tamaño:', xmlContent.length, 'caracteres');
 
-      await documento.update(datosActualizacion);
+      // Parsear XML
+      const parser = new xml2js.Parser({ explicitArray: false });
+      const result = await parser.parseStringPromise(xmlContent);
+      
+      console.log('✅ XML parseado exitosamente');
+      console.log('🔍 Estructura raíz:', Object.keys(result));
 
-      // Registrar evento de actualización
-      await EventoDocumento.create({
-        idDocumento: id,
-        tipo: 'actualizacion',
-        detalles: `Documento actualizado por ${req.matrizador.nombre} desde interfaz de caja`,
-        usuario: req.matrizador.nombre,
-        metadatos: JSON.stringify({
-          actualizadoPor: req.matrizador.id,
-          cambios: datosActualizacion
-        })
-      });
-
-      if (req.headers.accept && req.headers.accept.includes('application/json')) {
-        return res.json({ 
-          success: true, 
-          message: 'Documento actualizado correctamente' 
-        });
+      // Extraer datos del XML de factura electrónica
+      let datosExtraidos = {};
+      
+      // Buscar en diferentes estructuras posibles
+      if (result.factura) {
+        datosExtraidos = extraerDatosFactura(result.factura);
+      } else if (result.comprobanteRetencion) {
+        datosExtraidos = extraerDatosRetencion(result.comprobanteRetencion);
+      } else if (result.autorizacion) {
+        datosExtraidos = extraerDatosAutorizacion(result.autorizacion);
       } else {
-        req.flash('success', 'Documento actualizado correctamente');
-        return res.redirect('/caja/mis-documentos');
+        // Buscar en el primer nivel
+        const primerNivel = Object.keys(result)[0];
+        datosExtraidos = extraerDatosGenericos(result[primerNivel]);
       }
-    } catch (error) {
-      console.error('Error actualizando documento:', error);
-      
-      if (req.headers.accept && req.headers.accept.includes('application/json')) {
-        return res.status(500).json({ 
-          success: false, 
-          message: 'Error actualizando documento: ' + error.message 
-        });
+
+      console.log('📊 Datos extraídos:', datosExtraidos);
+
+      // Usar el código de libro si está disponible, sino generar uno temporal
+      let codigoDocumento;
+      if (datosExtraidos.codigoLibro) {
+        codigoDocumento = datosExtraidos.codigoLibro;
+        console.log('✅ Usando código de libro del XML:', codigoDocumento);
       } else {
-        req.flash('error', 'Error actualizando documento: ' + error.message);
-        return res.redirect('/caja/mis-documentos');
-      }
-    }
-  },
-
-  /**
-   * Marcar documento como listo para entrega desde interfaz de caja
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
-   */
-  marcarDocumentoListoMatrizador: async (req, res) => {
-    try {
-      const { id } = req.params;
-      const userId = req.matrizador.id;
-
-      const documento = await Documento.findOne({
-        where: { 
-          id,
-          idMatrizador: userId
-        }
-      });
-
-      if (!documento) {
-        return res.status(404).json({ 
-          success: false, 
-          message: 'Documento no encontrado o no asignado a usted' 
-        });
+        // Generar código temporal para vista previa
+        const timestamp = Date.now();
+        const random = Math.random().toString(36).substr(2, 5).toUpperCase();
+        codigoDocumento = `TEMP-${timestamp}-${random}`;
+        console.log('⚠️ Generando código temporal para vista previa:', codigoDocumento);
       }
 
-      if (documento.estado === 'listo_para_entrega') {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'El documento ya está marcado como listo para entrega' 
-        });
-      }
-
-      // Actualizar estado
-      await documento.update({
-        estado: 'listo_para_entrega'
-      });
-
-      // Registrar evento
-      await EventoDocumento.create({
-        idDocumento: id,
-        tipo: 'cambio_estado',
-        detalles: `Documento marcado como listo para entrega por ${req.matrizador.nombre}`,
-        usuario: req.matrizador.nombre,
-        metadatos: JSON.stringify({
-          estadoAnterior: documento.estado,
-          estadoNuevo: 'listo_para_entrega',
-          marcadoPor: req.matrizador.id
-        })
-      });
-
-      return res.json({ 
-        success: true, 
-        message: 'Documento marcado como listo para entrega' 
-      });
-    } catch (error) {
-      console.error('Error marcando documento como listo:', error);
-      return res.status(500).json({ 
-        success: false, 
-        message: 'Error marcando documento como listo: ' + error.message 
-      });
-    }
-  },
-
-  // ============== NUEVOS MÉTODOS PARA ENTREGA DE DOCUMENTOS EN INTERFAZ CAJA ==============
-
-  /**
-   * Página principal de entrega de documentos (interfaz caja)
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
-   */
-  entregaDocumentos: async (req, res) => {
-    try {
-      const userId = req.matrizador.id;
-      
-      // Obtener documentos listos para entrega de este matrizador
-      const documentosListos = await Documento.findAll({
-        where: {
-          idMatrizador: userId,
-          estado: 'listo_para_entrega'
-        },
-        include: [
-          {
-            model: Matrizador,
-            as: 'matrizador',
-            attributes: ['id', 'nombre']
+      // Determinar tipo de documento según letra del código de libro
+      let tipoDocumento = 'Otros'; // Valor por defecto
+      if (datosExtraidos.codigoLibro) {
+        const letraMatch = datosExtraidos.codigoLibro.match(/[A-Z]/);
+        if (letraMatch) {
+          const letra = letraMatch[0];
+          console.log('🔍 Letra encontrada en código de libro:', letra);
+          
+          switch (letra) {
+            case 'P':
+              tipoDocumento = 'Protocolo';
+              break;
+            case 'D':
+              tipoDocumento = 'Diligencias';
+              break;
+            case 'C':
+              tipoDocumento = 'Certificaciones';
+              break;
+            case 'A':
+              tipoDocumento = 'Arrendamientos';
+              break;
+            default:
+              tipoDocumento = 'Otros';
           }
-        ],
-        order: [['created_at', 'DESC']]
-      });
+          console.log('✅ Tipo de documento determinado:', tipoDocumento);
+        }
+      }
 
-      // Estadísticas rápidas para el usuario
-      const estadisticas = {
-        listos: documentosListos.length,
-        entregadosHoy: await Documento.count({
+      // Buscar matrizador por nombre si está en el XML
+      let matrizadorSugerido = null;
+      if (datosExtraidos.nombreMatrizador) {
+        console.log('🔍 Buscando matrizador por nombre:', datosExtraidos.nombreMatrizador);
+        matrizadorSugerido = await Matrizador.findOne({
           where: {
-            idMatrizador: userId,
-            estado: 'entregado',
-            fechaEntrega: {
-              [Op.gte]: moment().startOf('day').toDate()
+            nombre: {
+              [Op.iLike]: `%${datosExtraidos.nombreMatrizador}%`
+            },
+            activo: true,
+            rol: {
+              [Op.in]: ['matrizador', 'caja_archivo']
             }
           }
-        }),
-        totalAsignados: await Documento.count({
-          where: {
-            idMatrizador: userId,
-            estado: { [Op.notIn]: ['eliminado', 'nota_credito'] }
-          }
-        })
-      };
+        });
+        
+        if (matrizadorSugerido) {
+          console.log('✅ Matrizador encontrado:', matrizadorSugerido.nombre);
+        } else {
+          console.log('⚠️ Matrizador no encontrado en sistema');
+        }
+      }
 
-      res.render('caja/entrega-documentos', {
-        layout: 'caja',
-        title: 'Entrega de Documentos',
-        activeEntregaDocumentos: true,
-        documentosListos,
-        estadisticas,
-        userRole: req.matrizador?.rol,
-        userName: req.matrizador?.nombre
+      // Obtener todos los matrizadores para la vista de selección
+      const matrizadores = await Matrizador.findAll({
+        where: { 
+          activo: true,
+          rol: {
+            [Op.in]: ['matrizador', 'caja_archivo']
+          }
+        },
+        order: [['nombre', 'ASC']]
       });
+
+      // Limpiar archivo temporal
+      fs.unlinkSync(req.file.path);
+      console.log('🗑️ Archivo temporal eliminado');
+
+      // RESPUESTA CON DATOS PARA VISTA PREVIA (NO registro automático)
+      res.json({
+        success: true,
+        message: 'XML procesado exitosamente - Confirme los datos antes del registro',
+        vistaPrevia: true,
+        datosExtraidos: {
+          // Datos principales del documento
+          codigoBarras: codigoDocumento,
+          tipoDocumento: tipoDocumento,
+          
+          // Información del cliente
+          nombreCliente: datosExtraidos.nombreCliente || '',
+          identificacionCliente: datosExtraidos.identificacionCliente || '',
+          emailCliente: datosExtraidos.emailCliente || '',
+          telefonoCliente: datosExtraidos.telefonoCliente || '',
+          
+          // Información financiera
+          numeroFactura: datosExtraidos.numeroFactura || '',
+          valorFactura: parseFloat(datosExtraidos.valorTotal || 0),
+          fechaFactura: datosExtraidos.fechaEmision || '',
+          
+          // Información del XML
+          razonSocialEmisor: datosExtraidos.razonSocial || '',
+          rucEmisor: datosExtraidos.ruc || '',
+          
+          // Matrizador sugerido
+          matrizadorSugerido: matrizadorSugerido ? {
+            id: matrizadorSugerido.id,
+            nombre: matrizadorSugerido.nombre
+          } : null,
+          nombreMatrizadorXML: datosExtraidos.nombreMatrizador || ''
+        },
+        matrizadores: matrizadores.map(m => ({
+          id: m.id,
+          nombre: m.nombre
+        })),
+        archivoOriginal: req.file.originalname
+      });
+
     } catch (error) {
-      console.error('Error en entrega de documentos:', error);
-      return res.status(500).render('error', {
-        layout: 'caja',
-        title: 'Error',
-        message: 'Error al cargar la página de entrega de documentos',
-        error
+      console.error('❌ Error procesando XML:', error);
+      
+      // Limpiar archivo temporal en caso de error
+      if (req.file && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+
+      res.status(500).json({
+        success: false, 
+        message: 'Error al procesar el archivo XML: ' + error.message
       });
     }
   },
 
   /**
-   * Buscar documento para entrega (interfaz caja)
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
+   * NUEVO: Registrar documento después de confirmación en vista previa
    */
-  buscarDocumentoEntrega: async (req, res) => {
+  registrarDocumentoDesdeXML: async (req, res) => {
     try {
-      const { codigo } = req.body;
-      const userId = req.matrizador.id;
-      
-      const documento = await Documento.findOne({
-        where: {
-          codigoBarras: codigo,
-          idMatrizador: userId, // Solo documentos asignados a este usuario
-          estado: 'listo_para_entrega'
-        },
-        include: [
-          {
-            model: Matrizador,
-            as: 'matrizador',
-            attributes: ['id', 'nombre']
-          }
-        ]
-      });
+      console.log('🔄 Registrando documento confirmado desde XML...');
+      console.log('Datos recibidos:', req.body);
 
-      if (!documento) {
-        return res.json({
+      const {
+        codigoBarras,
+        tipoDocumento,
+        nombreCliente,
+        identificacionCliente,
+        emailCliente,
+        telefonoCliente,
+        numeroFactura,
+        valorFactura,
+        fechaFactura,
+        idMatrizador,
+        observaciones
+      } = req.body;
+
+      // Validaciones básicas
+      if (!codigoBarras || !tipoDocumento || !nombreCliente || !identificacionCliente) {
+        return res.status(400).json({
           success: false,
-          message: 'Documento no encontrado, no está listo para entrega o no está asignado a usted'
+          message: 'Faltan campos requeridos: código de barras, tipo de documento, nombre del cliente e identificación'
         });
       }
+
+      // Verificar que el matrizador existe
+      const matrizador = await Matrizador.findByPk(idMatrizador);
+      if (!matrizador) {
+        return res.status(400).json({
+          success: false,
+          message: 'El matrizador seleccionado no existe'
+        });
+      }
+
+      // Verificar que el código de barras no exista
+      const documentoExistente = await Documento.findOne({
+        where: { codigoBarras: codigoBarras }
+      });
+
+      if (documentoExistente) {
+        return res.status(400).json({
+          success: false,
+          message: `Ya existe un documento con el código de barras: ${codigoBarras}`
+        });
+      }
+
+      // Registrar documento
+      const nuevoDocumento = await Documento.create({
+        codigoBarras: codigoBarras,
+        tipoDocumento: tipoDocumento,
+        nombreCliente: nombreCliente,
+        identificacionCliente: identificacionCliente,
+        emailCliente: emailCliente || null,
+        telefonoCliente: telefonoCliente || null,
+        numeroFactura: numeroFactura || null,
+        valorFactura: parseFloat(valorFactura || 0),
+        fechaFactura: fechaFactura ? new Date(fechaFactura) : new Date(),
+        estado: 'en_proceso',
+        estadoPago: 'pendiente',
+        idMatrizador: idMatrizador,
+        observaciones: observaciones || 'Documento registrado desde XML mediante vista previa'
+      });
+
+      console.log('✅ Documento registrado exitosamente:', nuevoDocumento.id);
 
       res.json({
         success: true,
+        message: 'Documento registrado exitosamente',
         documento: {
-          id: documento.id,
-          codigoBarras: documento.codigoBarras,
-          tipoDocumento: documento.tipoDocumento,
-          nombreCliente: documento.nombreCliente,
-          identificacionCliente: documento.identificacionCliente,
-          codigoVerificacion: documento.codigoVerificacion,
-          notificarAutomatico: documento.notificarAutomatico,
-          metodoNotificacion: documento.metodoNotificacion
+          id: nuevoDocumento.id,
+          codigoBarras: nuevoDocumento.codigoBarras,
+          tipoDocumento: nuevoDocumento.tipoDocumento,
+          nombreCliente: nuevoDocumento.nombreCliente,
+          matrizador: matrizador.nombre
         }
       });
+
     } catch (error) {
-      console.error('Error buscando documento:', error);
-      res.json({ 
-        success: false, 
-        message: 'Error interno del servidor' 
+      console.error('❌ Error registrando documento desde XML:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error al registrar el documento: ' + error.message
       });
     }
   },
 
   /**
-   * Procesar entrega de documento (interfaz caja)
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
+   * RESTAURADO: Reporte de documentos (placeholder funcional)
    */
-  procesarEntregaDocumento: async (req, res) => {
+  reporteDocumentos: async (req, res) => {
     try {
-      const { id } = req.params;
-      const userId = req.matrizador.id;
-      const {
-        nombreReceptor,
-        identificacionReceptor,
-        relacionReceptor,
-        codigoIngresado
-      } = req.body;
-
-      // Iniciar transacción
-      const transaction = await sequelize.transaction();
-
-      try {
-        const documento = await Documento.findOne({
-          where: {
-            id,
-            idMatrizador: userId // Solo documentos asignados a este usuario
-          },
-          transaction
-        });
-
-        if (!documento) {
-          await transaction.rollback();
-          return res.json({ 
-            success: false, 
-            message: 'Documento no encontrado o no asignado a usted' 
-          });
-        }
-
-        if (documento.estado !== 'listo_para_entrega') {
-          await transaction.rollback();
-          return res.json({ 
-            success: false, 
-            message: 'El documento no está listo para entrega' 
-          });
-        }
-
-        // Validar código de verificación si es necesario
-        if (documento.codigoVerificacion && documento.notificarAutomatico) {
-          if (!codigoIngresado || codigoIngresado !== documento.codigoVerificacion) {
-            await transaction.rollback();
-            return res.json({ 
-              success: false, 
-              message: 'Código de verificación incorrecto' 
-            });
-          }
-        }
-
-        // Procesar entrega
-        await documento.update({
-          estado: 'entregado',
-          fechaEntrega: obtenerTimestampEcuador(),
-          nombreReceptor: nombreReceptor || null,
-          identificacionReceptor: identificacionReceptor || null,
-          relacionReceptor: relacionReceptor || 'titular'
-        }, { transaction });
-
-        // Registrar evento de entrega
-        await EventoDocumento.create({
-          idDocumento: documento.id,
-          tipo: 'entrega',
-          detalles: `Documento entregado por ${req.matrizador.nombre} (caja_archivo) a ${nombreReceptor || 'receptor no especificado'}`,
-          usuario: req.matrizador.nombre,
-          metadatos: JSON.stringify({
-            entregadoPor: req.matrizador.id,
-            nombreReceptor,
-            identificacionReceptor,
-            relacionReceptor,
-            codigoVerificado: !!codigoIngresado
-          })
-        }, { transaction });
-
-        // Confirmar transacción
-        await transaction.commit();
-
-        res.json({
-          success: true,
-          message: 'Documento entregado exitosamente',
-          documento: {
-            codigoBarras: documento.codigoBarras,
-            nombreCliente: documento.nombreCliente,
-            nombreReceptor
-          }
-        });
-      } catch (error) {
-        await transaction.rollback();
-        throw error;
-      }
+      res.render('caja/reportes/documentos', {
+        layout: 'caja',
+        title: 'Reporte de Documentos',
+        activeReportes: true,
+        userRole: req.matrizador?.rol,
+        userName: req.matrizador?.nombre,
+        message: 'Funcionalidad en desarrollo - Próximamente disponible'
+      });
     } catch (error) {
-      console.error('Error procesando entrega:', error);
-      res.json({ 
-        success: false, 
-        message: 'Error procesando entrega: ' + error.message 
+      console.error('Error al generar reporte de documentos:', error);
+      return res.status(500).render('error', {
+        layout: 'caja',
+        title: 'Error',
+        message: 'Error al generar el reporte de documentos',
+        error
       });
     }
-  }
+  },
+
+  /**
+   * RESTAURADO: Listado de pagos
+   */
+  listarPagos: async (req, res) => {
+    try {
+      // Obtener pagos recientes
+      const pagos = await Documento.findAll({
+        where: {
+          estado_pago: 'pagado', // CORREGIDO: usar camelCase
+          numero_factura: { [Op.not]: null }, // CORREGIDO: usar camelCase
+          estado: { [Op.notIn]: ['eliminado', 'nota_credito', 'cancelado'] }
+        },
+        include: [
+          {
+            model: Matrizador,
+            as: 'matrizador',
+            attributes: ['id', 'nombre', 'email']
+          }
+        ],
+        order: [['fecha_pago', 'DESC']], // CORREGIDO: usar camelCase
+        limit: 50
+      });
+
+      res.render('caja/pagos/listado', {
+        layout: 'caja',
+        title: 'Gestión de Pagos',
+        userRole: req.matrizador?.rol,
+        userName: req.matrizador?.nombre,
+        pagos
+      });
+    } catch (error) {
+      console.error('Error al listar pagos:', error);
+      return res.status(500).render('error', {
+        layout: 'caja',
+        title: 'Error',
+        message: 'Error al cargar el listado de pagos',
+        error
+      });
+    }
+  },
 };
 
-// 🎯 FUNCIÓN AUXILIAR: Generar texto descriptivo del período para el indicador global
-function obtenerTextoDescriptivoPeriodo(tipoPeriodo, fechaInicio, fechaFin) {
-  const moment = require('moment-timezone');
-  const TIMEZONE_ECUADOR = 'America/Guayaquil';
+// Funciones auxiliares para extraer datos del XML
+function extraerDatosFactura(factura) {
+  console.log('🔍 Extrayendo datos de factura...');
+  console.log('Estructura completa de factura:', JSON.stringify(factura, null, 2));
   
-  // Asegurar que las fechas sean objetos moment
-  const inicio = moment.isMoment(fechaInicio) ? fechaInicio : moment.tz(fechaInicio, TIMEZONE_ECUADOR);
-  const fin = moment.isMoment(fechaFin) ? fechaFin : moment.tz(fechaFin, TIMEZONE_ECUADOR);
+  const datos = {
+    tipoDocumento: 'factura',
+    numeroFactura: factura.infoTributaria?.estab + '-' + factura.infoTributaria?.ptoEmi + '-' + factura.infoTributaria?.secuencial,
+    nombreCliente: factura.infoFactura?.razonSocialComprador || 'Cliente no especificado',
+    identificacionCliente: factura.infoFactura?.identificacionComprador,
+    fechaEmision: factura.infoFactura?.fechaEmision,
+    valorTotal: parseFloat(factura.infoFactura?.importeTotal || 0),
+    razonSocial: factura.infoTributaria?.razonSocial,
+    ruc: factura.infoTributaria?.ruc
+  };
   
-  switch(tipoPeriodo) {
-    case 'hoy':
-      return `HOY - ${inicio.format('DD/MM/YYYY')}`;
-    case 'semana':
-      return `ESTA SEMANA - ${inicio.format('DD/MM')} al ${fin.format('DD/MM/YYYY')}`;
-    case 'mes':
-      return `ESTE MES - ${inicio.format('DD/MM')} al ${fin.format('DD/MM/YYYY')}`;
-    case 'ultimo_mes':
-      return `ÚLTIMOS 30 DÍAS - ${inicio.format('DD/MM')} al ${fin.format('DD/MM/YYYY')}`;
-    case 'ano':
-      return `AÑO ACTUAL - ${inicio.format('DD/MM')} al ${fin.format('DD/MM/YYYY')}`;
-    case 'personalizado':
-      return `PERÍODO PERSONALIZADO - ${inicio.format('DD/MM')} al ${fin.format('DD/MM/YYYY')}`;
-    default:
-      return `${inicio.format('DD/MM')} al ${fin.format('DD/MM/YYYY')}`;
+  // NUEVO: Extraer información adicional específica del sistema notarial
+  if (factura.infoAdicional) {
+    console.log('✅ Encontrada sección infoAdicional:', factura.infoAdicional);
+    
+    // La infoAdicional puede ser un array de objetos o un objeto
+    let camposAdicionales = [];
+    if (Array.isArray(factura.infoAdicional)) {
+      camposAdicionales = factura.infoAdicional;
+    } else if (factura.infoAdicional.campoAdicional) {
+      // Si hay un solo campo, convertir a array
+      camposAdicionales = Array.isArray(factura.infoAdicional.campoAdicional) ? 
+        factura.infoAdicional.campoAdicional : [factura.infoAdicional.campoAdicional];
+    }
+    
+    console.log('📋 Campos adicionales encontrados:', camposAdicionales);
+    
+    // Procesar cada campo adicional
+    camposAdicionales.forEach(campo => {
+      if (campo && campo.$ && campo.$.nombre) {
+        const nombre = campo.$.nombre.toUpperCase();
+        const valor = campo._ || campo;
+        
+        console.log(`🔍 Campo: ${nombre} = ${valor}`);
+        
+        switch (nombre) {
+          case 'NÚMERO DE LIBRO':
+          case 'NUMERO DE LIBRO':
+            datos.codigoLibro = valor; // Este es el verdadero código de barras
+            console.log('✅ Código de libro encontrado:', valor);
+            break;
+          case 'MATRIZADOR':
+            datos.nombreMatrizador = valor;
+            console.log('✅ Matrizador encontrado:', valor);
+            break;
+          case 'EMAIL CLIENTE':
+            datos.emailCliente = valor;
+            console.log('✅ Email cliente encontrado:', valor);
+            break;
+          case 'TELÉFONO':
+          case 'TELEFONO':
+            datos.telefonoCliente = valor;
+            console.log('✅ Teléfono cliente encontrado:', valor);
+            break;
+        }
+      }
+    });
+  } else {
+    console.log('⚠️ No se encontró sección infoAdicional en el XML');
   }
+  
+  console.log('📊 Datos finales extraídos:', datos);
+  return datos;
+}
+
+function extraerDatosRetencion(retencion) {
+  return {
+    tipoDocumento: 'retencion',
+    numeroComprobante: retencion.infoTributaria?.estab + '-' + retencion.infoTributaria?.ptoEmi + '-' + retencion.infoTributaria?.secuencial,
+    nombreCliente: retencion.infoCompRetencion?.razonSocialSujetoRetenido || 'Cliente no especificado',
+    identificacionCliente: retencion.infoCompRetencion?.identificacionSujetoRetenido,
+    fechaEmision: retencion.infoCompRetencion?.fechaEmision,
+    valorTotal: parseFloat(retencion.infoCompRetencion?.valorRetIva || 0) + parseFloat(retencion.infoCompRetencion?.valorRetRenta || 0),
+    razonSocial: retencion.infoTributaria?.razonSocial,
+    ruc: retencion.infoTributaria?.ruc
+  };
+}
+
+function extraerDatosAutorizacion(autorizacion) {
+  // Si viene dentro de una autorización, buscar el comprobante interno
+  const comprobante = autorizacion.comprobante || autorizacion;
+  
+  if (typeof comprobante === 'string') {
+    // Si el comprobante es un string XML, parsearlo
+    const xml2js = require('xml2js');
+    const parser = new xml2js.Parser({ explicitArray: false });
+    
+    return parser.parseStringPromise(comprobante).then(result => {
+      if (result.factura) {
+        return extraerDatosFactura(result.factura);
+      } else if (result.comprobanteRetencion) {
+        return extraerDatosRetencion(result.comprobanteRetencion);
+      }
+      return extraerDatosGenericos(result);
+    });
+  }
+  
+  return extraerDatosGenericos(comprobante);
+}
+
+function extraerDatosGenericos(datos) {
+  return {
+    tipoDocumento: 'documento',
+    numeroFactura: 'XML-' + Date.now(),
+    nombreCliente: 'Cliente desde XML',
+    identificacionCliente: '',
+    fechaEmision: new Date().toISOString().split('T')[0],
+    valorTotal: 0,
+    razonSocial: 'Empresa desde XML',
+    ruc: '',
+    datosOriginales: datos
+  };
+}
+
+// NUEVA FUNCIÓN: Extraer datos específicos de XMLs de retención
+function extraerDatosRetencionXML(comprobanteRetencion) {
+  console.log('🔍 Extrayendo datos de comprobante de retención...');
+  console.log('Estructura completa:', JSON.stringify(comprobanteRetencion, null, 2));
+  
+  const datos = {};
+  
+  // Información tributaria (empresa que retiene)
+  if (comprobanteRetencion.infoTributaria) {
+    datos.razonSocialRetenedora = comprobanteRetencion.infoTributaria.razonSocial || '';
+    datos.rucRetenedor = comprobanteRetencion.infoTributaria.ruc || '';
+    
+    // Construir número de comprobante de retención
+    const estab = comprobanteRetencion.infoTributaria.estab || '';
+    const ptoEmi = comprobanteRetencion.infoTributaria.ptoEmi || '';
+    const secuencial = comprobanteRetencion.infoTributaria.secuencial || '';
+    
+    if (estab && ptoEmi && secuencial) {
+      datos.numeroComprobanteRetencion = `${estab}-${ptoEmi}-${secuencial}`;
+    }
+    
+    console.log('✅ Info tributaria extraída:', {
+      razonSocial: datos.razonSocialRetenedora,
+      ruc: datos.rucRetenedor,
+      comprobante: datos.numeroComprobanteRetencion
+    });
+  }
+  
+  // Información del comprobante
+  if (comprobanteRetencion.infoCompRetencion) {
+    datos.fechaRetencion = comprobanteRetencion.infoCompRetencion.fechaEmision || '';
+    datos.razonSocialSujetoRetenido = comprobanteRetencion.infoCompRetencion.razonSocialSujetoRetenido || '';
+    datos.identificacionSujetoRetenido = comprobanteRetencion.infoCompRetencion.identificacionSujetoRetenido || '';
+    
+    console.log('✅ Info comprobante extraída:', {
+      fecha: datos.fechaRetencion,
+      sujetoRetenido: datos.razonSocialSujetoRetenido,
+      identificacion: datos.identificacionSujetoRetenido
+    });
+  }
+  
+  // Documentos sustento (facturas relacionadas)
+  if (comprobanteRetencion.docsSustento && comprobanteRetencion.docsSustento.docSustento) {
+    const docSustento = comprobanteRetencion.docsSustento.docSustento;
+    
+    // Puede ser un objeto o array, normalizar a array
+    const docsSustento = Array.isArray(docSustento) ? docSustento : [docSustento];
+    
+    // Tomar el primer documento sustento
+    if (docsSustento.length > 0) {
+      const primerDoc = docsSustento[0];
+      datos.numeroFactura = primerDoc.numDocSustento || '';
+      datos.fechaFactura = primerDoc.fechaEmisionDocSustento || '';
+      datos.importeTotal = parseFloat(primerDoc.importeTotal || 0);
+      
+      console.log('✅ Documento sustento extraído:', {
+        factura: datos.numeroFactura,
+        fecha: datos.fechaFactura,
+        importe: datos.importeTotal
+      });
+      
+      // Extraer retenciones específicas
+      if (primerDoc.retenciones && primerDoc.retenciones.retencion) {
+        const retenciones = Array.isArray(primerDoc.retenciones.retencion) ? 
+          primerDoc.retenciones.retencion : [primerDoc.retenciones.retencion];
+        
+        datos.retencionIva = 0;
+        datos.retencionRenta = 0;
+        
+        retenciones.forEach(retencion => {
+          const codigo = parseInt(retencion.codigo || 0);
+          const valorRetenido = parseFloat(retencion.valorRetenido || 0);
+          
+          console.log(`🔍 Procesando retención: código=${codigo}, valor=${valorRetenido}`);
+          
+          if (codigo === 2) {
+            // Código 2 = Retención IVA
+            datos.retencionIva += valorRetenido;
+            console.log(`✅ Retención IVA: +${valorRetenido} = ${datos.retencionIva}`);
+          } else if (codigo === 1) {
+            // Código 1 = Retención Renta
+            datos.retencionRenta += valorRetenido;
+            console.log(`✅ Retención Renta: +${valorRetenido} = ${datos.retencionRenta}`);
+          }
+        });
+        
+        // Calcular total retenido
+        datos.totalRetenido = datos.retencionIva + datos.retencionRenta;
+        
+        console.log('📊 Retenciones calculadas:', {
+          iva: datos.retencionIva,
+          renta: datos.retencionRenta,
+          total: datos.totalRetenido
+        });
+      }
+    }
+  }
+  
+  // Validar datos mínimos
+  if (!datos.numeroComprobanteRetencion) {
+    console.log('⚠️ No se pudo extraer número de comprobante');
+  }
+  
+  if (!datos.totalRetenido || datos.totalRetenido <= 0) {
+    console.log('⚠️ No se encontraron retenciones válidas');
+  }
+  
+  console.log('📋 Datos finales de retención:', datos);
+  return datos;
 }
 
 module.exports = cajaController;

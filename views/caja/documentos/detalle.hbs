@@ -99,8 +99,12 @@
             <div class="row">
               <div class="col-md-3">
                 <p><strong>Estado:</strong> 
-                  {{#if (eq documento.estadoPago "pagado")}}
-                  <span class="badge bg-success">Pagado</span>
+                  {{#if (eq documento.estadoPago "pagado_completo")}}
+                  <span class="badge bg-success">Pagado Completo</span>
+                  {{else if (eq documento.estadoPago "pagado_con_retencion")}}
+                  <span class="badge bg-info">Pagado con Retención</span>
+                  {{else if (eq documento.estadoPago "pago_parcial")}}
+                  <span class="badge bg-warning text-dark">Pago Parcial</span>
                   {{else}}
                   <span class="badge bg-danger">Pendiente</span>
                   {{/if}}
@@ -120,7 +124,7 @@
                 <p><strong>Fecha de Factura:</strong> {{formatDateDocument documento.fechaFactura}}</p>
               </div>
               {{/if}}
-              {{#if (eq documento.estadoPago "pagado")}}
+              {{#if (or (eq documento.estadoPago "pagado_completo") (eq documento.estadoPago "pagado_con_retencion") (eq documento.estadoPago "pago_parcial"))}}
               <div class="col-md-6">
                 <p><strong>📅 Fecha de Pago:</strong> 
                   <span class="badge bg-success-subtle text-success-emphasis px-3 py-2">
@@ -141,6 +145,35 @@
                 </p>
               </div>
               {{/if}}
+              {{/if}}
+              
+              <!-- Mostrar información adicional de pago -->
+              {{#if (neq documento.estadoPago "pendiente")}}
+              <div class="col-md-12">
+                <hr>
+                <div class="row">
+                  <div class="col-md-3">
+                    <p><strong>💰 Valor Total:</strong> ${{#if documento.valorFactura}}{{formatMoney documento.valorFactura}}{{else}}0.00{{/if}}</p>
+                  </div>
+                  <div class="col-md-3">
+                    <p><strong>💳 Pagado:</strong> 
+                      <span class="text-success">${{#if documento.valorPagado}}{{formatMoney documento.valorPagado}}{{else}}0.00{{/if}}</span>
+                    </p>
+                  </div>
+                  <div class="col-md-3">
+                    <p><strong>⏳ Pendiente:</strong> 
+                      <span class="text-danger">${{#if documento.valorPendiente}}{{formatMoney documento.valorPendiente}}{{else}}0.00{{/if}}</span>
+                    </p>
+                  </div>
+                  {{#if documento.tieneRetencion}}
+                  <div class="col-md-3">
+                    <p><strong>🔒 Retención:</strong> 
+                      <span class="text-warning">${{#if documento.valorRetenido}}{{formatMoney documento.valorRetenido}}{{else}}0.00{{/if}}</span>
+                    </p>
+                  </div>
+                  {{/if}}
+                </div>
+              </div>
               {{/if}}
             </div>
           </div>
@@ -339,12 +372,12 @@
 
 <!-- Modal para registrar pago -->
 <div class="modal fade" id="registrarPagoModal" tabindex="-1" aria-labelledby="registrarPagoModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
+  <div class="modal-dialog modal-xl">
     <div class="modal-content">
-      <form id="formRegistrarPago" action="/caja/pagos/registrar" method="POST">
+      <form id="formRegistrarPago" action="/caja/registrar-pago" method="POST" enctype="multipart/form-data">
         <div class="modal-header bg-primary text-white">
           <h5 class="modal-title" id="registrarPagoModalLabel">
-            <i class="fas fa-credit-card me-2"></i>Registrar Pago
+            <i class="fas fa-credit-card me-2"></i>Registrar Pago - Sistema Avanzado
           </h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
@@ -354,82 +387,302 @@
           <!-- Información del documento -->
           <div class="alert alert-info mb-4">
             <div class="row">
-              <div class="col-md-6">
-                <strong>Documento:</strong> {{documento.codigoBarras}}<br>
-                <strong>Cliente:</strong> {{documento.nombreCliente}}
+              <div class="col-md-4">
+                <strong>📄 Documento:</strong> {{documento.codigoBarras}}<br>
+                <strong>👤 Cliente:</strong> {{documento.nombreCliente}}
               </div>
-              <div class="col-md-6">
-                <strong>Tipo:</strong> {{documento.tipoDocumento}}<br>
-                <strong>Estado actual:</strong> 
-                {{#if (eq documento.estadoPago "pagado")}}
-                <span class="badge bg-success">Pagado</span>
+              <div class="col-md-4">
+                <strong>📋 Tipo:</strong> {{documento.tipoDocumento}}<br>
+                <strong>🏷️ Estado:</strong> 
+                {{#if (eq documento.estadoPago "pagado_completo")}}
+                <span class="badge bg-success">Pagado Completo</span>
+                {{else if (eq documento.estadoPago "pagado_con_retencion")}}
+                <span class="badge bg-info">Pagado con Retención</span>
+                {{else if (eq documento.estadoPago "pago_parcial")}}
+                <span class="badge bg-warning text-dark">Pago Parcial</span>
                 {{else}}
-                <span class="badge bg-warning">Pendiente</span>
+                <span class="badge bg-danger">Pendiente</span>
                 {{/if}}
               </div>
+              <div class="col-md-4">
+                <strong>💰 Valor Total:</strong> $<span id="valorTotalDocumento">{{#if documento.valorFactura}}{{formatMoney documento.valorFactura}}{{else}}0.00{{/if}}</span><br>
+                <strong>💳 Pagado:</strong> $<span id="valorPagadoDocumento">{{#if documento.valorPagado}}{{formatMoney documento.valorPagado}}{{else}}0.00{{/if}}</span><br>
+                <strong>⏳ Pendiente:</strong> $<span id="valorPendienteDocumento">{{#if documento.valorPendiente}}{{formatMoney documento.valorPendiente}}{{else if documento.valorFactura}}{{formatMoney documento.valorFactura}}{{else}}0.00{{/if}}</span>
+              </div>
             </div>
           </div>
-          
+
           <div class="row">
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label for="montoPagado" class="form-label">Monto Pagado ($) <span class="text-danger">*</span></label>
-                <input type="number" class="form-control" id="montoPagado" name="valorFactura" 
-                       value="{{documento.valorFactura}}" min="0.01" step="0.01" required>
-                <div class="form-text">Ingrese el monto exacto recibido</div>
+            <!-- Columna izquierda: Información de pago -->
+            <div class="col-md-8">
+              <div class="card">
+                <div class="card-header bg-light">
+                  <h6 class="mb-0"><i class="fas fa-money-bill-wave me-2"></i>Información del Pago</h6>
+                </div>
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-md-6">
+                      <div class="mb-3">
+                        <label for="monto" class="form-label">💰 Monto a Pagar ($) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                          <span class="input-group-text">$</span>
+                          <input type="number" class="form-control" id="monto" name="monto" 
+                                 min="0.01" step="0.01" required 
+                                 placeholder="0.00">
+                          <div class="invalid-feedback" id="montoError"></div>
+                        </div>
+                        <div class="form-text">Máximo: $<span id="montoMaximo">{{#if documento.valorPendiente}}{{formatMoney documento.valorPendiente}}{{else if documento.valorFactura}}{{formatMoney documento.valorFactura}}{{else}}0.00{{/if}}</span></div>
+                      </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                      <div class="mb-3">
+                        <label for="formaPago" class="form-label">💳 Forma de Pago <span class="text-danger">*</span></label>
+                        <select class="form-select" id="formaPago" name="formaPago" required>
+                          <option value="" disabled selected>Seleccionar método...</option>
+                          <option value="efectivo">💵 Efectivo</option>
+                          <option value="transferencia">🏦 Transferencia Bancaria</option>
+                          <option value="tarjeta_credito">💳 Tarjeta de Crédito</option>
+                          <option value="tarjeta_debito">💳 Tarjeta de Débito</option>
+                          <option value="cheque">📝 Cheque</option>
+                          <option value="otro">🔄 Otro</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- BOTONES DE PAGO RÁPIDO MEJORADOS -->
+                  <div class="row mb-3">
+                    <div class="col-12">
+                      <h6 class="text-primary">💰 Opciones de Pago Rápido:</h6>
+                      <div class="d-flex gap-2 flex-wrap mb-2">
+                        <!-- Botón Pago Total Normal -->
+                        <button type="button" class="btn btn-success" onclick="pagarTotalCompleto()">
+                          💰 PAGO TOTAL $<span id="valor-total-btn">{{documento.valorPendiente}}</span>
+                        </button>
+                        
+                        <!-- Botón Nuevo: Pago con Retención -->
+                        <button type="button" class="btn btn-info" onclick="pagarConRetencion()">
+                          🧮 CON RETENCIÓN ~$<span class="calcular-neto" data-total="{{documento.valorPendiente}}">0.00</span>
+                        </button>
+                        
+                        <!-- Botón Pago Personalizado -->
+                        <button type="button" class="btn btn-outline-secondary" onclick="mostrarFormularioPersonalizado()">
+                          ✏️ MONTO PERSONALIZADO
+                        </button>
+                      </div>
+                      
+                      <!-- Nota explicativa -->
+                      <small class="text-muted">
+                        <i class="fas fa-info-circle"></i> 
+                        "Con Retención" calcula automáticamente: Ret. IVA 100% + Ret. Renta 10%
+                      </small>
+                    </div>
+                  </div>
+
+                  <div class="row">
+                    <div class="col-md-6">
+                      <div class="mb-3">
+                        <label for="numeroComprobante" class="form-label">🧾 Número de Comprobante</label>
+                        <input type="text" class="form-control" id="numeroComprobante" name="numeroComprobante" 
+                               placeholder="Opcional">
+                        <div class="form-text">Número de recibo, factura o comprobante</div>
+                      </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                      <div class="mb-3">
+                        <label for="fechaPago" class="form-label">📅 Fecha de Pago</label>
+                        <input type="date" class="form-control" id="fechaPago" name="fechaPago" 
+                               value="">
+                        <div class="form-text">Dejar vacío para usar fecha actual</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="mb-3">
+                    <label for="observaciones" class="form-label">📝 Observaciones</label>
+                    <textarea class="form-control" id="observaciones" name="observaciones" rows="2" 
+                              placeholder="Información adicional sobre el pago (opcional)"></textarea>
+                  </div>
+
+                  <!-- Sección de retención XML (inicialmente oculta) -->
+                  <div id="seccionRetencion" style="display: none;">
+                    <div class="card border-success">
+                      <div class="card-header bg-success text-white">
+                        <h6 class="mb-0">
+                          <i class="fas fa-file-code me-2"></i>Comprobante de Retención XML
+                        </h6>
+                      </div>
+                      <div class="card-body">
+                        <div class="alert alert-info">
+                          <h6><i class="fas fa-info-circle me-1"></i>Formato Único Soportado</h6>
+                          <p class="mb-0">
+                            <strong>📋 Solo archivos XML del SRI</strong><br>
+                            <small class="text-muted">100% preciso - Sin errores de procesamiento</small>
+                          </p>
+                        </div>
+                        
+                        <!-- Upload de XML -->
+                        <div class="mb-3">
+                          <label for="xmlRetencion" class="form-label">
+                            <i class="fas fa-upload me-1"></i>Subir XML de Retención:
+                          </label>
+                          <input type="file" class="form-control" id="xmlRetencion" name="xmlRetencion" 
+                                 accept=".xml" aria-describedby="xmlHelp">
+                          <div id="xmlHelp" class="form-text">
+                            📁 Solo archivos .xml del SRI | Máximo 5MB
+                          </div>
+                        </div>
+                        
+                        <!-- Botón de procesamiento -->
+                        <div class="mb-3">
+                          <button type="button" class="btn btn-primary" id="btnProcesarXml" onclick="procesarXmlRetencion()" disabled>
+                            <i class="fas fa-cogs me-1"></i>🔍 PROCESAR XML
+                          </button>
+                        </div>
+                        
+                        <!-- Área de resultados del procesamiento XML -->
+                        <div id="resultadosProcesamientoXml" style="display: none;">
+                          <div class="alert alert-success">
+                            <h6><i class="fas fa-check-circle me-1"></i>XML Procesado Exitosamente:</h6>
+                            <div class="row">
+                              <div class="col-md-6">
+                                <strong>📄 Comprobante:</strong> <span id="numeroComprobanteExtraido">-</span><br>
+                                <strong>🏢 Empresa:</strong> <span id="empresaRetenedoraExtraida">-</span><br>
+                                <strong>🆔 RUC:</strong> <span id="rucEmpresaExtraido">-</span>
+                              </div>
+                              <div class="col-md-6">
+                                <strong>💰 Ret. IVA:</strong> $<span id="retencionIvaExtraida">0.00</span><br>
+                                <strong>💼 Ret. Renta:</strong> $<span id="retencionRentaExtraida">0.00</span><br>
+                                <strong>🎯 Total Ret.:</strong> $<span id="totalRetencionExtraida">0.00</span>
+                              </div>
+                            </div>
+                            
+                            <!-- Validación automática -->
+                            <div class="mt-2" id="validacionRetencion">
+                              <div class="d-flex align-items-center">
+                                <span id="iconoValidacion" class="me-2">✅</span>
+                                <span id="mensajeValidacion">XML validado correctamente</span>
+                              </div>
+                            </div>
+                            
+                            <!-- Botones de acción -->
+                            <div class="mt-3">
+                              <button type="button" class="btn btn-success btn-sm" onclick="aplicarDatosXml()">
+                                <i class="fas fa-check me-1"></i>APLICAR DATOS
+                              </button>
+                              <button type="button" class="btn btn-secondary btn-sm" onclick="limpiarResultados()">
+                                <i class="fas fa-times me-1"></i>LIMPIAR
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <!-- Área de error del procesamiento -->
+                        <div id="errorProcesamientoXml" style="display: none;">
+                          <div class="alert alert-danger">
+                            <h6><i class="fas fa-exclamation-triangle me-1"></i>Error Procesando XML</h6>
+                            <p id="mensajeErrorXml">Error desconocido</p>
+                            <div class="mt-3">
+                              <button type="button" class="btn btn-secondary btn-sm" onclick="limpiarError()">
+                                <i class="fas fa-times me-1"></i>CERRAR
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-            
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label for="metodoPago" class="form-label">Método de Pago <span class="text-danger">*</span></label>
-                <select class="form-select" id="metodoPago" name="metodoPago" required>
-                  <option value="" disabled selected>Seleccionar método...</option>
-                  <option value="efectivo">Efectivo</option>
-                  <option value="transferencia">Transferencia Bancaria</option>
-                  <option value="otro">Cheque</option>
-                  <option value="tarjeta">Tarjeta</option>
-                </select>
+
+            <!-- Columna derecha: Resumen y validación -->
+            <div class="col-md-4">
+              <div class="card">
+                <div class="card-header bg-success text-white">
+                  <h6 class="mb-0"><i class="fas fa-calculator me-2"></i>Resumen del Pago</h6>
+                </div>
+                <div class="card-body">
+                  <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                      <span>💰 Valor Total:</span>
+                      <strong>$<span id="resumenTotal">{{#if documento.valorFactura}}{{formatMoney documento.valorFactura}}{{else}}0.00{{/if}}</span></strong>
+                    </div>
+                  </div>
+                  
+                  <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                      <span>💳 Ya Pagado:</span>
+                      <span class="text-success">$<span id="resumenPagado">{{#if documento.valorPagado}}{{formatMoney documento.valorPagado}}{{else}}0.00{{/if}}</span></span>
+                    </div>
+                  </div>
+                  
+                  <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                      <span>➕ Este Pago:</span>
+                      <span class="text-primary">$<span id="resumenEstePago">0.00</span></span>
+                    </div>
+                  </div>
+                  
+                  <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                      <span>🔒 Retención:</span>
+                      <span class="text-warning">$<span id="resumenRetencion">0.00</span></span>
+                    </div>
+                  </div>
+                  
+                  <hr>
+                  
+                  <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                      <span><strong>⏳ Quedará Pendiente:</strong></span>
+                      <strong class="text-danger">$<span id="resumenPendiente">{{#if documento.valorPendiente}}{{formatMoney documento.valorPendiente}}{{else if documento.valorFactura}}{{formatMoney documento.valorFactura}}{{else}}0.00{{/if}}</span></strong>
+                    </div>
+                  </div>
+                  
+                  <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                      <span><strong>🎯 Estado Final:</strong></span>
+                      <span id="estadoFinal" class="badge bg-secondary">Pendiente</span>
+                    </div>
+                  </div>
+
+                  <!-- Validación matemática -->
+                  <div class="alert alert-light border" id="validacionMatematica">
+                    <small>
+                      <i class="fas fa-check-circle text-success me-1"></i>
+                      <strong>Validación:</strong><br>
+                      <span id="ecuacionMatematica">Total = Pagado + Pendiente + Retenido</span>
+                    </small>
+                  </div>
+
+                  <!-- Checkbox para retención -->
+                  <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="tieneRetencion" name="tieneRetencion" value="true">
+                    <label class="form-check-label" for="tieneRetencion">
+                      <i class="fas fa-file-code me-1"></i>Este pago tiene retención
+                    </label>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-          
-          <div class="row">
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label for="fechaPago" class="form-label">Fecha de Pago <span class="text-danger">*</span></label>
-                <input type="date" class="form-control" id="fechaPago" name="fechaPago" 
-                       value="" required>
-              </div>
-            </div>
-            
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label for="numeroFactura" class="form-label">Número de Factura</label>
-                <input type="text" class="form-control" id="numeroFactura" name="numeroFactura" 
-                       value="{{documento.numeroFactura}}" placeholder="Opcional">
-              </div>
-            </div>
-          </div>
-          
-          <div class="mb-3">
-            <label for="observaciones" class="form-label">Observaciones</label>
-            <textarea class="form-control" id="observaciones" name="observaciones" rows="3" 
-                      placeholder="Información adicional sobre el pago (opcional)"></textarea>
-          </div>
-          
-          <!-- Confirmación -->
-          <div class="alert alert-warning">
+
+          <!-- Confirmación final -->
+          <div class="alert alert-warning mt-3">
             <i class="fas fa-exclamation-triangle me-2"></i>
-            <strong>Confirmación:</strong> Al registrar este pago, el documento será marcado como <strong>PAGADO</strong> 
-            y no se podrá modificar sin justificación.
+            <strong>⚠️ Confirmación:</strong> Al registrar este pago se actualizará el estado del documento 
+            y se registrará en el historial. Esta acción no se puede deshacer fácilmente.
           </div>
         </div>
+        
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" id="cancelarPago">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
             <i class="fas fa-times me-1"></i>Cancelar
           </button>
-          <button type="submit" class="btn btn-success" id="confirmarPago">
+          <button type="submit" class="btn btn-success" id="btnConfirmarPago" disabled>
             <i class="fas fa-check me-1"></i>Confirmar Pago
           </button>
         </div>
@@ -521,132 +774,687 @@
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    // ============ FUNCIONALIDAD DE REGISTRO DE PAGOS ============
+    // ============ VARIABLES GLOBALES ============
+    const valorTotalDocumento = parseFloat('{{documento.valorFactura}}') || 0;
+    const valorPagadoDocumento = parseFloat('{{documento.valorPagado}}') || 0;
+    const valorPendienteDocumento = parseFloat('{{documento.valorPendiente}}') || (valorTotalDocumento - valorPagadoDocumento);
     
-    // Detectar si la URL contiene el fragmento #pago
-    function checkForPaymentFragment() {
-      if (window.location.hash === '#pago') {
-        const pagoModal = new bootstrap.Modal(document.getElementById('registrarPagoModal'));
-        pagoModal.show();
+    // ============ FUNCIONES DE CÁLCULO DE RETENCIÓN ============
+    
+    // Función principal de cálculo de retención (fórmula estándar Ecuador)
+    function calcularNetoConRetencion(totalFactura) {
+      const subtotal = totalFactura / 1.15;        // Quitar IVA (15%)
+      const iva = totalFactura - subtotal;         // IVA = diferencia
+      
+      // Retenciones típicas
+      const retencionIVA = iva * 1.00;             // 100% del IVA
+      const retencionRenta = subtotal * 0.10;      // 10% del subtotal
+      const totalRetencion = retencionIVA + retencionRenta;
+      
+      const netoARecibir = totalFactura - totalRetencion;
+      
+      return {
+        total: parseFloat(totalFactura.toFixed(2)),
+        subtotal: parseFloat(subtotal.toFixed(2)),
+        iva: parseFloat(iva.toFixed(2)),
+        retencionIVA: parseFloat(retencionIVA.toFixed(2)),
+        retencionRenta: parseFloat(retencionRenta.toFixed(2)),
+        totalRetencion: parseFloat(totalRetencion.toFixed(2)),
+        neto: parseFloat(netoARecibir.toFixed(2))
+      };
+    }
+    
+    // ============ FUNCIONES DE BOTONES DE PAGO RÁPIDO ============
+    
+    // Función global para pago total completo
+    window.pagarTotalCompleto = function() {
+      console.log('🟢 Pago total completo seleccionado');
+      const montoInput = document.getElementById('monto');
+      const retencionCheck = document.getElementById('tieneRetencion');
+      
+      if (montoInput) {
+        montoInput.value = valorPendienteDocumento.toFixed(2);
+        montoInput.dispatchEvent(new Event('input'));
       }
-    }
-    
-    // Verificar al cargar la página
-    checkForPaymentFragment();
-    
-    // Verificar cuando cambie el hash
-    window.addEventListener('hashchange', checkForPaymentFragment);
-    
-    // Configurar fecha por defecto (hoy)
-    const fechaPagoInput = document.getElementById('fechaPago');
-    if (fechaPagoInput) {
-      const today = new Date().toISOString().split('T')[0];
-      fechaPagoInput.value = today;
-    }
-    
-    // Manejar botón cancelar - quitar #pago de URL
-    const cancelarPagoBtn = document.getElementById('cancelarPago');
-    if (cancelarPagoBtn) {
-      cancelarPagoBtn.addEventListener('click', function() {
-        // Cerrar modal
-        const pagoModal = bootstrap.Modal.getInstance(document.getElementById('registrarPagoModal'));
-        if (pagoModal) {
-          pagoModal.hide();
+      
+      if (retencionCheck) {
+        retencionCheck.checked = false;
+        retencionCheck.dispatchEvent(new Event('change'));
+      }
+      
+      // Scroll al formulario
+      if (montoInput) {
+        montoInput.focus();
+        montoInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    };
+
+    // Función global para pago con retención
+    window.pagarConRetencion = function() {
+      console.log('🧮 Pago con retención seleccionado');
+      const total = valorPendienteDocumento;
+      const calculo = calcularNetoConRetencion(total);
+      
+      const montoInput = document.getElementById('monto');
+      const retencionCheck = document.getElementById('tieneRetencion');
+      
+      // Pre-llenar formulario con cálculo automático
+      if (montoInput) {
+        montoInput.value = calculo.neto.toFixed(2);
+        montoInput.dispatchEvent(new Event('input'));
+      }
+      
+      if (retencionCheck) {
+        retencionCheck.checked = true;
+        retencionCheck.dispatchEvent(new Event('change'));
+      }
+      
+      // Mostrar desglose del cálculo
+      if (mostrarDesglose(calculo)) {
+        // Focus en forma de pago si acepta
+        const formaPagoSelect = document.getElementById('formaPago');
+        if (formaPagoSelect) {
+          formaPagoSelect.focus();
         }
         
-        // Quitar #pago de la URL
+        if (montoInput) {
+          montoInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+    };
+
+    // Función global para monto personalizado
+    window.mostrarFormularioPersonalizado = function() {
+      console.log('✏️ Monto personalizado seleccionado');
+      const montoInput = document.getElementById('monto');
+      const retencionCheck = document.getElementById('tieneRetencion');
+      
+      if (montoInput) {
+        montoInput.value = '';
+        montoInput.dispatchEvent(new Event('input'));
+      }
+      
+      if (retencionCheck) {
+        retencionCheck.checked = false;
+        retencionCheck.dispatchEvent(new Event('change'));
+      }
+      
+      // Focus en monto para que usuario escriba
+      if (montoInput) {
+        montoInput.focus();
+        montoInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    };
+    
+    // Mostrar desglose del cálculo automático
+    function mostrarDesglose(calculo) {
+      const mensaje = `💰 CÁLCULO AUTOMÁTICO DE RETENCIÓN:
+
+📊 DESGLOSE:
+• Total Factura: $${calculo.total}
+• Subtotal s/IVA: $${calculo.subtotal}
+• IVA (15%): $${calculo.iva}
+
+🔻 RETENCIONES:
+• Retención IVA (100%): -$${calculo.retencionIVA}
+• Retención Renta (10%): -$${calculo.retencionRenta}
+• Total Retenciones: -$${calculo.totalRetencion}
+
+🎯 NETO A RECIBIR: $${calculo.neto}
+
+✅ Monto pre-cargado en formulario
+⚠️ Recuerde subir el XML de retención para validación`;
+      
+      // Mostrar como alert mejorado
+      return confirm(mensaje + '\n\n¿Continuar con este cálculo?');
+    }
+    
+    // ============ INICIALIZACIÓN Y EVENTOS ============
+    
+    // Calcular y mostrar montos estimados al cargar página
+    function inicializarCalculosRetenciones() {
+      console.log('🧮 Inicializando cálculos de retención...');
+      
+      const elementos = document.querySelectorAll('.calcular-neto');
+      elementos.forEach(function(elemento) {
+        const total = parseFloat(elemento.dataset.total);
+        if (!isNaN(total) && total > 0) {
+          const calculo = calcularNetoConRetencion(total);
+          elemento.textContent = calculo.neto.toFixed(2);
+          console.log(`💰 Calculado para $${total}: Neto = $${calculo.neto}`);
+        }
+      });
+      
+      // También actualizar el valor total en el botón
+      const valorTotalBtn = document.getElementById('valor-total-btn');
+      if (valorTotalBtn) {
+        valorTotalBtn.textContent = valorPendienteDocumento.toFixed(2);
+      }
+      
+      console.log('✅ Cálculos de retención inicializados');
+    }
+    
+    // ============ CONFIGURACIÓN DE EVENTOS MEJORADA ============
+    function configurarEventos() {
+      // Evento para cambio en monto
+      const montoInput = document.getElementById('monto');
+      if (montoInput) {
+        montoInput.addEventListener('input', function() {
+          validarMonto();
+          actualizarResumen();
+        });
+      }
+      
+      // Evento para checkbox de retención
+      const tieneRetencionCheck = document.getElementById('tieneRetencion');
+      if (tieneRetencionCheck) {
+        tieneRetencionCheck.addEventListener('change', function() {
+          console.log('🔍 Checkbox retención cambiado:', this.checked);
+          toggleSeccionRetencion();
+          actualizarResumen();
+        });
+      }
+      
+      // Eventos para botones de pago rápido (legacy - mantener por compatibilidad)
+      document.querySelectorAll('.btn-pago-rapido').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const porcentaje = parseInt(this.dataset.porcentaje);
+          const monto = (valorPendienteDocumento * porcentaje / 100).toFixed(2);
+          document.getElementById('monto').value = monto;
+          validarMonto();
+          actualizarResumen();
+        });
+      });
+      
+      // Evento para botón de retención automática (legacy)
+      document.querySelectorAll('.btn-pago-rapido-retencion').forEach(btn => {
+        btn.addEventListener('click', function() {
+          pagarConRetencion(); // Usar nueva función
+        });
+      });
+      
+      // Validación del formulario antes de enviar
+      const form = document.getElementById('formRegistrarPago');
+      if (form) {
+        form.addEventListener('submit', function(e) {
+          const monto = parseFloat(document.getElementById('monto').value);
+          const pendiente = valorPendienteDocumento;
+          
+          if (monto > pendiente) {
+            e.preventDefault();
+            alert('❌ El monto no puede ser mayor al valor pendiente ($' + pendiente + ')');
+            return false;
+          }
+          
+          // Validación simplificada - XML es opcional
+          const tieneRetencion = document.getElementById('tieneRetencion').checked;
+          const xmlFile = document.getElementById('xmlRetencion') ? document.getElementById('xmlRetencion').files[0] : null;
+          
+          if (tieneRetencion && !xmlFile && !window.datosRetencionActuales) {
+            if (!confirm('⚠️ No se subió XML de retención ni se procesaron datos. ¿Continuar sin retención?')) {
+              e.preventDefault();
+              return false;
+            }
+          }
+          
+          return true;
+        });
+      }
+      
+      console.log('✅ Eventos configurados correctamente');
+    }
+    
+    // ============ VALIDACIÓN DE MONTO ============
+    function validarMonto() {
+      const montoInput = document.getElementById('monto');
+      const montoError = document.getElementById('montoError');
+      const btnConfirmar = document.getElementById('btnConfirmarPago');
+      
+      if (!montoInput) return;
+      
+      const monto = parseFloat(montoInput.value) || 0;
+      const maxPermitido = valorPendienteDocumento;
+      
+      // Limpiar errores previos
+      montoInput.classList.remove('is-invalid');
+      if (montoError) montoError.textContent = '';
+      
+      let esValido = true;
+      let mensajeError = '';
+      
+      if (monto <= 0) {
+        esValido = false;
+        mensajeError = 'El monto debe ser mayor a 0';
+      } else if (monto > maxPermitido) {
+        esValido = false;
+        mensajeError = `El monto no puede ser mayor al pendiente ($${maxPermitido.toFixed(2)})`;
+      }
+      
+      if (!esValido) {
+        montoInput.classList.add('is-invalid');
+        if (montoError) montoError.textContent = mensajeError;
+        if (btnConfirmar) btnConfirmar.disabled = true;
+      } else {
+        if (btnConfirmar) btnConfirmar.disabled = false;
+      }
+      
+      return esValido;
+    }
+    
+    // ============ MANEJO DEL MODAL ============
+    const pagoModal = document.getElementById('registrarPagoModal');
+    if (pagoModal) {
+      pagoModal.addEventListener('hidden.bs.modal', function() {
+        // Quitar #pago de la URL cuando se cierre el modal
         if (window.location.hash === '#pago') {
           window.history.pushState("", document.title, window.location.pathname + window.location.search);
         }
+        
+        // Resetear formulario
+        const form = document.getElementById('formRegistrarPago');
+        if (form) {
+          form.reset();
+          // Restaurar botón
+          const btnConfirmar = document.getElementById('btnConfirmarPago');
+          if (btnConfirmar) {
+            btnConfirmar.innerHTML = '<i class="fas fa-check me-1"></i>Confirmar Pago';
+            btnConfirmar.disabled = true;
+          }
+        }
       });
-    }
-    
-    // Validación del formulario de pago
-    const formRegistrarPago = document.getElementById('formRegistrarPago');
-    if (formRegistrarPago) {
-      formRegistrarPago.addEventListener('submit', function(e) {
-        const montoPagado = document.getElementById('montoPagado').value;
-        const metodoPago = document.getElementById('metodoPago').value;
-        const fechaPago = document.getElementById('fechaPago').value;
-        
-        // Validaciones
-        if (!montoPagado || parseFloat(montoPagado) <= 0) {
-          e.preventDefault();
-          alert('Por favor, ingrese un monto válido mayor a 0');
-          return false;
+      
+      pagoModal.addEventListener('shown.bs.modal', function() {
+        // Enfocar en el campo de monto al abrir
+        const montoInput = document.getElementById('monto');
+        if (montoInput) {
+          setTimeout(() => montoInput.focus(), 100);
         }
-        
-        if (!metodoPago) {
-          e.preventDefault();
-          alert('Por favor, seleccione un método de pago');
-          return false;
-        }
-        
-        if (!fechaPago) {
-          e.preventDefault();
-          alert('Por favor, seleccione la fecha de pago');
-          return false;
-        }
-        
-        // Validar que la fecha no sea futura
-        const fechaSeleccionada = new Date(fechaPago);
-        const hoy = new Date();
-        hoy.setHours(0, 0, 0, 0);
-        
-        if (fechaSeleccionada > hoy) {
-          e.preventDefault();
-          alert('La fecha de pago no puede ser futura');
-          return false;
-        }
-        
-        // Confirmación final
-        const confirmacion = confirm(`¿Está seguro de registrar este pago?\n\nMonto: $${montoPagado}\nMétodo: ${metodoPago}\nFecha: ${fechaPago}\n\nEsta acción marcará el documento como PAGADO.`);
-        
-        if (!confirmacion) {
-          e.preventDefault();
-          return false;
-        }
-        
-        // Mostrar loading en el botón
-        const confirmarBtn = document.getElementById('confirmarPago');
-        confirmarBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
-        confirmarBtn.disabled = true;
       });
     }
     
     // ============ FUNCIONALIDAD DE CAMBIO DE MATRIZADOR ============
     
+    // Manejar modal de cambio de matrizador
     const cambiarMatrizadorModal = document.getElementById('cambiarMatrizadorModal');
     if (cambiarMatrizadorModal) {
-      cambiarMatrizadorModal.addEventListener('show.bs.modal', function (event) {
-        // Botón que activó el modal
+      cambiarMatrizadorModal.addEventListener('show.bs.modal', function(event) {
         const button = event.relatedTarget;
-        // Extraer información de los atributos data-*
         const documentoId = button.getAttribute('data-documento-id');
         const matrizadorActualId = button.getAttribute('data-matrizador-actual-id');
         const matrizadorActualNombre = button.getAttribute('data-matrizador-actual-nombre');
         
-        // Actualizar los campos del modal si vienen nuevos datos del botón
-        if (documentoId) document.getElementById('documentoId').value = documentoId;
+        // Actualizar el formulario del modal
+        const form = this.querySelector('#formCambiarMatrizador');
+        if (form) {
+          form.querySelector('input[name="documentoId"]').value = documentoId;
+          
+          // Actualizar el select para excluir el matrizador actual
+          const select = form.querySelector('select[name="matrizadorId"]');
+          if (select && matrizadorActualId) {
+            Array.from(select.options).forEach(option => {
+              if (option.value === matrizadorActualId) {
+                option.disabled = true;
+                option.textContent += ' (Actual)';
+              }
+            });
+          }
+        }
         
-        if (matrizadorActualNombre) {
-          document.getElementById('matrizadorActual').value = matrizadorActualNombre;
+        // Actualizar texto del modal
+        const modalTitle = this.querySelector('.modal-title');
+        if (modalTitle && matrizadorActualNombre) {
+          modalTitle.textContent = `Cambiar Matrizador (Actual: ${matrizadorActualNombre})`;
         }
       });
     }
     
-    // ============ FUNCIONALIDAD ADICIONAL ============
-    
-    // Destacar sección de pago si viene de URL con #pago
-    if (window.location.hash === '#pago') {
-      const pagoSection = document.getElementById('pago');
-      if (pagoSection) {
-        pagoSection.scrollIntoView({ behavior: 'smooth' });
-        pagoSection.style.backgroundColor = '#fff3cd';
-        setTimeout(() => {
-          pagoSection.style.backgroundColor = '';
-        }, 3000);
+    // ============ MANEJO DE SECCIÓN DE RETENCIÓN ============
+    function toggleSeccionRetencion() {
+      const checkbox = document.getElementById('tieneRetencion');
+      const seccion = document.getElementById('seccionRetencion');
+      
+      if (!checkbox || !seccion) return;
+      
+      if (checkbox.checked) {
+        seccion.style.display = 'block';
+        seccion.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        console.log('📄 Sección de retención mostrada');
+      } else {
+        seccion.style.display = 'none';
+        // Limpiar archivo si se deselecciona
+        const xmlInput = document.getElementById('xmlRetencion');
+        if (xmlInput) xmlInput.value = '';
+        console.log('📄 Sección de retención ocultada');
       }
+    }
+    
+    // ============ ACTUALIZACIÓN DEL RESUMEN ============
+    function actualizarResumen() {
+      const monto = parseFloat(document.getElementById('monto')?.value) || 0;
+      const tieneRetencion = document.getElementById('tieneRetencion')?.checked || false;
+      
+      // 🔧 NUEVO: Considerar datos de retención guardados del XML
+      let valorRetencion = 0;
+      if (window.datosRetencionActuales && tieneRetencion) {
+        valorRetencion = parseFloat(window.datosRetencionActuales.totalRetencion) || 0;
+        console.log('🔄 Usando retención del XML:', valorRetencion);
+      }
+      
+      // Calcular valores considerando retención
+      const nuevoValorPagado = valorPagadoDocumento + monto;
+      const totalCubierto = nuevoValorPagado + valorRetencion;
+      const nuevoValorPendiente = Math.max(0, valorTotalDocumento - totalCubierto);
+      
+      // Actualizar elementos del resumen
+      actualizarElemento('resumenTotal', valorTotalDocumento);
+      actualizarElemento('resumenPagado', valorPagadoDocumento);
+      actualizarElemento('resumenEstePago', monto);
+      actualizarElemento('resumenRetencion', valorRetencion);
+      actualizarElemento('resumenPendiente', nuevoValorPendiente);
+      
+      // Determinar estado final
+      let estadoFinal = 'Pendiente';
+      let claseEstado = 'bg-danger';
+      
+      if (nuevoValorPendiente <= 0.01) { // Tolerancia para decimales
+        if (valorRetencion > 0) {
+          estadoFinal = 'Pagado con Retención';
+          claseEstado = 'bg-info';
+        } else {
+          estadoFinal = 'Pagado Completo';
+          claseEstado = 'bg-success';
+        }
+      } else if (monto > 0 || valorRetencion > 0) {
+        estadoFinal = 'Pago Parcial';
+        claseEstado = 'bg-warning';
+      }
+      
+      // Actualizar estado final
+      const estadoFinalElement = document.getElementById('estadoFinal');
+      if (estadoFinalElement) {
+        estadoFinalElement.textContent = estadoFinal;
+        estadoFinalElement.className = `badge ${claseEstado}`;
+      }
+      
+      // Actualizar ecuación matemática
+      actualizarEcuacionMatematica(valorTotalDocumento, nuevoValorPagado, nuevoValorPendiente, valorRetencion);
+      
+      // 🔧 NUEVO: Log para debugging
+      console.log(`📊 Resumen actualizado: Monto=$${monto}, Retención=$${valorRetencion}, Pendiente=$${nuevoValorPendiente}, Estado=${estadoFinal}`);
+    }
+    
+    // ============ FUNCIONES AUXILIARES ============
+    function actualizarElemento(id, valor) {
+      const elemento = document.getElementById(id);
+      if (elemento) {
+        elemento.textContent = valor.toFixed(2);
+      }
+    }
+    
+    function actualizarEcuacionMatematica(total, pagado, pendiente, retenido) {
+      const ecuacion = document.getElementById('ecuacionMatematica');
+      if (!ecuacion) return;
+      
+      const suma = pagado + pendiente + retenido;
+      const esCorrecta = Math.abs(suma - total) < 0.01; // Tolerancia para decimales
+      
+      ecuacion.innerHTML = `
+        $${total.toFixed(2)} = $${pagado.toFixed(2)} + $${pendiente.toFixed(2)} + $${retenido.toFixed(2)}
+        <br><small class="${esCorrecta ? 'text-success' : 'text-danger'}">
+          ${esCorrecta ? '✓ Ecuación correcta' : '⚠ Verificar cálculos'}
+        </small>
+      `;
+    }
+    
+    // ============ INICIALIZACIÓN COMPLETA ============
+    function inicializarSistemaPagos() {
+      console.log('🚀 Inicializando sistema de pagos avanzado...');
+      
+      // 1. Inicializar cálculos de retención en botones
+      inicializarCalculosRetenciones();
+      
+      // 2. Configurar todos los eventos
+      configurarEventos();
+      
+      // 3. Configurar eventos del XML
+      configurarEventosXml();
+      
+      // 4. Inicializar resumen
+      actualizarResumen();
+      
+      // 5. Detectar si la URL contiene el fragmento #pago
+      if (window.location.hash === '#pago') {
+        const pagoModal = new bootstrap.Modal(document.getElementById('registrarPagoModal'));
+        pagoModal.show();
+        console.log('🔗 Modal abierto automáticamente por URL #pago');
+      }
+      
+      // 6. Configurar fecha por defecto (hoy)
+      const fechaPagoInput = document.getElementById('fechaPago');
+      if (fechaPagoInput && !fechaPagoInput.value) {
+        const today = new Date().toISOString().split('T')[0];
+        fechaPagoInput.value = today;
+      }
+      
+      console.log('✅ Sistema de pagos inicializado correctamente');
+    }
+    
+    // ============ EVENTOS DE INICIALIZACIÓN ============
+    
+    // Inicializar cuando el DOM esté listo
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', inicializarSistemaPagos);
+    } else {
+      inicializarSistemaPagos();
+    }
+    
+    // Verificar cuando cambie el hash de la URL
+    window.addEventListener('hashchange', function() {
+      if (window.location.hash === '#pago') {
+        const pagoModal = new bootstrap.Modal(document.getElementById('registrarPagoModal'));
+        pagoModal.show();
+        console.log('🔗 Modal abierto por cambio de hash');
+      }
+    });
+
+    // ============ FUNCIONES DE PROCESAMIENTO DE XML ============
+    
+    // Función global para procesar XML de retención
+    window.procesarXmlRetencion = async function() {
+      const xmlInput = document.getElementById('xmlRetencion');
+      const btnProcesar = document.getElementById('btnProcesarXml');
+      
+      // Validar archivo seleccionado
+      if (!xmlInput.files[0]) {
+        alert('❌ Por favor, seleccione un archivo XML primero');
+        return;
+      }
+      
+      if (!xmlInput.files[0].name.toLowerCase().endsWith('.xml')) {
+        alert('❌ Por favor, seleccione solo archivos XML');
+        return;
+      }
+      
+      // Mostrar loading
+      const textoOriginal = btnProcesar.innerHTML;
+      btnProcesar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
+      btnProcesar.disabled = true;
+      
+      try {
+        const formData = new FormData();
+        formData.append('xmlRetencion', xmlInput.files[0]);
+        formData.append('documentoId', '{{documento.id}}');
+        
+        console.log('📤 Enviando XML al servidor para procesamiento...');
+        
+        // Enviar al servidor
+        const response = await fetch('/caja/procesar-xml-retencion', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const resultado = await response.json();
+        
+        if (resultado.success) {
+          console.log('✅ XML procesado exitosamente');
+          mostrarResultadosXml(resultado.data);
+          onXmlProcesadoExitosamente(resultado);
+        } else {
+          console.log('❌ Error procesando XML:', resultado.message);
+          mostrarErrorXml(
+            resultado.message || 'Error desconocido al procesar el XML'
+          );
+        }
+        
+      } catch (error) {
+        console.error('❌ Error de conexión:', error);
+        
+        mostrarErrorXml(
+          'Error de conexión al procesar el XML. Verifique su conexión a internet.'
+        );
+        
+      } finally {
+        // Restaurar botón
+        btnProcesar.innerHTML = textoOriginal;
+        btnProcesar.disabled = false;
+      }
+    };
+    
+    // Mostrar resultados extraídos del XML
+    function mostrarResultadosXml(datos) {
+      // Ocultar errores
+      document.getElementById('errorProcesamientoXml').style.display = 'none';
+      
+      // Mostrar datos extraídos
+      document.getElementById('numeroComprobanteExtraido').textContent = datos.numeroComprobanteRetencion || '-';
+      document.getElementById('empresaRetenedoraExtraida').textContent = datos.razonSocialRetenedora || '-';
+      document.getElementById('rucEmpresaExtraido').textContent = datos.rucEmpresaRetenedora || '-';
+      document.getElementById('retencionIvaExtraida').textContent = (datos.retencionIva || 0).toFixed(2);
+      document.getElementById('retencionRentaExtraida').textContent = (datos.retencionRenta || 0).toFixed(2);
+      document.getElementById('totalRetencionExtraida').textContent = (datos.totalRetenido || 0).toFixed(2);
+      
+      // Mostrar panel de resultados
+      document.getElementById('resultadosProcesamientoXml').style.display = 'block';
+      
+      console.log('📄 Datos extraídos del XML:', datos);
+    }
+    
+    // Mostrar error del procesamiento XML
+    function mostrarErrorXml(mensaje) {
+      document.getElementById('mensajeErrorXml').textContent = mensaje;
+      document.getElementById('errorProcesamientoXml').style.display = 'block';
+      document.getElementById('resultadosProcesamientoXml').style.display = 'none';
+    }
+    
+    // Aplicar datos extraídos del XML a los campos del formulario
+    window.aplicarDatosXml = function() {
+      const numeroComprobante = document.getElementById('numeroComprobanteExtraido').textContent;
+      const empresaRetenedora = document.getElementById('empresaRetenedoraExtraida').textContent;
+      const retencionIva = document.getElementById('retencionIvaExtraida').textContent;
+      const retencionRenta = document.getElementById('retencionRentaExtraida').textContent;
+      const totalRetencion = document.getElementById('totalRetencionExtraida').textContent;
+      
+      console.log('📋 Aplicando datos del XML al formulario...');
+      
+      // Crear objeto de datos de retención
+      const datosRetencion = {
+        retencionIva: parseFloat(retencionIva) || 0,
+        retencionRenta: parseFloat(retencionRenta) || 0,
+        totalRetencion: parseFloat(totalRetencion) || 0,
+        numeroComprobante: numeroComprobante,
+        razonSocial: empresaRetenedora
+      };
+      
+      // Guardar datos para uso posterior
+      window.datosRetencionActuales = datosRetencion;
+      
+      // Actualizar resumen inmediatamente
+      actualizarResumenConRetencion(datosRetencion);
+      
+      // Marcar checkbox de retención automáticamente
+      const checkboxRetencion = document.getElementById('tieneRetencion');
+      if (checkboxRetencion && datosRetencion.totalRetencion > 0) {
+        checkboxRetencion.checked = true;
+        toggleSeccionRetencion(); // Activar sección de retención
+      }
+      
+      // Mostrar confirmación
+      const mensaje = `✅ Datos del XML aplicados correctamente:
+
+📋 Información del comprobante:
+• Número: ${numeroComprobante}
+• Empresa: ${empresaRetenedora}
+
+💰 Valores monetarios:
+• Retención IVA: $${retencionIva}
+• Retención RENTA: $${retencionRenta}
+• Total retención: $${totalRetencion}
+
+🧮 El resumen del pago ha sido actualizado automáticamente.`;
+      
+      alert(mensaje);
+      
+      // Scroll al formulario principal
+      document.getElementById('monto').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      
+      console.log('✅ Todos los datos del XML aplicados al formulario y resumen');
+    };
+    
+    // Limpiar resultados del procesamiento
+    window.limpiarResultados = function() {
+      document.getElementById('resultadosProcesamientoXml').style.display = 'none';
+      document.getElementById('errorProcesamientoXml').style.display = 'none';
+      
+      // Limpiar valores mostrados
+      document.getElementById('numeroComprobanteExtraido').textContent = '-';
+      document.getElementById('empresaRetenedoraExtraida').textContent = '-';
+      document.getElementById('rucEmpresaExtraido').textContent = '-';
+      document.getElementById('retencionIvaExtraida').textContent = '0.00';
+      document.getElementById('retencionRentaExtraida').textContent = '0.00';
+      document.getElementById('totalRetencionExtraida').textContent = '0.00';
+      
+      // Limpiar datos guardados
+      window.datosRetencionActuales = null;
+      
+      console.log('🧹 Resultados del XML limpiados');
+    };
+    
+    // Limpiar error
+    window.limpiarError = function() {
+      document.getElementById('errorProcesamientoXml').style.display = 'none';
+    };
+    
+    // Habilitar/deshabilitar botón de procesar según archivo seleccionado
+    function configurarEventosXml() {
+      const xmlInput = document.getElementById('xmlRetencion');
+      const btnProcesar = document.getElementById('btnProcesarXml');
+      
+      if (xmlInput && btnProcesar) {
+        xmlInput.addEventListener('change', function() {
+          if (this.files[0]) {
+            btnProcesar.disabled = false;
+            console.log('📁 Archivo XML seleccionado:', this.files[0].name);
+          } else {
+            btnProcesar.disabled = true;
+          }
+        });
+      }
+    }
+    
+    // Callback que se ejecuta cuando el XML se procesa exitosamente
+    function onXmlProcesadoExitosamente(resultadoXml) {
+      console.log('🔗 Conectando procesamiento XML con resumen del pago');
+      
+      // Mostrar resultados
+      mostrarResultadosXml(resultadoXml.data);
+      
+      // Actualizar resumen automáticamente
+      actualizarResumenConRetencion(resultadoXml.data);
+      
+      // Guardar datos globalmente
+      window.datosRetencionActuales = resultadoXml.data;
+      
+      console.log('✅ XML procesado y resumen actualizado automáticamente');
     }
   });
 </script> 
