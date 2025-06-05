@@ -319,10 +319,10 @@
                         </h6>
                         <div class="text-end">
                           <div class="small text-muted">
-                            <i class="fas fa-calendar me-1"></i>{{formatDate this.fecha}}
+                            <i class="fas fa-calendar me-1"></i><span class="fecha-evento-detalle" data-fecha="{{this.fecha}}">Cargando...</span>
                           </div>
                           <div class="small text-muted">
-                            <i class="fas fa-clock me-1"></i>{{formatTime this.fecha}}
+                            <i class="fas fa-clock me-1"></i><span class="hora-evento-detalle" data-fecha="{{this.fecha}}">-</span>
                           </div>
                         </div>
                       </div>
@@ -583,6 +583,93 @@
   }
 
   console.log('📖 Vista de detalle cargada para documento {{documento.codigoBarras}}');
+  
+  // ============== FORMATEAR FECHAS DE EVENTOS ==============
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('🕒 Iniciando formateo de fechas en detalle de documento...');
+    
+    // Función para formatear fecha de manera robusta
+    function formatearFechaSegura(fechaRaw) {
+      if (!fechaRaw || fechaRaw === 'null' || fechaRaw === '' || fechaRaw === 'undefined') {
+        return 'Sin fecha';
+      }
+      
+      try {
+        // Intentar diferentes formatos de fecha
+        let fecha;
+        
+        // Si ya es un objeto Date
+        if (fechaRaw instanceof Date) {
+          fecha = fechaRaw;
+        }
+        // Si es un string ISO
+        else if (typeof fechaRaw === 'string') {
+          // Limpiar la fecha de caracteres extraños
+          const fechaLimpia = fechaRaw.trim();
+          fecha = new Date(fechaLimpia);
+        }
+        // Si es un timestamp
+        else if (typeof fechaRaw === 'number') {
+          fecha = new Date(fechaRaw);
+        }
+        else {
+          console.warn('Formato de fecha no reconocido:', fechaRaw);
+          return 'Formato inválido';
+        }
+        
+        // Verificar si la fecha es válida
+        if (isNaN(fecha.getTime())) {
+          console.warn('Fecha inválida después de conversión:', fechaRaw);
+          return 'Fecha inválida';
+        }
+        
+        return fecha;
+      } catch (error) {
+        console.error('Error procesando fecha:', error, 'Fecha original:', fechaRaw);
+        return 'Error en fecha';
+      }
+    }
+    
+    // Formatear fechas de eventos (fecha completa)
+    document.querySelectorAll('.fecha-evento-detalle').forEach(function(elemento) {
+      const fechaRaw = elemento.getAttribute('data-fecha');
+      console.log('📅 Procesando fecha de evento:', fechaRaw);
+      
+      const fechaFormateada = formatearFechaSegura(fechaRaw);
+      
+      if (fechaFormateada instanceof Date) {
+        elemento.textContent = fechaFormateada.toLocaleDateString('es-EC', {
+          day: '2-digit',
+          month: '2-digit', 
+          year: 'numeric'
+        });
+        elemento.classList.add('text-success');
+      } else {
+        elemento.textContent = fechaFormateada;
+        elemento.classList.add('text-muted');
+      }
+    });
+    
+    // Formatear horas de eventos (solo hora)
+    document.querySelectorAll('.hora-evento-detalle').forEach(function(elemento) {
+      const fechaRaw = elemento.getAttribute('data-fecha');
+      console.log('🕒 Procesando hora de evento:', fechaRaw);
+      
+      const fechaFormateada = formatearFechaSegura(fechaRaw);
+      
+      if (fechaFormateada instanceof Date) {
+        elemento.textContent = fechaFormateada.toLocaleTimeString('es-EC', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        });
+      } else {
+        elemento.textContent = '-';
+      }
+    });
+    
+    console.log('✅ Formateo de fechas de eventos completado');
+  });
 </script>
 {{else}}
 <div class="alert alert-warning">

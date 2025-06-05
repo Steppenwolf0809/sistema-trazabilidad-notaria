@@ -14,6 +14,95 @@
     <i class="fas fa-check-circle me-2"></i> {{success}}
   </div>
   {{/if}}
+
+  {{! ============== NUEVA FUNCIONALIDAD: ALERTA DE ENTREGA GRUPAL ============== }}
+  {{#if (and documento documentosGrupales.tieneDocumentosSegurosPtraEntrega (eq tipoEntrega "recepcion_completa"))}}
+  <div class="alert alert-info border-left-info mb-4" id="alertaEntregaGrupal">
+    <div class="row align-items-center">
+      <div class="col-md-8">
+        <h6 class="alert-heading mb-1">
+          <i class="fas fa-boxes text-info me-2"></i>
+          <strong>🏢 Documentos Adicionales Detectados - Recepción</strong>
+        </h6>
+        <p class="mb-2">
+          Este cliente tiene <strong>{{documentosGrupales.cantidad}} documento(s) más</strong> 
+          listo(s) para entrega.
+        </p>
+        
+        {{#if (gt documentosGrupales.documentosPagados.length 0)}}
+        <div class="alert alert-success alert-sm mb-1">
+          <i class="fas fa-check-circle me-1"></i>
+          <strong>{{documentosGrupales.documentosPagados.length}} documento(s) pagado(s)</strong> - Listo(s) para entrega
+        </div>
+        {{/if}}
+        
+        {{#if (gt documentosGrupales.documentosPendientes.length 0)}}
+        <div class="alert alert-warning alert-sm mb-1">
+          <i class="fas fa-exclamation-triangle me-1"></i>
+          <strong>{{documentosGrupales.documentosPendientes.length}} documento(s) pendiente(s) de pago</strong>
+          <br>
+          <small>⚠️ <strong>Consultar con matrizador</strong> antes de proceder con entrega</small>
+        </div>
+        {{/if}}
+        
+        <small class="text-muted">
+          🔐 Estado: Listo para entrega | 📋 Sin entregas previas
+        </small>
+      </div>
+      <div class="col-md-4 text-end">
+        <button type="button" class="btn btn-primary btn-sm me-1" onclick="mostrarEntregaGrupalRecepcion()">
+          <i class="fas fa-boxes me-1"></i> Ver Todos los Documentos
+        </button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="ocultarAlertaGrupal()">
+          <i class="fas fa-file me-1"></i> Solo Este
+        </button>
+      </div>
+    </div>
+    
+    {{! Detalles de documentos adicionales }}
+    <div class="mt-3" id="detallesDocumentosGrupales" style="display: none;">
+      <h6><i class="fas fa-list me-2"></i>Documentos adicionales a entregar:</h6>
+      <div class="table-responsive">
+        <table class="table table-sm table-bordered">
+          <thead class="table-light">
+            <tr>
+              <th>Código</th>
+              <th>Tipo</th>
+              <th>Matrizador</th>
+              <th>Valor</th>
+              <th>Estado Pago</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each documentosGrupales.documentos}}
+            <tr class="{{#unless (or (eq this.estadoPago 'pagado_completo') (eq this.estadoPago 'pagado_con_retencion'))}}table-warning{{/unless}}">
+              <td><small>{{this.codigoBarras}}</small></td>
+              <td>{{this.tipoDocumento}}</td>
+              <td>{{#if this.matrizador}}{{this.matrizador.nombre}}{{else}}<span class="text-muted">No asignado</span>{{/if}}</td>
+              <td>${{#if this.valorFactura}}{{formatMoney this.valorFactura}}{{else}}0.00{{/if}}</td>
+              <td>
+                {{#if (eq this.estadoPago "pagado_completo")}}
+                <span class="badge bg-success">Completo</span>
+                {{else if (eq this.estadoPago "pagado_con_retencion")}}
+                <span class="badge bg-info">Con Retención</span>
+                {{else if (eq this.estadoPago "pago_parcial")}}
+                <span class="badge bg-warning text-dark">Parcial</span>
+                {{else}}
+                <span class="badge bg-danger">Pendiente</span>
+                {{/if}}
+              </td>
+            </tr>
+            {{/each}}
+          </tbody>
+        </table>
+      </div>
+      <div class="alert alert-info alert-sm mt-2">
+        <i class="fas fa-info-circle me-1"></i>
+        <strong>Recepción:</strong> Puede procesar entrega grupal de documentos de cualquier matrizador sin restricciones.
+      </div>
+    </div>
+  </div>
+  {{/if}}
   
   {{#if documento}}
   <!-- Formulario de entrega para un documento específico -->
@@ -221,8 +310,13 @@
               </div>
             </div>
             
+            {{! ============== CAMPOS OCULTOS PARA ENTREGA GRUPAL ============== }}
+            <input type="hidden" id="entregaGrupal" name="entregaGrupal" value="false">
+            <input type="hidden" id="documentosAdicionales" name="documentosAdicionales" value="">
+            <input type="hidden" id="tipoEntregaGrupal" name="tipoEntregaGrupal" value="{{tipoEntrega}}">
+            
             <div class="d-grid">
-              <button type="submit" class="btn btn-primary">
+              <button type="submit" class="btn btn-primary" id="btnConfirmarEntrega">
                 <i class="fas fa-check-circle me-2"></i> Confirmar Entrega
               </button>
             </div>
@@ -340,6 +434,120 @@
   {{/if}}
 </div>
 
+{{! ============== MODAL DE CONFIRMACIÓN ENTREGA GRUPAL ============== }}
+{{#if (and documento documentosGrupales.tieneDocumentosSegurosPtraEntrega (eq tipoEntrega "recepcion_completa"))}}
+<div class="modal fade" id="modalEntregaGrupalRecepcion" tabindex="-1" aria-labelledby="modalEntregaGrupalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title" id="modalEntregaGrupalLabel">
+          <i class="fas fa-boxes me-2"></i>Confirmar Entrega Grupal - Recepción
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info">
+          <h6><i class="fas fa-shield-check me-2"></i>Validaciones de Seguridad Completadas</h6>
+          <ul class="mb-0">
+            <li>✅ Todos los documentos están en estado "Listo para entrega"</li>
+            <li>✅ Sin entregas previas registradas</li>
+            <li>✅ Pertenecen al mismo cliente</li>
+            <li>✅ Sin eliminaciones registradas</li>
+          </ul>
+        </div>
+        
+        {{#if (gt documentosGrupales.documentosPagados.length 0)}}
+        <div class="alert alert-success">
+          <h6><i class="fas fa-check-circle me-2"></i>Documentos Pagados ({{documentosGrupales.documentosPagados.length}})</h6>
+          <p class="mb-0">Estos documentos tienen pago completo y están listos para entrega inmediata.</p>
+        </div>
+        {{/if}}
+        
+        {{#if (gt documentosGrupales.documentosPendientes.length 0)}}
+        <div class="alert alert-warning">
+          <h6><i class="fas fa-exclamation-triangle me-2"></i>Documentos Pendientes de Pago ({{documentosGrupales.documentosPendientes.length}})</h6>
+          <p class="mb-2">Los siguientes documentos tienen pago pendiente:</p>
+          <ul class="mb-2">
+            {{#each documentosGrupales.documentosPendientes}}
+            <li><strong>{{this.codigoBarras}}</strong> - {{this.tipoDocumento}} ({{this.estadoPago}})</li>
+            {{/each}}
+          </ul>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="confirmarEntregaPendiente" required>
+            <label class="form-check-label">
+              <strong>Confirmo que he consultado con el matrizador y autorizo la entrega de documentos pendientes</strong>
+            </label>
+          </div>
+        </div>
+        {{/if}}
+        
+        <h6><i class="fas fa-file-alt me-2"></i>Documento Principal:</h6>
+        <div class="card mb-3">
+          <div class="card-body p-2">
+            <strong>{{documento.codigoBarras}}</strong> - {{documento.tipoDocumento}}
+            <br><small class="text-muted">{{documento.nombreCliente}}</small>
+          </div>
+        </div>
+        
+        <h6><i class="fas fa-plus-circle me-2"></i>Documentos Adicionales ({{documentosGrupales.cantidad}}):</h6>
+        <div class="table-responsive mb-3">
+          <table class="table table-sm">
+            <thead class="table-light">
+              <tr>
+                <th>Código</th>
+                <th>Tipo</th>
+                <th>Matrizador</th>
+                <th>Valor</th>
+                <th>Estado Pago</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each documentosGrupales.documentos}}
+              <tr class="{{#unless (or (eq this.estadoPago 'pagado_completo') (eq this.estadoPago 'pagado_con_retencion'))}}table-warning{{/unless}}">
+                <td><small>{{this.codigoBarras}}</small></td>
+                <td>{{this.tipoDocumento}}</td>
+                <td>{{#if this.matrizador}}{{this.matrizador.nombre}}{{else}}<span class="text-muted">No asignado</span>{{/if}}</td>
+                <td>${{#if this.valorFactura}}{{formatMoney this.valorFactura}}{{else}}0.00{{/if}}</td>
+                <td>
+                  {{#if (eq this.estadoPago "pagado_completo")}}
+                  <span class="badge bg-success">PAGADO</span>
+                  {{else if (eq this.estadoPago "pagado_con_retencion")}}
+                  <span class="badge bg-info">CON RETENCIÓN</span>
+                  {{else if (eq this.estadoPago "pago_parcial")}}
+                  <span class="badge bg-warning text-dark">PARCIAL</span>
+                  {{else}}
+                  <span class="badge bg-danger">PENDIENTE</span>
+                  {{/if}}
+                </td>
+              </tr>
+              {{/each}}
+            </tbody>
+          </table>
+        </div>
+        
+        <div class="alert alert-info">
+          <i class="fas fa-info-circle me-2"></i>
+          <strong>Recepción:</strong> Tiene permisos completos para procesar entrega grupal de documentos de cualquier matrizador.
+        </div>
+        
+        <div class="alert alert-warning">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          <strong>Importante:</strong> Se entregarán <strong>{{add documentosGrupales.cantidad 1}} documentos</strong> en total al receptor especificado.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i> Cancelar
+        </button>
+        <button type="button" class="btn btn-success" onclick="confirmarEntregaGrupalRecepcion()">
+          <i class="fas fa-boxes me-1"></i> Confirmar Entrega Grupal
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{{/if}}
+
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     // Elementos para documentos CON código de verificación
@@ -409,5 +617,159 @@
       // Inicializar estado
       updateAlternativeVerification();
     }
+
+    // ============== FUNCIONES PARA ENTREGA GRUPAL - RECEPCIÓN ==============
+    
+    // Mostrar modal de entrega grupal para recepción
+    window.mostrarEntregaGrupalRecepcion = function() {
+      // Validar que se hayan completado los datos del receptor
+      const nombreReceptor = document.getElementById('nombreReceptor').value;
+      const identificacionReceptor = document.getElementById('identificacionReceptor').value;
+      const relacionReceptor = document.getElementById('relacionReceptor').value;
+      
+      if (!nombreReceptor || !identificacionReceptor || !relacionReceptor) {
+        alert('⚠️ Debe completar todos los datos del receptor antes de proceder con entrega grupal');
+        return;
+      }
+      
+      // Mostrar detalles de documentos grupales
+      document.getElementById('detallesDocumentosGrupales').style.display = 'block';
+      
+      // Mostrar modal de confirmación
+      const modal = new bootstrap.Modal(document.getElementById('modalEntregaGrupalRecepcion'));
+      modal.show();
+    };
+    
+    // Confirmar entrega grupal para recepción
+    window.confirmarEntregaGrupalRecepcion = function() {
+      // Verificar confirmación de documentos pendientes si es necesario
+      const confirmarPendiente = document.getElementById('confirmarEntregaPendiente');
+      if (confirmarPendiente && !confirmarPendiente.checked) {
+        alert('⚠️ Debe confirmar que ha consultado con el matrizador para documentos pendientes de pago');
+        return;
+      }
+      
+      // Obtener IDs de documentos adicionales
+      const documentosIds = [
+        {{#each documentosGrupales.documentos}}
+        {{this.id}}{{#unless @last}},{{/unless}}
+        {{/each}}
+      ];
+      
+      if (documentosIds.length === 0) {
+        alert('❌ No hay documentos adicionales para procesar');
+        return;
+      }
+      
+      // Configurar campos ocultos
+      document.getElementById('entregaGrupal').value = 'true';
+      document.getElementById('documentosAdicionales').value = documentosIds.join(',');
+      document.getElementById('tipoEntregaGrupal').value = 'recepcion_completa';
+      
+      // Agregar campo de confirmación de pendientes si existe
+      if (confirmarPendiente && confirmarPendiente.checked) {
+        // Crear campo oculto para confirmar entrega pendiente
+        const inputConfirmar = document.createElement('input');
+        inputConfirmar.type = 'hidden';
+        inputConfirmar.name = 'confirmarEntregaPendiente';
+        inputConfirmar.value = 'true';
+        document.querySelector('form').appendChild(inputConfirmar);
+      }
+      
+      // Actualizar texto del botón
+      const btnConfirmar = document.getElementById('btnConfirmarEntrega');
+      const tienePendientes = {{#if (gt documentosGrupales.documentosPendientes.length 0)}}true{{else}}false{{/if}};
+      
+      if (tienePendientes) {
+        btnConfirmar.innerHTML = '<i class="fas fa-boxes me-2"></i> Confirmar Entrega Grupal (' + (documentosIds.length + 1) + ' documentos - ⚠️ Con Pendientes)';
+        btnConfirmar.classList.remove('btn-primary');
+        btnConfirmar.classList.add('btn-warning');
+      } else {
+        btnConfirmar.innerHTML = '<i class="fas fa-boxes me-2"></i> Confirmar Entrega Grupal (' + (documentosIds.length + 1) + ' documentos)';
+        btnConfirmar.classList.remove('btn-primary');
+        btnConfirmar.classList.add('btn-success');
+      }
+      
+      // Cerrar modal
+      const modal = bootstrap.Modal.getInstance(document.getElementById('modalEntregaGrupalRecepcion'));
+      modal.hide();
+      
+      // Mostrar confirmación
+      const alertaGrupal = document.getElementById('alertaEntregaGrupal');
+      alertaGrupal.classList.remove('alert-info');
+      alertaGrupal.classList.add(tienePendientes ? 'alert-warning' : 'alert-success');
+      alertaGrupal.innerHTML = `
+        <div class="row align-items-center">
+          <div class="col-md-8">
+            <h6 class="alert-heading mb-1">
+              <i class="fas fa-boxes ${tienePendientes ? 'text-warning' : 'text-success'} me-2"></i>
+              <strong>🏢 Entrega Grupal Activada</strong>
+            </h6>
+            <p class="mb-0">
+              Se procesarán <strong>${documentosIds.length + 1} documentos</strong> en entrega grupal.
+              ${tienePendientes ? '<br><small class="text-warning">⚠️ Incluye documentos pendientes de pago</small>' : ''}
+              <br><small class="text-muted">Haga clic en "Confirmar Entrega Grupal" para procesar todos los documentos.</small>
+            </p>
+          </div>
+          <div class="col-md-4 text-end">
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="cancelarEntregaGrupal()">
+              <i class="fas fa-times me-1"></i> Cancelar Grupal
+            </button>
+          </div>
+        </div>
+      `;
+      
+      console.log('✅ [RECEPCIÓN] Entrega grupal configurada:', documentosIds.length + 1, 'documentos', tienePendientes ? '(con pendientes)' : '');
+    };
+    
+    // Ocultar alerta de entrega grupal
+    window.ocultarAlertaGrupal = function() {
+      document.getElementById('alertaEntregaGrupal').style.display = 'none';
+    };
+    
+    // Cancelar entrega grupal
+    window.cancelarEntregaGrupal = function() {
+      // Resetear campos ocultos
+      document.getElementById('entregaGrupal').value = 'false';
+      document.getElementById('documentosAdicionales').value = '';
+      
+      // Restaurar botón original
+      const btnConfirmar = document.getElementById('btnConfirmarEntrega');
+      btnConfirmar.innerHTML = '<i class="fas fa-check-circle me-2"></i> Confirmar Entrega';
+      btnConfirmar.classList.remove('btn-success');
+      btnConfirmar.classList.add('btn-primary');
+      
+      // Restaurar alerta original
+      location.reload(); // Recargar para restaurar estado original
+    };
+    
+    // Validación antes de envío del formulario
+    document.querySelector('form').addEventListener('submit', function(e) {
+      const entregaGrupal = document.getElementById('entregaGrupal').value;
+      const tipoEntrega = document.getElementById('tipoEntregaGrupal').value;
+      
+      if (entregaGrupal === 'true') {
+        console.log('📋 [RECEPCIÓN] Enviando entrega grupal:', tipoEntrega);
+        
+        // Validar que todos los campos estén completos
+        const nombreReceptor = document.getElementById('nombreReceptor').value;
+        const identificacionReceptor = document.getElementById('identificacionReceptor').value;
+        const relacionReceptor = document.getElementById('relacionReceptor').value;
+        
+        if (!nombreReceptor || !identificacionReceptor || !relacionReceptor) {
+          e.preventDefault();
+          alert('❌ Debe completar todos los datos del receptor para entrega grupal');
+          return false;
+        }
+        
+        // Confirmar entrega grupal
+        if (!confirm(`¿Confirma la entrega grupal de ${document.getElementById('documentosAdicionales').value.split(',').length + 1} documentos?`)) {
+          e.preventDefault();
+          return false;
+        }
+      }
+      
+      return true;
+    });
   });
 </script> 

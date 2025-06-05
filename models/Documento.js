@@ -193,7 +193,7 @@ const Documento = sequelize.define('Documento', {
     field: 'valor_pendiente',
     defaultValue: 0.00,
     allowNull: false,
-    comment: 'Monto pendiente de pago'
+    comment: 'Monto pendiente de pago - Se calcula automáticamente como valorFactura - valorPagado - valorRetenido'
   },
   
   estadoPago: {
@@ -428,7 +428,20 @@ const Documento = sequelize.define('Documento', {
   timestamps: true, // Automáticamente crea created_at y updated_at
   underscored: true, // Usa snake_case para los nombres de columnas
   createdAt: 'created_at', // Timestamp de cuándo se registró en el sistema
-  updatedAt: 'updated_at'  // Timestamp de última modificación
+  updatedAt: 'updated_at',  // Timestamp de última modificación
+  
+  // HOOKS PARA CÁLCULO AUTOMÁTICO DE VALOR PENDIENTE
+  hooks: {
+    beforeCreate: (documento, options) => {
+      calcularValorPendiente(documento);
+    },
+    beforeUpdate: (documento, options) => {
+      calcularValorPendiente(documento);
+    },
+    beforeSave: (documento, options) => {
+      calcularValorPendiente(documento);
+    }
+  }
 });
 
 // Definir relaciones con alias más descriptivos
@@ -473,5 +486,30 @@ Documento.hasMany(Documento, {
   as: 'documentosHabilitantes',
   constraints: false
 });
+
+// ============== FUNCIÓN AUXILIAR PARA CÁLCULO AUTOMÁTICO ==============
+
+/**
+ * Calcula automáticamente el valor pendiente de un documento
+ * valorPendiente = valorFactura - valorPagado - valorRetenido
+ */
+function calcularValorPendiente(documento) {
+  const valorFactura = parseFloat(documento.valorFactura) || 0;
+  const valorPagado = parseFloat(documento.valorPagado) || 0;
+  const valorRetenido = parseFloat(documento.valorRetenido) || 0;
+  
+  // Calcular valor pendiente
+  const valorPendienteCalculado = Math.max(0, valorFactura - valorPagado - valorRetenido);
+  
+  // Asignar el valor calculado
+  documento.valorPendiente = valorPendienteCalculado;
+  
+  console.log(`🧮 Cálculo automático valorPendiente para documento ${documento.id || 'NUEVO'}:`, {
+    valorFactura,
+    valorPagado,
+    valorRetenido,
+    valorPendienteCalculado
+  });
+}
 
 module.exports = Documento; 

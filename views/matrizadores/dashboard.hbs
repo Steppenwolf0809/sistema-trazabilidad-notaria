@@ -306,7 +306,11 @@
                 <td>{{this.codigoBarras}}</td>
                 <td>{{this.tipoDocumento}}</td>
                 <td>{{this.nombreCliente}}</td>
-                <td>{{formatDate this.fechaFactura}}</td>
+                <td>
+                  <span class="fecha-documento-dashboard" data-fecha="{{this.fechaFactura}}">
+                    Cargando...
+                  </span>
+                </td>
                 <td>
                   {{this.diasEnProceso}} días
                   {{#if (gte this.diasEnProceso 7)}}
@@ -356,7 +360,11 @@
                 <td>{{this.codigoBarras}}</td>
                 <td>{{this.tipoDocumento}}</td>
                 <td>{{this.nombreCliente}}</td>
-                <td>{{formatDate this.fechaListo}}</td>
+                <td>
+                  <span class="fecha-documento-dashboard" data-fecha="{{this.fechaListo}}">
+                    Cargando...
+                  </span>
+                </td>
                 <td>
                   {{this.diasSinRetirar}} días
                   {{#if (gte this.diasSinRetirar 15)}}
@@ -537,6 +545,73 @@
         });
       {{/if}}
     }
+    
+    // ============== FORMATEAR FECHAS DE DOCUMENTOS EN DASHBOARD ==============
+    console.log('🕒 Iniciando formateo de fechas en dashboard de matrizador...');
+    
+    // Función para formatear fecha de manera robusta
+    function formatearFechaSegura(fechaRaw) {
+      if (!fechaRaw || fechaRaw === 'null' || fechaRaw === '' || fechaRaw === 'undefined') {
+        return 'Sin fecha';
+      }
+      
+      try {
+        // Intentar diferentes formatos de fecha
+        let fecha;
+        
+        // Si ya es un objeto Date
+        if (fechaRaw instanceof Date) {
+          fecha = fechaRaw;
+        }
+        // Si es un string ISO
+        else if (typeof fechaRaw === 'string') {
+          // Limpiar la fecha de caracteres extraños
+          const fechaLimpia = fechaRaw.trim();
+          fecha = new Date(fechaLimpia);
+        }
+        // Si es un timestamp
+        else if (typeof fechaRaw === 'number') {
+          fecha = new Date(fechaRaw);
+        }
+        else {
+          console.warn('Formato de fecha no reconocido:', fechaRaw);
+          return 'Formato inválido';
+        }
+        
+        // Verificar si la fecha es válida
+        if (isNaN(fecha.getTime())) {
+          console.warn('Fecha inválida después de conversión:', fechaRaw);
+          return 'Fecha inválida';
+        }
+        
+        return fecha;
+      } catch (error) {
+        console.error('Error procesando fecha:', error, 'Fecha original:', fechaRaw);
+        return 'Error en fecha';
+      }
+    }
+    
+    // Formatear fechas de documentos en dashboard
+    document.querySelectorAll('.fecha-documento-dashboard').forEach(function(elemento) {
+      const fechaRaw = elemento.getAttribute('data-fecha');
+      console.log('📅 Procesando fecha de documento en dashboard:', fechaRaw);
+      
+      const fechaFormateada = formatearFechaSegura(fechaRaw);
+      
+      if (fechaFormateada instanceof Date) {
+        elemento.textContent = fechaFormateada.toLocaleDateString('es-EC', {
+          day: '2-digit',
+          month: '2-digit', 
+          year: 'numeric'
+        });
+        elemento.classList.add('text-success');
+      } else {
+        elemento.textContent = fechaFormateada;
+        elemento.classList.add('text-muted');
+      }
+    });
+    
+    console.log('✅ Formateo de fechas de documentos en dashboard completado');
   });
 </script>
 

@@ -59,6 +59,14 @@ router.get('/notificaciones/historial', validarAccesoConAuditoria(['matrizador',
 // API para obtener detalles de notificación
 router.get('/api/notificaciones/:id', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.obtenerDetalleNotificacion);
 
+// ============== NUEVAS RUTAS: ENTREGA GRUPAL ==============
+
+// API para detectar documentos grupales - LIMITADO: solo matrizadores
+router.get('/api/documentos/grupales/:identificacion/:documentoId', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.detectarDocumentosGrupales);
+
+// Endpoint para procesar entrega grupal - LIMITADO: solo matrizadores
+router.post('/documentos/entrega-grupal/:id', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.procesarEntregaGrupal);
+
 // Rutas de logout - Disponible para todos los usuarios
 router.get('/logout', matrizadorController.logout);
 

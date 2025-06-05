@@ -62,6 +62,130 @@
               </div>
             </div>
           </div>
+
+          {{! ============== NUEVA FUNCIONALIDAD: ALERTAS DE ENTREGA GRUPAL PARA MATRIZADORES ============== }}
+          {{#if documentosGrupales}}
+            {{#if (gt documentosGrupales.documentosPropiios.cantidad 0)}}
+            <div class="alert alert-info border-left-info mb-4" id="alertaEntregaGrupalMatrizador">
+              <div class="row align-items-center">
+                <div class="col-md-8">
+                  <h6 class="alert-heading mb-1">
+                    <i class="fas fa-user-check text-info me-2"></i>
+                    <strong>👤 Sus Documentos Adicionales</strong>
+                  </h6>
+                  <p class="mb-2">
+                    Puede agrupar <strong>{{documentosGrupales.documentosPropiios.cantidad}} documento(s) más</strong> 
+                    asignado(s) a usted para este cliente.
+                  </p>
+                  <small class="text-muted">
+                    ✅ Documentos validados de su asignación | 🔐 Estado: Listo | 💰 Pago: Completo
+                  </small>
+                </div>
+                <div class="col-md-4 text-end">
+                  <button type="button" class="btn btn-primary btn-sm me-1" onclick="mostrarEntregaGrupalMatrizador()">
+                    <i class="fas fa-boxes me-1"></i> Agrupar Mis Documentos
+                  </button>
+                  <button type="button" class="btn btn-outline-secondary btn-sm" onclick="ocultarAlertaGrupalMatrizador()">
+                    <i class="fas fa-file me-1"></i> Solo Este
+                  </button>
+                </div>
+              </div>
+              
+              {{! Detalles de documentos propios }}
+              <div class="mt-3" id="detallesDocumentosPropiios" style="display: none;">
+                <h6><i class="fas fa-list me-2"></i>Sus documentos adicionales:</h6>
+                <div class="table-responsive">
+                  <table class="table table-sm table-bordered">
+                    <thead class="table-light">
+                      <tr>
+                        <th>Código</th>
+                        <th>Tipo</th>
+                        <th>Valor</th>
+                        <th>Estado Pago</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {{#each documentosGrupales.documentosPropiios.documentos}}
+                      <tr>
+                        <td><small>{{this.codigoBarras}}</small></td>
+                        <td>{{this.tipoDocumento}}</td>
+                        <td>${{#if this.valorFactura}}{{formatMoney this.valorFactura}}{{else}}0.00{{/if}}</td>
+                        <td>
+                          {{#if (eq this.estadoPago "pagado_completo")}}
+                          <span class="badge bg-success">Completo</span>
+                          {{else if (eq this.estadoPago "pagado_con_retencion")}}
+                          <span class="badge bg-info">Con Retención</span>
+                          {{/if}}
+                        </td>
+                      </tr>
+                      {{/each}}
+                    </tbody>
+                  </table>
+                </div>
+                <div class="alert alert-info alert-sm mt-2">
+                  <i class="fas fa-info-circle me-1"></i>
+                  <strong>Matrizador:</strong> Solo puede procesar documentos de su asignación en entrega grupal.
+                </div>
+              </div>
+            </div>
+            {{/if}}
+            
+            {{#if (gt documentosGrupales.documentosOtros.cantidad 0)}}
+            <div class="alert alert-warning border-left-warning mb-4">
+              <div class="row align-items-center">
+                <div class="col-md-8">
+                  <h6 class="alert-heading mb-1">
+                    <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                    <strong>⚠️ Documentos de Otros Matrizadores</strong>
+                  </h6>
+                  <p class="mb-2">
+                    Este cliente tiene <strong>{{documentosGrupales.documentosOtros.cantidad}} documento(s) más</strong> 
+                    con otros matrizadores que también están listos para entrega.
+                  </p>
+                  <small class="text-muted">
+                    📋 No puede procesarlos desde aquí | 🏢 Dirigir cliente a Recepción
+                  </small>
+                </div>
+                <div class="col-md-4 text-end">
+                  <button type="button" class="btn btn-outline-warning btn-sm" onclick="mostrarDocumentosOtros()">
+                    <i class="fas fa-eye me-1"></i> Ver Detalles
+                  </button>
+                </div>
+              </div>
+              
+              {{! Detalles de documentos de otros matrizadores }}
+              <div class="mt-3" id="detallesDocumentosOtros" style="display: none;">
+                <h6><i class="fas fa-users me-2"></i>Documentos de otros matrizadores:</h6>
+                <div class="table-responsive">
+                  <table class="table table-sm table-bordered">
+                    <thead class="table-light">
+                      <tr>
+                        <th>Código</th>
+                        <th>Tipo</th>
+                        <th>Matrizador</th>
+                        <th>Valor</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {{#each documentosGrupales.documentosOtros.documentos}}
+                      <tr>
+                        <td><small>{{this.codigoBarras}}</small></td>
+                        <td>{{this.tipoDocumento}}</td>
+                        <td><strong>{{this.matrizador.nombre}}</strong></td>
+                        <td>${{#if this.valorFactura}}{{formatMoney this.valorFactura}}{{else}}0.00{{/if}}</td>
+                      </tr>
+                      {{/each}}
+                    </tbody>
+                  </table>
+                </div>
+                <div class="alert alert-warning alert-sm mt-2">
+                  <i class="fas fa-info-circle me-1"></i>
+                  <strong>Importante:</strong> Dirigir al cliente a <strong>Recepción</strong> para retirar estos documentos junto con el suyo.
+                </div>
+              </div>
+            </div>
+            {{/if}}
+          {{/if}}
           
           <form id="formVerificacion" action="/matrizador/documentos/completar-entrega/{{documento.id}}" method="POST">
             {{#if documento.codigoVerificacion}}
@@ -185,8 +309,13 @@
               </div>
             </div>
             
+            {{! ============== CAMPOS OCULTOS PARA ENTREGA GRUPAL ============== }}
+            <input type="hidden" id="entregaGrupal" name="entregaGrupal" value="false">
+            <input type="hidden" id="documentosAdicionales" name="documentosAdicionales" value="">
+            <input type="hidden" id="tipoEntregaGrupal" name="tipoEntregaGrupal" value="{{tipoEntrega}}">
+            
             <div class="d-grid">
-              <button type="submit" class="btn btn-primary btn-lg">
+              <button type="submit" class="btn btn-primary btn-lg" id="btnCompletarEntrega">
                 <i class="fas fa-paper-plane me-1"></i> Completar Entrega
               </button>
             </div>
@@ -220,7 +349,9 @@
             <a href="/matrizador/documentos/entrega/{{this.id}}" class="list-group-item list-group-item-action">
               <div class="d-flex w-100 justify-content-between">
                 <h6 class="mb-1">{{this.tipoDocumento}}</h6>
-                <small>{{formatDate this.updatedAt}}</small>
+                <small class="fecha-documento-entrega" data-fecha="{{this.updatedAt}}">
+                  Cargando...
+                </small>
               </div>
               <p class="mb-1">{{this.nombreCliente}}</p>
               <small>Código: {{this.codigoBarras}}</small>
@@ -236,6 +367,90 @@
     </div>
   </div>
 </div>
+
+{{! ============== MODAL DE CONFIRMACIÓN ENTREGA GRUPAL MATRIZADORES ============== }}
+{{#if (and documentosGrupales.documentosPropiios (gt documentosGrupales.documentosPropiios.cantidad 0))}}
+<div class="modal fade" id="modalEntregaGrupalMatrizador" tabindex="-1" aria-labelledby="modalEntregaGrupalMatrizadorLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="modalEntregaGrupalMatrizadorLabel">
+          <i class="fas fa-user-check me-2"></i>Confirmar Entrega Grupal - Sus Documentos
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info">
+          <h6><i class="fas fa-shield-check me-2"></i>Validaciones de Seguridad Completadas</h6>
+          <ul class="mb-0">
+            <li>✅ Todos los documentos están asignados a usted</li>
+            <li>✅ Estado "Listo para entrega" confirmado</li>
+            <li>✅ Pagos completados (completo o con retención)</li>
+            <li>✅ Sin entregas previas registradas</li>
+            <li>✅ Pertenecen al mismo cliente</li>
+          </ul>
+        </div>
+        
+        <h6><i class="fas fa-file-alt me-2"></i>Documento Principal:</h6>
+        <div class="card mb-3">
+          <div class="card-body p-2">
+            <strong>{{documento.codigoBarras}}</strong> - {{documento.tipoDocumento}}
+            <br><small class="text-muted">{{documento.nombreCliente}}</small>
+          </div>
+        </div>
+        
+        <h6><i class="fas fa-plus-circle me-2"></i>Sus Documentos Adicionales ({{documentosGrupales.documentosPropiios.cantidad}}):</h6>
+        <div class="table-responsive mb-3">
+          <table class="table table-sm">
+            <thead class="table-light">
+              <tr>
+                <th>Código</th>
+                <th>Tipo</th>
+                <th>Valor</th>
+                <th>Estado Pago</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each documentosGrupales.documentosPropiios.documentos}}
+              <tr>
+                <td><small>{{this.codigoBarras}}</small></td>
+                <td>{{this.tipoDocumento}}</td>
+                <td>${{#if this.valorFactura}}{{formatMoney this.valorFactura}}{{else}}0.00{{/if}}</td>
+                <td>
+                  {{#if (eq this.estadoPago "pagado_completo")}}
+                  <span class="badge bg-success">Completo</span>
+                  {{else if (eq this.estadoPago "pagado_con_retencion")}}
+                  <span class="badge bg-info">Con Retención</span>
+                  {{/if}}
+                </td>
+              </tr>
+              {{/each}}
+            </tbody>
+          </table>
+        </div>
+        
+        <div class="alert alert-success">
+          <i class="fas fa-info-circle me-2"></i>
+          <strong>Matrizador:</strong> Solo puede procesar documentos de su asignación en entrega grupal.
+        </div>
+        
+        <div class="alert alert-warning">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          <strong>Importante:</strong> Se entregarán <strong>{{add documentosGrupales.documentosPropiios.cantidad 1}} documentos</strong> en total al receptor especificado.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i> Cancelar
+        </button>
+        <button type="button" class="btn btn-primary" onclick="confirmarEntregaGrupalMatrizador()">
+          <i class="fas fa-boxes me-1"></i> Confirmar Entrega Grupal
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{{/if}}
 
 {{#if documento.codigoVerificacion}}
 <!-- Modal de verificación por llamada (solo para documentos CON código) -->
@@ -374,5 +589,210 @@
         tiposVerificacion[0].focus();
       }
     {{/if}}
+
+    // ============== FUNCIONES PARA ENTREGA GRUPAL - MATRIZADORES ==============
+    
+    // Mostrar modal de entrega grupal para matrizador
+    window.mostrarEntregaGrupalMatrizador = function() {
+      // Validar que se hayan completado los datos del receptor
+      const nombreReceptor = document.getElementById('nombreReceptor').value;
+      const identificacionReceptor = document.getElementById('identificacionReceptor').value;
+      const relacionReceptor = document.getElementById('relacionReceptor').value;
+      
+      if (!nombreReceptor || !identificacionReceptor || !relacionReceptor) {
+        alert('⚠️ Debe completar todos los datos del receptor antes de proceder con entrega grupal');
+        return;
+      }
+      
+      // Mostrar detalles de documentos propios
+      document.getElementById('detallesDocumentosPropiios').style.display = 'block';
+      
+      // Mostrar modal de confirmación
+      const modal = new bootstrap.Modal(document.getElementById('modalEntregaGrupalMatrizador'));
+      modal.show();
+    };
+    
+    // Confirmar entrega grupal para matrizador
+    window.confirmarEntregaGrupalMatrizador = function() {
+      // Obtener IDs de documentos propios
+      const documentosIds = [
+        {{#each documentosGrupales.documentosPropiios.documentos}}
+        {{this.id}}{{#unless @last}},{{/unless}}
+        {{/each}}
+      ];
+      
+      if (documentosIds.length === 0) {
+        alert('❌ No hay documentos adicionales para procesar');
+        return;
+      }
+      
+      // Configurar campos ocultos
+      document.getElementById('entregaGrupal').value = 'true';
+      document.getElementById('documentosAdicionales').value = documentosIds.join(',');
+      document.getElementById('tipoEntregaGrupal').value = 'matrizador_limitada';
+      
+      // Actualizar texto del botón
+      const btnCompletar = document.getElementById('btnCompletarEntrega');
+      btnCompletar.innerHTML = '<i class="fas fa-boxes me-2"></i> Completar Entrega Grupal (' + (documentosIds.length + 1) + ' documentos)';
+      btnCompletar.classList.remove('btn-primary');
+      btnCompletar.classList.add('btn-success');
+      
+      // Cerrar modal
+      const modal = bootstrap.Modal.getInstance(document.getElementById('modalEntregaGrupalMatrizador'));
+      modal.hide();
+      
+      // Mostrar confirmación
+      const alertaGrupal = document.getElementById('alertaEntregaGrupalMatrizador');
+      alertaGrupal.classList.remove('alert-info');
+      alertaGrupal.classList.add('alert-success');
+      alertaGrupal.innerHTML = `
+        <div class="row align-items-center">
+          <div class="col-md-8">
+            <h6 class="alert-heading mb-1">
+              <i class="fas fa-boxes text-success me-2"></i>
+              <strong>👤 Entrega Grupal Activada</strong>
+            </h6>
+            <p class="mb-0">
+              Se procesarán <strong>${documentosIds.length + 1} documentos</strong> de su asignación en entrega grupal.
+              <br><small class="text-muted">Haga clic en "Completar Entrega Grupal" para procesar todos sus documentos.</small>
+            </p>
+          </div>
+          <div class="col-md-4 text-end">
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="cancelarEntregaGrupalMatrizador()">
+              <i class="fas fa-times me-1"></i> Cancelar Grupal
+            </button>
+          </div>
+        </div>
+      `;
+      
+      console.log('✅ [MATRIZADOR] Entrega grupal configurada:', documentosIds.length + 1, 'documentos propios');
+    };
+    
+    // Mostrar documentos de otros matrizadores
+    window.mostrarDocumentosOtros = function() {
+      const detalles = document.getElementById('detallesDocumentosOtros');
+      if (detalles.style.display === 'none') {
+        detalles.style.display = 'block';
+      } else {
+        detalles.style.display = 'none';
+      }
+    };
+    
+    // Ocultar alerta de entrega grupal
+    window.ocultarAlertaGrupalMatrizador = function() {
+      document.getElementById('alertaEntregaGrupalMatrizador').style.display = 'none';
+    };
+    
+    // Cancelar entrega grupal
+    window.cancelarEntregaGrupalMatrizador = function() {
+      // Resetear campos ocultos
+      document.getElementById('entregaGrupal').value = 'false';
+      document.getElementById('documentosAdicionales').value = '';
+      
+      // Restaurar botón original
+      const btnCompletar = document.getElementById('btnCompletarEntrega');
+      btnCompletar.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Completar Entrega';
+      btnCompletar.classList.remove('btn-success');
+      btnCompletar.classList.add('btn-primary');
+      
+      // Restaurar alerta original
+      location.reload(); // Recargar para restaurar estado original
+    };
+    
+    // Validación antes de envío del formulario
+    document.getElementById('formVerificacion').addEventListener('submit', function(e) {
+      const entregaGrupal = document.getElementById('entregaGrupal').value;
+      const tipoEntrega = document.getElementById('tipoEntregaGrupal').value;
+      
+      if (entregaGrupal === 'true') {
+        console.log('📋 [MATRIZADOR] Enviando entrega grupal:', tipoEntrega);
+        
+        // Validar que todos los campos estén completos
+        const nombreReceptor = document.getElementById('nombreReceptor').value;
+        const identificacionReceptor = document.getElementById('identificacionReceptor').value;
+        const relacionReceptor = document.getElementById('relacionReceptor').value;
+        
+        if (!nombreReceptor || !identificacionReceptor || !relacionReceptor) {
+          e.preventDefault();
+          alert('❌ Debe completar todos los datos del receptor para entrega grupal');
+          return false;
+        }
+        
+        // Confirmar entrega grupal
+        if (!confirm(`¿Confirma la entrega grupal de ${document.getElementById('documentosAdicionales').value.split(',').length + 1} documentos de su asignación?`)) {
+          e.preventDefault();
+          return false;
+        }
+      }
+      
+      return true;
+    });
+    
+    // ============== FORMATEAR FECHAS DE DOCUMENTOS ==============
+    console.log('🕒 Iniciando formateo de fechas en entrega de documentos...');
+    
+    // Función para formatear fecha de manera robusta
+    function formatearFechaSegura(fechaRaw) {
+      if (!fechaRaw || fechaRaw === 'null' || fechaRaw === '' || fechaRaw === 'undefined') {
+        return 'Sin fecha';
+      }
+      
+      try {
+        // Intentar diferentes formatos de fecha
+        let fecha;
+        
+        // Si ya es un objeto Date
+        if (fechaRaw instanceof Date) {
+          fecha = fechaRaw;
+        }
+        // Si es un string ISO
+        else if (typeof fechaRaw === 'string') {
+          // Limpiar la fecha de caracteres extraños
+          const fechaLimpia = fechaRaw.trim();
+          fecha = new Date(fechaLimpia);
+        }
+        // Si es un timestamp
+        else if (typeof fechaRaw === 'number') {
+          fecha = new Date(fechaRaw);
+        }
+        else {
+          console.warn('Formato de fecha no reconocido:', fechaRaw);
+          return 'Formato inválido';
+        }
+        
+        // Verificar si la fecha es válida
+        if (isNaN(fecha.getTime())) {
+          console.warn('Fecha inválida después de conversión:', fechaRaw);
+          return 'Fecha inválida';
+        }
+        
+        return fecha;
+      } catch (error) {
+        console.error('Error procesando fecha:', error, 'Fecha original:', fechaRaw);
+        return 'Error en fecha';
+      }
+    }
+    
+    // Formatear fechas de documentos en entrega
+    document.querySelectorAll('.fecha-documento-entrega').forEach(function(elemento) {
+      const fechaRaw = elemento.getAttribute('data-fecha');
+      console.log('📅 Procesando fecha de documento en entrega:', fechaRaw);
+      
+      const fechaFormateada = formatearFechaSegura(fechaRaw);
+      
+      if (fechaFormateada instanceof Date) {
+        elemento.textContent = fechaFormateada.toLocaleDateString('es-EC', {
+          day: '2-digit',
+          month: '2-digit', 
+          year: 'numeric'
+        });
+        elemento.classList.add('text-success');
+      } else {
+        elemento.textContent = fechaFormateada;
+        elemento.classList.add('text-muted');
+      }
+    });
+    
+    console.log('✅ Formateo de fechas de documentos en entrega completado');
   });
 </script> 

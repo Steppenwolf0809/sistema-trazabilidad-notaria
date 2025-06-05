@@ -36,4 +36,12 @@ router.get('/notificaciones/historial', validarAccesoConAuditoria(['recepcion'])
 // Ruta para detalle de notificación específica - ESTRICTO: solo recepción
 router.get('/notificaciones/detalle/:id', validarAccesoConAuditoria(['recepcion']), recepcionController.obtenerDetalleNotificacion);
 
+// ============== NUEVAS RUTAS: ENTREGA GRUPAL ==============
+
+// API para detectar documentos grupales - ESTRICTO: solo recepción
+router.get('/api/documentos/grupales/:identificacion/:documentoId', validarAccesoConAuditoria(['recepcion']), recepcionController.detectarDocumentosGrupales);
+
+// Endpoint para procesar entrega grupal - ESTRICTO: solo recepción
+router.post('/documentos/entrega-grupal/:id', validarAccesoConAuditoria(['recepcion']), recepcionController.procesarEntregaGrupal);
+
 module.exports = router; 

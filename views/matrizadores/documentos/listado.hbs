@@ -90,7 +90,11 @@
               {{this.nombreCliente}}
               <div class="small text-muted">{{this.identificacionCliente}}</div>
             </td>
-            <td data-sort-value="{{this.created_at}}">{{formatDateDocument this.created_at}}</td>
+            <td data-sort-value="{{this.created_at}}">
+              <span class="fecha-documento" data-fecha="{{this.created_at}}">
+                Cargando...
+              </span>
+            </td>
             <td>
               {{#if (eq this.estado "en_proceso")}}
               <span class="badge bg-warning">En Proceso</span>
@@ -276,5 +280,72 @@
   
   document.addEventListener('DOMContentLoaded', function() {
     // Inicializar componentes si es necesario
+    
+    // ============== FORMATEAR FECHAS DE DOCUMENTOS ==============
+    console.log('🕒 Iniciando formateo de fechas en listado de documentos...');
+    
+    // Función para formatear fecha de manera robusta
+    function formatearFechaSegura(fechaRaw) {
+      if (!fechaRaw || fechaRaw === 'null' || fechaRaw === '' || fechaRaw === 'undefined') {
+        return 'Sin fecha';
+      }
+      
+      try {
+        // Intentar diferentes formatos de fecha
+        let fecha;
+        
+        // Si ya es un objeto Date
+        if (fechaRaw instanceof Date) {
+          fecha = fechaRaw;
+        }
+        // Si es un string ISO
+        else if (typeof fechaRaw === 'string') {
+          // Limpiar la fecha de caracteres extraños
+          const fechaLimpia = fechaRaw.trim();
+          fecha = new Date(fechaLimpia);
+        }
+        // Si es un timestamp
+        else if (typeof fechaRaw === 'number') {
+          fecha = new Date(fechaRaw);
+        }
+        else {
+          console.warn('Formato de fecha no reconocido:', fechaRaw);
+          return 'Formato inválido';
+        }
+        
+        // Verificar si la fecha es válida
+        if (isNaN(fecha.getTime())) {
+          console.warn('Fecha inválida después de conversión:', fechaRaw);
+          return 'Fecha inválida';
+        }
+        
+        return fecha;
+      } catch (error) {
+        console.error('Error procesando fecha:', error, 'Fecha original:', fechaRaw);
+        return 'Error en fecha';
+      }
+    }
+    
+    // Formatear fechas de documentos
+    document.querySelectorAll('.fecha-documento').forEach(function(elemento) {
+      const fechaRaw = elemento.getAttribute('data-fecha');
+      console.log('📅 Procesando fecha de documento:', fechaRaw);
+      
+      const fechaFormateada = formatearFechaSegura(fechaRaw);
+      
+      if (fechaFormateada instanceof Date) {
+        elemento.textContent = fechaFormateada.toLocaleDateString('es-EC', {
+          day: '2-digit',
+          month: '2-digit', 
+          year: 'numeric'
+        });
+        elemento.classList.add('text-success');
+      } else {
+        elemento.textContent = fechaFormateada;
+        elemento.classList.add('text-muted');
+      }
+    });
+    
+    console.log('✅ Formateo de fechas de documentos completado');
   });
 </script> 

@@ -147,6 +147,227 @@ _Guarde este mensaje como comprobante de entrega._`;
   };
 }
 
+// ============== FUNCIONES PARA ENTREGA GRUPAL - MATRIZADORES ==============
+
+/**
+ * Detecta documentos adicionales del mismo cliente para entrega grupal (MATRIZADORES - CON RESTRICCIONES)
+ * @param {string} identificacionCliente - Identificación del cliente
+ * @param {number} documentoActualId - ID del documento actual para excluir
+ * @param {number} matrizadorId - ID del matrizador para filtrar sus documentos
+ * @returns {Object} Información sobre documentos adicionales
+ */
+async function detectarDocumentosGrupalesMatrizador(identificacionCliente, documentoActualId, matrizadorId) {
+  try {
+    console.log(`🔍 [MATRIZADOR] Detectando documentos grupales para cliente: ${identificacionCliente}, matrizador: ${matrizadorId}`);
+    
+    // Documentos del mismo matrizador (pueden entregar) - NUEVA LÓGICA SIN RESTRICCIÓN DE PAGO
+    const documentosPropiios = await Documento.findAll({
+      where: {
+        identificacionCliente: identificacionCliente,
+        idMatrizador: matrizadorId,
+        estado: 'listo_para_entrega',
+        fechaEntrega: null,
+        id: { [Op.ne]: documentoActualId },
+        motivoEliminacion: null
+        // REMOVIDO: Validación de estadoPago
+      },
+      order: [['created_at', 'ASC']]
+    });
+    
+    // Documentos de otros matrizadores (solo para alerta) - NUEVA LÓGICA SIN RESTRICCIÓN DE PAGO
+    const documentosOtrosMatrizadores = await Documento.findAll({
+      where: {
+        identificacionCliente: identificacionCliente,
+        idMatrizador: { [Op.ne]: matrizadorId },
+        estado: 'listo_para_entrega',
+        fechaEntrega: null,
+        motivoEliminacion: null
+        // REMOVIDO: Validación de estadoPago
+      },
+      include: [{ 
+        model: Matrizador, 
+        as: 'matrizador',
+        attributes: ['id', 'nombre'] 
+      }],
+      order: [['created_at', 'ASC']]
+    });
+    
+    // SEPARAR documentos propios por estado de pago
+    const documentosPropiosPagados = documentosPropiios.filter(doc => 
+      ['pagado_completo', 'pagado_con_retencion'].includes(doc.estadoPago)
+    );
+    
+    const documentosPropiosPendientes = documentosPropiios.filter(doc => 
+      !['pagado_completo', 'pagado_con_retencion'].includes(doc.estadoPago)
+    );
+    
+    // SEPARAR documentos de otros por estado de pago
+    const documentosOtrosPagados = documentosOtrosMatrizadores.filter(doc => 
+      ['pagado_completo', 'pagado_con_retencion'].includes(doc.estadoPago)
+    );
+    
+    const documentosOtrosPendientes = documentosOtrosMatrizadores.filter(doc => 
+      !['pagado_completo', 'pagado_con_retencion'].includes(doc.estadoPago)
+    );
+    
+    console.log(`📄 [MATRIZADOR] Encontrados ${documentosPropiios.length} documentos propios (${documentosPropiosPagados.length} pagados, ${documentosPropiosPendientes.length} pendientes) y ${documentosOtrosMatrizadores.length} de otros matrizadores (${documentosOtrosPagados.length} pagados, ${documentosOtrosPendientes.length} pendientes)`);
+    
+    return {
+      documentosPropiios: {
+        cantidad: documentosPropiios.length,
+        documentos: documentosPropiios,
+        documentosPagados: documentosPropiosPagados,
+        documentosPendientes: documentosPropiosPendientes,
+        puedeEntregar: true
+      },
+      documentosOtros: {
+        cantidad: documentosOtrosMatrizadores.length,
+        documentos: documentosOtrosMatrizadores,
+        documentosPagados: documentosOtrosPagados,
+        documentosPendientes: documentosOtrosPendientes,
+        puedeEntregar: false,
+        requiereRecepcion: true
+      },
+      tipoDeteccion: 'matrizador_limitada'
+    };
+  } catch (error) {
+    console.error('❌ Error detectando documentos grupales para matrizador:', error);
+    return { 
+      documentosPropiios: { cantidad: 0, documentos: [], puedeEntregar: true },
+      documentosOtros: { cantidad: 0, documentos: [], puedeEntregar: false, requiereRecepcion: true },
+      tipoDeteccion: 'matrizador_limitada'
+    };
+  }
+}
+
+/**
+ * Procesa entrega grupal para matrizador (solo documentos propios)
+ * @param {Array} documentosIds - IDs de documentos a entregar
+ * @param {Object} datosEntrega - Datos del receptor
+ * @param {Object} usuario - Usuario que procesa la entrega
+ * @param {Object} transaction - Transacción de base de datos
+ * @returns {Object} Resultado del procesamiento
+ */
+async function procesarEntregaGrupalMatrizador(documentosIds, datosEntrega, usuario, transaction) {
+  try {
+    console.log(`👤 [MATRIZADOR] Procesando entrega grupal de ${documentosIds.length} documentos para matrizador: ${usuario.id}`);
+    
+    const documentosActualizados = [];
+    const erroresValidacion = [];
+    
+    for (const docId of documentosIds) {
+      try {
+        const documento = await Documento.findByPk(docId, { transaction });
+        
+        if (!documento) {
+          erroresValidacion.push(`Documento ${docId} no encontrado`);
+          continue;
+        }
+        
+        // VALIDACIÓN CRÍTICA: Solo documentos del matrizador
+        if (documento.idMatrizador !== usuario.id) {
+          erroresValidacion.push(`Documento ${documento.codigoBarras} no pertenece al matrizador ${usuario.nombre}`);
+          continue;
+        }
+        
+        // VALIDACIONES DE SEGURIDAD BÁSICAS (SIN VALIDACIÓN ESTRICTA DE PAGO)
+        if (documento.estado !== 'listo_para_entrega') {
+          erroresValidacion.push(`Documento ${documento.codigoBarras} no está listo para entrega`);
+          continue;
+        }
+        
+        if (documento.fechaEntrega !== null) {
+          erroresValidacion.push(`Documento ${documento.codigoBarras} ya fue entregado`);
+          continue;
+        }
+        
+        if (documento.identificacionCliente !== datosEntrega.identificacionCliente) {
+          erroresValidacion.push(`Documento ${documento.codigoBarras} no pertenece al cliente`);
+          continue;
+        }
+        
+        // NUEVA LÓGICA: Registrar estado de pago pero no bloquear entrega
+        const tienePagoPendiente = !['pagado_completo', 'pagado_con_retencion'].includes(documento.estadoPago);
+        if (tienePagoPendiente) {
+          console.log(`⚠️ [MATRIZADOR] Documento ${documento.codigoBarras} tiene pago pendiente: ${documento.estadoPago}`);
+        }
+        
+        // ACTUALIZAR DOCUMENTO
+        await documento.update({
+          estado: 'entregado',
+          fechaEntrega: new Date(),
+          nombreReceptor: datosEntrega.nombreReceptor,
+          identificacionReceptor: datosEntrega.identificacionReceptor,
+          relacionReceptor: datosEntrega.relacionReceptor
+        }, { transaction });
+        
+        // REGISTRAR EVENTO DE ENTREGA GRUPAL
+        await EventoDocumento.create({
+          documentoId: documento.id,
+          tipo: 'entrega_grupal',
+          categoria: 'entrega',
+          titulo: 'Entrega Grupal - Matrizador',
+          descripcion: `Documento entregado en entrega grupal por matrizador ${usuario.nombre} a ${datosEntrega.nombreReceptor}`,
+          detalles: {
+            entregaGrupal: true,
+            totalDocumentosGrupo: documentosIds.length,
+            tipoEntregaGrupal: 'matrizador_limitada',
+            rolProcesador: 'matrizador',
+            matrizadorId: usuario.id,
+            soloDocumentosPropiios: true,
+            nombreReceptor: datosEntrega.nombreReceptor,
+            identificacionReceptor: datosEntrega.identificacionReceptor,
+            relacionReceptor: datosEntrega.relacionReceptor,
+            // NUEVA INFORMACIÓN: Estado de pago al momento de entrega
+            estadoPagoAlEntrega: documento.estadoPago,
+            tienePagoPendiente: tienePagoPendiente,
+            entregaConPendientes: datosEntrega.confirmarEntregaPendiente === 'true',
+            validacionesAplicadas: [
+              'estado_verificado',
+              'no_entregado_previamente',
+              'pertenencia_cliente_confirmada',
+              'pertenencia_matrizador_validada'
+              // REMOVIDO: 'pago_validado' (ya no es obligatorio)
+            ],
+            metodoVerificacion: datosEntrega.tipoVerificacion,
+            observaciones: datosEntrega.observaciones
+          },
+          usuario: usuario.nombre,
+          metadatos: {
+            canal: 'sistema',
+            estado: 'procesada',
+            tipo: 'entrega_grupal',
+            idUsuario: usuario.id,
+            rolUsuario: usuario.rol,
+            timestamp: new Date().toISOString()
+          }
+        }, { transaction });
+        
+        documentosActualizados.push(documento);
+        console.log(`✅ [MATRIZADOR] Documento ${documento.codigoBarras} entregado grupalmente`);
+        
+      } catch (docError) {
+        console.error(`❌ Error procesando documento ${docId}:`, docError);
+        erroresValidacion.push(`Error en documento ${docId}: ${docError.message}`);
+      }
+    }
+    
+    if (erroresValidacion.length > 0) {
+      throw new Error(`Errores de validación: ${erroresValidacion.join('; ')}`);
+    }
+    
+    return {
+      exito: true,
+      documentosActualizados: documentosActualizados.length,
+      documentos: documentosActualizados
+    };
+    
+  } catch (error) {
+    console.error('❌ Error en procesamiento grupal matrizador:', error);
+    throw error;
+  }
+}
+
 // Objeto que contendrá todas las funciones del controlador
 const matrizadorController = {
   
@@ -1777,6 +1998,28 @@ const matrizadorController = {
         limit: 50 // Limitar para performance
       });
       
+      // ============== PROCESAR NOTIFICACIONES PARA VISTA ==============
+      const notificacionesProcesadas = notificaciones.map(notif => {
+        const notifData = notif.toJSON ? notif.toJSON() : notif;
+        
+        // Asegurar que las fechas estén en formato ISO string
+        if (notifData.createdAt) {
+          notifData.created_at = new Date(notifData.createdAt).toISOString();
+        }
+        if (notifData.updatedAt) {
+          notifData.updated_at = new Date(notifData.updatedAt).toISOString();
+        }
+        
+        // Asegurar que metadatos existan
+        if (!notifData.metadatos) {
+          notifData.metadatos = {};
+        }
+        
+        console.log(`📅 Notificación ID ${notifData.id}: fecha = ${notifData.created_at}`);
+        
+        return notifData;
+      });
+      
       // ============== CALCULAR ESTADÍSTICAS ==============
       const stats = {
         total: notificaciones.length,
@@ -1788,7 +2031,7 @@ const matrizadorController = {
       res.render('matrizadores/notificaciones/historial', {
         layout: 'matrizador',
         title: 'Historial de Notificaciones',
-        notificaciones,
+        notificaciones: notificacionesProcesadas,
         stats,
         filtros: { fechaDesde, fechaHasta, tipo, canal, busqueda },
         userRole: req.matrizador?.rol,
@@ -1921,7 +2164,7 @@ _Guarde este mensaje como comprobante de entrega._`;
       const detalles = {
         id: evento.id,
         tipo: evento.tipo,
-        fecha: evento.createdAt,
+        fecha: evento.createdAt ? new Date(evento.createdAt).toISOString() : null,
         detalles: evento.detalles,
         usuario: evento.usuario,
         documento: {
@@ -2257,12 +2500,34 @@ _Guarde este mensaje como comprobante de entrega._`;
           return res.redirect('/matrizador/documentos/entrega');
         }
         
+        // ============== NUEVA FUNCIONALIDAD: DETECTAR DOCUMENTOS GRUPALES ==============
+        let documentosGrupales = null;
+        if (documento.estado === 'listo_para_entrega' && 
+            documento.fechaEntrega === null &&
+            ['pagado_completo', 'pagado_con_retencion'].includes(documento.estadoPago) &&
+            documento.identificacionCliente) {
+          
+          console.log(`🔍 [MATRIZADOR] Verificando documentos grupales para cliente: ${documento.identificacionCliente}, matrizador: ${req.matrizador.id}`);
+          documentosGrupales = await detectarDocumentosGrupalesMatrizador(
+            documento.identificacionCliente, 
+            documento.id,
+            req.matrizador.id
+          );
+        }
+        
         return res.render('matrizadores/documentos/entrega', {
           layout: 'matrizador',
           title: 'Entrega de Documento',
           documento,
+          documentosGrupales,
+          tipoEntrega: 'matrizador_limitada',
           userRole: req.matrizador?.rol,
-          userName: req.matrizador?.nombre
+          userName: req.matrizador?.nombre,
+          usuario: {
+            id: req.matrizador?.id,
+            rol: req.matrizador?.rol,
+            nombre: req.matrizador?.nombre
+          }
         });
       }
       
@@ -2323,7 +2588,18 @@ _Guarde este mensaje como comprobante de entrega._`;
     
     try {
       const { id } = req.params;
-      const { codigoVerificacion, nombreReceptor, identificacionReceptor, relacionReceptor, tipoVerificacion, observaciones } = req.body;
+      const { 
+        codigoVerificacion, 
+        nombreReceptor, 
+        identificacionReceptor, 
+        relacionReceptor, 
+        tipoVerificacion, 
+        observaciones,
+        // ============== NUEVOS CAMPOS PARA ENTREGA GRUPAL ==============
+        entregaGrupal,
+        documentosAdicionales,
+        tipoEntregaGrupal
+      } = req.body;
       
       if (!id) {
         await transaction.rollback();
@@ -2386,15 +2662,186 @@ _Guarde este mensaje como comprobante de entrega._`;
         // Continuar con la transacción aunque el registro de eventos falle
       }
       
+      // ============== NUEVA FUNCIONALIDAD: PROCESAMIENTO DE ENTREGA GRUPAL ==============
+      let documentosGrupalesActualizados = 0;
+      
+      if (entregaGrupal === 'true' && documentosAdicionales && tipoEntregaGrupal === 'matrizador_limitada') {
+        console.log(`👤 [MATRIZADOR] Iniciando entrega grupal para ${documentosAdicionales}`);
+        
+        try {
+          const documentosIds = documentosAdicionales.split(',')
+            .map(id => parseInt(id.trim()))
+            .filter(id => !isNaN(id) && id > 0);
+          
+          if (documentosIds.length > 0) {
+            const datosEntrega = {
+              nombreReceptor,
+              identificacionReceptor,
+              relacionReceptor,
+              tipoVerificacion,
+              observaciones,
+              identificacionCliente: documento.identificacionCliente
+            };
+            
+            const resultadoGrupal = await procesarEntregaGrupalMatrizador(
+              documentosIds, 
+              datosEntrega, 
+              req.matrizador, 
+              transaction
+            );
+            
+            documentosGrupalesActualizados = resultadoGrupal.documentosActualizados;
+            console.log(`✅ [MATRIZADOR] Entrega grupal completada: ${documentosGrupalesActualizados} documentos adicionales`);
+          }
+        } catch (grupalError) {
+          console.error('❌ Error en entrega grupal:', grupalError);
+          await transaction.rollback();
+          req.flash('error', `Error en entrega grupal: ${grupalError.message}`);
+          return res.redirect(`/matrizador/documentos/entrega/${id}`);
+        }
+      }
+      
       await transaction.commit();
       
-      req.flash('success', `Documento entregado exitosamente a ${nombreReceptor}`);
+      // Mensaje de éxito personalizado según documentos procesados
+      let mensajeExito = `Documento entregado exitosamente a ${nombreReceptor}`;
+      
+      if (documentosGrupalesActualizados > 0) {
+        mensajeExito += `. También se procesaron ${documentosGrupalesActualizados} documento(s) más de su asignación en entrega grupal.`;
+      }
+      
+      req.flash('success', mensajeExito);
       res.redirect('/matrizador/documentos');
     } catch (error) {
       await transaction.rollback();
       console.error('Error al completar entrega:', error);
       req.flash('error', `Error al completar la entrega: ${error.message}`);
       res.redirect('/matrizador/documentos/entrega');
+    }
+  },
+
+  // ============== NUEVOS MÉTODOS: ENTREGA GRUPAL API ==============
+
+  /**
+   * API para detectar documentos grupales del mismo cliente (MATRIZADORES - CON RESTRICCIONES)
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  detectarDocumentosGrupales: async (req, res) => {
+    try {
+      const { identificacion, documentoId } = req.params;
+      
+      if (!identificacion || !documentoId) {
+        return res.status(400).json({
+          exito: false,
+          mensaje: 'Parámetros requeridos: identificación y documentoId'
+        });
+      }
+      
+      const documentosGrupales = await detectarDocumentosGrupalesMatrizador(
+        identificacion, 
+        parseInt(documentoId),
+        req.matrizador.id
+      );
+      
+      return res.status(200).json({
+        exito: true,
+        datos: documentosGrupales,
+        mensaje: `Detectados ${documentosGrupales.documentosPropiios.cantidad} documentos propios y ${documentosGrupales.documentosOtros.cantidad} de otros matrizadores`
+      });
+      
+    } catch (error) {
+      console.error('Error en API detectar documentos grupales matrizador:', error);
+      return res.status(500).json({
+        exito: false,
+        mensaje: 'Error al detectar documentos grupales',
+        error: error.message
+      });
+    }
+  },
+
+  /**
+   * Procesa entrega grupal específica (MATRIZADORES - SOLO DOCUMENTOS PROPIOS)
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  procesarEntregaGrupal: async (req, res) => {
+    const transaction = await sequelize.transaction();
+    
+    try {
+      const { id } = req.params;
+      const { 
+        documentosIds, 
+        nombreReceptor, 
+        identificacionReceptor, 
+        relacionReceptor,
+        tipoVerificacion,
+        observaciones
+      } = req.body;
+      
+      if (!id || !documentosIds || !Array.isArray(documentosIds)) {
+        await transaction.rollback();
+        return res.status(400).json({
+          exito: false,
+          mensaje: 'Parámetros requeridos: id del documento principal y array de documentosIds'
+        });
+      }
+      
+      // Obtener documento principal y verificar pertenencia
+      const documentoPrincipal = await Documento.findOne({
+        where: {
+          id: id,
+          idMatrizador: req.matrizador.id
+        },
+        transaction
+      });
+      
+      if (!documentoPrincipal) {
+        await transaction.rollback();
+        return res.status(404).json({
+          exito: false,
+          mensaje: 'Documento principal no encontrado o no pertenece al matrizador'
+        });
+      }
+      
+      // Preparar datos de entrega
+      const datosEntrega = {
+        nombreReceptor,
+        identificacionReceptor,
+        relacionReceptor,
+        tipoVerificacion,
+        observaciones,
+        identificacionCliente: documentoPrincipal.identificacionCliente
+      };
+      
+      // Procesar entrega grupal (solo documentos del matrizador)
+      const resultado = await procesarEntregaGrupalMatrizador(
+        documentosIds, 
+        datosEntrega, 
+        req.matrizador, 
+        transaction
+      );
+      
+      await transaction.commit();
+      
+      return res.status(200).json({
+        exito: true,
+        mensaje: `Entrega grupal procesada exitosamente: ${resultado.documentosActualizados} documentos propios`,
+        datos: {
+          documentosActualizados: resultado.documentosActualizados,
+          tipoEntrega: 'matrizador_limitada',
+          soloDocumentosPropiios: true
+        }
+      });
+      
+    } catch (error) {
+      await transaction.rollback();
+      console.error('Error en procesamiento entrega grupal matrizador:', error);
+      return res.status(500).json({
+        exito: false,
+        mensaje: 'Error al procesar entrega grupal',
+        error: error.message
+      });
     }
   },
 };

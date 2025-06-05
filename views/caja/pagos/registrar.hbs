@@ -115,9 +115,13 @@
                   <input type="number" class="form-control" id="monto" name="monto" 
                          step="0.01" min="0" max="{{#if documento.valorPendiente}}{{documento.valorPendiente}}{{else}}{{documento.valorFactura}}{{/if}}" 
                          placeholder="0.00">
+                  <button type="button" class="btn btn-success" id="btn-pago-completo" onclick="establecerPagoCompleto()">
+                    <i class="fas fa-coins me-1"></i>Pago Completo
+                  </button>
                 </div>
                 <div class="form-text">
-                  💡 Puede ser $0.00 si solo registra retención
+                  💡 Puede ser $0.00 si solo registra retención | 
+                  <strong>Valor pendiente: $<span id="valor-pendiente-display">{{#if documento.valorPendiente}}{{documento.valorPendiente}}{{else}}{{documento.valorFactura}}{{/if}}</span></strong>
                 </div>
               </div>
               
@@ -464,8 +468,26 @@ document.addEventListener('DOMContentLoaded', function() {
   const quedaPendienteDisplay = document.getElementById('queda-pendiente-display');
   const retencionTotalDisplay = document.getElementById('retencion-total-display');
   
-  // Valores del documento
-  const valorPendiente = parseFloat('{{#if documento.valorPendiente}}{{documento.valorPendiente}}{{else}}{{documento.valorFactura}}{{/if}}') || 0;
+  // Valores del documento - CORREGIDO: Calcular valor pendiente real
+  const valorFacturaDocumento = parseFloat('{{documento.valorFactura}}') || 0;
+  const valorPagadoDocumento = parseFloat('{{documento.valorPagado}}') || 0;
+  const valorRetenidoDocumento = parseFloat('{{documento.valorRetenido}}') || 0;
+  
+  // CÁLCULO CORRECTO: valorPendiente = valorFactura - valorPagado - valorRetenido
+  const valorPendienteDB = parseFloat('{{documento.valorPendiente}}') || 0;
+  const valorPendienteCalculado = Math.max(0, valorFacturaDocumento - valorPagadoDocumento - valorRetenidoDocumento);
+  
+  // Usar el valor de la DB si es mayor que 0, sino calcular
+  const valorPendiente = valorPendienteDB > 0 ? valorPendienteDB : valorPendienteCalculado;
+  
+  console.log('🔍 DEBUGGING VALORES FINANCIEROS:', {
+    valorFacturaDocumento,
+    valorPagadoDocumento,
+    valorRetenidoDocumento,
+    valorPendienteDB,
+    valorPendienteCalculado,
+    valorPendienteFinal: valorPendiente
+  });
   
   // Variable para almacenar datos de retención (XML o manual)
   let datosRetencionXML = null;
@@ -489,6 +511,45 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('manual-ret-renta').addEventListener('input', calcularTotalManual);
   
   // ============== FUNCIONES ==============
+  
+  // NUEVA FUNCIÓN CRÍTICA: Establecer pago completo automáticamente
+  window.establecerPagoCompleto = function() {
+    console.log('💰 Estableciendo pago completo...');
+    
+    // Obtener valor pendiente real
+    const valorPendienteReal = valorPendiente;
+    
+    console.log('🔍 Valor pendiente para pago completo:', valorPendienteReal);
+    
+    if (valorPendienteReal <= 0) {
+      alert('⚠️ Este documento no tiene valor pendiente para pagar');
+      return;
+    }
+    
+    // Establecer el monto completo
+    montoInput.value = valorPendienteReal.toFixed(2);
+    
+    // Actualizar resumen
+    actualizarResumen();
+    
+    // Enfocar en forma de pago
+    document.getElementById('formaPago').focus();
+    
+    console.log(`✅ Pago completo establecido: $${valorPendienteReal.toFixed(2)}`);
+    
+    // Mostrar confirmación visual
+    const btnPagoCompleto = document.getElementById('btn-pago-completo');
+    const textoOriginal = btnPagoCompleto.innerHTML;
+    btnPagoCompleto.innerHTML = '<i class="fas fa-check me-1"></i>¡Listo!';
+    btnPagoCompleto.classList.remove('btn-success');
+    btnPagoCompleto.classList.add('btn-primary');
+    
+    setTimeout(() => {
+      btnPagoCompleto.innerHTML = textoOriginal;
+      btnPagoCompleto.classList.remove('btn-primary');
+      btnPagoCompleto.classList.add('btn-success');
+    }, 1500);
+  };
   
   // NUEVA: Seleccionar opción de retención con tarjetas visuales
   function seleccionarOpcionRetencion(opcion) {
@@ -1172,6 +1233,18 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   
   // ============== INICIALIZACIÓN ==============
+  
+  // CRÍTICO: Actualizar display del valor pendiente en la interfaz
+  const valorPendienteDisplayElement = document.getElementById('valor-pendiente-display');
+  if (valorPendienteDisplayElement) {
+    valorPendienteDisplayElement.textContent = valorPendiente.toFixed(2);
+  }
+  
+  // Actualizar el max del input de monto
+  if (montoInput) {
+    montoInput.setAttribute('max', valorPendiente.toFixed(2));
+  }
+  
   actualizarResumen();
   
   // Establecer fecha actual por defecto en retención manual
@@ -1181,7 +1254,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // NUEVO: Inicializar estado visual de las tarjetas
   seleccionarOpcionRetencion('sin-retencion');
   
-  console.log('✅ JavaScript inicializado correctamente');
+  console.log('✅ JavaScript inicializado correctamente con valorPendiente:', valorPendiente);
 });
 </script>
 

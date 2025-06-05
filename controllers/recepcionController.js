@@ -128,6 +128,187 @@ async function enviarNotificacionEntrega(documento, datosEntrega, usuarioEntrega
   }
 }
 
+// ============== FUNCIONES PARA ENTREGA GRUPAL - RECEPCIÓN ==============
+
+/**
+ * Detecta documentos adicionales del mismo cliente para entrega grupal (RECEPCIÓN - SIN RESTRICCIONES)
+ * @param {string} identificacionCliente - Identificación del cliente
+ * @param {number} documentoActualId - ID del documento actual para excluir
+ * @returns {Object} Información sobre documentos adicionales
+ */
+async function detectarDocumentosGrupalesRecepcion(identificacionCliente, documentoActualId) {
+  try {
+    console.log(`🔍 [RECEPCIÓN] Detectando documentos grupales para cliente: ${identificacionCliente}`);
+    
+    // NUEVA LÓGICA: Detectar TODOS los documentos listos, independientemente del pago
+    const documentosListos = await Documento.findAll({
+      where: {
+        identificacionCliente: identificacionCliente,
+        estado: 'listo_para_entrega',
+        fechaEntrega: null,
+        id: { [Op.ne]: documentoActualId },
+        motivoEliminacion: null
+        // REMOVIDO: Validación de estadoPago
+      },
+      include: [{ 
+        model: Matrizador, 
+        as: 'matrizador',
+        attributes: ['id', 'nombre'] 
+      }],
+      order: [['created_at', 'ASC']]
+    });
+    
+    // SEPARAR documentos por estado de pago
+    const documentosPagados = documentosListos.filter(doc => 
+      ['pagado_completo', 'pagado_con_retencion'].includes(doc.estadoPago)
+    );
+    
+    const documentosPendientes = documentosListos.filter(doc => 
+      !['pagado_completo', 'pagado_con_retencion'].includes(doc.estadoPago)
+    );
+    
+    console.log(`📄 [RECEPCIÓN] Encontrados ${documentosListos.length} documentos adicionales (${documentosPagados.length} pagados, ${documentosPendientes.length} pendientes)`);
+    
+    return {
+      tieneDocumentosSegurosPtraEntrega: documentosListos.length > 0,
+      cantidad: documentosListos.length,
+      documentos: documentosListos,
+      documentosPagados: documentosPagados,
+      documentosPendientes: documentosPendientes,
+      tipoDeteccion: 'recepcion_completa'
+    };
+  } catch (error) {
+    console.error('❌ Error detectando documentos grupales para recepción:', error);
+    return { 
+      tieneDocumentosSegurosPtraEntrega: false, 
+      cantidad: 0, 
+      documentos: [],
+      documentosPagados: [],
+      documentosPendientes: [],
+      tipoDeteccion: 'recepcion_completa'
+    };
+  }
+}
+
+/**
+ * Procesa entrega grupal para recepción (sin restricciones de matrizador)
+ * @param {Array} documentosIds - IDs de documentos a entregar
+ * @param {Object} datosEntrega - Datos del receptor
+ * @param {Object} usuario - Usuario que procesa la entrega
+ * @param {Object} transaction - Transacción de base de datos
+ * @returns {Object} Resultado del procesamiento
+ */
+async function procesarEntregaGrupalRecepcion(documentosIds, datosEntrega, usuario, transaction) {
+  try {
+    console.log(`🏢 [RECEPCIÓN] Procesando entrega grupal de ${documentosIds.length} documentos`);
+    
+    const documentosActualizados = [];
+    const erroresValidacion = [];
+    
+    for (const docId of documentosIds) {
+      try {
+        const documento = await Documento.findByPk(docId, { transaction });
+        
+        if (!documento) {
+          erroresValidacion.push(`Documento ${docId} no encontrado`);
+          continue;
+        }
+        
+        // VALIDACIONES DE SEGURIDAD BÁSICAS (SIN VALIDACIÓN ESTRICTA DE PAGO)
+        if (documento.estado !== 'listo_para_entrega') {
+          erroresValidacion.push(`Documento ${documento.codigoBarras} no está listo para entrega`);
+          continue;
+        }
+        
+        if (documento.fechaEntrega !== null) {
+          erroresValidacion.push(`Documento ${documento.codigoBarras} ya fue entregado`);
+          continue;
+        }
+        
+        if (documento.identificacionCliente !== datosEntrega.identificacionCliente) {
+          erroresValidacion.push(`Documento ${documento.codigoBarras} no pertenece al cliente`);
+          continue;
+        }
+        
+        // NUEVA LÓGICA: Registrar estado de pago pero no bloquear entrega
+        const tienePagoPendiente = !['pagado_completo', 'pagado_con_retencion'].includes(documento.estadoPago);
+        if (tienePagoPendiente) {
+          console.log(`⚠️ [RECEPCIÓN] Documento ${documento.codigoBarras} tiene pago pendiente: ${documento.estadoPago}`);
+        }
+        
+        // ACTUALIZAR DOCUMENTO
+        await documento.update({
+          estado: 'entregado',
+          fechaEntrega: new Date(),
+          nombreReceptor: datosEntrega.nombreReceptor,
+          identificacionReceptor: datosEntrega.identificacionReceptor,
+          relacionReceptor: datosEntrega.relacionReceptor
+        }, { transaction });
+        
+        // REGISTRAR EVENTO DE ENTREGA GRUPAL CON ESTADO DE PAGO
+        await EventoDocumento.create({
+          documentoId: documento.id,
+          tipo: 'entrega_grupal',
+          categoria: 'entrega',
+          titulo: 'Entrega Grupal - Recepción',
+          descripcion: `Documento entregado en entrega grupal por recepción a ${datosEntrega.nombreReceptor}`,
+          detalles: {
+            entregaGrupal: true,
+            totalDocumentosGrupo: documentosIds.length,
+            tipoEntregaGrupal: 'recepcion_completa',
+            rolProcesador: 'recepcion',
+            nombreReceptor: datosEntrega.nombreReceptor,
+            identificacionReceptor: datosEntrega.identificacionReceptor,
+            relacionReceptor: datosEntrega.relacionReceptor,
+            // NUEVA INFORMACIÓN: Estado de pago al momento de entrega
+            estadoPagoAlEntrega: documento.estadoPago,
+            tienePagoPendiente: tienePagoPendiente,
+            entregaConPendientes: datosEntrega.confirmarEntregaPendiente === 'true',
+            validacionesAplicadas: [
+              'estado_verificado',
+              'no_entregado_previamente',
+              'pertenencia_cliente_confirmada'
+              // REMOVIDO: 'pago_validado' (ya no es obligatorio)
+            ],
+            metodoVerificacion: datosEntrega.tipoVerificacion,
+            observaciones: datosEntrega.observaciones
+          },
+          usuario: usuario.nombre,
+          metadatos: {
+            canal: 'sistema',
+            estado: 'procesada',
+            tipo: 'entrega_grupal',
+            idUsuario: usuario.id,
+            rolUsuario: usuario.rol,
+            timestamp: new Date().toISOString()
+          }
+        }, { transaction });
+        
+        documentosActualizados.push(documento);
+        console.log(`✅ [RECEPCIÓN] Documento ${documento.codigoBarras} entregado grupalmente`);
+        
+      } catch (docError) {
+        console.error(`❌ Error procesando documento ${docId}:`, docError);
+        erroresValidacion.push(`Error en documento ${docId}: ${docError.message}`);
+      }
+    }
+    
+    if (erroresValidacion.length > 0) {
+      throw new Error(`Errores de validación: ${erroresValidacion.join('; ')}`);
+    }
+    
+    return {
+      exito: true,
+      documentosActualizados: documentosActualizados.length,
+      documentos: documentosActualizados
+    };
+    
+  } catch (error) {
+    console.error('❌ Error en procesamiento grupal recepción:', error);
+    throw error;
+  }
+}
+
 const recepcionController = {
   /**
    * Muestra el dashboard de recepción con estadísticas y documentos pendientes
@@ -748,12 +929,33 @@ const recepcionController = {
           return res.redirect('/recepcion/documentos/entrega');
         }
         
+        // ============== NUEVA FUNCIONALIDAD: DETECTAR DOCUMENTOS GRUPALES ==============
+        let documentosGrupales = null;
+        if (documento.estado === 'listo_para_entrega' && 
+            documento.fechaEntrega === null &&
+            ['pagado_completo', 'pagado_con_retencion'].includes(documento.estadoPago) &&
+            documento.identificacionCliente) {
+          
+          console.log(`🔍 [RECEPCIÓN] Verificando documentos grupales para cliente: ${documento.identificacionCliente}`);
+          documentosGrupales = await detectarDocumentosGrupalesRecepcion(
+            documento.identificacionCliente, 
+            documento.id
+          );
+        }
+        
         return res.render('recepcion/documentos/entrega', {
           layout: 'recepcion',
           title: 'Entrega de Documento',
           documento,
+          documentosGrupales,
+          tipoEntrega: 'recepcion_completa',
           userRole: req.matrizador?.rol,
-          userName: req.matrizador?.nombre
+          userName: req.matrizador?.nombre,
+          usuario: {
+            id: req.matrizador?.id,
+            rol: req.matrizador?.rol,
+            nombre: req.matrizador?.nombre
+          }
         });
       }
       
@@ -859,7 +1061,18 @@ const recepcionController = {
     
     try {
       const { id } = req.params;
-      const { codigoVerificacion, nombreReceptor, identificacionReceptor, relacionReceptor, tipoVerificacion, observaciones } = req.body;
+      const { 
+        codigoVerificacion, 
+        nombreReceptor, 
+        identificacionReceptor, 
+        relacionReceptor, 
+        tipoVerificacion, 
+        observaciones,
+        // ============== NUEVOS CAMPOS PARA ENTREGA GRUPAL ==============
+        entregaGrupal,
+        documentosAdicionales,
+        tipoEntregaGrupal
+      } = req.body;
       
       if (!id) {
         await transaction.rollback();
@@ -1138,6 +1351,45 @@ const recepcionController = {
         // Continuar con la transacción aunque el registro de eventos falle
       }
       
+      // ============== NUEVA FUNCIONALIDAD: PROCESAMIENTO DE ENTREGA GRUPAL ==============
+      let documentosGrupalesActualizados = 0;
+      
+      if (entregaGrupal === 'true' && documentosAdicionales && tipoEntregaGrupal === 'recepcion_completa') {
+        console.log(`🏢 [RECEPCIÓN] Iniciando entrega grupal para ${documentosAdicionales}`);
+        
+        try {
+          const documentosIds = documentosAdicionales.split(',')
+            .map(id => parseInt(id.trim()))
+            .filter(id => !isNaN(id) && id > 0);
+          
+          if (documentosIds.length > 0) {
+            const datosEntrega = {
+              nombreReceptor,
+              identificacionReceptor,
+              relacionReceptor,
+              tipoVerificacion,
+              observaciones,
+              identificacionCliente: documento.identificacionCliente
+            };
+            
+            const resultadoGrupal = await procesarEntregaGrupalRecepcion(
+              documentosIds, 
+              datosEntrega, 
+              req.matrizador, 
+              transaction
+            );
+            
+            documentosGrupalesActualizados = resultadoGrupal.documentosActualizados;
+            console.log(`✅ [RECEPCIÓN] Entrega grupal completada: ${documentosGrupalesActualizados} documentos adicionales`);
+          }
+        } catch (grupalError) {
+          console.error('❌ Error en entrega grupal:', grupalError);
+          await transaction.rollback();
+          req.flash('error', `Error en entrega grupal: ${grupalError.message}`);
+          return res.redirect(`/recepcion/documentos/entrega/${id}`);
+        }
+      }
+      
       await transaction.commit();
       
       // Enviar confirmación de entrega después de confirmar la transacción
@@ -1152,10 +1404,15 @@ const recepcionController = {
         // No afectar el flujo principal si falla la notificación
       }
       
-      // Mensaje de éxito personalizado según si se actualizaron documentos habilitantes
+      // Mensaje de éxito personalizado según documentos procesados
       let mensajeExito = `El documento ha sido entregado exitosamente a ${nombreReceptor}.`;
+      
       if (documentosHabilitantesActualizados > 0) {
         mensajeExito += ` También se entregaron ${documentosHabilitantesActualizados} documento(s) habilitante(s) relacionado(s).`;
+      }
+      
+      if (documentosGrupalesActualizados > 0) {
+        mensajeExito += ` Adicionalmente se procesaron ${documentosGrupalesActualizados} documento(s) más del mismo cliente en entrega grupal.`;
       }
       
       req.flash('success', mensajeExito);
@@ -1769,6 +2026,122 @@ _Mensaje enviado por: ${canalesEnviados.join(' y ')}_`;
       return res.status(500).json({
         exito: false,
         mensaje: 'Error al obtener los detalles de la notificación',
+        error: error.message
+      });
+    }
+  },
+
+  // ============== NUEVOS MÉTODOS: ENTREGA GRUPAL API ==============
+
+  /**
+   * API para detectar documentos grupales del mismo cliente (RECEPCIÓN)
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  detectarDocumentosGrupales: async (req, res) => {
+    try {
+      const { identificacion, documentoId } = req.params;
+      
+      if (!identificacion || !documentoId) {
+        return res.status(400).json({
+          exito: false,
+          mensaje: 'Parámetros requeridos: identificación y documentoId'
+        });
+      }
+      
+      const documentosGrupales = await detectarDocumentosGrupalesRecepcion(
+        identificacion, 
+        parseInt(documentoId)
+      );
+      
+      return res.status(200).json({
+        exito: true,
+        datos: documentosGrupales,
+        mensaje: `Detectados ${documentosGrupales.cantidad} documentos adicionales`
+      });
+      
+    } catch (error) {
+      console.error('Error en API detectar documentos grupales:', error);
+      return res.status(500).json({
+        exito: false,
+        mensaje: 'Error al detectar documentos grupales',
+        error: error.message
+      });
+    }
+  },
+
+  /**
+   * Procesa entrega grupal específica (RECEPCIÓN)
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  procesarEntregaGrupal: async (req, res) => {
+    const transaction = await sequelize.transaction();
+    
+    try {
+      const { id } = req.params;
+      const { 
+        documentosIds, 
+        nombreReceptor, 
+        identificacionReceptor, 
+        relacionReceptor,
+        tipoVerificacion,
+        observaciones
+      } = req.body;
+      
+      if (!id || !documentosIds || !Array.isArray(documentosIds)) {
+        await transaction.rollback();
+        return res.status(400).json({
+          exito: false,
+          mensaje: 'Parámetros requeridos: id del documento principal y array de documentosIds'
+        });
+      }
+      
+      // Obtener documento principal
+      const documentoPrincipal = await Documento.findByPk(id, { transaction });
+      if (!documentoPrincipal) {
+        await transaction.rollback();
+        return res.status(404).json({
+          exito: false,
+          mensaje: 'Documento principal no encontrado'
+        });
+      }
+      
+      // Preparar datos de entrega
+      const datosEntrega = {
+        nombreReceptor,
+        identificacionReceptor,
+        relacionReceptor,
+        tipoVerificacion,
+        observaciones,
+        identificacionCliente: documentoPrincipal.identificacionCliente
+      };
+      
+      // Procesar entrega grupal
+      const resultado = await procesarEntregaGrupalRecepcion(
+        documentosIds, 
+        datosEntrega, 
+        req.matrizador, 
+        transaction
+      );
+      
+      await transaction.commit();
+      
+      return res.status(200).json({
+        exito: true,
+        mensaje: `Entrega grupal procesada exitosamente: ${resultado.documentosActualizados} documentos`,
+        datos: {
+          documentosActualizados: resultado.documentosActualizados,
+          tipoEntrega: 'recepcion_completa'
+        }
+      });
+      
+    } catch (error) {
+      await transaction.rollback();
+      console.error('Error en procesamiento entrega grupal:', error);
+      return res.status(500).json({
+        exito: false,
+        mensaje: 'Error al procesar entrega grupal',
         error: error.message
       });
     }
