@@ -162,8 +162,11 @@ const enviarMensaje = async (telefono, mensaje) => {
       throw new Error(`Número de teléfono inválido: ${telefono}`);
     }
     
-    // Modo desarrollo - simular envío
-    if (configuracion.modoDesarrollo) {
+    // Verificar configuración de envío real
+    const envioRealHabilitado = process.env.WHATSAPP_ENVIO_REAL === 'true' || process.env.NODE_ENV === 'production';
+    
+    // Modo desarrollo - simular envío SOLO si no está habilitado el envío real
+    if (!envioRealHabilitado) {
       console.log(`[SIMULADO] 📱 WhatsApp a ${telefonoValido}:`);
       console.log(`${mensaje}`);
       console.log(`[DESARROLLO] Notificación WhatsApp registrada sin envío real`);
@@ -176,6 +179,9 @@ const enviarMensaje = async (telefono, mensaje) => {
         timestamp: new Date().toISOString()
       };
     }
+    
+    // ============== ENVÍO REAL ACTIVADO ==============
+    console.log(`📱 [REAL] Enviando WhatsApp a ${telefonoValido}`);
     
     // Verificar si el servicio está habilitado
     if (!configuracion.habilitado) {
@@ -201,7 +207,7 @@ const enviarMensaje = async (telefono, mensaje) => {
       timeout: 30000 // 30 segundos
     });
     
-    console.log(`✅ WhatsApp enviado a ${telefonoValido}: ${respuesta.data.id || 'OK'}`);
+    console.log(`✅ [REAL] WhatsApp enviado a ${telefonoValido}: ${respuesta.data.id || 'OK'}`);
     
     return {
       exito: true,
@@ -216,7 +222,7 @@ const enviarMensaje = async (telefono, mensaje) => {
     
     return {
       exito: false,
-      simulado: configuracion.modoDesarrollo,
+      simulado: !envioRealHabilitado,
       destinatario: telefono,
       mensaje: mensaje,
       error: error.message,

@@ -89,4 +89,8 @@ router.post('/matrizadores/registro', matrizadorController.crear);
 router.post('/matrizadores/actualizar', matrizadorController.actualizar);
 router.post('/matrizadores/eliminar', matrizadorController.eliminar);
 
+// NUEVAS RUTAS DE NOTIFICACIONES (copiadas de recepción):
+router.get('/notificaciones/historial', adminController.historialNotificaciones);
+router.get('/notificaciones/detalle/:id', adminController.obtenerDetalleNotificacion);
+
 module.exports = router; 

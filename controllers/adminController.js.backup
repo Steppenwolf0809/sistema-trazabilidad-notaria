@@ -41,46 +41,40 @@ exports.dashboard = async (req, res) => {
     const hoy = moment().startOf('day');
     
     switch (rango) {
-      case 'desde_inicio':
-        // NUEVO: Mostrar todos los datos históricos
-        fechaInicio = moment('2020-01-01').startOf('day'); // Fecha muy antigua para incluir todo
-        fechaFin = moment().endOf('day');
-        periodoTexto = 'Desde el Inicio (Todos los datos históricos)';
-        break;
       case 'hoy':
         fechaInicio = hoy.clone();
         fechaFin = moment().endOf('day');
-        periodoTexto = 'Hoy ' + fechaInicio.format('DD/MM/YYYY');
+        periodoTexto = 'HOY - ' + fechaInicio.format('DD/MM/YYYY');
         break;
       case 'ayer':
         fechaInicio = hoy.clone().subtract(1, 'days');
         fechaFin = hoy.clone().subtract(1, 'days').endOf('day');
-        periodoTexto = 'Ayer ' + fechaInicio.format('DD/MM/YYYY');
+        periodoTexto = 'AYER - ' + fechaInicio.format('DD/MM/YYYY');
         break;
       case 'semana':
         fechaInicio = hoy.clone().startOf('week');
         fechaFin = moment().endOf('day');
-        periodoTexto = 'Esta semana (desde ' + fechaInicio.format('DD/MM/YYYY') + ')';
+        periodoTexto = 'ESTA SEMANA - ' + fechaInicio.format('DD/MM/YYYY') + ' al ' + fechaFin.format('DD/MM/YYYY');
         break;
       case 'mes':
         fechaInicio = hoy.clone().startOf('month');
         fechaFin = moment().endOf('day');
-        periodoTexto = 'Este mes (desde ' + fechaInicio.format('DD/MM/YYYY') + ')';
+        periodoTexto = 'ESTE MES - ' + fechaInicio.format('DD/MM/YYYY') + ' al ' + fechaFin.format('DD/MM/YYYY');
         break;
       case 'ultimo_mes':
         fechaInicio = hoy.clone().subtract(30, 'days');
         fechaFin = moment().endOf('day');
-        periodoTexto = 'Últimos 30 días';
+        periodoTexto = 'ÚLTIMOS 30 DÍAS - ' + fechaInicio.format('DD/MM/YYYY') + ' al ' + fechaFin.format('DD/MM/YYYY');
         break;
       case 'personalizado':
         fechaInicio = req.query.fechaInicio ? moment(req.query.fechaInicio).startOf('day') : hoy.clone().startOf('month');
         fechaFin = req.query.fechaFin ? moment(req.query.fechaFin).endOf('day') : moment().endOf('day');
-        periodoTexto = 'Del ' + fechaInicio.format('DD/MM/YYYY') + ' al ' + fechaFin.format('DD/MM/YYYY');
+        periodoTexto = 'PERÍODO PERSONALIZADO - ' + fechaInicio.format('DD/MM/YYYY') + ' al ' + fechaFin.format('DD/MM/YYYY');
         break;
       default:
         fechaInicio = hoy.clone().startOf('month');
         fechaFin = moment().endOf('day');
-        periodoTexto = 'Este mes (desde ' + fechaInicio.format('DD/MM/YYYY') + ')';
+        periodoTexto = 'ESTE MES - ' + fechaInicio.format('DD/MM/YYYY') + ' al ' + fechaFin.format('DD/MM/YYYY');
     }
     
     // Formatear fechas para consultas SQL
@@ -1281,12 +1275,6 @@ exports.reporteDocumentos = async (req, res) => {
     const hoy = moment().startOf('day');
     
     switch (rango) {
-      case 'desde_inicio':
-        // NUEVO: Mostrar todos los datos históricos
-        fechaInicio = moment('2020-01-01').startOf('day'); // Fecha muy antigua para incluir todo
-        fechaFin = moment().endOf('day');
-        periodoTexto = 'Desde el Inicio (Todos los datos históricos)';
-        break;
       case 'hoy':
         fechaInicio = hoy.clone();
         fechaFin = moment().endOf('day');
@@ -1624,12 +1612,6 @@ exports.reporteFinanciero = async (req, res) => {
     const hoy = moment().startOf('day');
     
     switch (rango) {
-      case 'desde_inicio':
-        // NUEVO: Mostrar todos los datos históricos
-        fechaInicio = moment('2020-01-01').startOf('day'); // Fecha muy antigua para incluir todo
-        fechaFin = moment().endOf('day');
-        periodoTexto = 'Desde el Inicio (Todos los datos históricos)';
-        break;
       case 'hoy':
         fechaInicio = hoy.clone();
         fechaFin = moment().endOf('day');
@@ -2160,12 +2142,6 @@ exports.reporteCobrosMatrizador = async (req, res) => {
     const hoy = moment().startOf('day');
     
     switch (rango) {
-      case 'desde_inicio':
-        // NUEVO: Mostrar todos los datos históricos
-        fechaInicio = moment('2020-01-01').startOf('day'); // Fecha muy antigua para incluir todo
-        fechaFin = moment().endOf('day');
-        periodoTexto = 'Desde el Inicio (Todos los datos históricos)';
-        break;
       case 'hoy':
         fechaInicio = hoy.clone();
         fechaFin = moment().endOf('day');
@@ -2362,28 +2338,22 @@ exports.reporteCobrosMatrizador = async (req, res) => {
 };
 
 /**
- * Reporte de Productividad de Matrizadores - LIMPIO SIN NOTIFICACIONES
- * Análisis completo de rendimiento con tiempos, calidad y volumen real
+ * Reporte de Productividad de Matrizadores - SIMPLIFICADO Y FUNCIONAL
+ * Análisis básico de rendimiento por matrizador usando patrón del reporte financiero
  */
 exports.reporteProductividadMatrizadores = async (req, res) => {
   try {
-    console.log('=== INICIO: Reporte Productividad Limpio ===');
+    console.log('=== DEBUG: Función productividad ejecutándose ===');
     
-    // Procesar parámetros de filtrado
+    // Procesar parámetros de filtrado (IGUAL que reporte financiero)
     const rango = req.query.rango || 'mes';
     const idMatrizador = req.query.idMatrizador;
     let fechaInicio, fechaFin, periodoTexto;
     
-    // Establecer fechas según el rango seleccionado
+    // Establecer fechas según el rango seleccionado (IGUAL que reporte financiero)
     const hoy = moment().startOf('day');
     
     switch (rango) {
-      case 'desde_inicio':
-        // NUEVO: Mostrar todos los datos históricos
-        fechaInicio = moment('2020-01-01').startOf('day'); // Fecha muy antigua para incluir todo
-        fechaFin = moment().endOf('day');
-        periodoTexto = 'Desde el Inicio (Todos los datos históricos)';
-        break;
       case 'hoy':
         fechaInicio = hoy.clone();
         fechaFin = moment().endOf('day');
@@ -2420,11 +2390,7 @@ exports.reporteProductividadMatrizadores = async (req, res) => {
         periodoTexto = 'Este mes (desde ' + fechaInicio.format('DD/MM/YYYY') + ')';
     }
     
-    // Formatear fechas para consultas SQL
-    const fechaInicioSQL = fechaInicio.format('YYYY-MM-DD HH:mm:ss');
-    const fechaFinSQL = fechaFin.format('YYYY-MM-DD HH:mm:ss');
-    
-    // Cláusula WHERE base para documentos
+    // SIMPLIFICADO: Usar queries básicas como en reporte financiero
     const whereClause = {
       created_at: {
         [Op.between]: [fechaInicio.toDate(), fechaFin.toDate()]
@@ -2432,59 +2398,47 @@ exports.reporteProductividadMatrizadores = async (req, res) => {
       estado: { [Op.notIn]: ['eliminado', 'nota_credito'] }
     };
     
-    // CORRECCIÓN: Filtro de matrizador funcional
+    // Añadir filtro por matrizador si se seleccionó uno
     if (idMatrizador && idMatrizador !== 'todos' && idMatrizador !== '') {
       whereClause.id_matrizador = parseInt(idMatrizador, 10);
     }
     
-    // Estadísticas básicas globales
+    // SIMPLIFICADO: Estadísticas básicas usando Sequelize (como reporte financiero)
     const totalDocumentos = await Documento.count({ where: whereClause }) || 0;
-    const documentosCompletados = await Documento.count({
-      where: { ...whereClause, estado: 'listo_para_entrega' }
-    }) || 0;
-    const documentosEntregados = await Documento.count({
-      where: { ...whereClause, estado: 'entregado' }
-    }) || 0;
     
-    // NUEVA MÉTRICA: Documentos atrasados (más de 3 días en proceso)
-    const documentosAtrasados = await Documento.count({
+    const documentosCompletados = await Documento.count({
       where: {
-        estado: 'en_proceso',
-        created_at: { [Op.lt]: moment().subtract(3, 'days').toDate() },
-        ...(idMatrizador && idMatrizador !== 'todos' && idMatrizador !== '' && {
-          id_matrizador: parseInt(idMatrizador, 10)
-        })
+        ...whereClause,
+        estado: 'listo_para_entrega'
       }
     }) || 0;
     
-    // Obtener todos los matrizadores activos
+    const documentosEntregados = await Documento.count({
+      where: {
+        ...whereClause,
+        estado: 'entregado'
+      }
+    }) || 0;
+    
+    // SIMPLIFICADO: Obtener matrizadores básico
     const matrizadores = await Matrizador.findAll({
       where: {
         rol: { [Op.in]: ['matrizador', 'caja_archivo'] },
         activo: true
       },
-      attributes: ['id', 'nombre', 'email'],
+      attributes: ['id', 'nombre'],
       order: [['nombre', 'ASC']],
       raw: true
     });
     
-    // CORRECCIÓN CRÍTICA: Filtrar matrizadores según selección
-    let matrizadoresFiltrados = matrizadores;
-    if (idMatrizador && idMatrizador !== 'todos' && idMatrizador !== '') {
-      // Si se selecciona un matrizador específico, solo procesar ese matrizador
-      matrizadoresFiltrados = matrizadores.filter(m => m.id == parseInt(idMatrizador, 10));
-    }
-    
-    // MEJORA: Cálculos de productividad por matrizador (SIN NOTIFICACIONES)
+    // SIMPLIFICADO: Datos básicos por matrizador
     const productividadMatrizadores = await Promise.all(
-      matrizadoresFiltrados.map(async (matrizador) => {
-        // Filtro específico por matrizador
+      matrizadores.map(async (matrizador) => {
         const whereMatrizador = {
           ...whereClause,
           id_matrizador: matrizador.id
         };
         
-        // Métricas básicas de productividad
         const documentos_registrados = await Documento.count({ where: whereMatrizador }) || 0;
         const documentos_completados = await Documento.count({ 
           where: { ...whereMatrizador, estado: 'listo_para_entrega' } 
@@ -2492,110 +2446,40 @@ exports.reporteProductividadMatrizadores = async (req, res) => {
         const documentos_entregados = await Documento.count({ 
           where: { ...whereMatrizador, estado: 'entregado' } 
         }) || 0;
+        
         const facturacion_total = await Documento.sum('valor_factura', { 
           where: whereMatrizador 
         }) || 0;
         
-        // NUEVA MÉTRICA: Documentos atrasados por matrizador
-        const documentos_atrasados = await Documento.count({
-          where: {
-            ...whereMatrizador,
-            estado: 'en_proceso',
-            created_at: { [Op.lt]: moment().subtract(3, 'days').toDate() }
-          }
-        }) || 0;
-        
-        // NUEVA MÉTRICA: Tiempo promedio de procesamiento
-        const tiempoPromedioQuery = await sequelize.query(`
-          SELECT AVG(EXTRACT(DAY FROM (
-            CASE 
-              WHEN d.estado = 'listo_para_entrega' OR d.estado = 'entregado' 
-              THEN COALESCE(d.updated_at, NOW())
-              ELSE NOW()
-            END - d.created_at
-          ))) as tiempo_promedio_dias
-          FROM documentos d
-          WHERE d.id_matrizador = :idMatrizador
-          AND d.created_at BETWEEN :fechaInicio AND :fechaFin
-          AND d.estado NOT IN ('eliminado', 'nota_credito')
-        `, {
-          replacements: { 
-            idMatrizador: matrizador.id, 
-            fechaInicio: fechaInicioSQL, 
-            fechaFin: fechaFinSQL 
-          },
-          type: sequelize.QueryTypes.SELECT
-        });
-        
-        const tiempo_promedio_dias = tiempoPromedioQuery[0]?.tiempo_promedio_dias || 0;
-        
-        // NUEVA MÉTRICA: Documentos por día (promedio diario)
-        const diasPeriodo = fechaFin.diff(fechaInicio, 'days') + 1;
-        const documentos_por_dia = diasPeriodo > 0 ? (documentos_registrados / diasPeriodo).toFixed(1) : 0;
-        
-        // NUEVA MÉTRICA: Eficiencia temporal (% completados a tiempo)
-        const documentos_a_tiempo = documentos_completados + documentos_entregados - documentos_atrasados;
-        const eficiencia_temporal = documentos_registrados > 0 ? 
-          Math.round((documentos_a_tiempo / documentos_registrados) * 100) : 0;
-        
-        // NUEVA MÉTRICA: Tasa de calidad (sin devoluciones - estimación)
-        const tasa_calidad = Math.max(85, eficiencia_temporal); // Estimación optimista
-        
         return {
           id: matrizador.id,
           nombre: matrizador.nombre,
-          email: matrizador.email,
-          // Métricas de productividad real
           documentos_registrados,
           documentos_completados,
           documentos_entregados,
           facturacion_total: parseFloat(facturacion_total),
           eficiencia_procesamiento: documentos_registrados > 0 ? 
             Math.round((documentos_completados / documentos_registrados) * 100) : 0,
-          facturacion_total_formato: formatearValorMonetario(facturacion_total),
-          // Nuevas métricas de productividad
-          documentos_atrasados,
-          tiempo_promedio_dias: parseFloat(tiempo_promedio_dias).toFixed(1),
-          documentos_por_dia,
-          eficiencia_temporal,
-          tasa_calidad,
-          // Métricas adicionales para análisis
-          documentos_en_proceso: documentos_registrados - documentos_completados - documentos_entregados,
-          porcentaje_entregados: documentos_registrados > 0 ? 
-            Math.round((documentos_entregados / documentos_registrados) * 100) : 0
+          facturacion_total_formato: formatearValorMonetario(facturacion_total)
         };
       })
     );
     
-    // MEJORA: Estadísticas globales limpias (SIN NOTIFICACIONES) - CORREGIDAS PARA FILTROS
-    const totalFacturacion = productividadMatrizadores.reduce((sum, item) => sum + item.facturacion_total, 0);
-    const tiempoPromedioGeneral = productividadMatrizadores.length > 0 ? 
-      (productividadMatrizadores.reduce((sum, item) => sum + parseFloat(item.tiempo_promedio_dias), 0) / productividadMatrizadores.length).toFixed(1) : 0;
-    
-    // CORRECCIÓN: Calcular estadísticas globales basadas en los filtros aplicados
-    const totalDocumentosFiltrados = productividadMatrizadores.reduce((sum, item) => sum + item.documentos_registrados, 0);
-    const totalCompletadosFiltrados = productividadMatrizadores.reduce((sum, item) => sum + item.documentos_completados, 0);
-    const totalEntregadosFiltrados = productividadMatrizadores.reduce((sum, item) => sum + item.documentos_entregados, 0);
-    const totalAtrasadosFiltrados = productividadMatrizadores.reduce((sum, item) => sum + item.documentos_atrasados, 0);
-    
-    // CORRECCIÓN: Calcular documentos por día promedio basado en filtros
-    const diasPeriodo = fechaFin.diff(fechaInicio, 'days') + 1;
-    const documentosPorDiaPromedioFiltrado = diasPeriodo > 0 ? (totalDocumentosFiltrados / diasPeriodo).toFixed(1) : 0;
-    
-    // Datos para gráficos (mantener compatibilidad)
+    // SIMPLIFICADO: Datos básicos para gráficos
     const datosGrafico = {
       nombres: productividadMatrizadores.map(item => item.nombre),
       registrados: productividadMatrizadores.map(item => item.documentos_registrados),
       completados: productividadMatrizadores.map(item => item.documentos_completados),
       entregados: productividadMatrizadores.map(item => item.documentos_entregados),
-      facturacion: productividadMatrizadores.map(item => item.facturacion_total),
-      // Nuevos datos para gráficos
-      tiempos: productividadMatrizadores.map(item => parseFloat(item.tiempo_promedio_dias))
+      facturacion: productividadMatrizadores.map(item => item.facturacion_total)
     };
     
-    console.log('=== DEBUG: Datos limpios preparados, renderizando vista ===');
+    // SIMPLIFICADO: Estadísticas como en reporte financiero
+    const totalFacturacion = productividadMatrizadores.reduce((sum, item) => sum + item.facturacion_total, 0);
     
-    // Renderizar la vista con datos limpios
+    console.log('=== DEBUG: Datos preparados, renderizando vista PRODUCTIVIDAD ===');
+    
+    // Renderizar la vista REAL de productividad (no más debug financiero)
     res.render('admin/reportes/productividad-matrizadores', {
       layout: 'admin',
       title: 'Productividad de Matrizadores',
@@ -2604,40 +2488,30 @@ exports.reporteProductividadMatrizadores = async (req, res) => {
       userName: req.matrizador?.nombre,
       productividadMatrizadores,
       matrizadores,
-      idMatrizadorSeleccionado: idMatrizador || 'todos', // CORRECCIÓN: Mantener selección
+      idMatrizadorSeleccionado: idMatrizador || 'todos',
       stats: {
-        // Stats limpios sin notificaciones - CORREGIDOS PARA FILTROS
-        totalDocumentos: totalDocumentosFiltrados, // CORREGIDO: usar valor filtrado
-        totalCompletados: totalCompletadosFiltrados, // CORREGIDO: usar valor filtrado
-        totalEntregados: totalEntregadosFiltrados, // CORREGIDO: usar valor filtrado
+        totalRegistrados: totalDocumentos,
+        totalCompletados: documentosCompletados,
+        totalEntregados: documentosEntregados,
+        totalDocumentos: totalDocumentos,
         totalFacturacion: formatearValorMonetario(totalFacturacion),
-        eficienciaGeneral: totalDocumentosFiltrados > 0 ? Math.round((totalCompletadosFiltrados / totalDocumentosFiltrados) * 100) : 0, // CORREGIDO
+        eficienciaGeneral: totalDocumentos > 0 ? Math.round((documentosCompletados / totalDocumentos) * 100) : 0,
         matrizadoresActivos: productividadMatrizadores.filter(m => m.documentos_registrados > 0).length,
-        promedioDocumentos: productividadMatrizadores.length > 0 ? Math.round(totalDocumentosFiltrados / productividadMatrizadores.length) : 0, // CORREGIDO
-        // Nuevas estadísticas globales limpias - CORREGIDAS
-        documentosAtrasados: totalAtrasadosFiltrados, // CORREGIDO: usar valor filtrado
-        tiempoPromedioGeneral,
-        documentosPorDiaPromedio: documentosPorDiaPromedioFiltrado, // CORREGIDO: usar valor filtrado
-        tasaCalidadPromedio: productividadMatrizadores.length > 0 ?
-          Math.round(productividadMatrizadores.reduce((sum, item) => sum + item.tasa_calidad, 0) / productividadMatrizadores.length) : 0
+        promedioDocumentos: matrizadores.length > 0 ? Math.round(totalDocumentos / matrizadores.length) : 0
       },
       datosGrafico,
       periodoTexto,
       filtros: {
         rango,
-        idMatrizador: idMatrizador || 'todos', // CORRECCIÓN: Mantener en filtros
+        idMatrizador,
         fechaInicio: fechaInicio.format('YYYY-MM-DD'),
         fechaFin: fechaFin.format('YYYY-MM-DD')
-      },
-      // Información adicional para la vista
-      esFiltradoPorMatrizador: idMatrizador && idMatrizador !== 'todos' && idMatrizador !== '',
-      matrizadorFiltradoNombre: idMatrizador && idMatrizador !== 'todos' && idMatrizador !== '' ?
-        matrizadores.find(m => m.id == idMatrizador)?.nombre : null
+      }
     });
     
-    console.log('=== ÉXITO: Vista de productividad limpia renderizada ===');
+    console.log('=== DEBUG: Vista PRODUCTIVIDAD renderizada exitosamente ===');
   } catch (error) {
-    console.error('=== ERROR: Reporte de productividad limpio ===', error);
+    console.error('=== DEBUG: Error en función productividad ===', error);
     return res.status(500).render('error', {
       layout: 'admin',
       title: 'Error',
@@ -2803,302 +2677,57 @@ exports.reporteDocumentosSinPago = async (req, res) => {
 };
 
 /**
- * COPIADO DE RECEPCIÓN: Historial completo de notificaciones para administradores
- * Muestra el historial completo de notificaciones con filtros avanzados
+ * Reporte de Productividad de Matrizadores - TEMPORALMENTE USANDO VISTA FINANCIERO
+ * Para debug del loop infinito
  */
-exports.historialNotificaciones = async (req, res) => {
+exports.reporteProductividadMatrizadores = async (req, res) => {
   try {
-    const { 
-      fechaDesde, 
-      fechaHasta, 
-      tipo, 
-      canal, 
-      matrizador, 
-      codigoDocumento,
-      cliente,
-      numeroFactura,
-      busqueda
-    } = req.query;
+    console.log('=== DEBUG: Función productividad ejecutándose ===');
     
-    let whereClause = {};
-    let documentoWhere = {};
+    // Datos básicos para debug
+    const matrizadores = [
+      { id: 1, nombre: 'Matrizador Test' }
+    ];
     
-    // Filtro por fechas
-    if (fechaDesde || fechaHasta) {
-      whereClause.created_at = {};
-      if (fechaDesde) {
-        whereClause.created_at[Op.gte] = new Date(fechaDesde + 'T00:00:00');
-      }
-      if (fechaHasta) {
-        whereClause.created_at[Op.lte] = new Date(fechaHasta + 'T23:59:59');
-      }
-    }
-    
-    // Filtros de tipo y canal
-    if (tipo) whereClause.tipo = tipo;
-    if (canal && canal !== '') {
-      // Buscar en metadatos.canal
-      whereClause['metadatos.canal'] = canal;
-    }
-    
-    // ============== BÚSQUEDA POR TEXTO ==============
-    if (busqueda && busqueda.trim() !== '') {
-      const textoBusqueda = busqueda.trim();
-      documentoWhere[Op.or] = [
-        // Buscar por código de barras
-        { codigoBarras: { [Op.iLike]: `%${textoBusqueda}%` } },
-        // Buscar por nombre del cliente
-        { nombreCliente: { [Op.iLike]: `%${textoBusqueda}%` } },
-        // Buscar por número de factura
-        { numeroFactura: { [Op.iLike]: `%${textoBusqueda}%` } },
-        // Buscar por identificación del cliente
-        { identificacionCliente: { [Op.iLike]: `%${textoBusqueda}%` } }
-      ];
-    }
-    
-    // Filtros específicos de documento
-    if (codigoDocumento) {
-      documentoWhere.codigoBarras = {
-        [Op.iLike]: `%${codigoDocumento}%`
-      };
-    }
-    
-    if (cliente) {
-      documentoWhere.nombreCliente = {
-        [Op.iLike]: `%${cliente}%`
-      };
-    }
-    
-    if (numeroFactura) {
-      documentoWhere.numeroFactura = {
-        [Op.iLike]: `%${numeroFactura}%`
-      };
-    }
-    
-    // Filtro por matrizador
-    if (matrizador) {
-      documentoWhere.idMatrizador = matrizador;
-    }
-    
-    const notificaciones = await EventoDocumento.findAll({
-      where: {
-        tipo: {
-          [Op.in]: ['documento_listo', 'documento_entregado']
-        },
-        ...whereClause
-      },
-      include: [
-        {
-          model: Documento,
-          as: 'documento',
-          where: documentoWhere,
-          attributes: [
-            'id',
-            'codigoBarras', 
-            'tipoDocumento', 
-            'nombreCliente',
-            'emailCliente',
-            'telefonoCliente',
-            'numeroFactura',
-            'estado',
-            'identificacionCliente',
-            'notas'
-          ],
-          include: [
-            {
-              model: Matrizador,
-              as: 'matrizador',
-              attributes: ['nombre'],
-              required: false
-            }
-          ],
-          required: true
-        }
-      ],
-      order: [['created_at', 'DESC']],
-      limit: 100 // Más resultados para admin
-    });
-    
-    // Obtener lista de matrizadores para filtro
-    const matrizadores = await Matrizador.findAll({
-      attributes: ['id', 'nombre'],
-      where: { activo: true },
-      order: [['nombre', 'ASC']]
-    });
-    
-    // ============== CALCULAR ESTADÍSTICAS ==============
-    const stats = {
-      total: notificaciones.length,
-      enviadas: notificaciones.filter(n => n.metadatos?.estado === 'enviado').length || 0,
-      fallidas: notificaciones.filter(n => n.metadatos?.estado === 'error').length || 0,
-      pendientes: notificaciones.filter(n => n.metadatos?.estado === 'pendiente').length || 0
-    };
-    
-    res.render('admin/notificaciones/historial', {
+    // TEMPORALMENTE usar vista del reporte financiero que SÍ funciona
+    res.render('admin/reportes/financiero', {
       layout: 'admin',
-      title: 'Control de Notificaciones',
-      activeNotificaciones: true,
-      notificaciones,
-      matrizadores,
-      stats,
-      filtros: { 
-        fechaDesde, 
-        fechaHasta, 
-        tipo, 
-        canal, 
-        matrizador, 
-        codigoDocumento,
-        cliente,
-        numeroFactura,
-        busqueda
-      },
+      title: 'Productividad de Matrizadores (DEBUG)',
+      activeReportes: true,
       userRole: req.matrizador?.rol,
       userName: req.matrizador?.nombre,
-      usuario: {
-        id: req.matrizador?.id,
-        rol: req.matrizador?.rol,
-        nombre: req.matrizador?.nombre
-      }
+      matrizadores,
+      idMatrizadorSeleccionado: 'todos',
+      stats: {
+        totalFacturado: '0.00',
+        totalCobrado: '0.00',
+        totalPendiente: '0.00',
+        porcentajeRecuperacion: 0
+      },
+      datosTabla: [], // Array vacío para debug
+      graficoTendencia: {
+        fechas: [],
+        facturado: [],
+        cobrado: [],
+        pendiente: []
+      },
+      filtros: {
+        rango: 'mes',
+        fechaInicio: '2025-01-01',
+        fechaFin: '2025-01-31',
+        idMatrizador: 'todos'
+      },
+      periodoTexto: 'DEBUG - Enero 2025'
     });
     
+    console.log('=== DEBUG: Vista renderizada exitosamente ===');
   } catch (error) {
-    console.error('Error en historial notificaciones admin:', error);
-    res.status(500).render('error', { 
+    console.error('=== DEBUG: Error en función productividad ===', error);
+    return res.status(500).render('error', {
       layout: 'admin',
       title: 'Error',
-      message: 'Error al cargar historial de notificaciones' 
+      message: 'Error al generar el reporte de productividad de matrizadores',
+      error
     });
   }
 };
-
-/**
- * COPIADO DE RECEPCIÓN: Obtiene los detalles de una notificación específica (API) para admin
- */
-exports.obtenerDetalleNotificacion = async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    if (!id) {
-      return res.status(400).json({
-        exito: false,
-        mensaje: 'ID de notificación no proporcionado'
-      });
-    }
-    
-    // Buscar el evento de notificación
-    const evento = await EventoDocumento.findOne({
-      where: {
-        id: id,
-        tipo: {
-          [Op.in]: ['documento_listo', 'documento_entregado']
-        }
-      },
-      include: [{
-        model: Documento,
-        as: 'documento',
-        attributes: ['codigoBarras', 'tipoDocumento', 'nombreCliente', 'emailCliente', 'telefonoCliente', 'notas', 'numeroFactura', 'estado'],
-        include: [{
-          model: Matrizador,
-          as: 'matrizador',
-          attributes: ['nombre'],
-          required: false
-        }]
-      }]
-    });
-    
-    if (!evento) {
-      return res.status(404).json({
-        exito: false,
-        mensaje: 'Notificación no encontrada'
-      });
-    }
-    
-    // Preparar datos para la respuesta
-    const datos = {
-      tipo: evento.tipo,
-      fecha: evento.created_at,
-      usuario: evento.usuario || 'Sistema',
-      metadatos: evento.metadatos || {},
-      detalles: evento.descripcion || '',
-      documento: {
-        codigo: evento.documento?.codigoBarras || 'N/A',
-        tipo: evento.documento?.tipoDocumento || 'N/A',
-        cliente: evento.documento?.nombreCliente || 'N/A',
-        estado: evento.documento?.estado || 'N/A',
-        matrizador: evento.documento?.matrizador?.nombre || 'Sin asignar',
-        numeroFactura: evento.documento?.numeroFactura || null
-      },
-      canales: {
-        email: evento.documento?.emailCliente || null,
-        telefono: evento.documento?.telefonoCliente || null
-      },
-      // MEJORA: Construir mensaje completo basado en el tipo de evento
-      mensajeEnviado: construirMensajeCompleto(evento, evento.documento)
-    };
-    
-    res.json({
-      exito: true,
-      datos
-    });
-    
-  } catch (error) {
-    console.error('Error al obtener detalle de notificación:', error);
-    res.status(500).json({
-      exito: false,
-      mensaje: 'Error interno del servidor'
-    });
-  }
-};
-
-/**
- * FUNCIÓN AUXILIAR: Construir mensaje completo de notificación
- * Recrea el mensaje que se envió al cliente basado en el tipo de evento
- */
-function construirMensajeCompleto(evento, documento) {
-  if (!documento) return 'Documento no disponible';
-  
-  const tipoDoc = documento.tipoDocumento || 'documento';
-  const codigo = documento.codigoBarras || 'N/A';
-  const cliente = documento.nombreCliente || 'Cliente';
-  
-  if (evento.tipo === 'documento_listo') {
-    return `🔔 NOTIFICACIÓN NOTARÍA REINOSO
-
-Estimado/a ${cliente},
-
-Su ${tipoDoc.toLowerCase()} está LISTO para retiro.
-
-📄 Código: ${codigo}
-📍 Dirección: Av. Amazonas N24-155 y Colón
-🕒 Horario: Lunes a Viernes 8:30-17:30
-📞 Teléfono: (02) 2553-456
-
-Para retirar su documento necesita:
-✅ Cédula de identidad original
-✅ Código de verificación (se proporcionará al momento)
-
-¡Gracias por confiar en nosotros!
-
-Notaría Reinoso
-www.notariareinoso.com`;
-  } else if (evento.tipo === 'documento_entregado') {
-    return `✅ CONFIRMACIÓN DE ENTREGA - NOTARÍA REINOSO
-
-Estimado/a ${cliente},
-
-Confirmamos la ENTREGA EXITOSA de su documento.
-
-📄 Código: ${codigo}
-📅 Fecha de entrega: ${new Date().toLocaleDateString('es-EC')}
-🕒 Hora: ${new Date().toLocaleTimeString('es-EC')}
-
-Su trámite ha sido completado satisfactoriamente.
-
-¡Gracias por confiar en Notaría Reinoso!
-
-Para consultas: (02) 2553-456
-www.notariareinoso.com`;
-  }
-  
-  return evento.metadatos?.mensaje || 'Mensaje no disponible';
-}

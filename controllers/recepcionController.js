@@ -620,15 +620,7 @@ const recepcionController = {
 
       // Obtener eventos del historial
       const eventos = await EventoDocumento.findAll({
-        where: { documento_id: id },
-        include: [
-          {
-            model: Matrizador,
-            as: 'usuario',
-            attributes: ['nombre', 'rol'],
-            required: false
-          }
-        ],
+        where: { documentoId: id },
         order: [['created_at', 'DESC']]
       });
 
@@ -641,7 +633,7 @@ const recepcionController = {
           titulo: evento.titulo,
           descripcion: evento.descripcion,
           fecha: evento.created_at,
-          usuario: evento.usuario ? evento.usuario.nombre : 'Sistema',
+          usuario: evento.usuario || 'Sistema',
           detalles: evento.detalles || {},
           color: 'secondary'
         };
@@ -1006,7 +998,7 @@ const recepcionController = {
             });
           }
         } else if (tipoVerificacion === 'llamada') {
-          if (!observaciones.toLowerCase().includes('llamé') && !observaciones.toLowerCase().includes('llame') && !observaciones.toLowerCase().includes('teléfono') && !observaciones.toLowerCase().includes('telefono')) {
+          if (!observaciones.toLowerCase().includes('llé') && !observaciones.toLowerCase().includes('llame') && !observaciones.toLowerCase().includes('teléfono') && !observaciones.toLowerCase().includes('telefono')) {
             await transaction.rollback();
             return res.render('recepcion/documentos/entrega', {
               layout: 'recepcion',
@@ -1092,7 +1084,7 @@ const recepcionController = {
               }
                 
               await EventoDocumento.create({
-                idDocumento: docHabilitante.id,
+                documentoId: docHabilitante.id,
                 tipo: 'entrega',
                 detalles: detallesHabilitante,
                 usuario: req.matrizador.nombre
@@ -1136,7 +1128,7 @@ const recepcionController = {
         }
           
         await EventoDocumento.create({
-          idDocumento: documento.id,
+          documentoId: documento.id,
           tipo: 'entrega',
           detalles,
           usuario: req.matrizador.nombre
@@ -1179,16 +1171,16 @@ const recepcionController = {
   marcarDocumentoListoParaEntrega: async (req, res) => {
     const transaction = await sequelize.transaction();
     try {
-      const { idDocumento } = req.body;
+      const { documentoId } = req.body;
       const usuario = req.matrizador || req.usuario; // Usuario autenticado (debe ser recepcion)
 
-      if (!idDocumento) {
+      if (!documentoId) {
         await transaction.rollback();
         req.flash('error', 'ID de documento no proporcionado.');
         return res.redirect('/recepcion/documentos');
       }
 
-      const documento = await Documento.findByPk(idDocumento, { transaction });
+      const documento = await Documento.findByPk(documentoId, { transaction });
 
       if (!documento) {
         await transaction.rollback();
@@ -1199,7 +1191,7 @@ const recepcionController = {
       if (documento.estado !== 'en_proceso') {
         await transaction.rollback();
         req.flash('error', 'Solo se pueden marcar como listos documentos en estado \'En Proceso\'.');
-        return res.redirect('/recepcion/documentos/detalle/' + idDocumento);
+        return res.redirect('/recepcion/documentos/detalle/' + documentoId);
       }
 
       // Generar código de verificación de 4 dígitos (si es necesario según flujo)
@@ -1216,15 +1208,56 @@ const recepcionController = {
 
       await documento.save({ transaction });
 
+      // ============== CORRECCIÓN: REGISTRO MEJORADO DE EVENTO ==============
+      // Determinar canal según configuración del documento
+      let canalPrincipal = 'ninguno';
+      const tieneEmail = documento.emailCliente && documento.emailCliente.trim() !== '';
+      const tieneTelefono = documento.telefonoCliente && documento.telefonoCliente.trim() !== '';
+      
+      switch (documento.metodoNotificacion) {
+        case 'email':
+          canalPrincipal = tieneEmail ? 'email' : 'ninguno';
+          break;
+        case 'whatsapp':
+          canalPrincipal = tieneTelefono ? 'whatsapp' : 'ninguno';
+          break;
+        case 'ambos':
+          if (tieneEmail && tieneTelefono) {
+            canalPrincipal = 'ambos';
+          } else if (tieneEmail) {
+            canalPrincipal = 'email';
+          } else if (tieneTelefono) {
+            canalPrincipal = 'whatsapp';
+          } else {
+            canalPrincipal = 'ninguno';
+          }
+          break;
+        default:
+          canalPrincipal = 'ninguno';
+      }
+
       await EventoDocumento.create({
-        idDocumento: documento.id,
+        documentoId: documento.id,
         tipo: 'cambio_estado',
         detalles: `Documento marcado como LISTO PARA ENTREGA por ${usuario.nombre || 'Recepción'} (${usuario.rol}). Código generado: ${codigoVerificacion}.`,
         usuario: usuario.nombre || 'Recepción',
         metadatos: {
+          // ✅ CAMPOS CORREGIDOS PARA HISTORIAL
+          canal: canalPrincipal,                    // ✅ Para mostrar en columna "Canal"
+          estado: 'procesada',                      // ✅ Para mostrar en columna "Estado"
+          tipo: 'cambio_estado',                    // ✅ Para filtros y etiquetas
           idUsuario: usuario.id,
           rolUsuario: usuario.rol,
-          codigoGenerado: codigoVerificacion
+          codigoGenerado: codigoVerificacion,
+          timestamp: new Date().toISOString(),
+          // Información adicional para auditoría
+          documentoId: documento.id,
+          codigoDocumento: documento.codigoBarras,
+          estadoAnterior: 'en_proceso',
+          estadoNuevo: 'listo_para_entrega',
+          metodoNotificacion: documento.metodoNotificacion,
+          clienteEmail: documento.emailCliente,
+          clienteTelefono: documento.telefonoCliente
         }
       }, { transaction });
 
@@ -1282,7 +1315,7 @@ const recepcionController = {
       
       // Registrar el evento de notificación
       await EventoDocumento.create({
-        idDocumento: documento.id,
+        documentoId: documento.id,
         tipo: 'otro',
         detalles: `Notificación al cliente via ${metodoNotificacion}`,
         usuario: req.matrizador.nombre,
@@ -1396,8 +1429,25 @@ const recepcionController = {
       const notificaciones = await EventoDocumento.findAll({
         where: {
           tipo: {
-            [Op.in]: ['documento_listo', 'documento_entregado']
+            [Op.in]: ['documento_listo', 'documento_entregado', 'otro', 'cambio_estado']
           },
+          // Filtrar solo eventos relacionados con notificaciones
+          [Op.or]: [
+            { tipo: 'documento_listo' },
+            { tipo: 'documento_entregado' },
+            { 
+              tipo: 'otro',
+              detalles: {
+                [Op.iLike]: '%notificación%'
+              }
+            },
+            {
+              tipo: 'cambio_estado',
+              detalles: {
+                [Op.iLike]: '%listo para entrega%'
+              }
+            }
+          ],
           ...whereClause
         },
         include: [
@@ -1429,7 +1479,30 @@ const recepcionController = {
           }
         ],
         order: [['created_at', 'DESC']],
-        limit: 100 // Más resultados para recepción
+        limit: 100, // Más resultados para recepción
+        raw: false // ✅ IMPORTANTE: Asegurar que devuelva objetos Sequelize completos
+      });
+      
+      // ============== PROCESAR NOTIFICACIONES PARA VISTA ==============
+      const notificacionesProcesadas = notificaciones.map(notif => {
+        const notifData = notif.toJSON ? notif.toJSON() : notif;
+        
+        // Asegurar que las fechas estén en formato ISO string
+        if (notifData.created_at) {
+          notifData.created_at = new Date(notifData.created_at).toISOString();
+        }
+        if (notifData.updated_at) {
+          notifData.updated_at = new Date(notifData.updated_at).toISOString();
+        }
+        
+        // Asegurar que metadatos existan
+        if (!notifData.metadatos) {
+          notifData.metadatos = {};
+        }
+        
+        console.log(`📅 Notificación ID ${notifData.id}: fecha = ${notifData.created_at}`);
+        
+        return notifData;
       });
       
       // Obtener lista de matrizadores para filtro
@@ -1450,7 +1523,7 @@ const recepcionController = {
       res.render('recepcion/notificaciones/historial', {
         layout: 'recepcion',
         title: 'Control de Notificaciones',
-        notificaciones,
+        notificaciones: notificacionesProcesadas,
         matrizadores,
         stats,
         filtros: { 
@@ -1503,9 +1576,22 @@ const recepcionController = {
       const evento = await EventoDocumento.findOne({
         where: {
           id: id,
-          tipo: {
-            [Op.in]: ['documento_listo', 'documento_entregado']
-          }
+          [Op.or]: [
+            { tipo: 'documento_listo' },
+            { tipo: 'documento_entregado' },
+            { 
+              tipo: 'otro',
+              detalles: {
+                [Op.iLike]: '%notificación%'
+              }
+            },
+            {
+              tipo: 'cambio_estado',
+              detalles: {
+                [Op.iLike]: '%listo para entrega%'
+              }
+            }
+          ]
         },
         include: [{
           model: Documento,
@@ -1596,15 +1682,66 @@ const recepcionController = {
 ✅ *Su trámite ha sido completado exitosamente.*
 
 _Guarde este mensaje como comprobante de entrega._`;
+      } else if (evento.tipo === 'otro' && evento.detalles && evento.detalles.includes('Notificación')) {
+        // Evento de notificación del NotificationService
+        const canalesEnviados = evento.metadatos?.canalesEnviados || [];
+        const codigoVerificacion = evento.documento.codigoVerificacion || 'N/A';
+        
+        let contextoTramite = '';
+        if (evento.documento.notas && 
+            typeof evento.documento.notas === 'string' && 
+            evento.documento.notas.trim().length > 0) {
+          contextoTramite = ` - ${evento.documento.notas.trim()}`;
+        }
+        
+        mensajeEnviado = `🏛️ *NOTARÍA 18*
+
+¡Su documento está listo para retirar!
+
+📄 *Trámite:* ${evento.documento.tipoDocumento}${contextoTramite}
+📋 *Documento:* ${evento.documento.codigoBarras}
+🔢 *Código de verificación:* ${codigoVerificacion}
+👤 *Cliente:* ${evento.documento.nombreCliente}
+
+📍 Retírelo en: Notaría Décima Octava
+🕒 Horario: Lunes a Viernes 8:00-17:00
+
+⚠️ *IMPORTANTE:* Presente el código de verificación y su cédula para el retiro.
+
+_Mensaje enviado por: ${canalesEnviados.join(' y ')}_`;
+        
+      } else if (evento.tipo === 'cambio_estado' && evento.detalles && evento.detalles.includes('listo para entrega')) {
+        // Evento de cambio de estado a "listo para entrega"
+        const codigoVerificacion = evento.metadatos?.codigoGenerado || evento.documento.codigoVerificacion || 'N/A';
+        
+        let contextoTramite = '';
+        if (evento.documento.notas && 
+            typeof evento.documento.notas === 'string' && 
+            evento.documento.notas.trim().length > 0) {
+          contextoTramite = ` - ${evento.documento.notas.trim()}`;
+        }
+        
+        mensajeEnviado = `📋 *DOCUMENTO MARCADO COMO LISTO*
+
+📄 *Trámite:* ${evento.documento.tipoDocumento}${contextoTramite}
+📋 *Código:* ${evento.documento.codigoBarras}
+🔢 *Código de verificación:* ${codigoVerificacion}
+👤 *Cliente:* ${evento.documento.nombreCliente}
+👨‍💼 *Marcado por:* ${evento.usuario}
+
+📅 *Fecha:* ${new Date(evento.created_at).toLocaleDateString('es-EC')}
+🕒 *Hora:* ${new Date(evento.created_at).toLocaleTimeString('es-EC')}
+
+✅ *El documento está listo para ser retirado por el cliente.*`;
       }
       
       // Preparar datos detallados
       const detalles = {
         id: evento.id,
         tipo: evento.tipo,
-        fecha: evento.createdAt,
+        fecha: evento.created_at ? new Date(evento.created_at).toISOString() : null,
         detalles: evento.detalles,
-        usuario: evento.usuario,
+        usuario: evento.usuario || 'Sistema',
         documento: {
           id: evento.documento.id,
           codigo: evento.documento.codigoBarras,
@@ -1619,7 +1756,7 @@ _Guarde este mensaje como comprobante de entrega._`;
           email: evento.documento.emailCliente,
           telefono: evento.documento.telefonoCliente
         },
-        mensajeEnviado: mensajeEnviado // ← NUEVO: Mensaje completo enviado
+        mensajeEnviado: mensajeEnviado
       };
       
       return res.status(200).json({

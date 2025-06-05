@@ -238,8 +238,11 @@ const enviarNotificacionDocumentoListo = async (documento, cliente) => {
       };
     }
     
-    // Modo desarrollo - simular envío
-    if (process.env.NODE_ENV !== 'production') {
+    // Verificar configuración de envío real
+    const envioRealHabilitado = process.env.EMAIL_ENVIO_REAL === 'true' || process.env.NODE_ENV === 'production';
+    
+    // Modo desarrollo - simular envío SOLO si no está habilitado el envío real
+    if (!envioRealHabilitado) {
       const mensaje = `Su documento ${documento.tipoDocumento} está listo para retirar. Código: ${documento.codigoBarras}`;
       console.log(`[SIMULADO] 📧 Email a ${cliente.email}:`);
       console.log(`   Asunto: Documento listo para entrega - ${documento.tipoDocumento}`);
@@ -255,6 +258,9 @@ const enviarNotificacionDocumentoListo = async (documento, cliente) => {
       };
     }
     
+    // ============== ENVÍO REAL ACTIVADO ==============
+    console.log(`📧 [REAL] Enviando email a ${cliente.email} para documento ${documento.codigoBarras}`);
+    
     // Compilar la plantilla con los datos del documento y cliente
     const contenidoHtml = await compilarPlantilla('documento-listo', {
       documento,
@@ -269,6 +275,12 @@ const enviarNotificacionDocumentoListo = async (documento, cliente) => {
       `Documento listo para entrega - ${documento.tipoDocumento}`,
       contenidoHtml
     );
+    
+    if (resultado) {
+      console.log(`✅ [REAL] Email enviado exitosamente a ${cliente.email}`);
+    } else {
+      console.log(`❌ [REAL] Error al enviar email a ${cliente.email}`);
+    }
     
     return {
       exito: resultado,

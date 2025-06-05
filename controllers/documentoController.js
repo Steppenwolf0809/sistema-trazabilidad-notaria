@@ -161,7 +161,7 @@ exports.registrarDocumento = async (req, res) => {
     
     // Registrar evento de creación
     await EventoDocumento.create({
-      idDocumento: nuevoDocumento.id,
+      documentoId: nuevoDocumento.id, // CORREGIDO: usar documentoId en lugar de idDocumento
       tipo: 'creacion',
       detalles: 'Documento registrado en el sistema',
       usuario: 'Sistema' // Aquí se podría usar el usuario autenticado
@@ -409,7 +409,7 @@ exports.marcarComoListo = async (req, res) => {
     
     // Registrar evento
     await EventoDocumento.create({
-      idDocumento: documento.id,
+      documentoId: documento.id, // CORREGIDO: usar documentoId en lugar de idDocumento
       tipo: 'cambio_estado',
       detalles: 'Documento marcado como listo para entrega',
       usuario: 'Sistema' // Aquí se podría usar el usuario autenticado
@@ -639,7 +639,7 @@ exports.completarEntrega = async (req, res) => {
     }
     
     await EventoDocumento.create({
-      idDocumento: documento.id,
+      documentoId: documento.id, // CORREGIDO: usar documentoId en lugar de idDocumento
       tipo: 'entrega',
       detalles,
       usuario: req.matrizador?.nombre || 'Sistema'
@@ -673,7 +673,7 @@ exports.completarEntrega = async (req, res) => {
     }
     
     await EventoDocumento.create({
-      idDocumento: documento.id,
+      documentoId: documento.id, // CORREGIDO: usar documentoId en lugar de idDocumento
       tipo: tipoEvento,
       detalles: detallesVerificacion,
       usuario: req.matrizador?.nombre || 'Sistema'
@@ -1368,7 +1368,7 @@ exports.obtenerDocumentoConRelaciones = async (req, res) => {
 
     // Obtener eventos del documento
     const eventos = await EventoDocumento.findAll({
-      where: { idDocumento: id },
+      where: { documentoId: id }, // CORREGIDO: usar documentoId en lugar de idDocumento
       order: [['created_at', 'DESC']]
     });
 
@@ -2037,7 +2037,7 @@ exports.actualizarDocumento = async (req, res) => {
     await documento.update(datosActualizar, { transaction });
 
     await EventoDocumento.create({
-      idDocumento: documento.id,
+      documentoId: documento.id, // CORREGIDO: usar documentoId en lugar de idDocumento
       tipo: 'modificacion',
       detalles: `Documento modificado por ${usuario.nombre || 'sistema'} (${usuario.rol || 'N/A'}).`,
       usuario: usuario.nombre || 'sistema',

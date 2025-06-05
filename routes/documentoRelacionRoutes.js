@@ -5,7 +5,7 @@ const documentoRelacionController = require('../controllers/documentoRelacionCon
 
 // Rutas para gestión de relaciones entre documentos
 router.post('/', verificarToken, esMatrizador, documentoRelacionController.crearRelacion);
-router.get('/documento/:idDocumento', verificarToken, esMatrizador, documentoRelacionController.obtenerRelaciones);
+router.get('/documento/:documentoId', verificarToken, esMatrizador, documentoRelacionController.obtenerRelaciones);
 router.put('/grupo/estado', verificarToken, esMatrizador, documentoRelacionController.actualizarEstadoGrupo);
 router.post('/grupo/:grupoEntrega/codigo', verificarToken, esMatrizador, documentoRelacionController.generarCodigoGrupo);
 

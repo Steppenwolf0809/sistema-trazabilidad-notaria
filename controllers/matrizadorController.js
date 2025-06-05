@@ -2110,7 +2110,7 @@ _Guarde este mensaje como comprobante de entrega._`;
                 : `Documento habilitante marcado como listo automáticamente junto con el principal ${documento.codigoBarras} (sin código - notificación omitida)`;
                 
               await EventoDocumento.create({
-                idDocumento: habilitante.id,
+                documentoId: habilitante.id,
                 tipo: 'cambio_estado',
                 detalles: detalleEvento,
                 usuario: req.matrizador.nombre
@@ -2139,7 +2139,7 @@ _Guarde este mensaje como comprobante de entrega._`;
         }
         
         await EventoDocumento.create({
-          idDocumento: documento.id,
+          documentoId: documento.id,
           tipo: 'cambio_estado',
           detalles: detallesEvento,
           usuario: req.matrizador.nombre
@@ -2165,7 +2165,7 @@ _Guarde este mensaje como comprobante de entrega._`;
           
           // Registrar evento de notificación en el historial
           await EventoDocumento.create({
-            idDocumento: documento.id,
+            documentoId: documento.id,
             tipo: mensajes.tipo,
             detalles: `Notificación de documento listo enviada - Código: ${codigoVerificacion}`,
             usuario: req.matrizador.nombre,

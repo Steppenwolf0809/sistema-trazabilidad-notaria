@@ -62,10 +62,10 @@ const documentoRelacionController = {
   // Obtener todas las relaciones de un documento
   obtenerRelaciones: async (req, res) => {
     try {
-      const { idDocumento } = req.params;
+      const { documentoId } = req.params;
 
       // Obtener el documento con sus relaciones
-      const documento = await Documento.findByPk(idDocumento, {
+      const documento = await Documento.findByPk(documentoId, {
         include: [
           {
             model: Documento,

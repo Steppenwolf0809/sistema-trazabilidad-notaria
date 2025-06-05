@@ -446,6 +446,13 @@ const hbs = engine({
             new Date(documento.created_at).toLocaleDateString('es-ES') : '';
       }
     },
+    // NUEVO: Helper moment para formatear fechas con moment.js
+    moment: function(date, format) {
+      if (!date) return '';
+      const moment = require('moment');
+      moment.locale('es'); // Configurar en español
+      return moment(date).format(format || 'DD/MM/YYYY HH:mm:ss');
+    },
   }
 });
 

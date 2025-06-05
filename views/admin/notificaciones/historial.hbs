@@ -1,3 +1,23 @@
+{{!-- Historial de Notificaciones - Vista Admin (copiada de recepción) --}}
+
+<!-- Breadcrumb -->
+<div class="row mb-3">
+  <div class="col-12">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item">
+          <a href="/admin/dashboard">
+            <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+          </a>
+        </li>
+        <li class="breadcrumb-item active" aria-current="page">
+          <i class="fas fa-bell me-1"></i>Control de Notificaciones
+        </li>
+      </ol>
+    </nav>
+  </div>
+</div>
+
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
@@ -9,13 +29,13 @@
                 <span class="badge bg-info fs-6">{{notificaciones.length}} notificaciones</span>
             </div>
 
-            {{!-- Filtros avanzados para recepción --}}
+            {{!-- Filtros avanzados para admin --}}
             <div class="card mb-4">
                 <div class="card-header">
                     <h5 class="mb-0">🔍 Filtros de Control</h5>
                 </div>
                 <div class="card-body">
-                    <form method="GET" action="/recepcion/notificaciones/historial">
+                    <form method="GET" action="/admin/notificaciones/historial">
                         <div class="row mb-3">
                             <div class="col-md-2">
                                 <label class="form-label">📅 Desde:</label>
@@ -83,7 +103,7 @@
                                 <label class="form-label">&nbsp;</label>
                                 <div class="d-flex gap-2">
                                     <button type="submit" class="btn btn-primary flex-fill">🔍 Buscar</button>
-                                    <a href="/recepcion/notificaciones/historial" class="btn btn-outline-secondary flex-fill">
+                                    <a href="/admin/notificaciones/historial" class="btn btn-outline-secondary flex-fill">
                                         🔄 Limpiar
                                     </a>
                                 </div>
@@ -98,6 +118,9 @@
                                     <button type="button" class="btn btn-info" onclick="busquedaAvanzada()">
                                         ⚙️ Búsqueda Avanzada
                                     </button>
+                                    <a href="/admin/reportes/notificaciones" class="btn btn-warning">
+                                        📊 Análisis de Notificaciones
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -169,12 +192,8 @@
                                 <tr>
                                     <td>
                                         <div class="d-flex flex-column">
-                                            <span class="fw-bold fecha-evento" data-fecha="{{this.created_at}}">
-                                                Cargando...
-                                            </span>
-                                            <small class="text-muted hora-evento" data-fecha="{{this.created_at}}">
-                                                -
-                                            </small>
+                                            <span class="fw-bold">{{formatDate this.created_at}}</span>
+                                            <small class="text-muted">{{substring (formatDate this.created_at) 11 19}}</small>
                                         </div>
                                     </td>
                                     <td>
@@ -209,13 +228,9 @@
                                     </td>
                                     <td>
                                         {{#if (eq this.tipo 'documento_listo')}}
-                                            <span class="badge bg-success">📋 Listo</span>
+                                            <span class="badge bg-info">📋 Listo</span>
                                         {{else if (eq this.tipo 'documento_entregado')}}
-                                            <span class="badge bg-info">✅ Entregado</span>
-                                        {{else if (eq this.tipo 'otro')}}
-                                            <span class="badge bg-primary">🔔 Notificación</span>
-                                        {{else if (eq this.tipo 'cambio_estado')}}
-                                            <span class="badge bg-warning">🔄 Cambio Estado</span>
+                                            <span class="badge bg-success">✅ Entregado</span>
                                         {{else}}
                                             <span class="badge bg-secondary">{{this.tipo}}</span>
                                         {{/if}}
@@ -228,13 +243,11 @@
                                                 <span class="badge bg-primary">📧 Email</span>
                                             {{else if (eq this.metadatos.canal 'ambos')}}
                                                 <span class="badge bg-info">📱📧 Ambos</span>
-                                            {{else if (eq this.metadatos.canal 'ninguno')}}
-                                                <span class="badge bg-secondary">❌ Sin Canal</span>
                                             {{else}}
                                                 <span class="badge bg-secondary">{{this.metadatos.canal}}</span>
                                             {{/if}}
                                         {{else}}
-                                            <span class="badge bg-light text-dark">No especificado</span>
+                                            <span class="badge bg-secondary">No especificado</span>
                                         {{/if}}
                                     </td>
                                     <td>
@@ -249,21 +262,17 @@
                                     </td>
                                     <td>
                                         {{#if this.metadatos.estado}}
-                                            {{#if (eq this.metadatos.estado 'enviada')}}
-                                                <span class="badge bg-success">✅ Enviada</span>
-                                            {{else if (eq this.metadatos.estado 'simulada')}}
-                                                <span class="badge bg-warning">🔄 Simulada</span>
-                                            {{else if (eq this.metadatos.estado 'fallida')}}
-                                                <span class="badge bg-danger">❌ Fallida</span>
-                                            {{else if (eq this.metadatos.estado 'procesada')}}
-                                                <span class="badge bg-info">⚙️ Procesada</span>
-                                            {{else if (eq this.metadatos.estado 'pendiente')}}
-                                                <span class="badge bg-secondary">⏳ Pendiente</span>
+                                            {{#if (eq this.metadatos.estado 'enviado')}}
+                                                <span class="badge bg-success">✅ Enviado</span>
+                                            {{else if (eq this.metadatos.estado 'error')}}
+                                                <span class="badge bg-danger">❌ Error</span>
+                                            {{else if (eq this.metadatos.estado 'simulado')}}
+                                                <span class="badge bg-warning">🔄 Simulado</span>
                                             {{else}}
                                                 <span class="badge bg-secondary">{{this.metadatos.estado}}</span>
                                             {{/if}}
                                         {{else}}
-                                            <span class="badge bg-light text-dark">Sin estado</span>
+                                            <span class="badge bg-secondary">Sin estado</span>
                                         {{/if}}
                                     </td>
                                     <td>
@@ -272,7 +281,7 @@
                                                     onclick="verDetalleNotificacion({{this.id}})">
                                                 👁️ Detalle
                                             </button>
-                                            <a href="/recepcion/documentos/detalle/{{this.documento.id}}" 
+                                            <a href="/admin/documentos/detalle/{{this.documento.id}}" 
                                                class="btn btn-sm btn-outline-secondary">
                                                 📄 Documento
                                             </a>
@@ -343,7 +352,7 @@ function verDetalleNotificacion(id) {
     
     modal.show();
     
-    fetch(`/recepcion/notificaciones/detalle/${id}`)
+    fetch(`/admin/notificaciones/detalle/${id}`)
         .then(response => response.json())
         .then(data => {
             if (data.exito) {
@@ -366,7 +375,7 @@ function verDetalleNotificacion(id) {
                                 <tr><td><strong>Tipo:</strong></td><td><span class="badge bg-primary">${data.datos.tipo}</span></td></tr>
                                 <tr><td><strong>Canal:</strong></td><td><span class="badge bg-success">${data.datos.metadatos.canal || 'No especificado'}</span></td></tr>
                                 <tr><td><strong>Estado:</strong></td><td><span class="badge bg-info">${data.datos.metadatos.estado || 'Sin estado'}</span></td></tr>
-                                <tr><td><strong>Fecha:</strong></td><td>${formatearFechaModal(data.datos.fecha)}</td></tr>
+                                <tr><td><strong>Fecha:</strong></td><td>${new Date(data.datos.fecha).toLocaleString('es-EC')}</td></tr>
                                 <tr><td><strong>Usuario:</strong></td><td>${data.datos.usuario}</td></tr>
                             </table>
                         </div>
@@ -420,7 +429,7 @@ function actualizarVista() {
 function exportarCSV() {
     const params = new URLSearchParams(window.location.search);
     params.set('formato', 'csv');
-    window.open(`/recepcion/notificaciones/historial?${params.toString()}`);
+    window.open(`/admin/notificaciones/historial?${params.toString()}`);
 }
 
 function busquedaAvanzada() {
@@ -459,139 +468,4 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
-
-// ============== FORMATEAR FECHAS AL CARGAR LA PÁGINA ==============
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🕒 Iniciando formateo de fechas en historial de notificaciones...');
-    
-    // Función para formatear fecha de manera robusta
-    function formatearFechaSegura(fechaRaw) {
-        if (!fechaRaw || fechaRaw === 'null' || fechaRaw === '' || fechaRaw === 'undefined') {
-            return 'Sin fecha';
-        }
-        
-        try {
-            // Intentar diferentes formatos de fecha
-            let fecha;
-            
-            // Si ya es un objeto Date
-            if (fechaRaw instanceof Date) {
-                fecha = fechaRaw;
-            }
-            // Si es un string ISO
-            else if (typeof fechaRaw === 'string') {
-                // Limpiar la fecha de caracteres extraños
-                const fechaLimpia = fechaRaw.trim();
-                fecha = new Date(fechaLimpia);
-            }
-            // Si es un timestamp
-            else if (typeof fechaRaw === 'number') {
-                fecha = new Date(fechaRaw);
-            }
-            else {
-                console.warn('Formato de fecha no reconocido:', fechaRaw);
-                return 'Formato inválido';
-            }
-            
-            // Verificar si la fecha es válida
-            if (isNaN(fecha.getTime())) {
-                console.warn('Fecha inválida después de conversión:', fechaRaw);
-                return 'Fecha inválida';
-            }
-            
-            return fecha;
-        } catch (error) {
-            console.error('Error procesando fecha:', error, 'Fecha original:', fechaRaw);
-            return 'Error en fecha';
-        }
-    }
-    
-    // Formatear fechas principales (fecha completa)
-    document.querySelectorAll('.fecha-evento').forEach(function(elemento) {
-        const fechaRaw = elemento.getAttribute('data-fecha');
-        console.log('📅 Procesando fecha principal:', fechaRaw);
-        
-        const fechaFormateada = formatearFechaSegura(fechaRaw);
-        
-        if (fechaFormateada instanceof Date) {
-            elemento.textContent = fechaFormateada.toLocaleDateString('es-EC', {
-                day: '2-digit',
-                month: '2-digit', 
-                year: 'numeric'
-            });
-            elemento.classList.add('text-success');
-        } else {
-            elemento.textContent = fechaFormateada;
-            elemento.classList.add('text-muted');
-        }
-    });
-    
-    // Formatear horas (solo hora)
-    document.querySelectorAll('.hora-evento').forEach(function(elemento) {
-        const fechaRaw = elemento.getAttribute('data-fecha');
-        console.log('🕒 Procesando hora:', fechaRaw);
-        
-        const fechaFormateada = formatearFechaSegura(fechaRaw);
-        
-        if (fechaFormateada instanceof Date) {
-            elemento.textContent = fechaFormateada.toLocaleTimeString('es-EC', {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false
-            });
-        } else {
-            elemento.textContent = '-';
-        }
-    });
-    
-    console.log('✅ Formateo de fechas completado');
-});
-
-function formatearFechaModal(fechaRaw) {
-    if (!fechaRaw || fechaRaw === 'null' || fechaRaw === '' || fechaRaw === 'undefined') {
-        return 'Sin fecha';
-    }
-    
-    try {
-        // Intentar diferentes formatos de fecha
-        let fecha;
-        
-        // Si ya es un objeto Date
-        if (fechaRaw instanceof Date) {
-            fecha = fechaRaw;
-        }
-        // Si es un string ISO
-        else if (typeof fechaRaw === 'string') {
-            // Limpiar la fecha de caracteres extraños
-            const fechaLimpia = fechaRaw.trim();
-            fecha = new Date(fechaLimpia);
-        }
-        // Si es un timestamp
-        else if (typeof fechaRaw === 'number') {
-            fecha = new Date(fechaRaw);
-        }
-        else {
-            console.warn('Formato de fecha no reconocido:', fechaRaw);
-            return 'Formato inválido';
-        }
-        
-        // Verificar si la fecha es válida
-        if (isNaN(fecha.getTime())) {
-            console.warn('Fecha inválida después de conversión:', fechaRaw);
-            return 'Fecha inválida';
-        }
-        
-        return fecha.toLocaleString('es-EC', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false
-        });
-    } catch (error) {
-        console.error('Error procesando fecha:', error, 'Fecha original:', fechaRaw);
-        return 'Error en fecha';
-    }
-}
 </script> 

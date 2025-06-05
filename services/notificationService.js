@@ -316,16 +316,45 @@ const enviarNotificacionDocumentoListo = async (documentoId) => {
       }
     }
     
-    // Registrar evento en el documento
+    // ============== CORRECCIÓN: REGISTRO MEJORADO DE EVENTO ==============
+    // Determinar el canal principal para el registro
+    let canalPrincipal = 'ninguno';
+    if (resultados.canalesEnviados.length === 1) {
+      canalPrincipal = resultados.canalesEnviados[0];
+    } else if (resultados.canalesEnviados.length > 1) {
+      canalPrincipal = 'ambos';
+    }
+    
+    // Determinar el estado principal
+    let estadoPrincipal = 'enviada';
+    if (resultados.canalesEnviados.length === 0) {
+      estadoPrincipal = 'fallida';
+    } else if (configuracion.modoDesarrollo) {
+      estadoPrincipal = 'simulada';
+    }
+    
+    // Registrar evento en el documento con metadatos corregidos
     await EventoDocumento.create({
-      idDocumento: documentoId,
+      documentoId: documentoId,
       tipo: 'otro',
-      detalles: `Notificación de documento listo enviada por: ${resultados.canalesEnviados.join(', ')}`,
+      detalles: `Notificación de documento listo enviada por: ${resultados.canalesEnviados.join(', ') || 'ningún canal'}`,
       usuario: 'Sistema de Notificaciones',
       metadatos: {
+        // ✅ CAMPOS CORREGIDOS PARA HISTORIAL
+        canal: canalPrincipal,                    // ✅ Para mostrar en columna "Canal"
+        estado: estadoPrincipal,                  // ✅ Para mostrar en columna "Estado"
+        tipo: 'documento_listo',                  // ✅ Para filtros y etiquetas
         canalesEnviados: resultados.canalesEnviados,
         errores: resultados.errores,
-        modoDesarrollo: configuracion.modoDesarrollo
+        modoDesarrollo: configuracion.modoDesarrollo,
+        timestamp: new Date().toISOString(),
+        configuracion: configuracion.modoDesarrollo ? 'desarrollo' : 'produccion',
+        // Información adicional para auditoría
+        documentoId: documentoId,
+        codigoDocumento: documento.codigoBarras,
+        clienteEmail: documento.emailCliente,
+        clienteTelefono: documento.telefonoCliente,
+        metodoNotificacion: documento.metodoNotificacion
       }
     }, { transaction });
     
@@ -461,7 +490,7 @@ const enviarNotificacionEntrega = async (documentoId, datosEntrega) => {
     
     // Registrar evento en el documento
     await EventoDocumento.create({
-      idDocumento: documentoId,
+      documentoId: documentoId,
       tipo: 'otro',
       detalles: `Confirmación de entrega enviada por: ${resultados.canalesEnviados.join(', ')}`,
       usuario: 'Sistema de Notificaciones',

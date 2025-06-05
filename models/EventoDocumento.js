@@ -93,19 +93,4 @@ const EventoDocumento = sequelize.define('EventoDocumento', {
   underscored: true
 });
 
-// Definir asociaciones
-EventoDocumento.associate = function(models) {
-  // Asociación con Documento
-  EventoDocumento.belongsTo(models.Documento, {
-    foreignKey: 'documentoId',
-    as: 'documento'
-  });
-  
-  // Asociación con Matrizador (usuario que realizó la acción)
-  EventoDocumento.belongsTo(models.Matrizador, {
-    foreignKey: 'usuarioId',
-    as: 'usuario'
-  });
-};
-
 module.exports = EventoDocumento; 
