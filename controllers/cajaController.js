@@ -17,57 +17,298 @@ const {
 const cajaController = {
   
   /**
-   * Dashboard principal para rol de caja - VERSIÓN ULTRA SIMPLIFICADA PARA DEBUG
+   * Dashboard principal para rol de caja - CORREGIDO CON MATEMÁTICA EXACTA
+   * Aplicando las mismas correcciones exitosas del dashboard admin
    */
   dashboard: async (req, res) => {
     try {
-      console.log('🚀 DASHBOARD CAJA - INICIO ULTRA SIMPLIFICADO');
+      console.log('🚀 DASHBOARD CAJA - INICIO CON MATEMÁTICA CORREGIDA');
       console.log('Usuario:', req.matrizador?.nombre, 'Rol:', req.matrizador?.rol);
       
-      // Datos mínimos para el dashboard
-      const datosRender = {
-        layout: 'caja',
-        title: 'Dashboard de Caja',
-        userRole: req.matrizador?.rol,
-        userName: req.matrizador?.nombre,
-        stats: {
-          totalFacturado: '0.00',
-          totalCobrado: '0.00',
-          totalPendiente: '0.00',
-          documentosFacturados: 0,
-          documentosPendientesPago: 0
-        },
-        documentosPendientes: [],
-        documentosPagadosRecientes: [],
-        periodo: {
-          esHoy: true,
-          esSemana: false,
-          esMes: false,
-          fechaInicio: new Date().toISOString().split('T')[0],
-          fechaFin: new Date().toISOString().split('T')[0],
-          periodoTexto: 'hoy',
-          periodoDescriptivo: 'HOY - ' + new Date().toLocaleDateString(),
-          fechaInicioFormateada: new Date().toLocaleDateString(),
-          fechaFinFormateada: new Date().toLocaleDateString(),
-          filtroActivo: 'hoy'
-        }
-      };
+      // ============== PROCESAR FILTROS DE PERÍODO (IGUAL QUE ADMIN) ==============
+      const rango = req.query.rango || req.query.tipoPeriodo || 'mes';
+      let fechaInicio, fechaFin, periodoTexto;
       
-      console.log('🔍 EJECUTANDO RENDER ULTRA SIMPLIFICADO...');
-      console.log('Datos básicos:', {
-        layout: datosRender.layout,
-        title: datosRender.title,
-        userRole: datosRender.userRole,
-        userName: datosRender.userName
+      // Establecer fechas según el rango seleccionado (COPIADO DE ADMIN)
+      const hoy = moment().startOf('day');
+      
+      switch (rango) {
+        case 'desde_inicio':
+          fechaInicio = moment('2020-01-01').startOf('day');
+          fechaFin = moment().endOf('day');
+          periodoTexto = 'Desde el Inicio (Todos los datos históricos)';
+          break;
+        case 'hoy':
+          fechaInicio = hoy.clone();
+          fechaFin = moment().endOf('day');
+          periodoTexto = 'Hoy ' + fechaInicio.format('DD/MM/YYYY');
+          break;
+        case 'ayer':
+          fechaInicio = hoy.clone().subtract(1, 'days');
+          fechaFin = hoy.clone().subtract(1, 'days').endOf('day');
+          periodoTexto = 'Ayer ' + fechaInicio.format('DD/MM/YYYY');
+          break;
+        case 'semana':
+          fechaInicio = hoy.clone().startOf('week');
+          fechaFin = moment().endOf('day');
+          periodoTexto = 'Esta semana';
+          break;
+        case 'mes':
+          fechaInicio = hoy.clone().startOf('month');
+          fechaFin = moment().endOf('day');
+          periodoTexto = 'Este mes';
+          break;
+        case 'ultimo_mes':
+          fechaInicio = hoy.clone().subtract(30, 'days');
+          fechaFin = moment().endOf('day');
+          periodoTexto = 'Últimos 30 días';
+          break;
+        case 'personalizado':
+          fechaInicio = req.query.fechaInicio ? moment(req.query.fechaInicio).startOf('day') : hoy.clone().startOf('month');
+          fechaFin = req.query.fechaFin ? moment(req.query.fechaFin).endOf('day') : moment().endOf('day');
+          periodoTexto = 'Del ' + fechaInicio.format('DD/MM/YYYY') + ' al ' + fechaFin.format('DD/MM/YYYY');
+          break;
+        default:
+          fechaInicio = hoy.clone().startOf('month');
+          fechaFin = moment().endOf('day');
+          periodoTexto = 'Este mes';
+      }
+      
+      // Formatear fechas para consultas SQL
+      const fechaInicioSQL = fechaInicio.format('YYYY-MM-DD HH:mm:ss');
+      const fechaFinSQL = fechaFin.format('YYYY-MM-DD HH:mm:ss');
+      const hoySQL = hoy.format('YYYY-MM-DD');
+      
+      console.log('📅 PERÍODO SELECCIONADO:', {
+        rango,
+        fechaInicio: fechaInicioSQL,
+        fechaFin: fechaFinSQL,
+        periodoTexto
       });
       
-      // Renderizar el dashboard
+      // ============== MÉTRICAS FINANCIERAS CON FILTROS (IGUAL QUE ADMIN) ==============
+      
+      // Condiciones base para el período
+      const whereBasePeriodo = {
+        created_at: {
+          [Op.between]: [fechaInicio.toDate(), fechaFin.toDate()]
+        },
+        estado: { [Op.notIn]: ['eliminado', 'nota_credito'] }
+      };
+      
+      // CORREGIDO: Facturación del período
+      const [facturacionPeriodoResult] = await sequelize.query(`
+        SELECT COALESCE(SUM(valor_factura), 0) as total
+        FROM documentos
+        WHERE created_at BETWEEN :fechaInicio AND :fechaFin
+        AND numero_factura IS NOT NULL
+        AND estado NOT IN ('eliminado', 'nota_credito')
+      `, {
+        replacements: { fechaInicio: fechaInicioSQL, fechaFin: fechaFinSQL },
+        type: sequelize.QueryTypes.SELECT
+      });
+      const facturacionPeriodo = parseFloat(facturacionPeriodoResult.total);
+      
+      // CORREGIDO: Pagos recibidos del período (dinero cobrado en documentos del período)
+      const [ingresosPeriodoResult] = await sequelize.query(`
+        SELECT COALESCE(SUM(CASE WHEN estado_pago IN ('pagado_completo', 'pagado_con_retencion', 'pago_parcial') THEN valor_pagado ELSE 0 END), 0) as total
+        FROM documentos
+        WHERE created_at BETWEEN :fechaInicio AND :fechaFin
+        AND estado NOT IN ('eliminado', 'nota_credito')
+      `, {
+        replacements: { fechaInicio: fechaInicioSQL, fechaFin: fechaFinSQL },
+        type: sequelize.QueryTypes.SELECT
+      });
+      const ingresosPeriodo = parseFloat(ingresosPeriodoResult.total);
+      
+      // CORREGIDO: Total pendiente de cobro POR PERÍODO - fórmula matemáticamente exacta
+      // Pendiente real = Facturado - Pagado - Retenido
+      let totalPendienteQuery, totalPendienteReplacements;
+      
+      if (rango === 'desde_inicio') {
+        // Para "desde_inicio", usar cálculo global
+        totalPendienteQuery = `
+          SELECT COALESCE(SUM(valor_factura - valor_pagado - COALESCE(valor_retenido, 0)), 0) as total
+          FROM documentos
+          WHERE numero_factura IS NOT NULL
+          AND estado NOT IN ('eliminado', 'nota_credito')
+          AND (valor_factura - valor_pagado - COALESCE(valor_retenido, 0)) > 0
+        `;
+        totalPendienteReplacements = {};
+      } else {
+        // Para otros rangos, filtrar por período de creación
+        totalPendienteQuery = `
+          SELECT COALESCE(SUM(valor_factura - valor_pagado - COALESCE(valor_retenido, 0)), 0) as total
+          FROM documentos
+          WHERE created_at BETWEEN :fechaInicio AND :fechaFin
+          AND numero_factura IS NOT NULL
+          AND estado NOT IN ('eliminado', 'nota_credito')
+          AND (valor_factura - valor_pagado - COALESCE(valor_retenido, 0)) > 0
+        `;
+        totalPendienteReplacements = { fechaInicio: fechaInicioSQL, fechaFin: fechaFinSQL };
+      }
+      
+      const [totalPendienteResult] = await sequelize.query(totalPendienteQuery, {
+        replacements: totalPendienteReplacements,
+        type: sequelize.QueryTypes.SELECT
+      });
+      const totalPendiente = parseFloat(totalPendienteResult.total);
+      
+      // CORREGIDO: Pagos recibidos hoy específicamente (dinero realmente cobrado HOY)
+      const [ingresosHoyResult] = await sequelize.query(`
+        SELECT COALESCE(SUM(valor_pagado), 0) as total
+        FROM documentos
+        WHERE DATE(fecha_ultimo_pago) = :hoy
+        AND estado_pago IN ('pagado_completo', 'pagado_con_retencion', 'pago_parcial')
+        AND estado NOT IN ('eliminado', 'nota_credito')
+      `, {
+        replacements: { hoy: hoySQL },
+        type: sequelize.QueryTypes.SELECT
+      });
+      const ingresosHoy = parseFloat(ingresosHoyResult.total);
+      
+      // Conteos básicos CON FILTROS DE PERÍODO
+      const totalDocumentos = await Documento.count({
+        where: whereBasePeriodo
+      });
+      
+      const documentosFacturados = await Documento.count({
+        where: { ...whereBasePeriodo, numero_factura: { [Op.not]: null } }
+      });
+      
+      const documentosPendientesPago = await Documento.count({
+        where: { ...whereBasePeriodo, estado_pago: 'pendiente', numero_factura: { [Op.not]: null } }
+      });
+      
+      // CORREGIDO: Documentos cobrados del período
+      const documentosCobradosPeriodo = await Documento.count({
+        where: {
+          ...whereBasePeriodo,
+          estado_pago: { [Op.in]: ['pagado_completo', 'pagado_con_retencion', 'pago_parcial'] }
+        }
+      });
+      
+      // CORREGIDO: Documentos cobrados hoy (incluir pago_parcial)
+      const documentosCobradosHoy = await Documento.count({
+        where: {
+          estado_pago: { [Op.in]: ['pagado_completo', 'pagado_con_retencion', 'pago_parcial'] },
+          fecha_ultimo_pago: {
+            [Op.gte]: hoy.toDate(),
+            [Op.lt]: moment().endOf('day').toDate()
+          }
+        }
+      });
+      
+      console.log('💰 MÉTRICAS FINANCIERAS CORREGIDAS:', {
+        facturacionPeriodo: facturacionPeriodo.toFixed(2),
+        ingresosPeriodo: ingresosPeriodo.toFixed(2),
+        totalPendiente: totalPendiente.toFixed(2),
+        ingresosHoy: ingresosHoy.toFixed(2),
+        documentosFacturados,
+        documentosPendientesPago,
+        documentosCobradosPeriodo,
+        documentosCobradosHoy
+      });
+      
+      // ============== OBTENER DATOS PARA TABLAS ==============
+      
+      // Documentos pendientes de pago (limitados al período)
+      const documentosPendientes = await Documento.findAll({
+        where: {
+          ...whereBasePeriodo,
+          estado_pago: 'pendiente',
+          numero_factura: { [Op.not]: null }
+        },
+        attributes: ['id', 'codigoBarras', 'nombreCliente', 'numeroFactura', 'valorFactura', 'created_at'],
+        include: [{
+          model: Matrizador,
+          as: 'matrizador',
+          attributes: ['nombre'],
+          required: false
+        }],
+        order: [['created_at', 'DESC']],
+        limit: 10
+      });
+      
+      // Pagos recientes (últimos pagos registrados)
+      const documentosPagadosRecientes = await Documento.findAll({
+        where: {
+          estado_pago: { [Op.in]: ['pagado_completo', 'pagado_con_retencion', 'pago_parcial'] },
+          fecha_ultimo_pago: { [Op.not]: null },
+          estado: { [Op.notIn]: ['eliminado', 'nota_credito'] }
+        },
+        attributes: ['id', 'codigoBarras', 'nombreCliente', 'valorFactura', 'valorPagado', 'fechaUltimoPago', 'metodoPago', 'numeroFactura'],
+        order: [['fechaUltimoPago', 'DESC']],
+        limit: 10
+      });
+      
+      // ============== PREPARAR DATOS PARA LA VISTA ==============
+      
+      const datosRender = {
+        layout: 'caja',
+        title: 'Dashboard de Caja - Operaciones Financieras',
+        userRole: req.matrizador?.rol,
+        userName: req.matrizador?.nombre,
+        
+        // Información del período
+        periodo: {
+          rango: rango,
+          fechaInicio: fechaInicio.format('YYYY-MM-DD'),
+          fechaFin: fechaFin.format('YYYY-MM-DD'),
+          periodoTexto,
+          esHoy: rango === 'hoy',
+          esAyer: rango === 'ayer',
+          esSemana: rango === 'semana',
+          esMes: rango === 'mes',
+          esUltimoMes: rango === 'ultimo_mes',
+          esPersonalizado: rango === 'personalizado'
+        },
+        
+        // Métricas financieras corregidas
+        stats: {
+          totalFacturado: facturacionPeriodo.toFixed(2),
+          totalCobrado: ingresosPeriodo.toFixed(2),
+          totalPendiente: totalPendiente.toFixed(2),
+          ingresosHoy: ingresosHoy.toFixed(2),
+          documentosFacturados,
+          documentosPendientesPago,
+          documentosCobradosPeriodo,
+          documentosCobradosHoy,
+          totalDocumentos
+        },
+        
+        // Datos para tablas
+        documentosPendientes: documentosPendientes.map(doc => ({
+          ...doc.toJSON(),
+          matrizadorNombre: doc.matrizador?.nombre || 'Sin asignar',
+          valorFacturaFormato: formatearValorMonetario(doc.valorFactura),
+          fechaFormateada: moment(doc.created_at).format('DD/MM/YYYY')
+        })),
+        
+        documentosPagadosRecientes: documentosPagadosRecientes.map(doc => ({
+          ...doc.toJSON(),
+          valorFacturaFormato: formatearValorMonetario(doc.valorFactura),
+          valorPagadoFormato: formatearValorMonetario(doc.valorPagado),
+          fechaPagoFormateada: moment(doc.fechaUltimoPago).format('DD/MM/YYYY HH:mm'),
+          metodoPagoFormateado: mapearMetodoPagoInverso(doc.metodoPago)
+        }))
+      };
+      
+      console.log('✅ DASHBOARD CAJA CORREGIDO - DATOS PREPARADOS');
+      console.log('📊 Resumen:', {
+        periodo: datosRender.periodo.periodoTexto,
+        facturado: datosRender.stats.totalFacturado,
+        cobrado: datosRender.stats.totalCobrado,
+        pendiente: datosRender.stats.totalPendiente,
+        documentosPendientes: datosRender.documentosPendientes.length,
+        pagosRecientes: datosRender.documentosPagadosRecientes.length
+      });
+      
+      // Renderizar el dashboard corregido
       res.render('caja/dashboard', datosRender);
       
-      console.log('✅ RENDER ULTRA SIMPLIFICADO COMPLETADO');
-      
     } catch (error) {
-      console.error('❌ ERROR EN DASHBOARD ULTRA SIMPLIFICADO:', error);
+      console.error('❌ ERROR EN DASHBOARD CAJA CORREGIDO:', error);
       console.error('Stack trace completo:', error.stack);
       
       // Respuesta de emergencia

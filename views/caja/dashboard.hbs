@@ -121,7 +121,7 @@
                     <td>{{this.codigoBarras}}</td>
                     <td>{{this.nombreCliente}}</td>
                     <td>{{this.numeroFactura}}</td>
-                    <td class="valor-financiero">***</td>
+                    <td class="valor-financiero" data-valor-original="{{this.valorFacturaFormato}}">***</td>
                     <td>
                       <a href="/caja/documentos/detalle/{{this.id}}" class="btn btn-sm btn-primary">
                         <i class="fas fa-edit"></i>
@@ -167,9 +167,9 @@
                   <tr>
                     <td>{{this.codigoBarras}}</td>
                     <td>{{this.nombreCliente}}</td>
-                    <td class="valor-financiero">***</td>
-                    <td>{{this.metodoPago}}</td>
-                    <td>{{formatDate this.updatedAt}}</td>
+                    <td class="valor-financiero" data-valor-original="{{this.valorPagadoFormato}}">***</td>
+                    <td>{{this.metodoPagoFormateado}}</td>
+                    <td>{{this.fechaPagoFormateada}}</td>
                   </tr>
                 {{/each}}
               </tbody>
@@ -277,28 +277,45 @@
     const toggleIcon = toggleBtn.querySelector('i');
     let valoresOcultos = true; // EMPEZAR CON VALORES OCULTOS
     
-    // Guardar valores originales en atributos data al cargar la página
-    document.querySelectorAll('.valor-financiero').forEach(element => {
-      // Si ya tiene contenido visible, guardarlo
+    // ============ INICIALIZAR VALORES DESDE EL SERVIDOR ============
+    // Establecer valores originales desde los datos del servidor
+    const statsData = {
+      totalFacturado: '{{stats.totalFacturado}}',
+      totalCobrado: '{{stats.totalCobrado}}',
+      totalPendiente: '{{stats.totalPendiente}}'
+    };
+    
+    console.log('📊 INICIALIZANDO VALORES DESDE SERVIDOR:', statsData);
+    
+    // Configurar valores principales
+    const totalFacturadoEl = document.getElementById('totalFacturado');
+    const totalCobradoEl = document.getElementById('totalCobrado');
+    const totalPendienteEl = document.getElementById('totalPendiente');
+    
+    if (totalFacturadoEl) {
+      const valorFormateado = '$' + formatMoney(statsData.totalFacturado);
+      totalFacturadoEl.setAttribute('data-valor-original', valorFormateado);
+      totalFacturadoEl.textContent = valoresOcultos ? '***' : valorFormateado;
+    }
+    
+    if (totalCobradoEl) {
+      const valorFormateado = '$' + formatMoney(statsData.totalCobrado);
+      totalCobradoEl.setAttribute('data-valor-original', valorFormateado);
+      totalCobradoEl.textContent = valoresOcultos ? '***' : valorFormateado;
+    }
+    
+    if (totalPendienteEl) {
+      const valorFormateado = '$' + formatMoney(statsData.totalPendiente);
+      totalPendienteEl.setAttribute('data-valor-original', valorFormateado);
+      totalPendienteEl.textContent = valoresOcultos ? '***' : valorFormateado;
+    }
+    
+    // Configurar valores en las tablas
+    document.querySelectorAll('.valor-financiero:not([id])').forEach(element => {
       if (element.textContent !== '***') {
         element.setAttribute('data-valor-original', element.textContent);
-      } else {
-        // Si ya está con ***, necesitamos obtener el valor del servidor
-        const id = element.id;
-        if (id) {
-          let valorOriginal = '';
-          switch (id) {
-            case 'totalFacturado':
-              valorOriginal = '${{formatMoney stats.totalFacturado}}';
-              break;
-            case 'totalCobrado':
-              valorOriginal = '${{formatMoney stats.totalCobrado}}';
-              break;
-            case 'totalPendiente':
-              valorOriginal = '${{formatMoney stats.totalPendiente}}';
-              break;
-          }
-          element.setAttribute('data-valor-original', valorOriginal);
+        if (valoresOcultos) {
+          element.textContent = '***';
         }
       }
     });

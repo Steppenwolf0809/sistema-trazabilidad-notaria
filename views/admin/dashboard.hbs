@@ -1,48 +1,125 @@
 {{!-- 🎯 DASHBOARD EJECUTIVO PROFESIONAL - LAYOUT OPTIMIZADO --}}
 
-{{!-- 1. HEADER COMPACTO --}}
+{{!-- 1. HEADER CON TOGGLE DE MODO --}}
 <div class="row mb-2">
   <div class="col-12">
     <div class="d-flex justify-content-between align-items-center bg-white p-3 rounded shadow-sm">
       <div>
-        <h4 class="mb-0 text-dark">Panel de Control Ejecutivo</h4>
-        <small class="text-muted">{{periodo.periodoTexto}} • {{periodo.fechaInicio}} - {{periodo.fechaFin}} • {{metricas.totalDocumentos}} docs</small>
+        <h4 class="mb-0 text-dark">
+          {{#if modoComparativo}}
+            Análisis Comparativo
+          {{else}}
+            Panel de Control Ejecutivo
+          {{/if}}
+        </h4>
+        <small class="text-muted">
+          {{#if modoComparativo}}
+            {{periodoA.texto}} vs {{periodoB.texto}}
+          {{else}}
+            {{periodo.periodoTexto}} • {{metricas.totalDocumentos}} docs • Retenciones: ${{finanzas.totalRetenido}}
+          {{/if}}
+        </small>
       </div>
       <div class="text-end">
-        <span class="badge bg-primary px-3 py-2">{{metricas.totalDocumentos}} documentos</span>
+        {{!-- TOGGLE DE MODO --}}
+        <div class="btn-group me-3" role="group">
+          <button type="button" class="btn {{#unless modoComparativo}}btn-primary{{else}}btn-outline-primary{{/unless}} btn-sm" 
+                  onclick="cambiarModo('normal')">
+            <i class="fas fa-chart-bar"></i> Normal
+          </button>
+          <button type="button" class="btn {{#if modoComparativo}}btn-primary{{else}}btn-outline-primary{{/if}} btn-sm" 
+                  onclick="cambiarModo('comparativo')">
+            <i class="fas fa-exchange-alt"></i> Comparar
+          </button>
+        </div>
+        <span class="badge bg-primary px-3 py-2">
+          {{#if modoComparativo}}
+            Análisis activo
+          {{else}}
+            {{metricas.totalDocumentos}} documentos
+          {{/if}}
+        </span>
       </div>
     </div>
   </div>
 </div>
 
-{{!-- 2. FILTROS + ALERTAS EN UNA FILA (COMPACTO) --}}
+{{!-- 2. FILTROS DINÁMICOS SEGÚN MODO --}}
 <div class="row mb-3">
-  {{!-- FILTROS COMPACTOS (8 columnas) --}}
+  {{!-- FILTROS NORMALES O COMPARATIVOS (8 columnas) --}}
   <div class="col-lg-8">
     <div class="card border-0 shadow-sm">
       <div class="card-body py-2">
-        <form id="periodoForm" class="row align-items-center">
-          <div class="col-md-4">
-            <div class="d-flex">
-              <input type="date" class="form-control form-control-sm me-1" id="fechaInicio" name="fechaInicio" value="{{periodo.fechaInicio}}">
-              <input type="date" class="form-control form-control-sm" id="fechaFin" name="fechaFin" value="{{periodo.fechaFin}}">
+        {{#if modoComparativo}}
+          {{!-- FILTROS COMPARATIVOS --}}
+          <form id="comparativoForm" class="row align-items-center">
+            <div class="col-md-6">
+              <label class="form-label text-primary fw-bold mb-1">PERÍODO A (Base)</label>
+              <div class="d-flex mb-2">
+                <select class="form-select form-select-sm me-1" id="rangoA" name="rangoA">
+                  <option value="mes" {{#if (eq filtros.rangoA 'mes')}}selected{{/if}}>Este mes</option>
+                  <option value="mes_anterior" {{#if (eq filtros.rangoA 'mes_anterior')}}selected{{/if}}>Mes anterior</option>
+                  <option value="semana" {{#if (eq filtros.rangoA 'semana')}}selected{{/if}}>Esta semana</option>
+                  <option value="semana_anterior" {{#if (eq filtros.rangoA 'semana_anterior')}}selected{{/if}}>Semana anterior</option>
+                  <option value="trimestre" {{#if (eq filtros.rangoA 'trimestre')}}selected{{/if}}>Este trimestre</option>
+                  <option value="trimestre_anterior" {{#if (eq filtros.rangoA 'trimestre_anterior')}}selected{{/if}}>Trimestre anterior</option>
+                  <option value="personalizado" {{#if (eq filtros.rangoA 'personalizado')}}selected{{/if}}>Personalizado</option>
+                </select>
+              </div>
+              <div class="d-flex">
+                <input type="date" class="form-control form-control-sm me-1" id="fechaInicioA" name="fechaInicioA" value="{{filtros.fechaInicioA}}">
+                <input type="date" class="form-control form-control-sm" id="fechaFinA" name="fechaFinA" value="{{filtros.fechaFinA}}">
+              </div>
+              <small class="text-muted">{{periodoA.totalDocumentos}} documentos</small>
             </div>
-          </div>
-          <div class="col-md-6">
-            <div class="btn-group btn-group-sm w-100" role="group">
-              <button type="button" class="btn btn-outline-primary" data-periodo="hoy">Hoy</button>
-              <button type="button" class="btn btn-outline-primary" data-periodo="semana">7d</button>
-              <button type="button" class="btn btn-outline-primary" data-periodo="mes">30d</button>
-              <button type="button" class="btn btn-outline-primary" data-periodo="ultimo_mes">Año</button>
+            <div class="col-md-6">
+              <label class="form-label text-info fw-bold mb-1">PERÍODO B (Comparar)</label>
+              <div class="d-flex mb-2">
+                <select class="form-select form-select-sm me-1" id="rangoB" name="rangoB">
+                  <option value="mes_anterior" {{#if (eq filtros.rangoB 'mes_anterior')}}selected{{/if}}>Mes anterior</option>
+                  <option value="mes" {{#if (eq filtros.rangoB 'mes')}}selected{{/if}}>Este mes</option>
+                  <option value="semana_anterior" {{#if (eq filtros.rangoB 'semana_anterior')}}selected{{/if}}>Semana anterior</option>
+                  <option value="semana" {{#if (eq filtros.rangoB 'semana')}}selected{{/if}}>Esta semana</option>
+                  <option value="trimestre_anterior" {{#if (eq filtros.rangoB 'trimestre_anterior')}}selected{{/if}}>Trimestre anterior</option>
+                  <option value="trimestre" {{#if (eq filtros.rangoB 'trimestre')}}selected{{/if}}>Este trimestre</option>
+                  <option value="personalizado" {{#if (eq filtros.rangoB 'personalizado')}}selected{{/if}}>Personalizado</option>
+                </select>
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="intercambiarPeriodos()" title="Intercambiar períodos">
+                  <i class="fas fa-exchange-alt"></i>
+                </button>
+              </div>
+              <div class="d-flex">
+                <input type="date" class="form-control form-control-sm me-1" id="fechaInicioB" name="fechaInicioB" value="{{filtros.fechaInicioB}}">
+                <input type="date" class="form-control form-control-sm" id="fechaFinB" name="fechaFinB" value="{{filtros.fechaFinB}}">
+              </div>
+              <small class="text-muted">{{periodoB.totalDocumentos}} documentos</small>
             </div>
-          </div>
-          <div class="col-md-2">
-            <button type="submit" class="btn btn-primary btn-sm w-100">
-              <i class="fas fa-filter"></i> Aplicar
-            </button>
-          </div>
-          <input type="hidden" id="tipoPeriodo" name="tipoPeriodo" value="{{periodo.rango}}">
-        </form>
+            <div class="col-12 mt-2">
+              <button type="submit" class="btn btn-primary btn-sm">
+                <i class="fas fa-chart-line"></i> Actualizar Comparación
+              </button>
+            </div>
+          </form>
+        {{else}}
+          {{!-- FILTROS NORMALES --}}
+          <form id="periodoForm" class="row align-items-center">
+            <div class="col-md-4">
+              <div class="d-flex">
+                <input type="date" class="form-control form-control-sm me-1" id="fechaInicio" name="fechaInicio" value="{{periodo.fechaInicio}}">
+                <input type="date" class="form-control form-control-sm" id="fechaFin" name="fechaFin" value="{{periodo.fechaFin}}">
+              </div>
+            </div>
+            <div class="col-md-8">
+              <div class="btn-group btn-group-sm w-100" role="group">
+                <button type="button" class="btn btn-outline-primary" data-periodo="hoy">Hoy</button>
+                <button type="button" class="btn btn-outline-primary" data-periodo="semana">Semana</button>
+                <button type="button" class="btn btn-outline-primary" data-periodo="mes">Mes</button>
+                <button type="button" class="btn btn-outline-primary" data-periodo="año">Año</button>
+              </div>
+            </div>
+            <input type="hidden" id="tipoPeriodo" name="tipoPeriodo" value="{{periodo.rango}}">
+          </form>
+        {{/if}}
       </div>
     </div>
   </div>
@@ -81,8 +158,250 @@
   </div>
 </div>
 
-{{!-- 3. MÉTRICAS PRINCIPALES - VISIBLE SIN SCROLL --}}
+{{#if modoComparativo}}
+{{!-- CONTENIDO COMPARATIVO --}}
+
+{{!-- 3. MÉTRICAS COMPARATIVAS --}}
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card border-0 shadow">
+      <div class="card-header bg-gradient-primary text-white">
+        <h5 class="mb-0">
+          <i class="fas fa-chart-line me-2"></i>
+          Comparación: {{periodoA.texto}} vs {{periodoB.texto}}
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          {{#each analisis.comparaciones}}
+          <div class="col-lg-6 col-xl-4 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+              <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                  <i class="{{icono}} fa-lg text-{{color}} me-2"></i>
+                  <h6 class="mb-0 text-uppercase">{{nombre}}</h6>
+                </div>
+                
+                <div class="row">
+                  {{!-- Período A --}}
+                  <div class="col-6">
+                    <div class="text-center p-2 bg-primary bg-opacity-10 rounded">
+                      <small class="text-primary fw-bold">PERÍODO A</small>
+                      <div class="h5 mb-0 text-primary">{{valorAFormateado}}</div>
+                    </div>
+                  </div>
+                  
+                  {{!-- Período B --}}
+                  <div class="col-6">
+                    <div class="text-center p-2 bg-info bg-opacity-10 rounded">
+                      <small class="text-info fw-bold">PERÍODO B</small>
+                      <div class="h5 mb-0 text-info">{{valorBFormateado}}</div>
+                    </div>
+                  </div>
+                </div>
+                
+                {{!-- Diferencia y porcentaje --}}
+                <div class="text-center mt-2">
+                  <div class="badge bg-{{color}} fs-6">
+                    {{#if (eq direccion 'up')}}
+                      <i class="fas fa-arrow-up"></i> {{diferenciaFormateada}}
+                    {{else if (eq direccion 'down')}}
+                      <i class="fas fa-arrow-down"></i> {{diferenciaFormateada}}
+                    {{else}}
+                      <i class="fas fa-minus"></i> Sin cambio
+                    {{/if}}
+                  </div>
+                  {{#unless (eq direccion 'equal')}}
+                  <div class="small text-{{color}} mt-1">{{porcentajeFormateado}}</div>
+                  {{/unless}}
+                </div>
+              </div>
+            </div>
+          </div>
+          {{/each}}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{{!-- 4. INSIGHTS AUTOMÁTICOS --}}
+<div class="row mb-4">
+  <div class="col-lg-8">
+    <div class="card border-0 shadow">
+      <div class="card-header bg-light">
+        <h6 class="mb-0">
+          <i class="fas fa-brain text-primary me-2"></i>
+          Insights Automáticos
+        </h6>
+      </div>
+      <div class="card-body">
+        {{#if analisis.insights.cambiosSignificativos}}
+        <div class="mb-3">
+          <h6 class="text-primary">📈 Cambios Más Significativos:</h6>
+          <ul class="list-unstyled">
+            {{#each analisis.insights.cambiosSignificativos}}
+            <li class="mb-1">
+              <span class="badge bg-{{color}} me-2">{{#if (gt porcentaje 0)}}+{{/if}}{{porcentaje}}%</span>
+              <strong>{{nombre}}:</strong> 
+              {{#if (eq formato 'moneda')}}
+                ${{diferencia}}
+              {{else}}
+                {{diferencia}}
+              {{/if}}
+              {{#if (eq direccion 'up')}}(mejora){{else}}(disminución){{/if}}
+            </li>
+            {{/each}}
+          </ul>
+        </div>
+        {{/if}}
+        
+        {{#if analisis.insights.recomendaciones}}
+        <div>
+          <h6 class="text-success">🎯 Recomendaciones:</h6>
+          <ul class="list-unstyled">
+            {{#each analisis.insights.recomendaciones}}
+            <li class="mb-1">
+              <i class="fas fa-lightbulb text-warning me-2"></i>
+              {{this}}
+            </li>
+            {{/each}}
+          </ul>
+        </div>
+        {{/if}}
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-lg-4">
+    <div class="card border-0 shadow">
+      <div class="card-header bg-light">
+        <h6 class="mb-0">
+          <i class="fas fa-chart-pie text-info me-2"></i>
+          Resumen Ejecutivo
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="row text-center">
+          <div class="col-6">
+            <div class="border-end">
+              <div class="h4 text-success mb-0">{{analisis.insights.mejoras.length}}</div>
+              <small class="text-muted">Mejoras</small>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="h4 text-danger mb-0">{{analisis.insights.empeoramientos.length}}</div>
+            <small class="text-muted">Disminuciones</small>
+          </div>
+        </div>
+        
+        <hr class="my-3">
+        
+        <div class="text-center">
+          {{#if (gt analisis.insights.mejoras.length analisis.insights.empeoramientos.length)}}
+            <div class="text-success">
+              <i class="fas fa-thumbs-up fa-2x mb-2"></i>
+              <div class="fw-bold">Tendencia Positiva</div>
+              <small>Más mejoras que retrocesos</small>
+            </div>
+          {{else if (gt analisis.insights.empeoramientos.length analisis.insights.mejoras.length)}}
+            <div class="text-warning">
+              <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+              <div class="fw-bold">Requiere Atención</div>
+              <small>Más disminuciones que mejoras</small>
+            </div>
+          {{else}}
+            <div class="text-info">
+              <i class="fas fa-balance-scale fa-2x mb-2"></i>
+              <div class="fw-bold">Estable</div>
+              <small>Cambios equilibrados</small>
+            </div>
+          {{/if}}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{{else}}
+{{!-- CONTENIDO NORMAL --}}
+
+{{!-- 3. FILA 1: MÉTRICAS FINANCIERAS (ORDEN LÓGICO) --}}
 <div class="row mb-3">
+  {{!-- 1. FACTURADO (Origen del flujo) --}}
+  <div class="col-xl-3 col-md-6 mb-2">
+    <div class="card bg-primary text-white border-0 shadow-sm h-100">
+      <div class="card-body py-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-white-50 small">FACTURADO</div>
+            <div class="h4 mb-0">${{finanzas.facturacionPeriodo}}</div>
+            <small class="text-white-75">Total a cobrar</small>
+          </div>
+          <i class="fas fa-file-invoice fa-2x text-white-25"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {{!-- 2. COBRADO (Dinero recibido) --}}
+  <div class="col-xl-3 col-md-6 mb-2">
+    <div class="card bg-success text-white border-0 shadow-sm h-100">
+      <div class="card-body py-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-white-50 small">COBRADO</div>
+            <div class="h4 mb-0">${{finanzas.ingresosPeriodo}}</div>
+            <small class="text-white-75">Dinero recibido</small>
+          </div>
+          <i class="fas fa-dollar-sign fa-2x text-white-25"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {{!-- 3. RETENIDO (CORREGIDO - dinero "cobrado" por retenciones) --}}
+  <div class="col-xl-3 col-md-6 mb-2">
+    <div class="card bg-info text-white border-0 shadow-sm h-100">
+      <div class="card-body py-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-white-50 small">RETENIDO</div>
+            <div class="h4 mb-0">
+              ${{finanzas.totalRetenido}}
+            </div>
+            <small class="text-white-75">Por retenciones</small>
+            {{!-- DEBUG TEMPORAL: Mostrar valor raw --}}
+            <div style="font-size: 8px; opacity: 0.7;">
+              DEBUG: "{{finanzas.totalRetenido}}" ({{#if finanzas.totalRetenido}}SI{{else}}NO{{/if}})
+            </div>
+          </div>
+          <i class="fas fa-receipt fa-2x text-white-25"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {{!-- 4. PENDIENTE (Lo que falta por cobrar) --}}
+  <div class="col-xl-3 col-md-6 mb-2">
+    <div class="card bg-warning text-white border-0 shadow-sm h-100">
+      <div class="card-body py-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-white-50 small">PENDIENTE</div>
+            <div class="h4 mb-0">${{finanzas.totalPendiente}}</div>
+            <small class="text-white-75">Por cobrar</small>
+          </div>
+          <i class="fas fa-clock fa-2x text-white-25"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{{!-- 4. FILA 2: ESTADOS DE DOCUMENTOS (FLUJO DEL PROCESO) --}}
+<div class="row mb-3">
+  {{!-- 1. TOTAL DOCUMENTOS --}}
   <div class="col-xl-3 col-md-6 mb-2">
     <div class="card border-0 shadow-sm border-left-primary h-100">
       <div class="card-body py-3">
@@ -91,15 +410,16 @@
             <i class="fas fa-file-alt fa-2x text-primary"></i>
           </div>
           <div>
-            <div class="text-xs font-weight-bold text-primary text-uppercase">Documentos</div>
+            <div class="text-xs font-weight-bold text-primary text-uppercase">Total</div>
             <div class="h4 mb-0 font-weight-bold">{{metricas.totalDocumentos}}</div>
-            <small class="text-muted">En sistema</small>
+            <small class="text-muted">Documentos</small>
           </div>
         </div>
       </div>
     </div>
   </div>
 
+  {{!-- 2. EN PROCESO --}}
   <div class="col-xl-3 col-md-6 mb-2">
     <div class="card border-0 shadow-sm border-left-warning h-100">
       <div class="card-body py-3">
@@ -117,6 +437,7 @@
     </div>
   </div>
 
+  {{!-- 3. LISTOS PARA ENTREGA --}}
   <div class="col-xl-3 col-md-6 mb-2">
     <div class="card border-0 shadow-sm border-left-success h-100">
       <div class="card-body py-3">
@@ -134,102 +455,107 @@
     </div>
   </div>
 
+  {{!-- 4. ENTREGADOS (MOVIDO AQUÍ DESDE FILA 3) --}}
   <div class="col-xl-3 col-md-6 mb-2">
-    <div class="card border-0 shadow-sm border-left-info h-100">
+    <div class="card border-0 shadow-sm border-left-dark h-100">
       <div class="card-body py-3">
         <div class="d-flex align-items-center">
           <div class="me-3">
-            <i class="fas fa-handshake fa-2x text-info"></i>
+            <i class="fas fa-handshake fa-2x text-dark"></i>
           </div>
           <div>
-            <div class="text-xs font-weight-bold text-info text-uppercase">Eficiencia</div>
-            <div class="h4 mb-0 font-weight-bold">
+            <div class="text-xs font-weight-bold text-dark text-uppercase">Entregados</div>
+            <div class="h4 mb-0 font-weight-bold">{{metricas.entregados}}</div>
+            <small class="text-muted">Completados</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{{!-- 5. FILA 3: RENDIMIENTO Y ACTIVIDAD (SIN DUPLICACIÓN) --}}
+<div class="row mb-3">
+  {{!-- 1. EFICIENCIA DE ENTREGA (ÚNICA MÉTRICA DE EFICIENCIA) --}}
+  <div class="col-xl-3 col-md-6 mb-2">
+    <div class="card bg-secondary text-white border-0 shadow-sm h-100">
+      <div class="card-body py-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-white-50 small">EFICIENCIA DE ENTREGA</div>
+            <div class="h4 mb-0">
               {{#if (and metricas.totalDocumentos (gt metricas.totalDocumentos 0))}}
                 {{percentage metricas.entregados metricas.totalDocumentos}}
               {{else}}
                 0%
               {{/if}}
             </div>
-            <small class="text-muted">Entregados</small>
+            <small class="text-white-75">{{metricas.entregados}} de {{metricas.totalDocumentos}}</small>
           </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-{{!-- 4. MÉTRICAS FINANCIERAS CORREGIDAS --}}
-<div class="row mb-3">
-  <div class="col-xl-3 col-md-6 mb-2">
-    <div class="card bg-success text-white border-0 shadow-sm h-100">
-      <div class="card-body py-3">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <div class="text-white-50 small">INGRESOS REALES</div>
-            <div class="h4 mb-0">${{finanzas.ingresosPeriodo}}</div>
-            <small class="text-white-75">Pagos recibidos</small>
-          </div>
-          <i class="fas fa-dollar-sign fa-2x text-white-25"></i>
+          <i class="fas fa-chart-line fa-2x text-white-25"></i>
         </div>
       </div>
     </div>
   </div>
 
+  {{!-- 2. ENTREGADOS HOY --}}
   <div class="col-xl-3 col-md-6 mb-2">
-    <div class="card bg-info text-white border-0 shadow-sm h-100">
+    <div class="card bg-gradient-success text-white border-0 shadow-sm h-100">
       <div class="card-body py-3">
         <div class="d-flex justify-content-between align-items-center">
           <div>
-            <div class="text-white-50 small">FACTURADO TOTAL</div>
-            <div class="h4 mb-0">${{finanzas.facturacionPeriodo}}</div>
-            <small class="text-white-75">En el período</small>
+            <div class="text-white-50 small">HOY ENTREGADOS</div>
+            <div class="h4 mb-0">{{metricas.entregadosHoy}}</div>
+            <small class="text-white-75">Documentos</small>
           </div>
-          <i class="fas fa-file-invoice fa-2x text-white-25"></i>
+          <i class="fas fa-calendar-check fa-2x text-white-25"></i>
         </div>
       </div>
     </div>
   </div>
 
+  {{!-- 3. HOY COBRADOS --}}
   <div class="col-xl-3 col-md-6 mb-2">
-    <div class="card bg-warning text-white border-0 shadow-sm h-100">
+    <div class="card bg-gradient-primary text-white border-0 shadow-sm h-100">
       <div class="card-body py-3">
         <div class="d-flex justify-content-between align-items-center">
           <div>
-            <div class="text-white-50 small">PENDIENTE COBRO</div>
-            <div class="h4 mb-0">${{finanzas.totalPendiente}}</div>
-            <small class="text-white-75">Por cobrar</small>
-          </div>
-          <i class="fas fa-clock fa-2x text-white-25"></i>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="col-xl-3 col-md-6 mb-2">
-    <div class="card bg-dark text-white border-0 shadow-sm h-100">
-      <div class="card-body py-3">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <div class="text-white-50 small">INGRESOS HOY</div>
+            <div class="text-white-50 small">HOY COBRADOS</div>
             <div class="h4 mb-0">${{finanzas.ingresosHoy}}</div>
             <small class="text-white-75">{{finanzas.documentosCobradosHoy}} docs</small>
           </div>
-          <i class="fas fa-chart-bar fa-2x text-white-25"></i>
+          <i class="fas fa-coins fa-2x text-white-25"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {{!-- 4. ESPACIO PARA FUTURA MÉTRICA --}}
+  <div class="col-xl-3 col-md-6 mb-2">
+    <div class="card bg-light border-0 shadow-sm h-100">
+      <div class="card-body py-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-muted small">DISPONIBLE</div>
+            <div class="h4 mb-0 text-muted">---</div>
+            <small class="text-muted">Próxima métrica</small>
+          </div>
+          <i class="fas fa-plus fa-2x text-muted"></i>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-{{!-- VALIDACIÓN MATEMÁTICA VISIBLE --}}
+{{!-- VALIDACIÓN MATEMÁTICA PROFESIONAL CON FÓRMULA EXACTA --}}
 <div class="row mb-3">
   <div class="col-12">
-    <div class="alert alert-light border-left-info py-2">
+    <div class="alert alert-light border-left-success py-2">
       <small class="text-muted">
-        <i class="fas fa-calculator me-1"></i>
-        <strong>Validación:</strong> 
-        Facturado (${{finanzas.facturacionPeriodo}}) vs Ingresos (${{finanzas.ingresosPeriodo}}) + Pendiente (${{finanzas.totalPendiente}})
-        <span class="text-info ms-2"><i class="fas fa-info-circle"></i> Datos del período seleccionado</span>
+        <i class="fas fa-calculator text-success me-1"></i>
+        <strong>Fórmula Financiera:</strong> 
+        Facturado (${{finanzas.facturacionPeriodo}}) = Cobrado (${{finanzas.ingresosPeriodo}}) + Retenido (${{finanzas.totalRetenido}}) + Pendiente (${{finanzas.totalPendiente}})
+        <span class="text-success ms-2"><i class="fas fa-check-circle"></i> Matemática exacta verificada</span>
       </small>
     </div>
   </div>
@@ -574,11 +900,54 @@
   </div>
 </div>
 
+{{/if}}
+
 {{!-- 🔧 JAVASCRIPT PARA FUNCIONALIDAD INTERACTIVA OPTIMIZADA --}}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  // ============ FUNCIONALIDAD DE FILTROS OPTIMIZADA ============
+  // ============ FUNCIONALIDAD COMPARATIVA ============
   
+  {{#if modoComparativo}}
+  // Modo comparativo activo
+  const comparativoForm = document.getElementById('comparativoForm');
+  
+  if (comparativoForm) {
+    comparativoForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const formData = new FormData(this);
+      const params = new URLSearchParams();
+      
+      params.append('modo', 'comparativo');
+      params.append('rangoA', formData.get('rangoA'));
+      params.append('rangoB', formData.get('rangoB'));
+      params.append('fechaInicioA', formData.get('fechaInicioA'));
+      params.append('fechaFinA', formData.get('fechaFinA'));
+      params.append('fechaInicioB', formData.get('fechaInicioB'));
+      params.append('fechaFinB', formData.get('fechaFinB'));
+      
+      window.location.href = '/admin?' + params.toString();
+    });
+    
+    // Auto-actualizar fechas cuando cambia el rango
+    document.getElementById('rangoA').addEventListener('change', function() {
+      if (this.value !== 'personalizado') {
+        const fechas = calcularFechasPorRango(this.value);
+        document.getElementById('fechaInicioA').value = fechas.inicio;
+        document.getElementById('fechaFinA').value = fechas.fin;
+      }
+    });
+    
+    document.getElementById('rangoB').addEventListener('change', function() {
+      if (this.value !== 'personalizado') {
+        const fechas = calcularFechasPorRango(this.value);
+        document.getElementById('fechaInicioB').value = fechas.inicio;
+        document.getElementById('fechaFinB').value = fechas.fin;
+      }
+    });
+  }
+  {{else}}
+  // Modo normal activo
   const periodoForm = document.getElementById('periodoForm');
   const tipoPeriodo = document.getElementById('tipoPeriodo');
   
@@ -609,6 +978,17 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
   
+  // Cambio automático en campos de fecha
+  document.getElementById('fechaInicio').addEventListener('change', function() {
+    tipoPeriodo.value = 'personalizado';
+    periodoForm.submit();
+  });
+  
+  document.getElementById('fechaFin').addEventListener('change', function() {
+    tipoPeriodo.value = 'personalizado';
+    periodoForm.submit();
+  });
+  
   // Marcar botón activo según período actual
   const periodoActual = tipoPeriodo.value;
   const btnActivo = document.querySelector(`[data-periodo="${periodoActual}"]`);
@@ -616,8 +996,9 @@ document.addEventListener('DOMContentLoaded', function() {
     btnActivo.classList.add('active', 'btn-primary');
     btnActivo.classList.remove('btn-outline-primary');
   }
+  {{/if}}
   
-  // ============ FUNCIONES AUXILIARES ============
+  // ============ FUNCIONES GLOBALES ============
   
   function calcularFechasPeriodo(periodo) {
     const hoy = new Date();
@@ -642,6 +1023,93 @@ document.addEventListener('DOMContentLoaded', function() {
         hace30Dias.setDate(hoy.getDate() - 30);
         inicio = hace30Dias.toISOString().split('T')[0];
         fin = hoy.toISOString().split('T')[0];
+        break;
+      case 'desde_inicio':
+        // Para "Año" - mostrar todos los datos históricos
+        inicio = '2020-01-01';
+        fin = hoy.toISOString().split('T')[0];
+        break;
+      default:
+        inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
+        fin = hoy.toISOString().split('T')[0];
+    }
+    
+    return { inicio, fin };
+  }
+  
+  // Función específica para rangos comparativos
+  function calcularFechasPorRango(rango) {
+    const hoy = new Date();
+    let inicio, fin;
+    
+    switch(rango) {
+      case 'hoy':
+        inicio = fin = hoy.toISOString().split('T')[0];
+        break;
+      case 'ayer':
+        const ayer = new Date(hoy);
+        ayer.setDate(hoy.getDate() - 1);
+        inicio = fin = ayer.toISOString().split('T')[0];
+        break;
+      case 'semana':
+        const inicioSemana = new Date(hoy);
+        inicioSemana.setDate(hoy.getDate() - hoy.getDay());
+        inicio = inicioSemana.toISOString().split('T')[0];
+        fin = hoy.toISOString().split('T')[0];
+        break;
+      case 'semana_anterior':
+        const inicioSemanaAnt = new Date(hoy);
+        inicioSemanaAnt.setDate(hoy.getDate() - hoy.getDay() - 7);
+        const finSemanaAnt = new Date(inicioSemanaAnt);
+        finSemanaAnt.setDate(inicioSemanaAnt.getDate() + 6);
+        inicio = inicioSemanaAnt.toISOString().split('T')[0];
+        fin = finSemanaAnt.toISOString().split('T')[0];
+        break;
+      case 'mes':
+        inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
+        fin = hoy.toISOString().split('T')[0];
+        break;
+      case 'mes_anterior':
+        const mesAnt = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+        const finMesAnt = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
+        inicio = mesAnt.toISOString().split('T')[0];
+        fin = finMesAnt.toISOString().split('T')[0];
+        break;
+      case 'trimestre':
+        const inicioTrimestre = new Date(hoy.getFullYear(), Math.floor(hoy.getMonth() / 3) * 3, 1);
+        inicio = inicioTrimestre.toISOString().split('T')[0];
+        fin = hoy.toISOString().split('T')[0];
+        break;
+      case 'trimestre_anterior':
+        const trimestreAnt = Math.floor(hoy.getMonth() / 3) - 1;
+        const añoTrimAnt = trimestreAnt < 0 ? hoy.getFullYear() - 1 : hoy.getFullYear();
+        const trimestreAjustado = trimestreAnt < 0 ? 3 : trimestreAnt;
+        const inicioTrimAnt = new Date(añoTrimAnt, trimestreAjustado * 3, 1);
+        const finTrimAnt = new Date(añoTrimAnt, trimestreAjustado * 3 + 3, 0);
+        inicio = inicioTrimAnt.toISOString().split('T')[0];
+        fin = finTrimAnt.toISOString().split('T')[0];
+        break;
+      case 'año':
+        inicio = new Date(hoy.getFullYear(), 0, 1).toISOString().split('T')[0];
+        fin = hoy.toISOString().split('T')[0];
+        break;
+      case 'año_anterior':
+        inicio = new Date(hoy.getFullYear() - 1, 0, 1).toISOString().split('T')[0];
+        fin = new Date(hoy.getFullYear() - 1, 11, 31).toISOString().split('T')[0];
+        break;
+      case 'ultimos_30':
+        const hace30 = new Date(hoy);
+        hace30.setDate(hoy.getDate() - 30);
+        inicio = hace30.toISOString().split('T')[0];
+        fin = hoy.toISOString().split('T')[0];
+        break;
+      case '30_dias_anteriores':
+        const hace60 = new Date(hoy);
+        hace60.setDate(hoy.getDate() - 60);
+        const hace30_2 = new Date(hoy);
+        hace30_2.setDate(hoy.getDate() - 30);
+        inicio = hace60.toISOString().split('T')[0];
+        fin = hace30_2.toISOString().split('T')[0];
         break;
       default:
         inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
@@ -683,19 +1151,14 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
   
-  // Loading state mejorado para formularios
+  // Loading state visual para cambios de período
   periodoForm.addEventListener('submit', function() {
-    const submitBtn = this.querySelector('button[type="submit"]');
-    if (submitBtn) {
-      const originalText = submitBtn.innerHTML;
-      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando...';
-      submitBtn.disabled = true;
-      
-      // Restaurar después de 3 segundos si no se recarga la página
-      setTimeout(() => {
-        submitBtn.innerHTML = originalText;
-        submitBtn.disabled = false;
-      }, 3000);
+    // Mostrar indicador de carga en el botón activo
+    const btnActivo = document.querySelector('[data-periodo].active');
+    if (btnActivo) {
+      const originalText = btnActivo.innerHTML;
+      btnActivo.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+      btnActivo.disabled = true;
     }
   });
   
@@ -754,6 +1217,45 @@ document.addEventListener('DOMContentLoaded', function() {
     observer.observe(el);
   });
 });
+
+// ============ FUNCIONES GLOBALES PARA MODO COMPARATIVO ============
+
+// Cambiar entre modo normal y comparativo
+function cambiarModo(modo) {
+  if (modo === 'comparativo') {
+    window.location.href = '/admin?modo=comparativo&rangoA=mes&rangoB=mes_anterior';
+  } else {
+    window.location.href = '/admin';
+  }
+}
+
+// Intercambiar períodos A y B
+function intercambiarPeriodos() {
+  const rangoA = document.getElementById('rangoA');
+  const rangoB = document.getElementById('rangoB');
+  const fechaInicioA = document.getElementById('fechaInicioA');
+  const fechaFinA = document.getElementById('fechaFinA');
+  const fechaInicioB = document.getElementById('fechaInicioB');
+  const fechaFinB = document.getElementById('fechaFinB');
+  
+  if (rangoA && rangoB && fechaInicioA && fechaFinA && fechaInicioB && fechaFinB) {
+    // Intercambiar valores
+    const tempRango = rangoA.value;
+    const tempFechaInicio = fechaInicioA.value;
+    const tempFechaFin = fechaFinA.value;
+    
+    rangoA.value = rangoB.value;
+    fechaInicioA.value = fechaInicioB.value;
+    fechaFinA.value = fechaFinB.value;
+    
+    rangoB.value = tempRango;
+    fechaInicioB.value = tempFechaInicio;
+    fechaFinB.value = tempFechaFin;
+    
+    // Enviar formulario automáticamente
+    document.getElementById('comparativoForm').submit();
+  }
+}
 
 // ============ CSS ANIMATIONS ============
 const style = document.createElement('style');

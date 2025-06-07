@@ -262,6 +262,76 @@ module.exports = {
     return a && b;
   },
   
+  // ============== HELPERS PARA MODO COMPARATIVO ==============
+  
+  /**
+   * Formatear diferencia con signo
+   */
+  formatDifference: (value, format = 'numero') => {
+    if (value == null || isNaN(value)) return '0';
+    
+    const num = parseFloat(value);
+    const sign = num >= 0 ? '+' : '';
+    
+    if (format === 'moneda') {
+      return `${sign}$${Math.abs(num).toFixed(2)}`;
+    } else if (format === 'porcentaje') {
+      return `${sign}${num.toFixed(1)}%`;
+    } else {
+      return `${sign}${num}`;
+    }
+  },
+  
+  /**
+   * Obtener icono de dirección según valor
+   */
+  getDirectionIcon: (value) => {
+    if (value > 0) return 'fas fa-arrow-up';
+    if (value < 0) return 'fas fa-arrow-down';
+    return 'fas fa-minus';
+  },
+  
+  /**
+   * Obtener color según dirección del cambio
+   */
+  getChangeColor: (value) => {
+    if (value > 0) return 'success';
+    if (value < 0) return 'danger';
+    return 'secondary';
+  },
+  
+  /**
+   * Formatear valor según tipo
+   */
+  formatByType: (value, type) => {
+    if (value == null) return '0';
+    
+    switch (type) {
+      case 'moneda':
+        return `$${parseFloat(value).toFixed(2)}`;
+      case 'porcentaje':
+        return `${parseFloat(value).toFixed(1)}%`;
+      case 'numero':
+        return String(Math.round(parseFloat(value)));
+      default:
+        return String(value);
+    }
+  },
+  
+  /**
+   * Verificar si un cambio es significativo (>= 10%)
+   */
+  isSignificantChange: (percentage) => {
+    return Math.abs(parseFloat(percentage)) >= 10;
+  },
+  
+  /**
+   * Operador NOT lógico
+   */
+  not: (a) => {
+    return !a;
+  },
+  
   // ============== HELPERS DE FORMATO ESPECÍFICOS ==============
   
   /**
