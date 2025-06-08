@@ -1,15 +1,89 @@
-<!-- Dashboard Caja --><div class="row">  <div class="col-md-12 mb-4">    <div class="alert alert-info d-flex justify-content-between align-items-center">      <span><i class="fas fa-info-circle me-2"></i> Bienvenido al panel de Caja. Desde aquí podrás gestionar pagos, facturas y documentos.</span>      <button type="button" class="btn btn-sm btn-outline-secondary" id="toggleValores">        <i class="fas fa-eye me-1"></i> <span id="toggleText">Mostrar Valores</span>      </button>    </div>  </div>    <!-- 🎯 INDICADOR ELEGANTE DE PERÍODO ACTIVO -->  <div class="col-md-12 mb-4">    <div class="alert alert-light border-left-primary shadow-sm">      <div class="d-flex align-items-center justify-content-between">        <div class="d-flex align-items-center">          <i class="fas fa-calendar-day text-primary me-3" style="font-size: 1.2rem;"></i>          <div>            <span class="text-muted me-2">Mostrando datos de:</span>            <strong class="text-primary" id="periodoActivo">{{periodo.periodoDescriptivo}}</strong>          </div>        </div>        <div class="text-end">          {{#if (and periodo.esHoy (eq stats.documentosFacturados 0))}}            <small class="text-warning">              <i class="fas fa-info-circle me-1"></i>Sin actividad hoy            </small>            <br>            <small class="text-muted">Use otros filtros para ver períodos anteriores</small>          {{else}}            <small class="text-success">              <i class="fas fa-check-circle me-1"></i>{{stats.documentosFacturados}} documentos            </small>            <br>            <small class="text-muted">en este período</small>          {{/if}}        </div>      </div>    </div>  </div>    <!-- Filtros de Fecha -->  <div class="col-md-12 mb-4">    <div class="card">      <div class="card-header">        <i class="fas fa-filter me-2"></i> Filtros de Período      </div>      <div class="card-body">        <div class="row align-items-end">          <div class="col-md-3">            <label for="fechaDesde" class="form-label">Desde</label>            <input type="date" class="form-control" id="fechaDesde" name="fechaDesde">          </div>          <div class="col-md-3">            <label for="fechaHasta" class="form-label">Hasta</label>            <input type="date" class="form-control" id="fechaHasta" name="fechaHasta">          </div>          <div class="col-md-6">            <div class="btn-group mb-2" role="group">              <button type="button" class="btn btn-outline-primary btn-sm" data-periodo="hoy">Hoy</button>              <button type="button" class="btn btn-outline-primary btn-sm" data-periodo="semana">Esta Semana</button>              <button type="button" class="btn btn-outline-primary btn-sm" data-periodo="mes">Este Mes</button>              <button type="button" class="btn btn-outline-primary btn-sm" data-periodo="ano">Año Actual</button>            </div>            <div class="d-flex">              <button type="button" class="btn btn-primary me-2" id="aplicarFiltros">                <i class="fas fa-search me-1"></i>Aplicar Filtros              </button>              <button type="button" class="btn btn-outline-secondary" id="limpiarFiltros">                <i class="fas fa-times me-1"></i>Limpiar              </button>            </div>          </div>        </div>      </div>    </div>  </div>
+<!-- Dashboard Caja Corregido -->
+<div class="row">
+  <div class="col-md-12 mb-4">
+    <div class="alert alert-info d-flex justify-content-between align-items-center">
+      <span><i class="fas fa-info-circle me-2"></i> Bienvenido al panel de Caja. Desde aquí podrás gestionar pagos, facturas y documentos.</span>
+      <button type="button" class="btn btn-sm btn-outline-secondary" id="toggleValores">
+        <i class="fas fa-eye-slash me-1"></i> <span id="toggleText">Ocultar Valores</span>
+      </button>
+    </div>
+  </div>
   
-  <!-- Tarjetas de estadísticas -->
+  <!-- 🎯 INDICADOR ELEGANTE DE PERÍODO ACTIVO -->
+  <div class="col-md-12 mb-4">
+    <div class="alert alert-light border-left-primary shadow-sm">
+      <div class="d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center">
+          <i class="fas fa-calendar-day text-primary me-3" style="font-size: 1.2rem;"></i>
+          <div>
+            <span class="text-muted me-2">Mostrando datos de:</span>
+            <strong class="text-primary" id="periodoActivo">{{periodo.periodoTexto}}</strong>
+          </div>
+        </div>
+        <div class="text-end">
+          {{#if (and periodo.esHoy (eq metricas.documentosFacturados 0))}}
+            <small class="text-warning">
+              <i class="fas fa-info-circle me-1"></i>Sin actividad hoy
+            </small>
+            <br>
+            <small class="text-muted">Use otros filtros para ver períodos anteriores</small>
+          {{else}}
+            <small class="text-success">
+              <i class="fas fa-check-circle me-1"></i>{{metricas.documentosFacturados}} documentos
+            </small>
+            <br>
+            <small class="text-muted">en este período</small>
+          {{/if}}
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Filtros de Fecha -->
+  <div class="col-md-12 mb-4">
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-filter me-2"></i> Filtros de Período
+      </div>
+      <div class="card-body">
+        <div class="row align-items-end">
+          <div class="col-md-3">
+            <label for="fechaDesde" class="form-label">Desde</label>
+            <input type="date" class="form-control" id="fechaDesde" name="fechaDesde">
+          </div>
+          <div class="col-md-3">
+            <label for="fechaHasta" class="form-label">Hasta</label>
+            <input type="date" class="form-control" id="fechaHasta" name="fechaHasta">
+          </div>
+          <div class="col-md-6">
+            <div class="btn-group mb-2" role="group">
+              <button type="button" class="btn btn-outline-primary btn-sm" data-periodo="hoy">Hoy</button>
+              <button type="button" class="btn btn-outline-primary btn-sm" data-periodo="semana">Esta Semana</button>
+              <button type="button" class="btn btn-outline-primary btn-sm" data-periodo="mes">Este Mes</button>
+              <button type="button" class="btn btn-outline-primary btn-sm" data-periodo="ano">Año Actual</button>
+            </div>
+            <div class="d-flex">
+              <button type="button" class="btn btn-outline-secondary me-2" id="limpiarFiltros">
+                <i class="fas fa-times me-1"></i>Limpiar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tarjetas de estadísticas financieras - ORDEN PROFESIONAL: FACTURADO → COBRADO → RETENIDO → PENDIENTE -->
   <div class="col-md-3 mb-4">
     <div class="card bg-primary text-white">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center">
           <div>
             <h6 class="card-title mb-0">Total Facturado</h6>
-            <h2 class="display-6 mt-2 mb-0 valor-financiero" id="totalFacturado">***</h2>
+            <h2 class="display-6 mt-2 mb-0 valor-financiero" id="totalFacturado" data-valor-original="${{finanzas.facturado}}">${{finanzas.facturado}}</h2>
+            <small class="opacity-75">{{metricas.documentosFacturados}} documentos</small>
           </div>
-          <i class="fas fa-dollar-sign fa-3x opacity-50"></i>
+          <i class="fas fa-file-invoice fa-3x opacity-50"></i>
         </div>
       </div>
     </div>
@@ -20,10 +94,26 @@
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center">
           <div>
-            <h6 class="card-title mb-0">Documentos Facturados</h6>
-            <h2 class="display-6 mt-2 mb-0" id="documentosFacturados">{{stats.documentosFacturados}}</h2>
+            <h6 class="card-title mb-0">Total Cobrado</h6>
+            <h2 class="display-6 mt-2 mb-0 valor-financiero" id="totalCobrado" data-valor-original="${{finanzas.cobrado}}">${{finanzas.cobrado}}</h2>
+            <small class="opacity-75">{{finanzas.documentosCobradosPeriodo}} cobrados</small>
           </div>
-          <i class="fas fa-file-invoice fa-3x opacity-50"></i>
+          <i class="fas fa-hand-holding-usd fa-3x opacity-50"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3 mb-4">
+    <div class="card bg-info text-white">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="card-title mb-0">Total Retenido</h6>
+            <h2 class="display-6 mt-2 mb-0 valor-financiero" id="totalRetenido" data-valor-original="${{finanzas.retenido}}">${{finanzas.retenido}}</h2>
+            <small class="opacity-75">Retenciones aplicadas</small>
+          </div>
+          <i class="fas fa-receipt fa-3x opacity-50"></i>
         </div>
       </div>
     </div>
@@ -35,33 +125,69 @@
         <div class="d-flex justify-content-between align-items-center">
           <div>
             <h6 class="card-title mb-0">Total Pendiente</h6>
-            <h2 class="display-6 mt-2 mb-0 valor-financiero" id="totalPendiente">***</h2>
+            <h2 class="display-6 mt-2 mb-0 valor-financiero" id="totalPendiente" data-valor-original="${{finanzas.pendiente}}">${{finanzas.pendiente}}</h2>
+            <small class="opacity-75">{{metricas.documentosPendientesPago}} por cobrar</small>
           </div>
           <i class="fas fa-clock fa-3x opacity-50"></i>
         </div>
       </div>
     </div>
   </div>
-  
-  <div class="col-md-3 mb-4">
-    <div class="card bg-info text-white">
-      <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <h6 class="card-title mb-0">Total Cobrado</h6>
-            <h2 class="display-6 mt-2 mb-0 valor-financiero" id="totalCobrado">***</h2>
+
+  <!-- Alertas Críticas -->
+  {{#if alertasCriticas.length}}
+  <div class="col-md-12 mb-4">
+    <div class="card border-warning">
+      <div class="card-header bg-warning text-dark">
+        <h6 class="mb-0">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          Alertas Críticas ({{alertasCriticas.length}})
+        </h6>
+      </div>
+      <div class="card-body p-0">
+        {{#each alertasCriticas}}
+        <div class="alert alert-{{this.tipo}} border-0 rounded-0 mb-0 {{#unless @last}}border-bottom{{/unless}}">
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+              <i class="{{this.icono}} me-3"></i>
+              <div>
+                <strong>{{this.titulo}}</strong>
+                <br><small>{{this.descripcion}}</small>
+              </div>
+            </div>
+            <a href="{{this.accion}}" class="btn btn-sm btn-outline-{{this.tipo}}">
+              <i class="fas fa-arrow-right"></i> Ver
+            </a>
           </div>
-          <i class="fas fa-hand-holding-usd fa-3x opacity-50"></i>
         </div>
+        {{/each}}
       </div>
     </div>
   </div>
+  {{/if}}
+
+  <!-- Validación Matemática (Solo visible si hay error) -->
+  {{#unless validacionMatematica.esValida}}
+  <div class="col-md-12 mb-4">
+    <div class="alert alert-danger">
+      <i class="fas fa-exclamation-triangle me-2"></i>
+      <strong>Error Matemático Detectado:</strong> 
+      La ecuación financiera no cuadra. Diferencia: ${{validacionMatematica.diferencia}}
+      <br><small>Ecuación esperada: {{validacionMatematica.ecuacion}}</small>
+    </div>
+  </div>
+  {{/unless}}
 
   <!-- Accesos rápidos -->
   <div class="col-md-12 mb-4">
     <div class="card">
       <div class="card-header">
         <i class="fas fa-bolt me-2"></i> Acciones Rápidas
+        {{#if validacionMatematica.esValida}}
+          <small class="text-success ms-2">
+            <i class="fas fa-check-circle"></i> Matemática verificada
+          </small>
+        {{/if}}
       </div>
       <div class="card-body">
         <div class="row text-center">
@@ -99,7 +225,7 @@
   <div class="col-md-6 mb-4">
     <div class="card h-100">
       <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="fas fa-exclamation-circle text-warning me-2"></i> Documentos Pendientes de Pago (<span id="cantidadPendientes">{{stats.documentosPendientesPago}}</span>)</span>
+        <span><i class="fas fa-exclamation-circle text-warning me-2"></i> Documentos Pendientes de Pago (<span id="cantidadPendientes">{{metricas.documentosPendientesPago}}</span>)</span>
         <a href="/caja/documentos?estadoPago=pendiente" class="btn btn-sm btn-outline-secondary">Ver Todos</a>
       </div>
       <div class="card-body p-0" id="tablaPendientes">
@@ -112,6 +238,7 @@
                   <th>Cliente</th>
                   <th>Factura</th>
                   <th>Valor</th>
+                  <th>Fecha</th>
                   <th>Acciones</th>
                 </tr>
               </thead>
@@ -121,7 +248,8 @@
                     <td>{{this.codigoBarras}}</td>
                     <td>{{this.nombreCliente}}</td>
                     <td>{{this.numeroFactura}}</td>
-                    <td class="valor-financiero" data-valor-original="{{this.valorFacturaFormato}}">***</td>
+                    <td class="valor-financiero" data-valor-original="{{this.valorFacturaFormato}}">{{this.valorFacturaFormato}}</td>
+                    <td>{{this.fechaCreacionFormato}}</td>
                     <td>
                       <a href="/caja/documentos/detalle/{{this.id}}" class="btn btn-sm btn-primary">
                         <i class="fas fa-edit"></i>
@@ -146,7 +274,7 @@
   <div class="col-md-6 mb-4">
     <div class="card h-100">
       <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="fas fa-money-bill-wave text-success me-2"></i> Pagos Recientes</span>
+        <span><i class="fas fa-check-circle text-success me-2"></i> Pagos Recientes</span>
         <a href="/caja/pagos" class="btn btn-sm btn-outline-secondary">Ver Todos</a>
       </div>
       <div class="card-body p-0" id="tablaPagosRecientes">
@@ -167,9 +295,9 @@
                   <tr>
                     <td>{{this.codigoBarras}}</td>
                     <td>{{this.nombreCliente}}</td>
-                    <td class="valor-financiero" data-valor-original="{{this.valorPagadoFormato}}">***</td>
-                    <td>{{this.metodoPagoFormateado}}</td>
-                    <td>{{this.fechaPagoFormateada}}</td>
+                    <td class="valor-financiero" data-valor-original="{{this.valorFacturaFormato}}">{{this.valorFacturaFormato}}</td>
+                    <td>{{this.metodoPago}}</td>
+                    <td>{{this.fechaPagoFormato}}</td>
                   </tr>
                 {{/each}}
               </tbody>
@@ -178,7 +306,7 @@
         {{else}}
           <div class="text-center py-5">
             <i class="fas fa-exclamation-triangle text-warning fa-3x mb-3"></i>
-            <p class="mb-0">No hay pagos recientes registrados</p>
+            <p class="mb-0">No hay pagos recientes</p>
           </div>
         {{/if}}
       </div>
@@ -186,554 +314,299 @@
   </div>
 </div>
 
-{{! ============== ESTADÍSTICAS ADICIONALES PARA CAJA_ARCHIVO ============== }}
-{{#if (eq userRole 'caja_archivo')}}
-  {{#if estadisticasMatrizador}}
-    <div class="row mt-4">
-      <div class="col-12">
-        <div class="card">
-          <div class="card-header">
-            <h5 class="mb-0">
-              <i class="fas fa-user-edit me-2"></i> Mis Estadísticas como Matrizadora
-            </h5>
-          </div>
-          <div class="card-body">
-            <div class="row">
-              <div class="col-md-2">
-                <div class="card bg-primary text-white">
-                  <div class="card-body text-center">
-                    <h4 class="mb-1">{{estadisticasMatrizador.asignados}}</h4>
-                    <small>Total Asignados</small>
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-2">
-                <div class="card bg-warning text-white">
-                  <div class="card-body text-center">
-                    <h4 class="mb-1">{{estadisticasMatrizador.enProceso}}</h4>
-                    <small>En Proceso</small>
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-2">
-                <div class="card bg-success text-white">
-                  <div class="card-body text-center">
-                    <h4 class="mb-1">{{estadisticasMatrizador.listos}}</h4>
-                    <small>Listos para Entrega</small>
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-2">
-                <div class="card bg-info text-white">
-                  <div class="card-body text-center">
-                    <h4 class="mb-1">{{estadisticasMatrizador.entregados}}</h4>
-                    <small>Total Entregados</small>
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-2">
-                <div class="card bg-secondary text-white">
-                  <div class="card-body text-center">
-                    <h4 class="mb-1">{{estadisticasMatrizador.entregadosHoy}}</h4>
-                    <small>Entregados Hoy</small>
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-2">
-                <div class="d-grid gap-2">
-                  <a href="/caja/mis-documentos" class="btn btn-outline-primary">
-                    <i class="fas fa-file-edit"></i><br>
-                    <small>Ver Mis Documentos</small>
-                  </a>
-                  <a href="/caja/entrega-documentos" class="btn btn-outline-success">
-                    <i class="fas fa-hand-holding"></i><br>
-                    <small>Entrega de Documentos</small>
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  {{/if}}
-{{/if}}
-
 <script>
-  document.addEventListener('DOMContentLoaded', function() {
-    // ============ FUNCIÓN AUXILIAR PARA FORMATEAR DINERO ============
-    function formatMoney(value) {
-      if (!value) return '0.00';
-      const num = parseFloat(value.toString().replace(/[^0-9.-]/g, ''));
-      return num.toLocaleString('es-EC', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      });
-    }
-    
-    // ============ FUNCIONALIDAD OCULTAR/MOSTRAR VALORES ============
-    const toggleBtn = document.getElementById('toggleValores');
+document.addEventListener('DOMContentLoaded', function() {
+  // CORREGIDO: Valores visibles por defecto
+  let valoresOcultos = false;
+  
+  // Configurar fechas por defecto
+  const hoy = new Date();
+  const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+  
+  document.getElementById('fechaDesde').value = primerDiaMes.toISOString().split('T')[0];
+  document.getElementById('fechaHasta').value = hoy.toISOString().split('T')[0];
+  
+  // CORREGIDO: Toggle para ocultar/mostrar valores (empezar mostrando)
+  document.getElementById('toggleValores').addEventListener('click', function() {
     const toggleText = document.getElementById('toggleText');
-    const toggleIcon = toggleBtn.querySelector('i');
-    let valoresOcultos = true; // EMPEZAR CON VALORES OCULTOS
+    const toggleIcon = this.querySelector('i');
+    const valoresFinancieros = document.querySelectorAll('.valor-financiero');
     
-    // ============ INICIALIZAR VALORES DESDE EL SERVIDOR ============
-    // Establecer valores originales desde los datos del servidor
-    const statsData = {
-      totalFacturado: '{{stats.totalFacturado}}',
-      totalCobrado: '{{stats.totalCobrado}}',
-      totalPendiente: '{{stats.totalPendiente}}'
-    };
-    
-    console.log('📊 INICIALIZANDO VALORES DESDE SERVIDOR:', statsData);
-    
-    // Configurar valores principales
-    const totalFacturadoEl = document.getElementById('totalFacturado');
-    const totalCobradoEl = document.getElementById('totalCobrado');
-    const totalPendienteEl = document.getElementById('totalPendiente');
-    
-    if (totalFacturadoEl) {
-      const valorFormateado = '$' + formatMoney(statsData.totalFacturado);
-      totalFacturadoEl.setAttribute('data-valor-original', valorFormateado);
-      totalFacturadoEl.textContent = valoresOcultos ? '***' : valorFormateado;
-    }
-    
-    if (totalCobradoEl) {
-      const valorFormateado = '$' + formatMoney(statsData.totalCobrado);
-      totalCobradoEl.setAttribute('data-valor-original', valorFormateado);
-      totalCobradoEl.textContent = valoresOcultos ? '***' : valorFormateado;
-    }
-    
-    if (totalPendienteEl) {
-      const valorFormateado = '$' + formatMoney(statsData.totalPendiente);
-      totalPendienteEl.setAttribute('data-valor-original', valorFormateado);
-      totalPendienteEl.textContent = valoresOcultos ? '***' : valorFormateado;
-    }
-    
-    // Configurar valores en las tablas
-    document.querySelectorAll('.valor-financiero:not([id])').forEach(element => {
-      if (element.textContent !== '***') {
-        element.setAttribute('data-valor-original', element.textContent);
-        if (valoresOcultos) {
-          element.textContent = '***';
+    if (valoresOcultos) {
+      // Mostrar valores
+      valoresFinancieros.forEach(element => {
+        const valorOriginal = element.getAttribute('data-valor-original');
+        if (valorOriginal) {
+          element.textContent = valorOriginal;
         }
-      }
-    });
-    
-    // Guardar valores de las tablas
-    {{#each documentosPendientes}}
-    document.querySelector(`td.valor-financiero[data-doc-id="{{this.id}}"]`)?.setAttribute('data-valor-original', '${{formatMoney this.valorFactura}}');
-    {{/each}}
-    
-    {{#each documentosPagadosRecientes}}
-    document.querySelector(`td.valor-financiero[data-doc-reciente-id="{{this.id}}"]`)?.setAttribute('data-valor-original', '${{formatMoney this.valorFactura}}');
-    {{/each}}
-    
-    toggleBtn.addEventListener('click', function() {
-      const valoresFinancieros = document.querySelectorAll('.valor-financiero');
-      
-      if (valoresOcultos) {
-        // Mostrar valores
-        valoresFinancieros.forEach(element => {
-          const valorOriginal = element.getAttribute('data-valor-original');
-          if (valorOriginal) {
-            element.textContent = valorOriginal;
-          }
-        });
-        
-        toggleText.textContent = 'Ocultar Valores';
-        toggleIcon.className = 'fas fa-eye-slash me-1';
-        valoresOcultos = false;
-      } else {
-        // Ocultar valores
-        valoresFinancieros.forEach(element => {
-          element.textContent = '***';
-        });
-        
-        toggleText.textContent = 'Mostrar Valores';
-        toggleIcon.className = 'fas fa-eye me-1';
-        valoresOcultos = true;
-      }
-    });
-    
-    // ============ FUNCIONALIDAD FILTROS DE FECHA ============
-    
-    // 🎯 MEJORADO: Establecer fechas por defecto como HOY en lugar del mes completo
-    const hoy = new Date();
-    
-    // 🔧 CAMBIO: Usar solo el día de hoy como filtro por defecto
-    document.getElementById('fechaDesde').value = hoy.toISOString().split('T')[0];
-    document.getElementById('fechaHasta').value = hoy.toISOString().split('T')[0];
-    
-    // 🎯 NUEVO: Activar el botón "Hoy" por defecto para mostrar visualmente el filtro activo
-    const botonHoy = document.querySelector('[data-periodo="hoy"]');
-    if (botonHoy) {
-      botonHoy.classList.add('active');
-      // Cambiar clase para que se vea como seleccionado
-      botonHoy.classList.remove('btn-outline-primary');
-      botonHoy.classList.add('btn-primary');
-    }
-    
-    // Manejar botones de período predefinido
-    document.querySelectorAll('[data-periodo]').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const periodo = this.getAttribute('data-periodo');
-        const fechas = calcularFechasPeriodo(periodo);
-        
-        document.getElementById('fechaDesde').value = fechas.desde;
-        document.getElementById('fechaHasta').value = fechas.hasta;
-        
-        // 🔧 MEJORADO: Destacar botón activo con estilos correctos
-        document.querySelectorAll('[data-periodo]').forEach(b => {
-          b.classList.remove('active', 'btn-primary');
-          b.classList.add('btn-outline-primary');
-        });
-        this.classList.remove('btn-outline-primary');
-        this.classList.add('active', 'btn-primary');
-        
-        // 🎯 NUEVO: Actualizar indicador de período activo
-        actualizarIndicadorPeriodo(periodo, fechas.desde, fechas.hasta);
-        
-        // Aplicar automáticamente
-        aplicarFiltrosFecha();
       });
-    });
-    
-    // Calcular fechas según período
-    function calcularFechasPeriodo(periodo) {
-      const hoy = new Date();
-      let desde, hasta;
-      
-      switch(periodo) {
-        case 'hoy':
-          // 🔧 CORREGIDO: Solo el día de hoy
-          desde = hasta = hoy.toISOString().split('T')[0];
-          break;
-        case 'semana':
-          // 🔧 CORREGIDO: Desde el lunes de esta semana hasta hoy
-          const primerDiaSemana = new Date(hoy);
-          const diasHastaLunes = (hoy.getDay() + 6) % 7; // Calcular días hasta el lunes anterior
-          primerDiaSemana.setDate(hoy.getDate() - diasHastaLunes);
-          desde = primerDiaSemana.toISOString().split('T')[0];
-          hasta = hoy.toISOString().split('T')[0];
-          break;
-        case 'mes':
-          // 🔧 CORREGIDO: Desde el día 1 del mes actual hasta hoy
-          desde = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
-          hasta = hoy.toISOString().split('T')[0];
-          break;
-        case 'ano':
-          // 🔧 NUEVO: Desde enero 1 del año actual hasta hoy
-          desde = new Date(hoy.getFullYear(), 0, 1).toISOString().split('T')[0];
-          hasta = hoy.toISOString().split('T')[0];
-          break;
-        default:
-          // 🔧 FALLBACK: Mes actual
-          desde = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
-          hasta = hoy.toISOString().split('T')[0];
-      }
-      
-      // 🔧 NUEVO: Logging para debugging
-      console.log('=== DEBUG FRONTEND ===');
-      console.log('Período:', periodo);
-      console.log('Fecha desde:', desde);
-      console.log('Fecha hasta:', hasta);
-      console.log('Hoy:', hoy.toISOString().split('T')[0]);
-      console.log('==================');
-      
-      return { desde, hasta };
-    }
-    
-    // Aplicar filtros manualmente
-    document.getElementById('aplicarFiltros').addEventListener('click', function() {
-      aplicarFiltrosFecha();
-    });
-    
-    // Limpiar filtros
-    document.getElementById('limpiarFiltros').addEventListener('click', function() {
-      // 🎯 MEJORADO: Volver al período "HOY" por defecto en lugar del mes
-      const hoy = new Date();
-      
-      document.getElementById('fechaDesde').value = hoy.toISOString().split('T')[0];
-      document.getElementById('fechaHasta').value = hoy.toISOString().split('T')[0];
-      
-      // 🔧 MEJORADO: Activar botón "Hoy" y quitar selección de otros
-      document.querySelectorAll('[data-periodo]').forEach(b => {
-        b.classList.remove('active', 'btn-primary');
-        b.classList.add('btn-outline-primary');
+      toggleText.textContent = 'Ocultar Valores';
+      toggleIcon.className = 'fas fa-eye-slash me-1';
+      valoresOcultos = false;
+    } else {
+      // Ocultar valores
+      valoresFinancieros.forEach(element => {
+        element.textContent = '***';
       });
-      
-      // Activar botón "Hoy"
-      const botonHoy = document.querySelector('[data-periodo="hoy"]');
-      if (botonHoy) {
-        botonHoy.classList.remove('btn-outline-primary');
-        botonHoy.classList.add('active', 'btn-primary');
-      }
-      
-      // Aplicar filtros
-      aplicarFiltrosFecha();
-    });
-    
-    // Función principal para aplicar filtros
-    function aplicarFiltrosFecha() {
-      const fechaDesde = document.getElementById('fechaDesde').value;
-      const fechaHasta = document.getElementById('fechaHasta').value;
-      
-      // Validaciones
-      if (!fechaDesde || !fechaHasta) {
-        alert('Por favor, seleccione ambas fechas');
-        return;
-      }
-      
-      if (new Date(fechaDesde) > new Date(fechaHasta)) {
-        alert('La fecha "Desde" no puede ser mayor a la fecha "Hasta"');
-        return;
-      }
-      
-      // Mostrar loading
-      mostrarCargando(true);
-      
-      // Hacer petición AJAX
-      fetch('/caja/dashboard/filtrar', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          fechaDesde: fechaDesde,
-          fechaHasta: fechaHasta
-        })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          actualizarMetricas(data.datos);
-        } else {
-          alert('Error al obtener los datos: ' + data.message);
-        }
-      })
-      .catch(error => {
-        console.error('Error:', error);
-        alert('Error al procesar la solicitud');
-      })
-      .finally(() => {
-        mostrarCargando(false);
-      });
-    }
-    
-    // Mostrar/ocultar loading
-    function mostrarCargando(mostrar) {
-      const aplicarBtn = document.getElementById('aplicarFiltros');
-      
-      if (mostrar) {
-        aplicarBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Cargando...';
-        aplicarBtn.disabled = true;
-      } else {
-        aplicarBtn.innerHTML = '<i class="fas fa-search me-1"></i>Aplicar Filtros';
-        aplicarBtn.disabled = false;
-      }
-    }
-    
-    // Actualizar métricas en la interfaz con validación de lógica temporal
-    function actualizarMetricas(datos) {
-      // 🔧 NUEVO: Validación de lógica temporal en frontend
-      const totalFacturado = parseFloat(datos.stats.totalFacturado.replace(/[^0-9.-]/g, '')) || 0;
-      const totalCobrado = parseFloat(datos.stats.totalCobrado.replace(/[^0-9.-]/g, '')) || 0;
-      const totalPendiente = parseFloat(datos.stats.totalPendiente.replace(/[^0-9.-]/g, '')) || 0;
-      
-      console.log('=== VALIDACIÓN FRONTEND ===');
-      console.log('Total Facturado:', totalFacturado);
-      console.log('Total Cobrado:', totalCobrado);
-      console.log('Total Pendiente:', totalPendiente);
-      console.log('Documentos Facturados:', datos.stats.documentosFacturados);
-      console.log('Documentos Pendientes:', datos.stats.documentosPendientesPago);
-      
-      // 🔧 NUEVO: Validaciones de coherencia
-      if (totalCobrado > totalFacturado) {
-        console.error('❌ ERROR: Total cobrado no puede ser mayor que total facturado');
-        console.error('Facturado:', totalFacturado, 'Cobrado:', totalCobrado);
-      }
-      
-      if (Math.abs((totalFacturado - totalCobrado) - totalPendiente) > 0.01) {
-        console.error('❌ ERROR: Inconsistencia en cálculo de pendiente');
-        console.error('Calculado:', totalFacturado - totalCobrado, 'Reportado:', totalPendiente);
-      }
-      
-      if (datos.stats.documentosPendientesPago > datos.stats.documentosFacturados) {
-        console.error('❌ ERROR: Documentos pendientes no pueden ser más que documentos facturados');
-      }
-      
-      console.log('========================');
-      
-      // Actualizar tarjetas principales (guardando valores originales)
-      document.getElementById('totalFacturado').setAttribute('data-valor-original', datos.stats.totalFacturado);
-      document.getElementById('totalCobrado').setAttribute('data-valor-original', datos.stats.totalCobrado);
-      document.getElementById('totalPendiente').setAttribute('data-valor-original', datos.stats.totalPendiente);
-      
-      document.getElementById('documentosFacturados').textContent = datos.stats.documentosFacturados;
-      document.getElementById('cantidadPendientes').textContent = datos.stats.documentosPendientesPago;
-      
-      // Actualizar tabla de documentos pendientes
-      actualizarTablaPendientes(datos.documentosPendientes);
-      
-      // Actualizar tabla de pagos recientes
-      actualizarTablaPagosRecientes(datos.documentosPagadosRecientes);
-      
-      // Aplicar filtro de ocultar valores si está activo
-      if (valoresOcultos) {
-        document.querySelectorAll('.valor-financiero').forEach(element => {
-          element.textContent = '***';
-        });
-      } else {
-        document.querySelectorAll('.valor-financiero').forEach(element => {
-          const valorOriginal = element.getAttribute('data-valor-original');
-          if (valorOriginal) {
-            element.textContent = valorOriginal;
-          }
-        });
-      }
-    }
-    
-    // Actualizar tabla de documentos pendientes
-    function actualizarTablaPendientes(documentos) {
-      const tabla = document.getElementById('tablaPendientes');
-      
-      if (documentos.length === 0) {
-        tabla.innerHTML = `
-          <div class="text-center py-5">
-            <i class="fas fa-check-circle text-success fa-3x mb-3"></i>
-            <p class="mb-0">No hay documentos pendientes de pago en el período seleccionado</p>
-          </div>
-        `;
-        return;
-      }
-      
-      let html = `
-        <div class="table-responsive">
-          <table class="table table-hover mb-0">
-            <thead>
-              <tr>
-                <th>Código</th>
-                <th>Cliente</th>
-                <th>Factura</th>
-                <th>Valor</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-      `;
-      
-      documentos.forEach(doc => {
-        const valorFormateado = '$' + formatMoney(doc.valorFactura || '0.00');
-        html += `
-          <tr>
-            <td>${doc.codigoBarras}</td>
-            <td>${doc.nombreCliente}</td>
-            <td>${doc.numeroFactura || 'N/A'}</td>
-            <td class="valor-financiero" data-valor-original="${valorFormateado}">${valoresOcultos ? '***' : valorFormateado}</td>
-            <td>
-              <a href="/caja/documentos/detalle/${doc.id}" class="btn btn-sm btn-primary">
-                <i class="fas fa-edit"></i>
-              </a>
-            </td>
-          </tr>
-        `;
-      });
-      
-      html += `
-            </tbody>
-          </table>
-        </div>
-      `;
-      
-      tabla.innerHTML = html;
-    }
-    
-    // Actualizar tabla de pagos recientes
-    function actualizarTablaPagosRecientes(documentos) {
-      const tabla = document.getElementById('tablaPagosRecientes');
-      
-      if (documentos.length === 0) {
-        tabla.innerHTML = `
-          <div class="text-center py-5">
-            <i class="fas fa-exclamation-triangle text-warning fa-3x mb-3"></i>
-            <p class="mb-0">No hay pagos recientes en el período seleccionado</p>
-          </div>
-        `;
-        return;
-      }
-      
-      let html = `
-        <div class="table-responsive">
-          <table class="table table-hover mb-0">
-            <thead>
-              <tr>
-                <th>Código</th>
-                <th>Cliente</th>
-                <th>Valor</th>
-                <th>Método</th>
-                <th>Fecha</th>
-              </tr>
-            </thead>
-            <tbody>
-      `;
-      
-      documentos.forEach(doc => {
-        // 🔧 CORREGIDO: Usar fechaPago en lugar de updated_at
-        const fecha = doc.fechaPago ? 
-          new Date(doc.fechaPago).toLocaleDateString('es-EC', {
-            day: '2-digit',
-            month: '2-digit', 
-            year: 'numeric'
-          }) : 'N/A';
-        const valorFormateado = '$' + formatMoney(doc.valorFactura || '0.00');
-        html += `
-          <tr>
-            <td>${doc.codigoBarras}</td>
-            <td>${doc.nombreCliente}</td>
-            <td class="valor-financiero" data-valor-original="${valorFormateado}">${valoresOcultos ? '***' : valorFormateado}</td>
-            <td>${doc.metodoPago || 'N/A'}</td>
-            <td>${fecha}</td>
-          </tr>
-        `;
-      });
-      
-      html += `
-            </tbody>
-          </table>
-        </div>
-      `;
-      
-      tabla.innerHTML = html;
-    }
-
-    // 🎯 NUEVA FUNCIÓN: Actualizar indicador de período activo
-    function actualizarIndicadorPeriodo(periodo, fechaDesde, fechaHasta) {
-      const indicador = document.getElementById('periodoActivo');
-      const fechaDesdeFormateada = new Date(fechaDesde).toLocaleDateString('es-EC');
-      const fechaHastaFormateada = new Date(fechaHasta).toLocaleDateString('es-EC');
-      
-      let textoIndicador = '';
-      switch(periodo) {
-        case 'hoy':
-          textoIndicador = `HOY - ${fechaDesdeFormateada}`;
-          break;
-        case 'semana':
-          textoIndicador = `ESTA SEMANA - ${fechaDesdeFormateada} al ${fechaHastaFormateada}`;
-          break;
-        case 'mes':
-          textoIndicador = `ESTE MES - ${fechaDesdeFormateada} al ${fechaHastaFormateada}`;
-          break;
-        case 'ano':
-          textoIndicador = `AÑO ACTUAL - ${fechaDesdeFormateada} al ${fechaHastaFormateada}`;
-          break;
-        default:
-          textoIndicador = `PERÍODO PERSONALIZADO - ${fechaDesdeFormateada} al ${fechaHastaFormateada}`;
-      }
-      
-      if (indicador) {
-        indicador.textContent = textoIndicador;
-      }
+      toggleText.textContent = 'Mostrar Valores';
+      toggleIcon.className = 'fas fa-eye me-1';
+      valoresOcultos = true;
     }
   });
+  
+  // CORREGIDO: Aplicar filtros automáticamente al cambiar fechas
+  document.getElementById('fechaDesde').addEventListener('change', aplicarFiltrosFecha);
+  document.getElementById('fechaHasta').addEventListener('change', aplicarFiltrosFecha);
+  
+  // Botones de período predefinido
+  document.querySelectorAll('[data-periodo]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const periodo = this.getAttribute('data-periodo');
+      const hoy = new Date();
+      let fechaDesde, fechaHasta;
+      
+      switch(periodo) {
+        case 'hoy':
+          fechaDesde = fechaHasta = hoy;
+          break;
+        case 'semana':
+          fechaDesde = new Date(hoy);
+          fechaDesde.setDate(hoy.getDate() - hoy.getDay()); // Lunes de esta semana
+          fechaHasta = hoy;
+          break;
+        case 'mes':
+          fechaDesde = new Date(hoy.getFullYear(), hoy.getMonth(), 1); // CORREGIDO: Primer día del mes
+          fechaHasta = hoy;
+          break;
+        case 'ano':
+          fechaDesde = new Date(hoy.getFullYear(), 0, 1); // CORREGIDO: 1 de enero
+          fechaHasta = hoy;
+          break;
+      }
+      
+      document.getElementById('fechaDesde').value = fechaDesde.toISOString().split('T')[0];
+      document.getElementById('fechaHasta').value = fechaHasta.toISOString().split('T')[0];
+      
+      // Aplicar filtros automáticamente
+      aplicarFiltrosFecha();
+    });
+  });
+  
+  // Limpiar filtros
+  document.getElementById('limpiarFiltros').addEventListener('click', function() {
+    const hoy = new Date();
+    const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+    
+    document.getElementById('fechaDesde').value = primerDiaMes.toISOString().split('T')[0];
+    document.getElementById('fechaHasta').value = hoy.toISOString().split('T')[0];
+    
+    aplicarFiltrosFecha();
+  });
+  
+  function aplicarFiltrosFecha() {
+    const fechaDesde = document.getElementById('fechaDesde').value;
+    const fechaHasta = document.getElementById('fechaHasta').value;
+    
+    if (!fechaDesde || !fechaHasta) {
+      console.warn('Fechas incompletas');
+      return;
+    }
+    
+    console.log('🔄 Aplicando filtros:', { fechaDesde, fechaHasta });
+    
+    // Enviar solicitud AJAX
+    fetch('/caja/dashboard/filtrar', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        fechaDesde,
+        fechaHasta
+      })
+    })
+    .then(response => response.json())
+    .then(datos => {
+      console.log('✅ Datos recibidos:', datos);
+      actualizarDashboard(datos);
+    })
+    .catch(error => {
+      console.error('❌ Error al aplicar filtros:', error);
+      alert('Error al aplicar filtros. Por favor, intente nuevamente.');
+    });
+  }
+  
+  function actualizarDashboard(datos) {
+    if (!datos.datos || !datos.datos.finanzas) {
+      console.error('❌ Datos de finanzas no recibidos correctamente');
+      return;
+    }
+    
+    const finanzas = datos.datos.finanzas;
+    const metricas = datos.datos.metricas;
+    
+    console.log('📊 Actualizando métricas:', finanzas);
+    
+    // Actualizar métricas principales - CORRECCIÓN: Actualizar tanto atributos como texto
+    const totalFacturado = document.getElementById('totalFacturado');
+    const totalCobrado = document.getElementById('totalCobrado');
+    const totalRetenido = document.getElementById('totalRetenido');
+    const totalPendiente = document.getElementById('totalPendiente');
+    
+    if (totalFacturado) {
+      const valorFacturado = '$' + finanzas.facturado;
+      totalFacturado.setAttribute('data-valor-original', valorFacturado);
+      totalFacturado.textContent = valoresOcultos ? '***' : valorFacturado;
+    }
+    
+    if (totalCobrado) {
+      const valorCobrado = '$' + finanzas.cobrado;
+      totalCobrado.setAttribute('data-valor-original', valorCobrado);
+      totalCobrado.textContent = valoresOcultos ? '***' : valorCobrado;
+    }
+    
+    if (totalRetenido) {
+      const valorRetenido = '$' + finanzas.retenido;
+      totalRetenido.setAttribute('data-valor-original', valorRetenido);
+      totalRetenido.textContent = valoresOcultos ? '***' : valorRetenido;
+    }
+    
+    if (totalPendiente) {
+      const valorPendiente = '$' + finanzas.pendiente;
+      totalPendiente.setAttribute('data-valor-original', valorPendiente);
+      totalPendiente.textContent = valoresOcultos ? '***' : valorPendiente;
+    }
+    
+    // Actualizar contadores
+    const cantidadPendientesElement = document.getElementById('cantidadPendientes');
+    if (cantidadPendientesElement && metricas) {
+      cantidadPendientesElement.textContent = metricas.documentosPendientesPago || 0;
+    }
+    
+    // Actualizar tablas
+    actualizarTablaPendientes(datos.datos.documentosPendientes);
+    actualizarTablaPagosRecientes(datos.datos.documentosPagadosRecientes);
+    
+    // Actualizar indicador de período
+    const fechaDesdeFormateada = new Date(datos.datos.fechaDesde || new Date()).toLocaleDateString('es-EC');
+    const fechaHastaFormateada = new Date(datos.datos.fechaHasta || new Date()).toLocaleDateString('es-EC');
+    actualizarIndicadorPeriodo(fechaDesdeFormateada, fechaHastaFormateada);
+    
+    console.log('✅ Dashboard actualizado correctamente');
+  }
+  
+  function actualizarTablaPendientes(documentos) {
+    const tabla = document.getElementById('tablaPendientes');
+    
+    if (!documentos || documentos.length === 0) {
+      tabla.innerHTML = `
+        <div class="text-center py-5">
+          <i class="fas fa-check-circle text-success fa-3x mb-3"></i>
+          <p class="mb-0">No hay documentos pendientes de pago en el período seleccionado</p>
+        </div>
+      `;
+      return;
+    }
+    
+    let html = `
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Cliente</th>
+              <th>Factura</th>
+              <th>Valor</th>
+              <th>Fecha</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+    
+    documentos.forEach(doc => {
+      const valorFormateado = doc.valorFacturaFormato || doc.valorFactura || '0.00';
+      html += `
+        <tr>
+          <td>${doc.codigoBarras || 'N/A'}</td>
+          <td>${doc.nombreCliente || 'N/A'}</td>
+          <td>${doc.numeroFactura || 'N/A'}</td>
+          <td class="valor-financiero" data-valor-original="${valorFormateado}">${valoresOcultos ? '***' : valorFormateado}</td>
+          <td>${doc.fechaCreacionFormato || 'N/A'}</td>
+          <td>
+            <a href="/caja/documentos/detalle/${doc.id}" class="btn btn-sm btn-primary">
+              <i class="fas fa-edit"></i>
+            </a>
+          </td>
+        </tr>
+      `;
+    });
+    
+    html += `
+          </tbody>
+        </table>
+      </div>
+    `;
+    
+    tabla.innerHTML = html;
+  }
+  
+  function actualizarTablaPagosRecientes(documentos) {
+    const tabla = document.getElementById('tablaPagosRecientes');
+    
+    if (!documentos || documentos.length === 0) {
+      tabla.innerHTML = `
+        <div class="text-center py-5">
+          <i class="fas fa-exclamation-triangle text-warning fa-3x mb-3"></i>
+          <p class="mb-0">No hay pagos recientes en el período seleccionado</p>
+        </div>
+      `;
+      return;
+    }
+    
+    let html = `
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Cliente</th>
+              <th>Valor</th>
+              <th>Método</th>
+              <th>Fecha</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+    
+    documentos.forEach(doc => {
+      const valorFormateado = doc.valorFacturaFormato || doc.valorFactura || '0.00';
+      html += `
+        <tr>
+          <td>${doc.codigoBarras || 'N/A'}</td>
+          <td>${doc.nombreCliente || 'N/A'}</td>
+          <td class="valor-financiero" data-valor-original="${valorFormateado}">${valoresOcultos ? '***' : valorFormateado}</td>
+          <td>${doc.metodoPago || 'N/A'}</td>
+          <td>${doc.fechaPagoFormato || 'N/A'}</td>
+        </tr>
+      `;
+    });
+    
+    html += `
+          </tbody>
+        </table>
+      </div>
+    `;
+    
+    tabla.innerHTML = html;
+  }
+  
+  function actualizarIndicadorPeriodo(fechaDesdeFormateada, fechaHastaFormateada) {
+    const indicador = document.getElementById('periodoActivo');
+    
+    if (indicador) {
+      indicador.textContent = `${fechaDesdeFormateada} al ${fechaHastaFormateada}`;
+    }
+  }
+});
 </script> 
