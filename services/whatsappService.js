@@ -5,6 +5,7 @@
 
 const axios = require('axios');
 const { sequelize } = require('../config/database');
+const configNotaria = require('../config/notaria');
 
 // Configuración del servicio
 let configuracion = {
@@ -97,20 +98,20 @@ const validarTelefono = (telefono) => {
  * @returns {string} Mensaje formateado
  */
 const generarMensajeDocumentoListo = (documento) => {
-  const mensaje = `🏛️ *NOTARÍA*
+  let contextoTramite = '';
+  if (documento.notas && 
+      typeof documento.notas === 'string' && 
+      documento.notas.trim().length > 0) {
+    contextoTramite = ` - ${documento.notas.trim()}`;
+  }
 
-¡Su documento está listo para retirar!
-
-📄 *Tipo:* ${documento.tipoDocumento}
-🔢 *Código:* ${documento.codigoBarras}
-👤 *Cliente:* ${documento.nombreCliente}
-
-📍 *Dirección:* [Dirección de la Notaría]
-🕒 *Horario:* Lunes a Viernes 8:00 AM - 5:00 PM
-
-⚠️ *Importante:* Traiga su documento de identidad para el retiro.
-
-¿Tiene alguna pregunta? Responda a este mensaje.`;
+  // Usar plantilla centralizada
+  const mensaje = configNotaria.plantillas.documentoListo.whatsapp
+    .replace('{{tipoDocumento}}', documento.tipoDocumento)
+    .replace('{{contextoTramite}}', contextoTramite)
+    .replace('{{codigoBarras}}', documento.codigoBarras)
+    .replace('{{codigoVerificacion}}', documento.codigoVerificacion || 'N/A')
+    .replace('{{nombreCliente}}', documento.nombreCliente);
 
   return mensaje;
 };
@@ -122,28 +123,34 @@ const generarMensajeDocumentoListo = (documento) => {
  * @returns {string} Mensaje formateado
  */
 const generarMensajeEntregaConfirmada = (documento, datosEntrega) => {
-  const fechaEntrega = new Date(datosEntrega.fechaEntrega || new Date()).toLocaleDateString('es-CO');
-  const horaEntrega = new Date(datosEntrega.fechaEntrega || new Date()).toLocaleTimeString('es-CO', { 
-    hour: '2-digit', 
-    minute: '2-digit' 
+  let contextoTramite = '';
+  if (documento.notas && 
+      typeof documento.notas === 'string' && 
+      documento.notas.trim().length > 0) {
+    contextoTramite = ` - ${documento.notas.trim()}`;
+  }
+
+  const fechaEntrega = new Date(datosEntrega.fechaEntrega || new Date()).toLocaleDateString('es-EC', {
+    day: '2-digit', month: '2-digit', year: 'numeric'
   });
   
-  const mensaje = `🏛️ *NOTARÍA*
-
-✅ *Documento entregado exitosamente*
-
-📄 *Tipo:* ${documento.tipoDocumento}
-🔢 *Código:* ${documento.codigoBarras}
-👤 *Cliente:* ${documento.nombreCliente}
-
-📋 *Detalles de entrega:*
-• *Recibido por:* ${datosEntrega.nombreReceptor}
-• *Identificación:* ${datosEntrega.identificacionReceptor}
-• *Relación:* ${datosEntrega.relacionReceptor}
-• *Fecha:* ${fechaEntrega}
-• *Hora:* ${horaEntrega}
-
-Gracias por confiar en nuestros servicios.`;
+  const horaEntrega = new Date(datosEntrega.fechaEntrega || new Date()).toLocaleTimeString('es-EC', { 
+    hour: '2-digit', 
+    minute: '2-digit',
+    hour12: false
+  });
+  
+  // Usar plantilla centralizada
+  const mensaje = configNotaria.plantillas.documentoEntregado.whatsapp
+    .replace('{{tipoDocumento}}', documento.tipoDocumento)
+    .replace('{{contextoTramite}}', contextoTramite)
+    .replace('{{codigoBarras}}', documento.codigoBarras)
+    .replace('{{nombreCliente}}', documento.nombreCliente)
+    .replace('{{nombreReceptor}}', datosEntrega.nombreReceptor)
+    .replace('{{identificacionReceptor}}', datosEntrega.identificacionReceptor)
+    .replace('{{relacionReceptor}}', datosEntrega.relacionReceptor)
+    .replace('{{fechaEntrega}}', fechaEntrega)
+    .replace('{{horaEntrega}}', horaEntrega);
 
   return mensaje;
 };
@@ -166,7 +173,7 @@ const enviarMensaje = async (telefono, mensaje) => {
     const envioRealHabilitado = process.env.WHATSAPP_ENVIO_REAL === 'true' || process.env.NODE_ENV === 'production';
     
     // Modo desarrollo - simular envío SOLO si no está habilitado el envío real
-    if (!envioRealHabilitado) {
+    if (!envioRealHabilitado || configuracion.modoDesarrollo) {
       console.log(`[SIMULADO] 📱 WhatsApp a ${telefonoValido}:`);
       console.log(`${mensaje}`);
       console.log(`[DESARROLLO] Notificación WhatsApp registrada sin envío real`);
@@ -185,7 +192,15 @@ const enviarMensaje = async (telefono, mensaje) => {
     
     // Verificar si el servicio está habilitado
     if (!configuracion.habilitado) {
-      throw new Error('Servicio de WhatsApp no está habilitado');
+      console.log('⚠️ Servicio de WhatsApp no está habilitado, simulando envío...');
+      return {
+        exito: true,
+        simulado: true,
+        destinatario: telefonoValido,
+        mensaje: mensaje,
+        timestamp: new Date().toISOString(),
+        razon: 'Servicio no habilitado'
+      };
     }
     
     // Preparar datos para la API
@@ -220,9 +235,12 @@ const enviarMensaje = async (telefono, mensaje) => {
   } catch (error) {
     console.error('❌ Error al enviar WhatsApp:', error.message);
     
+    // Determinar si es simulado basado en configuración
+    const esSimulado = configuracion.modoDesarrollo || process.env.WHATSAPP_ENVIO_REAL !== 'true';
+    
     return {
       exito: false,
-      simulado: !envioRealHabilitado,
+      simulado: esSimulado,
       destinatario: telefono,
       mensaje: mensaje,
       error: error.message,

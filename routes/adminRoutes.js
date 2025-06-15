@@ -79,9 +79,10 @@ router.post('/documentos/relacionar', documentoController.relacionarDocumentos);
 router.post('/documentos/eliminar-relacion', documentoController.eliminarRelacion);
 
 // Rutas para el proceso de entrega - Solo para administradores
-router.get('/documentos/entrega', documentoController.mostrarEntrega);
-router.get('/documentos/entrega/:id?', documentoController.mostrarEntrega);
-router.post('/documentos/entrega/:id', documentoController.completarEntrega);
+// NUEVAS RUTAS MEJORADAS CON ENTREGA GRUPAL
+router.get('/documentos/entrega', adminController.mostrarEntregaAdmin);
+router.get('/documentos/entrega/:id?', adminController.mostrarEntregaAdmin);
+router.post('/documentos/entrega/:id', adminController.completarEntregaAdmin);
 
 // Rutas de gestión de matrizadores - Solo para administradores
 router.get('/matrizadores', matrizadorController.obtenerTodos);
@@ -92,5 +93,9 @@ router.post('/matrizadores/eliminar', matrizadorController.eliminar);
 // NUEVAS RUTAS DE NOTIFICACIONES (copiadas de recepción):
 router.get('/notificaciones/historial', adminController.historialNotificaciones);
 router.get('/notificaciones/detalle/:id', adminController.obtenerDetalleNotificacion);
+
+// NUEVAS APIs para entrega grupal admin
+router.get('/api/documentos/grupales/:identificacion/:documentoId', adminController.detectarDocumentosGrupalesAdmin);
+router.post('/api/documentos/entrega-grupal/:id', adminController.procesarEntregaGrupalAdmin);
 
 module.exports = router; 

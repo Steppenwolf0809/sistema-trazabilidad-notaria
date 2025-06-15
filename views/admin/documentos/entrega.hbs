@@ -1,371 +1,565 @@
-<div class="row">
-  <div class="col-md-6 mx-auto">
-    <div class="card">
-      <div class="card-header">
-        <i class="fas fa-hand-holding me-2"></i> Entrega de Documentos
+{{!-- VISTA DE ENTREGA ADMIN CORREGIDA - INTERFAZ UNIFICADA --}}
+<div class="container-fluid" data-user-role="admin">
+  <div class="row">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-handshake me-2"></i>Entrega de Documentos - Admin</h2>
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/admin">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="/admin/documentos/listado">Documentos</a></li>
+            <li class="breadcrumb-item active">Entrega</li>
+          </ol>
+        </nav>
       </div>
-      <div class="card-body">
-        {{#if documento}}
-          <!-- Modo: Verificación de documento específico -->
-          <h5 class="mb-4">Verificación para Entrega</h5>
-          
-          {{! ============== LÓGICA CONDICIONAL: CON O SIN CÓDIGO DE VERIFICACIÓN ============== }}
-          {{#if documento.codigoVerificacion}}
-            {{! Documento CON código de verificación - Interfaz tradicional }}
-            <div class="alert alert-info">
-              <div class="d-flex align-items-center">
-                <i class="fas fa-info-circle fa-2x me-3"></i>
-                <div>
-                  <p class="mb-0">El cliente debe proporcionar el código de verificación de 4 dígitos que recibió por teléfono o correo electrónico.</p>
+
+      {{!-- Mensajes de estado --}}
+      {{#if error}}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+          <i class="fas fa-exclamation-triangle me-2"></i>{{error}}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {{/if}}
+
+      {{#if success}}
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+          <i class="fas fa-check-circle me-2"></i>{{success}}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {{/if}}
+
+      {{#if documento}}
+        {{!-- ============== 1. DOCUMENTO PRINCIPAL CON INFORMACIÓN COMPLETA ============== --}}
+        <div class="card mb-3">
+          <div class="card-header bg-primary text-white">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <h5 class="mb-1">
+                  <i class="fas fa-file-alt me-2"></i>📄 Documento Principal: {{documento.codigoBarras}}
+                </h5>
+                <small class="opacity-75">
+                  <strong>Código de Verificación:</strong> 
+                  {{#if documento.codigoVerificacion}}
+                    {{#if (eq documento.codigoVerificacion 'sin_codigo')}}
+                      <span class="badge bg-warning text-dark">Sin código</span>
+                    {{else}}
+                      <code class="bg-light text-dark px-2 py-1 rounded">{{documento.codigoVerificacion}}</code>
+                    {{/if}}
+                  {{else}}
+                    <span class="badge bg-warning text-dark">Sin código</span>
+                  {{/if}}
+                </small>
+              </div>
+              <span class="badge bg-light text-dark fs-6">{{documento.tipoDocumento}}</span>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-4">
+                <h6><i class="fas fa-user me-1"></i> Cliente</h6>
+                <p class="mb-1"><strong>{{documento.nombreCliente}}</strong></p>
+                <p class="text-muted mb-0"><small>{{documento.identificacionCliente}}</small></p>
+              </div>
+              <div class="col-md-3">
+                <h6><i class="fas fa-user-tie me-1"></i> Matrizador</h6>
+                <p class="mb-1"><strong>{{documento.matrizador.nombre}}</strong></p>
+                <p class="text-muted mb-0"><small>Asignado</small></p>
+              </div>
+              <div class="col-md-3">
+                <h6><i class="fas fa-dollar-sign me-1"></i> Valor</h6>
+                <p class="mb-1"><strong>${{formatMoney documento.valorFactura}}</strong></p>
+                <p class="text-muted mb-0"><small>{{#if documento.numeroFactura}}Fact: {{documento.numeroFactura}}{{else}}Sin factura{{/if}}</small></p>
+              </div>
+              <div class="col-md-2">
+                <h6><i class="fas fa-credit-card me-1"></i> Estado Pago</h6>
+                <span class="badge {{estadoPagoClass documento.estadoPago}} fs-6">
+                  {{estadoPagoTexto documento.estadoPago}}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {{!-- ============== 2. DOCUMENTOS ADICIONALES DETECTADOS ============== --}}
+        {{#if documentosGrupales.tieneDocumentosAdicionales}}
+          <div class="alert alert-info" id="alerta-entrega-grupal">
+            <div class="d-flex justify-content-between align-items-start">
+              <div class="flex-grow-1">
+                <h6><i class="fas fa-boxes me-2"></i>Documentos Adicionales Detectados</h6>
+                <p class="mb-2">
+                  Se encontraron <strong>{{documentosGrupales.cantidad}} documento(s) adicional(es)</strong> 
+                  del mismo cliente listos para entrega.
+                </p>
+                <p class="mb-0 text-success">
+                  <i class="fas fa-shield-alt me-1"></i>
+                  <strong>Acceso Admin:</strong> Puede entregar documentos de cualquier matrizador
+                </p>
+              </div>
+              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="ocultarEntregaGrupal()">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
+
+          {{!-- Tabla de documentos adicionales con ESTADO DE PAGO VISIBLE --}}
+          <div class="card mb-4" id="seccion-entrega-grupal">
+            <div class="card-header">
+              <div class="d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                  <i class="fas fa-list-check me-2"></i>
+                  Seleccionar Documentos Adicionales
+                </h6>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="selectAll">
+                  <label class="form-check-label" for="selectAll">
+                    <strong>Seleccionar todos</strong>
+                  </label>
                 </div>
               </div>
             </div>
-          {{else}}
-            {{! Documento SIN código de verificación - Métodos alternativos }}
-            <div class="alert alert-warning">
-              <div class="d-flex align-items-center">
-                <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
-                <div>
-                  <h6 class="mb-1">Documento sin código de verificación</h6>
-                  <p class="mb-0">Este documento no tiene código de verificación. Use uno de los métodos alternativos de verificación.</p>
-                </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-hover table-sm">
+                  <thead class="table-light">
+                    <tr>
+                      <th width="50">Seleccionar</th>
+                      <th>Código</th>
+                      <th>Tipo</th>
+                      <th>Matrizador</th>
+                      <th>Valor</th>
+                      <th>Estado Pago</th>
+                      <th>Código Verificación</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {{#each documentosGrupales.documentos}}
+                      <tr>
+                        <td>
+                          <div class="form-check">
+                            <input 
+                              class="form-check-input documento-checkbox" 
+                              type="checkbox" 
+                              value="{{this.id}}"
+                              data-codigo="{{this.codigoVerificacion}}"
+                              data-matrizador-id="{{this.matrizadorId}}"
+                              id="doc_{{this.id}}">
+                            <label class="form-check-label" for="doc_{{this.id}}"></label>
+                          </div>
+                        </td>
+                        <td>
+                          <strong>{{this.codigoBarras}}</strong>
+                        </td>
+                        <td>
+                          <span class="badge bg-secondary">{{this.tipoDocumento}}</span>
+                        </td>
+                        <td>
+                          <small class="text-muted">{{this.matrizador.nombre}}</small>
+                        </td>
+                        <td>
+                          <strong>${{formatMoney this.valorFactura}}</strong>
+                        </td>
+                        <td>
+                          <span class="badge {{estadoPagoClass this.estadoPago}}">
+                            {{estadoPagoTexto this.estadoPago}}
+                          </span>
+                        </td>
+                        <td>
+                          {{#if this.codigoVerificacion}}
+                            {{#if (eq this.codigoVerificacion 'sin_codigo')}}
+                              <span class="badge bg-warning text-dark">Sin código</span>
+                            {{else}}
+                              <code>{{this.codigoVerificacion}}</code>
+                            {{/if}}
+                          {{else}}
+                            <span class="badge bg-warning text-dark">Sin código</span>
+                          {{/if}}
+                        </td>
+                      </tr>
+                    {{/each}}
+                  </tbody>
+                </table>
               </div>
-            </div>
-          {{/if}}
-          
-          <div class="row mb-4">
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label class="form-label">Documento:</label>
-                <div class="form-control bg-light">{{documento.tipoDocumento}}</div>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label class="form-label">Código de Barras:</label>
-                <div class="form-control bg-light">{{documento.codigoBarras}}</div>
-              </div>
-            </div>
-            <div class="col-md-12">
-              <div class="mb-0">
-                <label class="form-label">Cliente:</label>
-                <div class="form-control bg-light">
-                  {{documento.nombreCliente}} ({{documento.identificacionCliente}})
+
+              {{!-- Contador de selección mejorado --}}
+              <div class="mt-3">
+                <div class="alert alert-light border">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <span>
+                      <i class="fas fa-info-circle me-2 text-info"></i>
+                      <span id="contador-seleccion">1 documento(s) seleccionado(s)</span>
+                    </span>
+                    <div id="codigos-seleccionados" class="small text-muted"></div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-          
-          <form id="formVerificacion" action="/admin/documentos/entrega/{{documento.id}}" method="POST">
-            {{#if documento.codigoVerificacion}}
-              {{! ============== INTERFAZ PARA DOCUMENTOS CON CÓDIGO ============== }}
-              <!-- Sección de verificación -->
-              <div class="card bg-light mb-4">
-                <div class="card-body">
-                  <h6 class="card-title">Verificación de Código</h6>
-                  
-                  <div class="form-group mb-3">
-                    <label for="codigoVerificacion" class="form-label">Código de 4 dígitos:</label>
-                    <div class="input-group">
-                      <input type="text" class="form-control form-control-lg text-center" id="codigoVerificacion" name="codigoVerificacion" 
-                             maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="0000" required
-                             style="letter-spacing: 0.5em; font-weight: bold;">
-                      <button class="btn btn-primary" type="submit">
-                        <i class="fas fa-check-circle me-1"></i> Verificar
-                      </button>
-                    </div>
-                    {{#if error}}
-                    <div class="text-danger mt-2">
-                      <i class="fas fa-exclamation-circle me-1"></i> {{error}}
-                    </div>
-                    {{/if}}
-                  </div>
-                  
-                  <div class="text-center mt-2">
-                    <button type="button" class="btn btn-link" data-bs-toggle="modal" data-bs-target="#verificacionLlamadaModal">
-                      <i class="fas fa-phone me-1"></i> El cliente no recuerda el código
-                    </button>
-                  </div>
-                </div>
-              </div>
-            {{else}}
-              {{! ============== INTERFAZ PARA DOCUMENTOS SIN CÓDIGO ============== }}
-              <!-- Sección de verificación alternativa -->
-              <div class="card bg-warning bg-opacity-10 mb-4">
-                <div class="card-body">
-                  <h6 class="card-title">
-                    <i class="fas fa-shield-alt me-2"></i>Métodos de Verificación Alternativos
-                  </h6>
-                  
-                  <div class="form-group mb-3">
-                    <label class="form-label">Seleccione el método de verificación:</label>
-                    <div class="row">
-                      <div class="col-md-4 mb-2">
-                        <div class="form-check">
-                          <input class="form-check-input" type="radio" name="tipoVerificacion" id="verificacionIdentidad" value="identidad" required>
-                          <label class="form-check-label" for="verificacionIdentidad">
-                            <i class="fas fa-id-card me-1"></i> Cédula de Identidad
-                          </label>
-                        </div>
-                      </div>
-                      <div class="col-md-4 mb-2">
-                        <div class="form-check">
-                          <input class="form-check-input" type="radio" name="tipoVerificacion" id="verificacionFactura" value="factura" required>
-                          <label class="form-check-label" for="verificacionFactura">
-                            <i class="fas fa-receipt me-1"></i> Número de Factura
-                          </label>
-                        </div>
-                      </div>
-                      <div class="col-md-4 mb-2">
-                        <div class="form-check">
-                          <input class="form-check-input" type="radio" name="tipoVerificacion" id="verificacionLlamada" value="llamada" required>
-                          <label class="form-check-label" for="verificacionLlamada">
-                            <i class="fas fa-phone me-1"></i> Llamada Telefónica
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div class="form-group mb-3">
-                    <label for="observaciones" class="form-label">Detalles de la verificación:</label>
-                    <textarea class="form-control" id="observaciones" name="observaciones" rows="3" 
-                              placeholder="Describa los detalles del método de verificación utilizado..." required></textarea>
-                    <div class="form-text">
-                      <strong>Ejemplos:</strong><br>
-                      • <em>Cédula:</em> "Verificada cédula 1234567890 coincide con cliente"<br>
-                      • <em>Factura:</em> "Verificado número de factura 001-001-000123456"<br>
-                      • <em>Llamada:</em> "Llamé al 0987654321, confirmó datos personales y trámite"
-                    </div>
-                  </div>
-                  
-                  {{#if error}}
-                  <div class="alert alert-danger">
-                    <i class="fas fa-exclamation-circle me-1"></i> {{error}}
-                  </div>
+        {{/if}}
+
+        {{!-- ============== 3. FORMULARIO DE ENTREGA CORREGIDO ============== --}}
+        <form id="formEntrega" action="/admin/documentos/entrega/{{documento.id}}" method="POST">
+          {{!-- Campos ocultos para entrega grupal --}}
+          <input type="hidden" id="documentos_seleccionados" name="documentosAdicionales" value="">
+          <input type="hidden" id="entrega_grupal" name="entregaGrupal" value="false">
+          <input type="hidden" name="tipoEntregaGrupal" value="admin_completa">
+
+          {{!-- SECCIÓN: VALIDACIÓN DE CÓDIGO CORREGIDA --}}
+          <div class="card mb-4">
+            <div class="card-header">
+              <h6 class="mb-0">
+                <i class="fas fa-key me-2"></i>
+                Validación de Código
+              </h6>
+            </div>
+            <div class="card-body">
+              {{!-- Mostrar códigos válidos dinámicamente --}}
+              <div class="alert alert-info" id="alert-codigos-validos">
+                <strong>Códigos válidos para esta entrega:</strong>
+                <div id="lista-codigos-validos">
+                  {{#if documento.codigoVerificacion}}
+                    {{#unless (eq documento.codigoVerificacion 'sin_codigo')}}
+                      <code class="bg-dark text-light px-2 py-1 rounded me-2">{{documento.codigoVerificacion}}</code>
+                      <small class="text-muted me-3">(documento principal)</small>
+                    {{/unless}}
                   {{/if}}
                 </div>
               </div>
-            {{/if}}
-            
-            <!-- Sección de datos del receptor -->
-            <div class="card mb-4">
-              <div class="card-body">
-                <h6 class="card-title">Datos de quien recibe</h6>
-                
-                <div class="row">
-                  <div class="col-md-6 mb-3">
-                    <label for="nombreReceptor" class="form-label">Nombre completo:</label>
-                    <input type="text" class="form-control" id="nombreReceptor" name="nombreReceptor" required>
+
+              {{!-- Input de código con validación mejorada --}}
+              <div class="row">
+                <div class="col-md-6">
+                  <label for="codigoVerificacion" class="form-label">
+                    <strong>Código de Verificación</strong>
+                    <span class="text-danger">*</span>
+                  </label>
+                  <div class="input-group">
+                    <input type="text" class="form-control" id="codigoVerificacion" name="codigoVerificacion" 
+                           placeholder="Ingrese código de 4 dígitos" maxlength="6" required>
+                    <button type="button" class="btn btn-outline-primary" id="validarCodigo">
+                      <i class="fas fa-check me-1"></i>Validar
+                    </button>
                   </div>
-                  
-                  <div class="col-md-6 mb-3">
-                    <label for="identificacionReceptor" class="form-label">Identificación:</label>
-                    <input type="text" class="form-control" id="identificacionReceptor" name="identificacionReceptor" required>
+                  <div id="mensaje-validacion-codigo" class="mt-2"></div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Método de verificación alternativo</label>
+                  <div class="form-check">
+                    <input class="form-check-input" type="radio" name="tipoVerificacion" value="llamada" id="verificacionLlamada">
+                    <label class="form-check-label" for="verificacionLlamada">
+                      Verificación por llamada telefónica
+                    </label>
                   </div>
-                  
-                  <div class="col-md-12 mb-0">
-                    <label for="relacionReceptor" class="form-label">Relación con el cliente:</label>
-                    <select class="form-select" id="relacionReceptor" name="relacionReceptor" required>
-                      <option value="" selected disabled>Seleccionar...</option>
-                      <option value="titular">Titular del documento</option>
-                      <option value="familiar">Familiar</option>
-                      <option value="mandatario">Mandatario</option>
-                      <option value="otro">Otro</option>
-                    </select>
+                  <div id="div-observaciones" class="mt-2 d-none">
+                    <textarea class="form-control" id="observaciones" name="observaciones" rows="2" 
+                              placeholder="Detalles de la verificación por llamada..."></textarea>
                   </div>
                 </div>
               </div>
             </div>
-            
-            <div class="d-grid">
-              <button type="submit" class="btn btn-primary btn-lg">
-                <i class="fas fa-paper-plane me-1"></i> Completar Entrega
-              </button>
+          </div>
+
+          {{!-- SECCIÓN: INFORMACIÓN DEL RECEPTOR --}}
+          <div class="card mb-4">
+            <div class="card-header">
+              <h6 class="mb-0">
+                <i class="fas fa-user-check me-2"></i>
+                Información del Receptor
+              </h6>
             </div>
-          </form>
-        {{else}}
-          <!-- Modo: Búsqueda de documento para entrega -->
-          <h5 class="mb-4">Buscar Documento para Entrega</h5>
-          
-          <div class="alert alert-info mb-4">
-            <div class="d-flex align-items-center">
-              <i class="fas fa-info-circle fa-2x me-3"></i>
-              <div>
-                <p class="mb-0">Ingrese el código de barras o busque un documento listo para entrega.</p>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="nombreReceptor" class="form-label">
+                    <strong>Nombre completo del receptor</strong>
+                    <span class="text-danger">*</span>
+                  </label>
+                  <input type="text" class="form-control" id="nombreReceptor" name="nombreReceptor" 
+                         placeholder="Nombre completo de quien recibe" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="identificacionReceptor" class="form-label">
+                    <strong>Identificación del receptor</strong>
+                    <span class="text-danger">*</span>
+                  </label>
+                  <input type="text" class="form-control" id="identificacionReceptor" name="identificacionReceptor" 
+                         placeholder="Cédula o identificación" required>
+                </div>
+              </div>
+              <div class="mb-3">
+                <label for="relacionReceptor" class="form-label">
+                  <strong>Relación con el cliente</strong>
+                  <span class="text-danger">*</span>
+                </label>
+                <select class="form-select" id="relacionReceptor" name="relacionReceptor" required>
+                  <option value="">Seleccione la relación</option>
+                  <option value="titular">Titular del documento</option>
+                  <option value="representante_legal">Representante legal</option>
+                  <option value="apoderado">Apoderado</option>
+                  <option value="familiar">Familiar autorizado</option>
+                  <option value="empleado">Empleado autorizado</option>
+                  <option value="tercero_autorizado">Tercero autorizado</option>
+                </select>
               </div>
             </div>
           </div>
-          
-          <form action="/admin/documentos/entrega" method="GET">
-            <div class="input-group mb-4">
-              <input type="text" class="form-control" name="codigo" placeholder="Escanear o ingresar código de barras">
-              <button class="btn btn-primary" type="submit">
-                <i class="fas fa-search me-1"></i> Buscar
-              </button>
-            </div>
-          </form>
-          
-          <h6 class="mb-3 border-bottom pb-2">Documentos Listos para Entrega</h6>
-          
-          <div class="list-group">
-            {{#each documentosListos}}
-            <a href="/admin/documentos/entrega/{{this.id}}" class="list-group-item list-group-item-action">
-              <div class="d-flex w-100 justify-content-between">
-                <h6 class="mb-1">{{this.tipoDocumento}}</h6>
-                <small>{{formatDate this.updatedAt}}</small>
+
+          {{!-- BOTÓN DE CONFIRMACIÓN --}}
+          <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-success btn-lg" id="btnConfirmarEntrega">
+              <i class="fas fa-check-circle me-2"></i>
+              Confirmar Entrega
+            </button>
+          </div>
+        </form>
+
+      {{else}}
+        {{!-- ============== BÚSQUEDA Y LISTADO DE DOCUMENTOS ============== --}}
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">
+              <i class="fas fa-search me-2"></i>
+              Buscar Documento para Entrega
+            </h5>
+          </div>
+          <div class="card-body">
+            <form action="/admin/documentos/entrega" method="GET">
+              <div class="input-group mb-3">
+                <input type="text" class="form-control form-control-lg" name="codigo" 
+                       placeholder="Escanee o ingrese el código de barras del documento" 
+                       value="{{codigo}}" autofocus>
+                <button class="btn btn-primary btn-lg" type="submit">
+                  <i class="fas fa-search me-1"></i>Buscar
+                </button>
               </div>
-              <p class="mb-1">{{this.nombreCliente}}</p>
-              <small>Código: {{this.codigoBarras}}</small>
-            </a>
-            {{else}}
-            <div class="text-center py-4">
-              <i class="fas fa-info-circle me-2"></i> No hay documentos listos para entrega
+            </form>
+          </div>
+        </div>
+
+        {{!-- LISTA DE DOCUMENTOS LISTOS CON ESTADO DE PAGO VISIBLE --}}
+        {{#if documentosListos.length}}
+          <div class="card mt-4">
+            <div class="card-header">
+              <h6 class="mb-0">
+                <i class="fas fa-list me-2"></i>
+                Documentos Listos para Entrega ({{documentosListos.length}})
+              </h6>
             </div>
-            {{/each}}
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-hover">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Código</th>
+                      <th>Cliente</th>
+                      <th>Tipo</th>
+                      <th>Matrizador</th>
+                      <th>Valor</th>
+                      <th>Estado Pago</th>
+                      <th>Fecha Registro</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {{#each documentosListos}}
+                      <tr>
+                        <td><strong>{{this.codigoBarras}}</strong></td>
+                        <td>
+                          <div>{{this.nombreCliente}}</div>
+                          <small class="text-muted">{{this.identificacionCliente}}</small>
+                        </td>
+                        <td>
+                          <span class="badge bg-secondary">{{this.tipoDocumento}}</span>
+                        </td>
+                        <td>{{this.matrizador.nombre}}</td>
+                        <td><strong>${{formatMoney this.valorFactura}}</strong></td>
+                        <td>
+                          <span class="badge {{estadoPagoClass this.estadoPago}}">
+                            {{estadoPagoTexto this.estadoPago}}
+                          </span>
+                        </td>
+                        <td>{{formatDate this.created_at}}</td>
+                        <td>
+                          <a href="/admin/documentos/entrega/{{this.id}}" class="btn btn-sm btn-primary">
+                            <i class="fas fa-handshake me-1"></i>Entregar
+                          </a>
+                        </td>
+                      </tr>
+                    {{/each}}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        {{else}}
+          <div class="card mt-4">
+            <div class="card-body text-center py-5">
+              <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+              <h5>No hay documentos listos para entrega</h5>
+              <p class="text-muted">Todos los documentos han sido entregados o están en proceso.</p>
+            </div>
           </div>
         {{/if}}
-      </div>
+      {{/if}}
     </div>
   </div>
 </div>
 
-{{#if documento.codigoVerificacion}}
-<!-- Modal de verificación por llamada (solo para documentos CON código) -->
-<div class="modal fade" id="verificacionLlamadaModal" tabindex="-1" aria-labelledby="verificacionLlamadaModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="verificacionLlamadaModalLabel">Verificación Alternativa por Llamada</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div class="alert alert-warning">
-          <i class="fas fa-exclamation-triangle me-2"></i> Este método solo debe usarse cuando el cliente no recuerda el código y es necesario verificar su identidad por teléfono.
-        </div>
-        
-        <div class="mb-3">
-          <label class="form-label">Cliente:</label>
-          <div class="form-control bg-light">{{documento.nombreCliente}} ({{documento.identificacionCliente}})</div>
-        </div>
-        
-        <div class="mb-3">
-          <label class="form-label">Teléfono de contacto:</label>
-          <div class="form-control bg-light">{{documento.telefonoCliente}}</div>
-        </div>
-        
-        <div class="form-check mb-3">
-          <input class="form-check-input" type="checkbox" id="confirmacionLlamada">
-          <label class="form-check-label" for="confirmacionLlamada">
-            Confirmo que he verificado la identidad del cliente por teléfono.
-          </label>
-        </div>
-        
-        <div class="mb-3">
-          <label class="form-label">Observaciones:</label>
-          <textarea class="form-control" id="observacionesLlamada" rows="3" placeholder="Detalles de la verificación realizada..."></textarea>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button type="button" class="btn btn-primary" id="confirmarVerificacionLlamada" disabled>
-          <i class="fas fa-check me-1"></i> Confirmar Verificación
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-{{/if}}
-
+{{!-- ============== JAVASCRIPT CORREGIDO PARA FUNCIONALIDAD ============== --}}
 <script>
-  document.addEventListener('DOMContentLoaded', function() {
-    {{#if documento.codigoVerificacion}}
-      // ============== SCRIPT PARA DOCUMENTOS CON CÓDIGO ==============
-      // Auto-focus en el campo de código
-      const codigoInput = document.getElementById('codigoVerificacion');
-      if (codigoInput) {
-        codigoInput.focus();
-        
-        // Solo permitir dígitos
-        codigoInput.addEventListener('input', function(e) {
-          this.value = this.value.replace(/[^0-9]/g, '');
-        });
-        
-        // Submit del formulario cuando se complete el código
-        codigoInput.addEventListener('input', function() {
-          if (this.value.length === 4) {
-            // Dar tiempo para verificar visualmente
-            setTimeout(function() {
-              document.getElementById('nombreReceptor').focus();
-            }, 300);
-          }
-        });
+document.addEventListener('DOMContentLoaded', function() {
+  // Configuración global
+  window.documentoPrincipal = {{{json documento}}};
+  window.documentosDisponibles = {{{json documentosGrupales.documentos}}};
+  window.usuarioActual = { rol: 'admin' };
+  
+  // Variables del DOM
+  const selectAll = document.getElementById('selectAll');
+  const documentoCheckboxes = document.querySelectorAll('.documento-checkbox');
+  const contadorSeleccion = document.getElementById('contador-seleccion');
+  const codigoInput = document.getElementById('codigoVerificacion');
+  const btnValidar = document.getElementById('validarCodigo');
+  const listaCodigosValidos = document.getElementById('lista-codigos-validos');
+  const verificacionLlamada = document.getElementById('verificacionLlamada');
+  const divObservaciones = document.getElementById('div-observaciones');
+  const btnConfirmar = document.getElementById('btnConfirmarEntrega');
+  
+  // ============== GESTIÓN DE SELECCIÓN DE DOCUMENTOS ==============
+  function actualizarSeleccion() {
+    const seleccionados = Array.from(documentoCheckboxes).filter(cb => cb.checked);
+    const total = seleccionados.length + 1; // +1 por el documento principal
+    
+    // Actualizar contador
+    if (contadorSeleccion) {
+      contadorSeleccion.textContent = `${total} documento(s) seleccionado(s)`;
+    }
+    
+    // Actualizar códigos válidos
+    if (listaCodigosValidos && window.documentoPrincipal) {
+      let codigosHTML = '';
+      
+      // Código del documento principal
+      if (window.documentoPrincipal.codigoVerificacion && window.documentoPrincipal.codigoVerificacion !== 'sin_codigo') {
+        codigosHTML += `<code class="bg-dark text-light px-2 py-1 rounded me-2">${window.documentoPrincipal.codigoVerificacion}</code>`;
+        codigosHTML += `<small class="text-muted me-3">(principal)</small>`;
       }
       
-      // Verificación por llamada
-      const checkboxConfirmacion = document.getElementById('confirmacionLlamada');
-      const btnConfirmarLlamada = document.getElementById('confirmarVerificacionLlamada');
-      
-      if (checkboxConfirmacion && btnConfirmarLlamada) {
-        checkboxConfirmacion.addEventListener('change', function() {
-          btnConfirmarLlamada.disabled = !this.checked;
-        });
-        
-        btnConfirmarLlamada.addEventListener('click', function() {
-          const observaciones = document.getElementById('observacionesLlamada').value;
-          
-          // Preparar formulario para envío
-          const form = document.getElementById('formVerificacion');
-          
-          // Agregar campo oculto para indicar verificación por llamada
-          const inputTipoVerificacion = document.createElement('input');
-          inputTipoVerificacion.type = 'hidden';
-          inputTipoVerificacion.name = 'tipoVerificacion';
-          inputTipoVerificacion.value = 'llamada';
-          form.appendChild(inputTipoVerificacion);
-          
-          // Agregar observaciones
-          const inputObservaciones = document.createElement('input');
-          inputObservaciones.type = 'hidden';
-          inputObservaciones.name = 'observaciones';
-          inputObservaciones.value = observaciones;
-          form.appendChild(inputObservaciones);
-          
-          // Cerrar modal y enviar formulario
-          const modal = bootstrap.Modal.getInstance(document.getElementById('verificacionLlamadaModal'));
-          modal.hide();
-          form.submit();
-        });
-      }
-    {{else}}
-      // ============== SCRIPT PARA DOCUMENTOS SIN CÓDIGO ==============
-      // Validación de métodos alternativos
-      const tiposVerificacion = document.querySelectorAll('input[name="tipoVerificacion"]');
-      const observacionesTextarea = document.getElementById('observaciones');
-      
-      // Actualizar placeholder según el tipo seleccionado
-      tiposVerificacion.forEach(radio => {
-        radio.addEventListener('change', function() {
-          if (this.checked) {
-            switch(this.value) {
-              case 'identidad':
-                observacionesTextarea.placeholder = 'Ej: Verificada cédula 1234567890, coincide con el nombre del cliente y datos del documento';
-                break;
-              case 'factura':
-                observacionesTextarea.placeholder = 'Ej: Cliente presentó factura número 001-001-000123456, coincide con el documento';
-                break;
-              case 'llamada':
-                observacionesTextarea.placeholder = 'Ej: Llamé al 0987654321, cliente confirmó nombre completo, cédula y detalles del trámite';
-                break;
-            }
-          }
-        });
+      // Códigos de documentos seleccionados
+      seleccionados.forEach((checkbox, index) => {
+        const codigo = checkbox.dataset.codigo;
+        if (codigo && codigo !== 'sin_codigo') {
+          codigosHTML += `<code class="bg-success text-light px-2 py-1 rounded me-2">${codigo}</code>`;
+          codigosHTML += `<small class="text-muted me-3">(seleccionado ${index + 1})</small>`;
+        }
       });
       
-      // Auto-focus en el primer método de verificación
-      if (tiposVerificacion.length > 0) {
-        tiposVerificacion[0].focus();
+      if (codigosHTML === '') {
+        codigosHTML = '<span class="text-warning">⚠️ Documentos sin código - usar verificación alternativa</span>';
       }
-    {{/if}}
+      
+      listaCodigosValidos.innerHTML = codigosHTML;
+    }
+    
+    // Actualizar campos ocultos
+    const idsSeleccionados = seleccionados.map(cb => cb.value);
+    document.getElementById('documentos_seleccionados').value = idsSeleccionados.join(',');
+    document.getElementById('entrega_grupal').value = idsSeleccionados.length > 0 ? 'true' : 'false';
+  }
+  
+  // Event listeners para checkboxes
+  if (selectAll) {
+    selectAll.addEventListener('change', function() {
+      documentoCheckboxes.forEach(cb => {
+        cb.checked = this.checked;
+      });
+      actualizarSeleccion();
+    });
+  }
+  
+  documentoCheckboxes.forEach(checkbox => {
+    checkbox.addEventListener('change', actualizarSeleccion);
   });
+  
+  // ============== VALIDACIÓN DE CÓDIGO CORREGIDA ==============
+  if (btnValidar && codigoInput) {
+    btnValidar.addEventListener('click', function() {
+      const codigoIngresado = codigoInput.value.trim();
+      const mensajeDiv = document.getElementById('mensaje-validacion-codigo');
+      
+      if (!codigoIngresado) {
+        mensajeDiv.innerHTML = '<div class="alert alert-warning alert-sm mt-2">⚠️ Ingrese un código</div>';
+        return;
+      }
+      
+      // Obtener códigos válidos
+      const codigosValidos = [];
+      
+      // Código principal
+      if (window.documentoPrincipal && window.documentoPrincipal.codigoVerificacion && 
+          window.documentoPrincipal.codigoVerificacion !== 'sin_codigo') {
+        codigosValidos.push(window.documentoPrincipal.codigoVerificacion);
+      }
+      
+      // Códigos de seleccionados
+      const seleccionados = Array.from(documentoCheckboxes).filter(cb => cb.checked);
+      seleccionados.forEach(cb => {
+        const codigo = cb.dataset.codigo;
+        if (codigo && codigo !== 'sin_codigo') {
+          codigosValidos.push(codigo);
+        }
+      });
+      
+      // Validar código
+      if (codigosValidos.includes(codigoIngresado)) {
+        mensajeDiv.innerHTML = '<div class="alert alert-success alert-sm mt-2">✅ Código válido</div>';
+        codigoInput.classList.remove('is-invalid');
+        codigoInput.classList.add('is-valid');
+      } else {
+        mensajeDiv.innerHTML = `<div class="alert alert-danger alert-sm mt-2">❌ Código inválido. Códigos válidos: ${codigosValidos.join(', ')}</div>`;
+        codigoInput.classList.remove('is-valid');
+        codigoInput.classList.add('is-invalid');
+      }
+    });
+  }
+  
+  // ============== VERIFICACIÓN ALTERNATIVA ==============
+  if (verificacionLlamada) {
+    verificacionLlamada.addEventListener('change', function() {
+      if (this.checked) {
+        divObservaciones.classList.remove('d-none');
+        document.getElementById('observaciones').setAttribute('required', '');
+        codigoInput.removeAttribute('required');
+      } else {
+        divObservaciones.classList.add('d-none');
+        document.getElementById('observaciones').removeAttribute('required');
+        codigoInput.setAttribute('required', '');
+      }
+    });
+  }
+  
+  // ============== VALIDACIÓN DE FORMULARIO ==============
+  if (btnConfirmar) {
+    document.getElementById('formEntrega').addEventListener('submit', function(e) {
+      const entregaGrupal = document.getElementById('entrega_grupal').value === 'true';
+      const numDocumentos = entregaGrupal ? 
+        document.getElementById('documentos_seleccionados').value.split(',').length + 1 : 1;
+      
+      if (entregaGrupal) {
+        btnConfirmar.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i>Procesando entrega grupal (${numDocumentos} documentos)...`;
+      } else {
+        btnConfirmar.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i>Procesando entrega...`;
+      }
+      
+      btnConfirmar.disabled = true;
+    });
+  }
+  
+  // Inicializar selección
+  actualizarSeleccion();
+  
+  // Función para ocultar alerta grupal
+  window.ocultarEntregaGrupal = function() {
+    document.getElementById('alerta-entrega-grupal').style.display = 'none';
+    document.getElementById('seccion-entrega-grupal').style.display = 'none';
+  };
+});
 </script> 

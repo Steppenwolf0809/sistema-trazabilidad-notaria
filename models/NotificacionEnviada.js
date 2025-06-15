@@ -15,11 +15,11 @@ const NotificacionEnviada = sequelize.define('NotificacionEnviada', {
     allowNull: false
   },
   
-  // ID del documento asociado
+  // ID del documento asociado (para entrega individual)
   documentoId: {
     type: DataTypes.INTEGER,
     field: 'documento_id',
-    allowNull: false,
+    allowNull: true, // Puede ser null para entrega grupal
     references: {
       model: 'documentos',
       key: 'id'
@@ -28,9 +28,29 @@ const NotificacionEnviada = sequelize.define('NotificacionEnviada', {
     onDelete: 'CASCADE'
   },
   
+  // IDs de documentos para entrega grupal
+  documentosIds: {
+    type: DataTypes.JSON,
+    field: 'documentos_ids',
+    allowNull: true,
+    comment: 'Array de IDs de documentos para entrega grupal'
+  },
+  
+  // Tipo de entrega
+  tipoEntrega: {
+    type: DataTypes.STRING(20),
+    field: 'tipo_entrega',
+    defaultValue: 'individual',
+    allowNull: false,
+    validate: {
+      isIn: [['individual', 'grupal']]
+    },
+    comment: 'Tipo de entrega: individual o grupal'
+  },
+  
   // Tipo de evento que generó la notificación
   tipoEvento: {
-    type: DataTypes.ENUM('documento_listo', 'entrega_confirmada', 'recordatorio', 'alerta_sin_recoger'),
+    type: DataTypes.ENUM('documento_listo', 'entrega_confirmada', 'entrega_grupal', 'recordatorio', 'alerta_sin_recoger'),
     field: 'tipo_evento',
     allowNull: false,
     comment: 'Tipo de evento que generó la notificación'
@@ -46,7 +66,8 @@ const NotificacionEnviada = sequelize.define('NotificacionEnviada', {
   // Destinatario de la notificación
   destinatario: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true, // Permitir null temporalmente para desarrollo
+    defaultValue: 'no-disponible',
     comment: 'Email, teléfono o identificador del destinatario'
   },
   

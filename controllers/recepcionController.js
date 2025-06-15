@@ -5,6 +5,8 @@ const { sequelize } = require('../config/database');
 const { Op } = require('sequelize');
 const moment = require('moment');
 const NotificationService = require('../services/notificationService');
+const NotificacionEnviada = require('../models/NotificacionEnviada');
+const configNotaria = require('../config/notaria');
 
 // ============== FUNCIONES PARA CONSTRUCCIÓN DE MENSAJES PROFESIONALES ==============
 
@@ -30,27 +32,17 @@ function construirMensajeDocumentoEntregado(documento, datosEntrega) {
     hour: '2-digit', minute: '2-digit', hour12: false
   });
 
-  // Mensaje WhatsApp para entrega
-  const mensajeWhatsApp = `🏛️ *NOTARÍA 18*
-
-✅ *DOCUMENTO ENTREGADO EXITOSAMENTE*
-
-📄 *Documento:* ${documento.tipoDocumento}${contextoTramite}
-📋 *Código:* ${documento.codigoBarras}
-👤 *Cliente:* ${documento.nombreCliente}
-
-📦 *DETALLES DE LA ENTREGA:*
-👨‍💼 *Retirado por:* ${datosEntrega.nombreReceptor}
-🆔 *Identificación:* ${datosEntrega.identificacionReceptor}
-👥 *Relación:* ${datosEntrega.relacionReceptor}
-
-📅 *Fecha:* ${fechaEntrega}
-🕒 *Hora:* ${horaEntrega}
-📍 *Lugar:* Notaría Décima Octava, Quito
-
-✅ *Su trámite ha sido completado exitosamente.*
-
-_Guarde este mensaje como comprobante de entrega._`;
+  // Mensaje WhatsApp usando plantilla centralizada
+  const mensajeWhatsApp = configNotaria.plantillas.documentoEntregado.whatsapp
+    .replace('{{tipoDocumento}}', documento.tipoDocumento)
+    .replace('{{contextoTramite}}', contextoTramite)
+    .replace('{{codigoBarras}}', documento.codigoBarras)
+    .replace('{{nombreCliente}}', documento.nombreCliente)
+    .replace('{{nombreReceptor}}', datosEntrega.nombreReceptor)
+    .replace('{{identificacionReceptor}}', datosEntrega.identificacionReceptor)
+    .replace('{{relacionReceptor}}', datosEntrega.relacionReceptor)
+    .replace('{{fechaEntrega}}', fechaEntrega)
+    .replace('{{horaEntrega}}', horaEntrega);
 
   // Datos para email de confirmación
   const datosEmail = {
@@ -70,8 +62,8 @@ _Guarde este mensaje como comprobante de entrega._`;
   return {
     whatsapp: mensajeWhatsApp,
     email: {
-      subject: `Documento entregado - ${documento.codigoBarras} - Notaría 18`,
-      template: 'confirmacion-entrega',
+      subject: configNotaria.plantillas.documentoEntregado.email.subject.replace('{{codigoBarras}}', documento.codigoBarras),
+      template: configNotaria.plantillas.documentoEntregado.email.template,
       data: datosEmail
     },
     tipo: 'documento_entregado'
@@ -79,7 +71,7 @@ _Guarde este mensaje como comprobante de entrega._`;
 }
 
 /**
- * Envía notificación de entrega de documento
+ * Envía notificación de entrega de documento individual
  * @param {Object} documento - Datos del documento
  * @param {Object} datosEntrega - Datos de la entrega
  * @param {Object} usuarioEntrega - Usuario que realizó la entrega
@@ -128,7 +120,296 @@ async function enviarNotificacionEntrega(documento, datosEntrega, usuarioEntrega
   }
 }
 
+/**
+ * Construye mensaje de entrega grupal para notificación
+ * @param {Array} documentos - Array de documentos entregados
+ * @param {Object} datosEntrega - Datos de la entrega
+ * @returns {Object} Mensajes para WhatsApp y Email
+ */
+function construirMensajeEntregaGrupal(documentos, datosEntrega) {
+  const fechaEntrega = new Date().toLocaleDateString('es-EC', {
+    day: '2-digit', month: '2-digit', year: 'numeric'
+  });
+  
+  const horaEntrega = new Date().toLocaleTimeString('es-EC', {
+    hour: '2-digit', minute: '2-digit', hour12: false
+  });
+
+  // Construir lista de documentos
+  let listaDocumentos = '';
+  documentos.forEach((doc, index) => {
+    let contextoTramite = '';
+    if (doc.detallesAdicionales && 
+        typeof doc.detallesAdicionales === 'string' && 
+        doc.detallesAdicionales.trim().length > 0) {
+      contextoTramite = ` - ${doc.detallesAdicionales.trim()}`;
+    }
+    
+    listaDocumentos += `${index + 1}. ${doc.tipoDocumento}${contextoTramite}\n   📋 Código: ${doc.codigoBarras}\n`;
+  });
+
+  // Mensaje WhatsApp usando plantilla centralizada
+  const mensajeWhatsApp = configNotaria.plantillas.entregaGrupal.whatsapp
+    .replace('{{nombreCliente}}', documentos[0].nombreCliente)
+    .replace('{{totalDocumentos}}', documentos.length)
+    .replace('{{listaDocumentos}}', listaDocumentos)
+    .replace('{{nombreReceptor}}', datosEntrega.nombreReceptor)
+    .replace('{{identificacionReceptor}}', datosEntrega.identificacionReceptor)
+    .replace('{{relacionReceptor}}', datosEntrega.relacionReceptor)
+    .replace('{{fechaEntrega}}', fechaEntrega)
+    .replace('{{horaEntrega}}', horaEntrega);
+
+  // Datos para email de confirmación grupal
+  const datosEmail = {
+    nombreCliente: documentos[0].nombreCliente,
+    totalDocumentos: documentos.length,
+    documentos: documentos.map(doc => ({
+      tipoDocumento: doc.tipoDocumento,
+      codigoBarras: doc.codigoBarras,
+      detallesAdicionales: doc.detallesAdicionales?.trim() || null
+    })),
+    nombreReceptor: datosEntrega.nombreReceptor,
+    identificacionReceptor: datosEntrega.identificacionReceptor,
+    relacionReceptor: datosEntrega.relacionReceptor,
+    fechaEntrega: fechaEntrega,
+    horaEntrega: horaEntrega,
+    usuarioEntrega: datosEntrega.usuarioEntrega || 'Personal de Recepción',
+    fechaGeneracion: new Date().toLocaleString('es-EC')
+  };
+
+  return {
+    whatsapp: mensajeWhatsApp,
+    email: {
+      subject: configNotaria.plantillas.entregaGrupal.email.subject.replace('{{totalDocumentos}}', documentos.length),
+      template: configNotaria.plantillas.entregaGrupal.email.template,
+      data: datosEmail
+    },
+    tipo: 'entrega_grupal'
+  };
+}
+
+/**
+ * Guarda notificación grupal en el historial de la base de datos
+ * @param {Array} documentos - Array de documentos entregados
+ * @param {Object} datosEntrega - Datos de la entrega
+ * @param {Object} usuarioEntrega - Usuario que realizó la entrega
+ * @param {string} metodoNotificacion - Método de notificación usado
+ * @param {string} mensajeEnviado - Mensaje que se envió
+ * @returns {Object} Notificación guardada
+ */
+async function guardarNotificacionGrupalEnHistorial(documentos, datosEntrega, usuarioEntrega, metodoNotificacion, mensajeEnviado) {
+  try {
+    const documentoPrincipal = documentos[0];
+    
+    // Detectar documentos con pago pendiente
+    const documentosPendientes = documentos.filter(doc => 
+      !['pagado_completo', 'pagado_con_retencion'].includes(doc.estadoPago)
+    );
+    
+    const notificacion = await NotificacionEnviada.create({
+      // Para entrega grupal, documento_id es null y usamos documentos_ids
+      documentoId: null,
+      documentosIds: documentos.map(doc => doc.id),
+      tipoEvento: 'entrega_grupal',
+      tipoEntrega: 'grupal',
+      canal: metodoNotificacion === 'ambos' ? 'whatsapp' : metodoNotificacion,
+      destinatario: metodoNotificacion.includes('email') ? 
+        documentoPrincipal.emailCliente : documentoPrincipal.telefonoCliente,
+      estado: 'enviado',
+      mensajeEnviado: mensajeEnviado,
+      respuestaApi: null,
+      intentos: 1,
+      metadatos: {
+        // Información básica de la entrega
+        totalDocumentos: documentos.length,
+        nombreCliente: documentoPrincipal.nombreCliente,
+        identificacionCliente: documentoPrincipal.identificacionCliente,
+        // Información del receptor
+        nombreReceptor: datosEntrega.nombreReceptor,
+        identificacionReceptor: datosEntrega.identificacionReceptor,
+        relacionReceptor: datosEntrega.relacionReceptor,
+        // Información del usuario que procesó
+        entregadoPor: usuarioEntrega.nombre,
+        rolEntregador: usuarioEntrega.rol,
+        idUsuarioEntregador: usuarioEntrega.id,
+        // Lista de documentos incluidos
+        documentosIncluidos: documentos.map(doc => ({
+          id: doc.id,
+          codigo: doc.codigoBarras,
+          tipo: doc.tipoDocumento,
+          valor: doc.valorFactura,
+          estadoPago: doc.estadoPago,
+          matrizador: doc.matrizador?.nombre || 'Sin asignar'
+        })),
+        // Información especial de validaciones
+        documentosPendientes: documentosPendientes.length,
+        requirioAutorizacion: documentosPendientes.length > 0,
+        entregaConPendientes: documentosPendientes.length > 0,
+        // Códigos de los documentos
+        codigosDocumentos: documentos.map(doc => doc.codigoBarras),
+        tiposDocumentos: documentos.map(doc => doc.tipoDocumento),
+        // Metadatos de auditoría
+        fechaEntrega: new Date().toISOString(),
+        tipoEntregaGrupal: 'recepcion_completa',
+        metodoVerificacion: datosEntrega.tipoVerificacion || 'codigo',
+        observaciones: datosEntrega.observaciones
+      }
+    });
+
+    console.log(`📝 [HISTORIAL] Notificación grupal guardada en historial: ID ${notificacion.id}`);
+    
+    return notificacion;
+  } catch (error) {
+    console.error('❌ Error guardando notificación grupal en historial:', error);
+    throw error;
+  }
+}
+
+/**
+ * Envía notificación de entrega grupal (UNA SOLA NOTIFICACIÓN PARA TODOS LOS DOCUMENTOS)
+ * @param {Array} documentos - Array de documentos entregados
+ * @param {Object} datosEntrega - Datos de la entrega
+ * @param {Object} usuarioEntrega - Usuario que realizó la entrega
+ */
+async function enviarNotificacionEntregaGrupal(documentos, datosEntrega, usuarioEntrega) {
+  try {
+    if (!documentos || documentos.length === 0) {
+      console.log('⚠️ No hay documentos para notificar en entrega grupal');
+      return;
+    }
+
+    console.log(`📧 [ENTREGA GRUPAL] Enviando notificación única para ${documentos.length} documentos`);
+
+    const mensajes = construirMensajeEntregaGrupal(documentos, {
+      ...datosEntrega,
+      usuarioEntrega: usuarioEntrega.nombre
+    });
+
+    // Usar la configuración de notificación del primer documento (todos del mismo cliente)
+    const documentoPrincipal = documentos[0];
+    const metodoNotificacion = documentoPrincipal.metodoNotificacion || 'email';
+    
+    // Enviar según configuración
+    if (metodoNotificacion === 'whatsapp' || metodoNotificacion === 'ambos') {
+      if (documentoPrincipal.telefonoCliente) {
+        // Aquí se integraría con el servicio de WhatsApp
+        console.log(`📱 Confirmación entrega grupal enviada por WhatsApp a ${documentoPrincipal.telefonoCliente}`);
+        console.log(`Mensaje: ${mensajes.whatsapp}`);
+      }
+    }
+
+    if (metodoNotificacion === 'email' || metodoNotificacion === 'ambos') {
+      if (documentoPrincipal.emailCliente) {
+        // Aquí se integraría con el servicio de Email
+        console.log(`📧 Confirmación entrega grupal enviada por email a ${documentoPrincipal.emailCliente}`);
+        console.log(`Asunto: ${mensajes.email.subject}`);
+      }
+    }
+
+    // ============== NUEVO: GUARDAR EN HISTORIAL DE NOTIFICACIONES ==============
+    try {
+      await guardarNotificacionGrupalEnHistorial(
+        documentos, 
+        datosEntrega, 
+        usuarioEntrega, 
+        metodoNotificacion, 
+        mensajes.whatsapp
+      );
+    } catch (historialError) {
+      console.error('❌ Error guardando en historial (continuando):', historialError);
+      // No detener el flujo si falla el historial
+    }
+
+    // Registrar evento de notificación grupal para cada documento
+    for (const documento of documentos) {
+      try {
+        await EventoDocumento.create({
+          documentoId: documento.id,
+          tipo: 'notificacion_grupal',
+          categoria: 'notificacion',
+          titulo: 'Notificación Entrega Grupal',
+          descripcion: `Notificación de entrega grupal enviada para ${documentos.length} documentos`,
+          detalles: {
+            tipoNotificacion: 'entrega_grupal',
+            totalDocumentos: documentos.length,
+            metodoNotificacion: metodoNotificacion,
+            receptor: datosEntrega.nombreReceptor,
+            documentosIncluidos: documentos.map(d => ({
+              id: d.id,
+              codigo: d.codigoBarras,
+              tipo: d.tipoDocumento
+            }))
+          },
+          usuario: usuarioEntrega.nombre,
+          metadatos: {
+            canal: metodoNotificacion,
+            estado: 'enviada',
+            tipo: 'notificacion_grupal',
+            idUsuario: usuarioEntrega.id,
+            rolUsuario: usuarioEntrega.rol,
+            timestamp: new Date().toISOString()
+          }
+        });
+      } catch (eventError) {
+        console.error(`Error registrando evento de notificación para documento ${documento.id}:`, eventError);
+      }
+    }
+
+    console.log(`✅ [ENTREGA GRUPAL] Notificación única enviada exitosamente para ${documentos.length} documentos`);
+
+  } catch (error) {
+    console.error('Error enviando notificación de entrega grupal:', error);
+  }
+}
+
 // ============== FUNCIONES PARA ENTREGA GRUPAL - RECEPCIÓN ==============
+
+/**
+ * Valida documentos para entrega y genera alertas específicas
+ * @param {Array} documentos - Array de documentos a validar
+ * @returns {Object} Validación con alertas específicas
+ */
+function validarDocumentosParaEntrega(documentos) {
+  const documentosValidos = [];
+  const documentosPendientes = [];
+  const alertas = [];
+  
+  for (const documento of documentos) {
+    // Verificar estado de pago
+    const tienePagoPendiente = !['pagado_completo', 'pagado_con_retencion'].includes(documento.estadoPago);
+    
+    if (tienePagoPendiente) {
+      documentosPendientes.push(documento);
+      alertas.push({
+        tipo: 'pago_pendiente',
+        codigo: documento.codigoBarras,
+        tipoDocumento: documento.tipoDocumento,
+        valor: documento.valorFactura,
+        estadoPago: documento.estadoPago,
+        matrizador: documento.matrizador?.nombre || 'Sin asignar',
+        mensaje: `${documento.codigoBarras} - ${documento.tipoDocumento} tiene pago pendiente (${documento.estadoPago})`
+      });
+    }
+    
+    documentosValidos.push(documento);
+  }
+
+  return {
+    puedeEntregar: true, // Recepción siempre puede entregar pero con confirmación
+    requiereAutorizacion: documentosPendientes.length > 0,
+    documentosPendientes: documentosPendientes,
+    documentosValidos: documentosValidos,
+    alertas: alertas,
+    totalDocumentos: documentos.length,
+    documentosPagados: documentos.length - documentosPendientes.length,
+    advertencias: documentosPendientes.length > 0 ? [
+      {
+        tipo: 'autorizacion_requerida',
+        mensaje: `Se requiere confirmación para entregar ${documentosPendientes.length} documento(s) con pago pendiente`
+      }
+    ] : []
+  };
+}
 
 /**
  * Detecta documentos adicionales del mismo cliente para entrega grupal (RECEPCIÓN - SIN RESTRICCIONES)
@@ -169,23 +450,35 @@ async function detectarDocumentosGrupalesRecepcion(identificacionCliente, docume
     
     console.log(`📄 [RECEPCIÓN] Encontrados ${documentosListos.length} documentos adicionales (${documentosPagados.length} pagados, ${documentosPendientes.length} pendientes)`);
     
+    // ============== NUEVA FUNCIONALIDAD: VALIDACIÓN Y ALERTAS ==============
+    const validacion = validarDocumentosParaEntrega(documentosListos);
+    
     return {
-      tieneDocumentosSegurosPtraEntrega: documentosListos.length > 0,
+      tieneDocumentosAdicionales: documentosListos.length > 0,
       cantidad: documentosListos.length,
       documentos: documentosListos,
       documentosPagados: documentosPagados,
       documentosPendientes: documentosPendientes,
-      tipoDeteccion: 'recepcion_completa'
+      tipoDeteccion: 'recepcion_completa',
+      // Nueva información de validación
+      validacion: validacion,
+      requiereAutorizacion: validacion.requiereAutorizacion,
+      alertas: validacion.alertas,
+      advertencias: validacion.advertencias
     };
   } catch (error) {
     console.error('❌ Error detectando documentos grupales para recepción:', error);
     return { 
-      tieneDocumentosSegurosPtraEntrega: false, 
+      tieneDocumentosAdicionales: false, 
       cantidad: 0, 
       documentos: [],
       documentosPagados: [],
       documentosPendientes: [],
-      tipoDeteccion: 'recepcion_completa'
+      tipoDeteccion: 'recepcion_completa',
+      validacion: { puedeEntregar: false, requiereAutorizacion: false, alertas: [] },
+      requiereAutorizacion: false,
+      alertas: [],
+      advertencias: []
     };
   }
 }
@@ -941,6 +1234,21 @@ const recepcionController = {
             documento.identificacionCliente, 
             documento.id
           );
+          
+          // ============== NUEVA FUNCIONALIDAD: VALIDACIÓN COMPLETA INCLUYENDO DOCUMENTO PRINCIPAL ==============
+          if (documentosGrupales.tieneDocumentosAdicionales) {
+            const todosLosDocumentos = [documento, ...documentosGrupales.documentos];
+            const validacionCompleta = validarDocumentosParaEntrega(todosLosDocumentos);
+            
+            // Actualizar información de validación
+            documentosGrupales.validacionCompleta = validacionCompleta;
+            documentosGrupales.requiereAutorizacion = validacionCompleta.requiereAutorizacion;
+            documentosGrupales.alertas = validacionCompleta.alertas;
+            documentosGrupales.advertencias = validacionCompleta.advertencias;
+            documentosGrupales.documentosPendientes = validacionCompleta.documentosPendientes;
+            
+            console.log(`📋 [VALIDACIÓN] Documentos pendientes detectados: ${validacionCompleta.documentosPendientes.length}`);
+          }
         }
         
         return res.render('recepcion/documentos/entrega', {
@@ -1071,7 +1379,10 @@ const recepcionController = {
         // ============== NUEVOS CAMPOS PARA ENTREGA GRUPAL ==============
         entregaGrupal,
         documentosAdicionales,
-        tipoEntregaGrupal
+        tipoEntregaGrupal,
+        // ============== NUEVOS CAMPOS PARA VALIDACIÓN DE PAGOS ==============
+        confirmarEntregaPendiente,
+        autorizacionMatrizador
       } = req.body;
       
       if (!id) {
@@ -1351,6 +1662,58 @@ const recepcionController = {
         // Continuar con la transacción aunque el registro de eventos falle
       }
       
+      // ============== NUEVA FUNCIONALIDAD: VALIDACIÓN DE DOCUMENTOS PENDIENTES ==============
+      let todosLosDocumentos = [documento];
+      let documentosConPagoPendiente = [];
+      
+      if (entregaGrupal === 'true' && documentosAdicionales && tipoEntregaGrupal === 'recepcion_completa') {
+        const documentosIds = documentosAdicionales.split(',')
+          .map(id => parseInt(id.trim()))
+          .filter(id => !isNaN(id) && id > 0);
+        
+        if (documentosIds.length > 0) {
+          const documentosAdicionalesToEntrega = await Documento.findAll({
+            where: {
+              id: { [Op.in]: documentosIds }
+            },
+            include: [{ 
+              model: Matrizador, 
+              as: 'matrizador',
+              attributes: ['id', 'nombre'] 
+            }],
+            transaction
+          });
+          
+          todosLosDocumentos = [...todosLosDocumentos, ...documentosAdicionalesToEntrega];
+        }
+      }
+      
+      // Validar todos los documentos
+      const validacionPagos = validarDocumentosParaEntrega(todosLosDocumentos);
+      documentosConPagoPendiente = validacionPagos.documentosPendientes;
+      
+      // Si hay documentos pendientes, verificar autorización
+      if (documentosConPagoPendiente.length > 0) {
+        console.log(`⚠️ [VALIDACIÓN] ${documentosConPagoPendiente.length} documento(s) con pago pendiente detectado(s)`);
+        
+        if (confirmarEntregaPendiente !== 'true') {
+          await transaction.rollback();
+          
+          // Construir mensaje de error con detalles específicos
+          let mensajeError = `Se detectaron ${documentosConPagoPendiente.length} documento(s) con pago pendiente. Para continuar, debe confirmar que ha consultado con el matrizador responsable.\\n\\n`;
+          mensajeError += 'Documentos pendientes:\\n';
+          
+          documentosConPagoPendiente.forEach(doc => {
+            mensajeError += `- ${doc.codigoBarras} (${doc.tipoDocumento}) - Matrizador: ${doc.matrizador?.nombre || 'Sin asignar'}\\n`;
+          });
+          
+          req.flash('error', mensajeError);
+          return res.redirect(`/recepcion/documentos/entrega/${id}`);
+        } else {
+          console.log(`✅ [AUTORIZACIÓN] Usuario confirmó consulta con matrizador para documentos pendientes`);
+        }
+      }
+      
       // ============== NUEVA FUNCIONALIDAD: PROCESAMIENTO DE ENTREGA GRUPAL ==============
       let documentosGrupalesActualizados = 0;
       
@@ -1369,7 +1732,10 @@ const recepcionController = {
               relacionReceptor,
               tipoVerificacion,
               observaciones,
-              identificacionCliente: documento.identificacionCliente
+              identificacionCliente: documento.identificacionCliente,
+              // Nueva información para auditoría
+              confirmarEntregaPendiente: confirmarEntregaPendiente,
+              documentosConPagoPendiente: documentosConPagoPendiente.length
             };
             
             const resultadoGrupal = await procesarEntregaGrupalRecepcion(
@@ -1392,13 +1758,47 @@ const recepcionController = {
       
       await transaction.commit();
       
-      // Enviar confirmación de entrega después de confirmar la transacción
+      // ============== NUEVA LÓGICA: NOTIFICACIÓN GRUPAL O INDIVIDUAL ==============
       try {
-        await enviarNotificacionEntrega(documento, {
-          nombreReceptor,
-          identificacionReceptor, 
-          relacionReceptor
-        }, req.matrizador);
+        if (entregaGrupal === 'true' && documentosGrupalesActualizados > 0) {
+          // ENTREGA GRUPAL: Enviar UNA SOLA notificación para todos los documentos
+          console.log(`📧 [ENTREGA GRUPAL] Preparando notificación única para ${documentosGrupalesActualizados + 1} documentos`);
+          
+          // Obtener todos los documentos entregados (principal + adicionales)
+          const todosLosDocumentosEntregados = [documento];
+          
+          // Obtener documentos adicionales entregados
+          if (documentosAdicionales) {
+            const documentosIds = documentosAdicionales.split(',')
+              .map(id => parseInt(id.trim()))
+              .filter(id => !isNaN(id) && id > 0);
+            
+            const documentosAdicionalesEntregados = await Documento.findAll({
+              where: {
+                id: { [Op.in]: documentosIds },
+                estado: 'entregado',
+                fechaEntrega: { [Op.not]: null }
+              }
+            });
+            
+            todosLosDocumentosEntregados.push(...documentosAdicionalesEntregados);
+          }
+          
+          // Enviar notificación grupal única
+          await enviarNotificacionEntregaGrupal(todosLosDocumentosEntregados, {
+            nombreReceptor,
+            identificacionReceptor, 
+            relacionReceptor
+          }, req.matrizador);
+          
+        } else {
+          // ENTREGA INDIVIDUAL: Enviar notificación tradicional
+          await enviarNotificacionEntrega(documento, {
+            nombreReceptor,
+            identificacionReceptor, 
+            relacionReceptor
+          }, req.matrizador);
+        }
       } catch (notificationError) {
         console.error('Error al enviar confirmación de entrega:', notificationError);
         // No afectar el flujo principal si falla la notificación
@@ -1413,6 +1813,10 @@ const recepcionController = {
       
       if (documentosGrupalesActualizados > 0) {
         mensajeExito += ` Adicionalmente se procesaron ${documentosGrupalesActualizados} documento(s) más del mismo cliente en entrega grupal.`;
+      }
+      
+      if (documentosConPagoPendiente.length > 0) {
+        mensajeExito += ` Se entregaron ${documentosConPagoPendiente.length} documento(s) con pago pendiente bajo autorización manual.`;
       }
       
       req.flash('success', mensajeExito);

@@ -1,775 +1,629 @@
 {{! Entrega de Documento - Recepción }}
 {{! layout: 'recepcion' }}
-<div class="container mt-4">
-  <h2>Entrega de Documentos</h2>
-  
-  {{#if error}}
-  <div class="alert alert-danger">
-    <i class="fas fa-exclamation-triangle me-2"></i> {{error}}
-  </div>
-  {{/if}}
-  
-  {{#if success}}
-  <div class="alert alert-success">
-    <i class="fas fa-check-circle me-2"></i> {{success}}
-  </div>
-  {{/if}}
-
-  {{! ============== NUEVA FUNCIONALIDAD: ALERTA DE ENTREGA GRUPAL ============== }}
-  {{#if (and documento documentosGrupales.tieneDocumentosSegurosPtraEntrega (eq tipoEntrega "recepcion_completa"))}}
-  <div class="alert alert-info border-left-info mb-4" id="alertaEntregaGrupal">
-    <div class="row align-items-center">
-      <div class="col-md-8">
-        <h6 class="alert-heading mb-1">
-          <i class="fas fa-boxes text-info me-2"></i>
-          <strong>🏢 Documentos Adicionales Detectados - Recepción</strong>
-        </h6>
-        <p class="mb-2">
-          Este cliente tiene <strong>{{documentosGrupales.cantidad}} documento(s) más</strong> 
-          listo(s) para entrega.
-        </p>
-        
-        {{#if (gt documentosGrupales.documentosPagados.length 0)}}
-        <div class="alert alert-success alert-sm mb-1">
-          <i class="fas fa-check-circle me-1"></i>
-          <strong>{{documentosGrupales.documentosPagados.length}} documento(s) pagado(s)</strong> - Listo(s) para entrega
-        </div>
-        {{/if}}
-        
-        {{#if (gt documentosGrupales.documentosPendientes.length 0)}}
-        <div class="alert alert-warning alert-sm mb-1">
-          <i class="fas fa-exclamation-triangle me-1"></i>
-          <strong>{{documentosGrupales.documentosPendientes.length}} documento(s) pendiente(s) de pago</strong>
-          <br>
-          <small>⚠️ <strong>Consultar con matrizador</strong> antes de proceder con entrega</small>
-        </div>
-        {{/if}}
-        
-        <small class="text-muted">
-          🔐 Estado: Listo para entrega | 📋 Sin entregas previas
-        </small>
-      </div>
-      <div class="col-md-4 text-end">
-        <button type="button" class="btn btn-primary btn-sm me-1" onclick="mostrarEntregaGrupalRecepcion()">
-          <i class="fas fa-boxes me-1"></i> Ver Todos los Documentos
-        </button>
-        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="ocultarAlertaGrupal()">
-          <i class="fas fa-file me-1"></i> Solo Este
-        </button>
-      </div>
-    </div>
-    
-    {{! Detalles de documentos adicionales }}
-    <div class="mt-3" id="detallesDocumentosGrupales" style="display: none;">
-      <h6><i class="fas fa-list me-2"></i>Documentos adicionales a entregar:</h6>
-      <div class="table-responsive">
-        <table class="table table-sm table-bordered">
-          <thead class="table-light">
-            <tr>
-              <th>Código</th>
-              <th>Tipo</th>
-              <th>Matrizador</th>
-              <th>Valor</th>
-              <th>Estado Pago</th>
-            </tr>
-          </thead>
-          <tbody>
-            {{#each documentosGrupales.documentos}}
-            <tr class="{{#unless (or (eq this.estadoPago 'pagado_completo') (eq this.estadoPago 'pagado_con_retencion'))}}table-warning{{/unless}}">
-              <td><small>{{this.codigoBarras}}</small></td>
-              <td>{{this.tipoDocumento}}</td>
-              <td>{{#if this.matrizador}}{{this.matrizador.nombre}}{{else}}<span class="text-muted">No asignado</span>{{/if}}</td>
-              <td>${{#if this.valorFactura}}{{formatMoney this.valorFactura}}{{else}}0.00{{/if}}</td>
-              <td>
-                {{#if (eq this.estadoPago "pagado_completo")}}
-                <span class="badge bg-success">Completo</span>
-                {{else if (eq this.estadoPago "pagado_con_retencion")}}
-                <span class="badge bg-info">Con Retención</span>
-                {{else if (eq this.estadoPago "pago_parcial")}}
-                <span class="badge bg-warning text-dark">Parcial</span>
-                {{else}}
-                <span class="badge bg-danger">Pendiente</span>
-                {{/if}}
-              </td>
-            </tr>
-            {{/each}}
-          </tbody>
-        </table>
-      </div>
-      <div class="alert alert-info alert-sm mt-2">
-        <i class="fas fa-info-circle me-1"></i>
-        <strong>Recepción:</strong> Puede procesar entrega grupal de documentos de cualquier matrizador sin restricciones.
-      </div>
-    </div>
-  </div>
-  {{/if}}
-  
-  {{#if documento}}
-  <!-- Formulario de entrega para un documento específico -->
+<div class="container-fluid" data-user-role="recepcion">
   <div class="row">
-    <div class="col-md-8 mx-auto">
-      <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <span><i class="fas fa-hand-holding me-2"></i> Entrega de Documento</span>
-          <a href="/recepcion/documentos" class="btn btn-sm btn-outline-secondary">
-            <i class="fas fa-arrow-left me-1"></i> Volver al listado
-          </a>
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-handshake me-2"></i>Entrega de Documentos - Recepción</h2>
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/recepcion">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="/recepcion/documentos">Documentos</a></li>
+            <li class="breadcrumb-item active">Entrega</li>
+          </ol>
+        </nav>
+      </div>
+
+      {{!-- Mensajes de estado --}}
+      {{#if error}}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+          <i class="fas fa-exclamation-triangle me-2"></i>{{error}}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
-        <div class="card-body">
-          <div class="row mb-4">
-            <div class="col-md-6">
-              <div class="card bg-light mb-2">
-                <div class="card-body p-3">
-                  <h5 class="card-title">{{documento.tipoDocumento}}</h5>
-                  <h6 class="card-subtitle mb-2 text-muted">Código: {{documento.codigoBarras}}</h6>
-                  <hr>
-                  <p class="card-text">
-                    <strong>Cliente:</strong> {{documento.nombreCliente}}<br>
-                    <strong>Identificación:</strong> {{documento.identificacionCliente}}<br>
-                    {{#if documento.matrizador}}
-                    <strong>Matrizador:</strong> {{documento.matrizador.nombre}}<br>
+      {{/if}}
+
+      {{#if success}}
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+          <i class="fas fa-check-circle me-2"></i>{{success}}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {{/if}}
+
+      {{#if documento}}
+        {{!-- ============== 1. DOCUMENTO PRINCIPAL CON INFORMACIÓN COMPLETA ============== --}}
+        <div class="card mb-3">
+          <div class="card-header bg-primary text-white">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <h5 class="mb-1">
+                  <i class="fas fa-file-alt me-2"></i>📄 Documento Principal: {{documento.codigoBarras}}
+                </h5>
+                <small class="opacity-75">
+                  <strong>Código de Verificación:</strong> 
+                  {{#if documento.codigoVerificacion}}
+                    {{#if (eq documento.codigoVerificacion 'sin_codigo')}}
+                      <span class="badge bg-warning text-dark">Sin código</span>
+                    {{else}}
+                      <code class="bg-light text-dark px-2 py-1 rounded">{{documento.codigoVerificacion}}</code>
                     {{/if}}
-                    {{#if documento.valorFactura}}
-                    <strong>Valor:</strong> ${{formatMoney documento.valorFactura}}<br>
-                    {{/if}}
-                    {{#if documento.numeroFactura}}
-                    <strong>N° Factura:</strong> {{documento.numeroFactura}}
-                    {{/if}}
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-6 d-flex flex-column justify-content-center">
-              <!-- Estado de Pago -->
-              {{#if (eq documento.estadoPago "pagado_completo")}}
-              <div class="alert alert-success">
-                <i class="fas fa-check-circle me-2"></i>
-                <strong>✅ Documento pagado</strong><br>
-                <small>Proceder con entrega normal</small>
-              </div>
-              {{else if (eq documento.estadoPago "pagado_con_retencion")}}
-              <div class="alert alert-success">
-                <i class="fas fa-check-circle me-2"></i>
-                <strong>✅ Pagado con Retención</strong><br>
-                <small>Documento completamente pagado. Proceder con entrega normal.</small>
-              </div>
-              {{else if (eq documento.estadoPago "pago_parcial")}}
-              <div class="alert alert-warning text-dark">
-                <i class="fas fa-exclamation-triangle me-2"></i>
-                <strong>Pago Parcial</strong><br>
-                <small>
-                  {{#if documento.matrizador}}
-                  Consultar con matrizador <strong>{{documento.matrizador.nombre}}</strong>
                   {{else}}
-                  Consultar con el matrizador asignado
+                    <span class="badge bg-warning text-dark">Sin código</span>
                   {{/if}}
                 </small>
               </div>
-              {{else}}
-              <div class="alert alert-warning">
-                <i class="fas fa-exclamation-triangle me-2"></i>
-                <strong>⚠️ Pago pendiente</strong><br>
-                <small>
-                  {{#if documento.matrizador}}
-                  Consultar con matrizador <strong>{{documento.matrizador.nombre}}</strong>
-                  {{else}}
-                  Consultar con el matrizador asignado
-                  {{/if}}
-                </small>
-              </div>
-              {{/if}}
-              
-              <div class="alert alert-info">
-                <i class="fas fa-info-circle me-2"></i> Este documento está listo para ser entregado al cliente.
-              </div>
-              <p>
-                <small class="text-muted">El cliente debe proporcionar el código de verificación para la entrega.</small>
-              </p>
+              <span class="badge bg-light text-dark fs-6">{{documento.tipoDocumento}}</span>
             </div>
           </div>
-          
-          <form action="/recepcion/documentos/entrega/{{documento.id}}" method="POST">
-            <div class="card mb-4">
-              <div class="card-header">
-                <i class="fas fa-user-check me-2"></i> Información del Receptor
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-3">
+                <h6><i class="fas fa-user me-1"></i> Cliente</h6>
+                <p class="mb-1"><strong>{{documento.nombreCliente}}</strong></p>
+                <p class="text-muted mb-0"><small>{{documento.identificacionCliente}}</small></p>
               </div>
-              <div class="card-body">
-                <div class="row">
-                  <div class="col-md-6 mb-3">
-                    <label for="nombreReceptor" class="form-label">Nombre completo*</label>
-                    <input type="text" class="form-control" id="nombreReceptor" name="nombreReceptor" required>
-                  </div>
-                  <div class="col-md-6 mb-3">
-                    <label for="identificacionReceptor" class="form-label">Identificación*</label>
-                    <input type="text" class="form-control" id="identificacionReceptor" name="identificacionReceptor" required>
-                  </div>
-                </div>
-                <div class="mb-3">
-                  <label for="relacionReceptor" class="form-label">Relación con el cliente*</label>
-                  <select class="form-select" id="relacionReceptor" name="relacionReceptor" required>
-                    <option value="" selected disabled>Seleccione una opción</option>
-                    <option value="titular">Es el titular</option>
-                    <option value="familiar">Familiar</option>
-                    <option value="mandatario">Mandatario</option>
-                    <option value="otro">Otro</option>
-                  </select>
-                </div>
+              <div class="col-md-3">
+                <h6><i class="fas fa-user-tie me-1"></i> Matrizador</h6>
+                <p class="mb-1"><strong>{{#if documento.matrizador}}{{documento.matrizador.nombre}}{{else}}Sin asignar{{/if}}</strong></p>
+                <p class="text-muted mb-0"><small>Responsable</small></p>
+              </div>
+              <div class="col-md-3">
+                <h6><i class="fas fa-dollar-sign me-1"></i> Valor</h6>
+                <p class="mb-1"><strong>${{formatMoney documento.valorFactura}}</strong></p>
+                <p class="text-muted mb-0"><small>{{#if documento.numeroFactura}}Fact: {{documento.numeroFactura}}{{else}}Sin factura{{/if}}</small></p>
+              </div>
+              <div class="col-md-3">
+                <h6><i class="fas fa-credit-card me-1"></i> Estado Pago</h6>
+                <span class="badge {{estadoPagoClass documento.estadoPago}} fs-6">
+                  {{estadoPagoTexto documento.estadoPago}}
+                </span>
               </div>
             </div>
-            
-            <div class="card mb-4">
-              <div class="card-header">
-                <i class="fas fa-lock me-2"></i> Verificación
-              </div>
-              <div class="card-body">
-                {{#if documento.codigoVerificacion}}
-                <!-- Documento CON código de verificación -->
-                <div class="alert alert-info mb-3">
-                  <i class="fas fa-info-circle me-2"></i>
-                  <strong>Documento con código de verificación</strong><br>
-                  <small>El cliente debe proporcionar el código de 4 dígitos que recibió por notificación.</small>
-                </div>
+          </div>
+        </div>
+
+        {{!-- ============== 2. DOCUMENTOS ADICIONALES DETECTADOS ============== --}}
+        {{#if documentosGrupales.tieneDocumentosAdicionales}}
+          <div class="alert alert-info" id="alerta-entrega-grupal">
+            <div class="d-flex justify-content-between align-items-start">
+              <div class="flex-grow-1">
+                <h6><i class="fas fa-boxes me-2"></i>Documentos Adicionales Detectados</h6>
+                <p class="mb-2">
+                  Se encontraron <strong>{{documentosGrupales.cantidad}} documento(s) adicional(es)</strong> 
+                  del mismo cliente listos para entrega.
+                </p>
+                <p class="mb-0 text-info">
+                  <i class="fas fa-shield-alt me-1"></i>
+                  <strong>Acceso Recepción:</strong> Puede entregar TODOS los documentos sin restricciones
+                </p>
                 
-                <div class="mb-3">
-                  <label class="form-label d-block">Método de verificación*</label>
-                  <div class="form-check form-check-inline">
-                    <input class="form-check-input" type="radio" name="tipoVerificacion" id="verificacionCodigo" value="codigo" checked>
-                    <label class="form-check-label" for="verificacionCodigo">Código de verificación</label>
+                {{!-- ============== NUEVA SECCIÓN: ALERTAS DE DOCUMENTOS PENDIENTES ============== --}}
+                {{#if documentosGrupales.requiereAutorizacion}}
+                  <div class="alert alert-warning mt-3" id="alerta-documentos-pendientes">
+                    <h6><i class="fas fa-exclamation-triangle me-2"></i>Documentos con Pago Pendiente Detectados</h6>
+                    <p class="mb-2">
+                      <strong>{{documentosGrupales.documentosPendientes.length}} documento(s)</strong> tienen pago pendiente.
+                      Debe confirmar que ha consultado con el matrizador responsable.
+                    </p>
+                    <div class="mt-2">
+                      {{#each documentosGrupales.alertas}}
+                        <div class="alert alert-light border-warning p-2 mb-2">
+                          <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                              <strong>{{this.codigo}}</strong> - {{this.tipoDocumento}}
+                              <br><small class="text-muted">Valor: ${{formatMoney this.valor}} - Estado: {{this.estadoPago}}</small>
+                            </div>
+                            <div class="text-end">
+                              <small><strong>Matrizador:</strong><br>{{this.matrizador}}</small>
+                            </div>
+                          </div>
+                        </div>
+                      {{/each}}
+                    </div>
                   </div>
-                  <div class="form-check form-check-inline">
-                    <input class="form-check-input" type="radio" name="tipoVerificacion" id="verificacionLlamada" value="llamada">
-                    <label class="form-check-label" for="verificacionLlamada">Verificación por llamada</label>
-                  </div>
-                </div>
-                
-                <div id="divCodigoVerificacion" class="mb-3">
-                  <label for="codigoVerificacion" class="form-label">Código de verificación (4 dígitos)*</label>
-                  <input type="text" class="form-control" id="codigoVerificacion" name="codigoVerificacion" maxlength="4" pattern="[0-9]{4}">
-                  <div class="form-text">El código fue enviado al cliente por WhatsApp/correo electrónico.</div>
-                </div>
-                
-                <div id="divObservaciones" class="mb-3 d-none">
-                  <label for="observaciones" class="form-label">Observaciones de la verificación por llamada*</label>
-                  <textarea class="form-control" id="observaciones" name="observaciones" rows="3"></textarea>
-                  <div class="form-text">Detalle la información de la llamada: hora, quién atendió, número al que se llamó, etc.</div>
-                </div>
-                {{else}}
-                <!-- Documento SIN código de verificación -->
-                <div class="alert alert-warning mb-3">
-                  <i class="fas fa-exclamation-triangle me-2"></i>
-                  <strong>Documento sin código de verificación</strong><br>
-                  <small>Este documento fue configurado para no enviar notificaciones automáticas o es de entrega inmediata.</small>
-                </div>
-                
-                <div class="card bg-light mb-3">
-                  <div class="card-body">
-                    <h6 class="card-title"><i class="fas fa-shield-alt me-2"></i>Métodos de verificación alternativos:</h6>
-                    <ul class="mb-0">
-                      <li><strong>Cédula de identidad:</strong> Verificar que coincida con los datos del documento</li>
-                      <li><strong>Número de factura:</strong> {{#if documento.numeroFactura}}{{documento.numeroFactura}}{{else}}Solicitar al cliente{{/if}}</li>
-                      <li><strong>Datos del cliente:</strong> Nombre completo y número de identificación</li>
-                      <li><strong>Llamada de confirmación:</strong> Contactar al cliente para verificar la entrega</li>
-                    </ul>
-                  </div>
-                </div>
-                
-                <div class="mb-3">
-                  <label class="form-label d-block">Método de verificación utilizado*</label>
-                  <div class="form-check">
-                    <input class="form-check-input" type="radio" name="tipoVerificacion" id="verificacionIdentidad" value="identidad" checked>
-                    <label class="form-check-label" for="verificacionIdentidad">
-                      <strong>Verificación por cédula de identidad</strong><br>
-                      <small class="text-muted">El receptor presenta cédula que coincide con los datos del documento</small>
-                    </label>
-                  </div>
-                  <div class="form-check">
-                    <input class="form-check-input" type="radio" name="tipoVerificacion" id="verificacionFactura" value="factura">
-                    <label class="form-check-label" for="verificacionFactura">
-                      <strong>Verificación por número de factura</strong><br>
-                      <small class="text-muted">El cliente proporciona el número de factura correcto</small>
-                    </label>
-                  </div>
-                  <div class="form-check">
-                    <input class="form-check-input" type="radio" name="tipoVerificacion" id="verificacionLlamadaAlt" value="llamada">
-                    <label class="form-check-label" for="verificacionLlamadaAlt">
-                      <strong>Verificación por llamada telefónica</strong><br>
-                      <small class="text-muted">Llamar al cliente para confirmar la entrega</small>
-                    </label>
-                  </div>
-                </div>
-                
-                <div id="divObservacionesAlt" class="mb-3 d-none">
-                  <label for="observacionesAlt" class="form-label">Detalles de la verificación*</label>
-                  <textarea class="form-control" id="observacionesAlt" name="observaciones" rows="3" placeholder="Ejemplo: Cliente presentó cédula 1234567890 que coincide con los datos del documento..."></textarea>
-                  <div class="form-text">Describa el método de verificación utilizado y los detalles relevantes.</div>
-                </div>
-                
-                <!-- Campo oculto para indicar que no hay código -->
-                <input type="hidden" name="codigoVerificacion" value="sin_codigo">
                 {{/if}}
               </div>
-            </div>
-            
-            {{! ============== CAMPOS OCULTOS PARA ENTREGA GRUPAL ============== }}
-            <input type="hidden" id="entregaGrupal" name="entregaGrupal" value="false">
-            <input type="hidden" id="documentosAdicionales" name="documentosAdicionales" value="">
-            <input type="hidden" id="tipoEntregaGrupal" name="tipoEntregaGrupal" value="{{tipoEntrega}}">
-            
-            <div class="d-grid">
-              <button type="submit" class="btn btn-primary" id="btnConfirmarEntrega">
-                <i class="fas fa-check-circle me-2"></i> Confirmar Entrega
+              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="ocultarEntregaGrupal()">
+                <i class="fas fa-times"></i>
               </button>
             </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>
-  {{else}}
-  <!-- Búsqueda y filtrado de documentos listos para entrega -->
-  <div class="row mb-4">
-    <div class="col-md-12">
-      <div class="card">
-        <div class="card-header">
-          <i class="fas fa-search me-2"></i> Buscar y filtrar documentos para entregar
-        </div>
-        <div class="card-body">
-          <form action="/recepcion/documentos/entrega" method="GET" class="row g-3">
-            <div class="col-md-3">
-              <label for="codigo" class="form-label">Código de barras</label>
-              <input type="text" class="form-control" id="codigo" name="codigo" placeholder="Código del documento" value="{{filtros.codigo}}">
-            </div>
-            <div class="col-md-3">
-              <label for="nombre" class="form-label">Nombre cliente</label>
-              <input type="text" class="form-control" id="nombre" name="nombre" placeholder="Nombre del cliente" value="{{filtros.nombre}}">
-            </div>
-            <div class="col-md-3">
-              <label for="identificacion" class="form-label">Identificación</label>
-              <input type="text" class="form-control" id="identificacion" name="identificacion" placeholder="Número de documento" value="{{filtros.identificacion}}">
-            </div>
-            <div class="col-md-3">
-              <label for="fechaDesde" class="form-label">Fecha desde</label>
-              <input type="date" class="form-control" id="fechaDesde" name="fechaDesde" value="{{filtros.fechaDesde}}">
-            </div>
-            <div class="col-md-3">
-              <label for="fechaHasta" class="form-label">Fecha hasta</label>
-              <input type="date" class="form-control" id="fechaHasta" name="fechaHasta" value="{{filtros.fechaHasta}}">
-            </div>
-            <div class="col-md-3">
-              <label for="matrizador" class="form-label">Matrizador</label>
-              <input type="text" class="form-control" id="matrizador" name="matrizador" placeholder="Nombre del matrizador" value="{{filtros.matrizador}}">
-            </div>
-            <div class="col-md-6 d-flex align-items-end">
-              <button class="btn btn-primary me-2" type="submit">
-                <i class="fas fa-search me-1"></i> Buscar
-              </button>
-              <a href="/recepcion/documentos/entrega" class="btn btn-outline-secondary">
-                <i class="fas fa-times me-1"></i> Limpiar filtros
-              </a>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>
-  
-  {{#if documentosListos}}
-  <h4 class="mb-3">Documentos Listos para Entrega</h4>
-  <div class="table-responsive">
-    <table class="table table-hover table-striped">
-      <thead class="table-light">
-        <tr>
-          <th>Código</th>
-          <th>Tipo</th>
-          <th>Cliente</th>
-          <th>Matrizador</th>
-          <th>Fecha</th>
-          <th>Estado Pago</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        {{#each documentosListos}}
-        <tr>
-          <td><span class="small">{{this.codigoBarras}}</span></td>
-          <td>{{this.tipoDocumento}}</td>
-          <td>
-            {{this.nombreCliente}}
-            <div class="small text-muted">{{this.identificacionCliente}}</div>
-          </td>
-          <td>
-            {{#if this.matrizador}}
-            {{this.matrizador.nombre}}
-            {{else}}
-            <span class="text-muted">No asignado</span>
-            {{/if}}
-          </td>
-          <td>{{formatDate this.fechaFactura}}</td>
-          <td>
-            {{#if (eq this.estadoPago "pagado_completo")}}
-            <span class="badge bg-success">Pagado Completo</span>
-            {{else if (eq this.estadoPago "pagado_con_retencion")}}
-            <span class="badge bg-info">Pagado con Retención</span>
-            {{else if (eq this.estadoPago "pago_parcial")}}
-            <span class="badge bg-warning text-dark">Pago Parcial</span>
-            {{else}}
-            <span class="badge bg-danger">Pendiente</span>
-            {{/if}}
-          </td>
-          <td>
-            <a href="/recepcion/documentos/entrega/{{this.id}}" class="btn btn-sm btn-primary">
-              <i class="fas fa-handshake me-1"></i> Entregar
-            </a>
-          </td>
-        </tr>
-        {{/each}}
-      </tbody>
-    </table>
-  </div>
-  {{else}}
-  <div class="alert alert-info mt-4">
-    <i class="fas fa-info-circle me-2"></i> No hay documentos listos para entrega en este momento.
-  </div>
-  {{/if}}
-  {{/if}}
-</div>
+          </div>
 
-{{! ============== MODAL DE CONFIRMACIÓN ENTREGA GRUPAL ============== }}
-{{#if (and documento documentosGrupales.tieneDocumentosSegurosPtraEntrega (eq tipoEntrega "recepcion_completa"))}}
-<div class="modal fade" id="modalEntregaGrupalRecepcion" tabindex="-1" aria-labelledby="modalEntregaGrupalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header bg-success text-white">
-        <h5 class="modal-title" id="modalEntregaGrupalLabel">
-          <i class="fas fa-boxes me-2"></i>Confirmar Entrega Grupal - Recepción
-        </h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div class="alert alert-info">
-          <h6><i class="fas fa-shield-check me-2"></i>Validaciones de Seguridad Completadas</h6>
-          <ul class="mb-0">
-            <li>✅ Todos los documentos están en estado "Listo para entrega"</li>
-            <li>✅ Sin entregas previas registradas</li>
-            <li>✅ Pertenecen al mismo cliente</li>
-            <li>✅ Sin eliminaciones registradas</li>
-          </ul>
-        </div>
-        
-        {{#if (gt documentosGrupales.documentosPagados.length 0)}}
-        <div class="alert alert-success">
-          <h6><i class="fas fa-check-circle me-2"></i>Documentos Pagados ({{documentosGrupales.documentosPagados.length}})</h6>
-          <p class="mb-0">Estos documentos tienen pago completo y están listos para entrega inmediata.</p>
-        </div>
-        {{/if}}
-        
-        {{#if (gt documentosGrupales.documentosPendientes.length 0)}}
-        <div class="alert alert-warning">
-          <h6><i class="fas fa-exclamation-triangle me-2"></i>Documentos Pendientes de Pago ({{documentosGrupales.documentosPendientes.length}})</h6>
-          <p class="mb-2">Los siguientes documentos tienen pago pendiente:</p>
-          <ul class="mb-2">
-            {{#each documentosGrupales.documentosPendientes}}
-            <li><strong>{{this.codigoBarras}}</strong> - {{this.tipoDocumento}} ({{this.estadoPago}})</li>
-            {{/each}}
-          </ul>
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" id="confirmarEntregaPendiente" required>
-            <label class="form-check-label">
-              <strong>Confirmo que he consultado con el matrizador y autorizo la entrega de documentos pendientes</strong>
-            </label>
+          {{!-- Tabla de documentos adicionales con ESTADO DE PAGO VISIBLE --}}
+          <div class="card mb-4" id="seccion-entrega-grupal">
+            <div class="card-header">
+              <div class="d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                  <i class="fas fa-list-check me-2"></i>
+                  Seleccionar Documentos Adicionales
+                </h6>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="selectAll">
+                  <label class="form-check-label" for="selectAll">
+                    <strong>Seleccionar todos</strong>
+                  </label>
+                </div>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-hover table-sm">
+                  <thead class="table-light">
+                    <tr>
+                      <th width="50">Seleccionar</th>
+                      <th>Código</th>
+                      <th>Tipo</th>
+                      <th>Matrizador</th>
+                      <th>Valor</th>
+                      <th>Estado Pago</th>
+                      <th>Código Verificación</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {{#each documentosGrupales.documentos}}
+                      <tr>
+                        <td>
+                          <div class="form-check">
+                            <input 
+                              class="form-check-input documento-checkbox" 
+                              type="checkbox" 
+                              value="{{this.id}}"
+                              data-codigo="{{this.codigoVerificacion}}"
+                              data-matrizador-id="{{this.matrizadorId}}"
+                              id="doc_{{this.id}}">
+                            <label class="form-check-label" for="doc_{{this.id}}"></label>
+                          </div>
+                        </td>
+                        <td>
+                          <strong>{{this.codigoBarras}}</strong>
+                        </td>
+                        <td>
+                          <span class="badge bg-secondary">{{this.tipoDocumento}}</span>
+                        </td>
+                        <td>
+                          <span class="badge bg-info">{{#if this.matrizador}}{{this.matrizador.nombre}}{{else}}Sin asignar{{/if}}</span>
+                        </td>
+                        <td>
+                          <strong>${{formatMoney this.valorFactura}}</strong>
+                        </td>
+                        <td>
+                          <span class="badge {{estadoPagoClass this.estadoPago}}">
+                            {{estadoPagoTexto this.estadoPago}}
+                          </span>
+                        </td>
+                        <td>
+                          {{#if this.codigoVerificacion}}
+                            {{#if (eq this.codigoVerificacion 'sin_codigo')}}
+                              <span class="badge bg-warning text-dark">Sin código</span>
+                            {{else}}
+                              <code>{{this.codigoVerificacion}}</code>
+                            {{/if}}
+                          {{else}}
+                            <span class="badge bg-warning text-dark">Sin código</span>
+                          {{/if}}
+                        </td>
+                      </tr>
+                    {{/each}}
+                  </tbody>
+                </table>
+              </div>
+
+              {{!-- Contador de selección mejorado --}}
+              <div class="mt-3">
+                <div class="alert alert-light border">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <span>
+                      <i class="fas fa-info-circle me-2 text-info"></i>
+                      <span id="contador-seleccion">1 documento(s) seleccionado(s)</span>
+                    </span>
+                    <div id="codigos-seleccionados" class="small text-muted"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
         {{/if}}
-        
-        <h6><i class="fas fa-file-alt me-2"></i>Documento Principal:</h6>
-        <div class="card mb-3">
-          <div class="card-body p-2">
-            <strong>{{documento.codigoBarras}}</strong> - {{documento.tipoDocumento}}
-            <br><small class="text-muted">{{documento.nombreCliente}}</small>
-          </div>
-        </div>
-        
-        <h6><i class="fas fa-plus-circle me-2"></i>Documentos Adicionales ({{documentosGrupales.cantidad}}):</h6>
-        <div class="table-responsive mb-3">
-          <table class="table table-sm">
-            <thead class="table-light">
-              <tr>
-                <th>Código</th>
-                <th>Tipo</th>
-                <th>Matrizador</th>
-                <th>Valor</th>
-                <th>Estado Pago</th>
-              </tr>
-            </thead>
-            <tbody>
-              {{#each documentosGrupales.documentos}}
-              <tr class="{{#unless (or (eq this.estadoPago 'pagado_completo') (eq this.estadoPago 'pagado_con_retencion'))}}table-warning{{/unless}}">
-                <td><small>{{this.codigoBarras}}</small></td>
-                <td>{{this.tipoDocumento}}</td>
-                <td>{{#if this.matrizador}}{{this.matrizador.nombre}}{{else}}<span class="text-muted">No asignado</span>{{/if}}</td>
-                <td>${{#if this.valorFactura}}{{formatMoney this.valorFactura}}{{else}}0.00{{/if}}</td>
-                <td>
-                  {{#if (eq this.estadoPago "pagado_completo")}}
-                  <span class="badge bg-success">PAGADO</span>
-                  {{else if (eq this.estadoPago "pagado_con_retencion")}}
-                  <span class="badge bg-info">CON RETENCIÓN</span>
-                  {{else if (eq this.estadoPago "pago_parcial")}}
-                  <span class="badge bg-warning text-dark">PARCIAL</span>
-                  {{else}}
-                  <span class="badge bg-danger">PENDIENTE</span>
+
+        {{!-- ============== 3. FORMULARIO DE ENTREGA CORREGIDO ============== --}}
+        <form id="formEntrega" action="/recepcion/documentos/entrega/{{documento.id}}" method="POST">
+          {{!-- Campos ocultos para entrega grupal --}}
+          <input type="hidden" id="documentos_seleccionados" name="documentosAdicionales" value="">
+          <input type="hidden" id="entrega_grupal" name="entregaGrupal" value="false">
+          <input type="hidden" name="tipoEntregaGrupal" value="recepcion_completa">
+
+          {{!-- SECCIÓN: VALIDACIÓN DE CÓDIGO CORREGIDA --}}
+          <div class="card mb-4">
+            <div class="card-header">
+              <h6 class="mb-0">
+                <i class="fas fa-key me-2"></i>
+                Validación de Código
+              </h6>
+            </div>
+            <div class="card-body">
+              {{!-- Mostrar códigos válidos dinámicamente --}}
+              <div class="alert alert-info" id="alert-codigos-validos">
+                <strong>Códigos válidos para esta entrega:</strong>
+                <div id="lista-codigos-validos">
+                  {{#if documento.codigoVerificacion}}
+                    {{#unless (eq documento.codigoVerificacion 'sin_codigo')}}
+                      <code class="bg-dark text-light px-2 py-1 rounded me-2">{{documento.codigoVerificacion}}</code>
+                      <small class="text-muted">(documento principal)</small>
+                    {{/unless}}
                   {{/if}}
-                </td>
-              </tr>
-              {{/each}}
-            </tbody>
-          </table>
-        </div>
-        
-        <div class="alert alert-info">
-          <i class="fas fa-info-circle me-2"></i>
-          <strong>Recepción:</strong> Tiene permisos completos para procesar entrega grupal de documentos de cualquier matrizador.
-        </div>
-        
-        <div class="alert alert-warning">
-          <i class="fas fa-exclamation-triangle me-2"></i>
-          <strong>Importante:</strong> Se entregarán <strong>{{add documentosGrupales.cantidad 1}} documentos</strong> en total al receptor especificado.
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-          <i class="fas fa-times me-1"></i> Cancelar
-        </button>
-        <button type="button" class="btn btn-success" onclick="confirmarEntregaGrupalRecepcion()">
-          <i class="fas fa-boxes me-1"></i> Confirmar Entrega Grupal
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-{{/if}}
+                </div>
+              </div>
 
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    // Elementos para documentos CON código de verificación
-    const verificacionCodigo = document.getElementById('verificacionCodigo');
-    const verificacionLlamada = document.getElementById('verificacionLlamada');
-    const divCodigoVerificacion = document.getElementById('divCodigoVerificacion');
-    const divObservaciones = document.getElementById('divObservaciones');
-    const codigoVerificacion = document.getElementById('codigoVerificacion');
-    const observaciones = document.getElementById('observaciones');
-    
-    // Elementos para documentos SIN código de verificación
-    const verificacionIdentidad = document.getElementById('verificacionIdentidad');
-    const verificacionFactura = document.getElementById('verificacionFactura');
-    const verificacionLlamadaAlt = document.getElementById('verificacionLlamadaAlt');
-    const divObservacionesAlt = document.getElementById('divObservacionesAlt');
-    const observacionesAlt = document.getElementById('observacionesAlt');
-    
-    // Lógica para documentos CON código de verificación
-    if (verificacionCodigo && verificacionLlamada) {
-      verificacionCodigo.addEventListener('change', updateVerificationMethod);
-      verificacionLlamada.addEventListener('change', updateVerificationMethod);
-      
-      function updateVerificationMethod() {
-        if (verificacionCodigo.checked) {
-          divCodigoVerificacion.classList.remove('d-none');
-          divObservaciones.classList.add('d-none');
-          codigoVerificacion.setAttribute('required', '');
-          observaciones.removeAttribute('required');
-        } else {
-          divCodigoVerificacion.classList.add('d-none');
-          divObservaciones.classList.remove('d-none');
-          codigoVerificacion.removeAttribute('required');
-          observaciones.setAttribute('required', '');
-        }
-      }
-    }
-    
-    // Lógica para documentos SIN código de verificación
-    if (verificacionIdentidad && verificacionFactura && verificacionLlamadaAlt) {
-      verificacionIdentidad.addEventListener('change', updateAlternativeVerification);
-      verificacionFactura.addEventListener('change', updateAlternativeVerification);
-      verificacionLlamadaAlt.addEventListener('change', updateAlternativeVerification);
-      
-      function updateAlternativeVerification() {
-        if (verificacionLlamadaAlt.checked) {
-          // Mostrar campo de observaciones para llamada
-          divObservacionesAlt.classList.remove('d-none');
-          observacionesAlt.setAttribute('required', '');
-          observacionesAlt.placeholder = 'Ejemplo: Llamé al 0987654321, atendió María Pérez (esposa del titular), confirmó que autoriza la entrega...';
-        } else if (verificacionIdentidad.checked) {
-          // Mostrar campo de observaciones para verificación por cédula
-          divObservacionesAlt.classList.remove('d-none');
-          observacionesAlt.setAttribute('required', '');
-          observacionesAlt.placeholder = 'Ejemplo: Cliente presentó cédula 1234567890 que coincide con los datos del documento. Nombre: Juan Pérez...';
-        } else if (verificacionFactura.checked) {
-          // Mostrar campo de observaciones para verificación por factura
-          divObservacionesAlt.classList.remove('d-none');
-          observacionesAlt.setAttribute('required', '');
-          observacionesAlt.placeholder = 'Ejemplo: Cliente proporcionó número de factura 001-001-000123456 que coincide con el documento...';
-        } else {
-          // Ocultar observaciones
-          divObservacionesAlt.classList.add('d-none');
-          observacionesAlt.removeAttribute('required');
-        }
-      }
-      
-      // Inicializar estado
-      updateAlternativeVerification();
-    }
-
-    // ============== FUNCIONES PARA ENTREGA GRUPAL - RECEPCIÓN ==============
-    
-    // Mostrar modal de entrega grupal para recepción
-    window.mostrarEntregaGrupalRecepcion = function() {
-      // Validar que se hayan completado los datos del receptor
-      const nombreReceptor = document.getElementById('nombreReceptor').value;
-      const identificacionReceptor = document.getElementById('identificacionReceptor').value;
-      const relacionReceptor = document.getElementById('relacionReceptor').value;
-      
-      if (!nombreReceptor || !identificacionReceptor || !relacionReceptor) {
-        alert('⚠️ Debe completar todos los datos del receptor antes de proceder con entrega grupal');
-        return;
-      }
-      
-      // Mostrar detalles de documentos grupales
-      document.getElementById('detallesDocumentosGrupales').style.display = 'block';
-      
-      // Mostrar modal de confirmación
-      const modal = new bootstrap.Modal(document.getElementById('modalEntregaGrupalRecepcion'));
-      modal.show();
-    };
-    
-    // Confirmar entrega grupal para recepción
-    window.confirmarEntregaGrupalRecepcion = function() {
-      // Verificar confirmación de documentos pendientes si es necesario
-      const confirmarPendiente = document.getElementById('confirmarEntregaPendiente');
-      if (confirmarPendiente && !confirmarPendiente.checked) {
-        alert('⚠️ Debe confirmar que ha consultado con el matrizador para documentos pendientes de pago');
-        return;
-      }
-      
-      // Obtener IDs de documentos adicionales
-      const documentosIds = [
-        {{#each documentosGrupales.documentos}}
-        {{this.id}}{{#unless @last}},{{/unless}}
-        {{/each}}
-      ];
-      
-      if (documentosIds.length === 0) {
-        alert('❌ No hay documentos adicionales para procesar');
-        return;
-      }
-      
-      // Configurar campos ocultos
-      document.getElementById('entregaGrupal').value = 'true';
-      document.getElementById('documentosAdicionales').value = documentosIds.join(',');
-      document.getElementById('tipoEntregaGrupal').value = 'recepcion_completa';
-      
-      // Agregar campo de confirmación de pendientes si existe
-      if (confirmarPendiente && confirmarPendiente.checked) {
-        // Crear campo oculto para confirmar entrega pendiente
-        const inputConfirmar = document.createElement('input');
-        inputConfirmar.type = 'hidden';
-        inputConfirmar.name = 'confirmarEntregaPendiente';
-        inputConfirmar.value = 'true';
-        document.querySelector('form').appendChild(inputConfirmar);
-      }
-      
-      // Actualizar texto del botón
-      const btnConfirmar = document.getElementById('btnConfirmarEntrega');
-      const tienePendientes = {{#if (gt documentosGrupales.documentosPendientes.length 0)}}true{{else}}false{{/if}};
-      
-      if (tienePendientes) {
-        btnConfirmar.innerHTML = '<i class="fas fa-boxes me-2"></i> Confirmar Entrega Grupal (' + (documentosIds.length + 1) + ' documentos - ⚠️ Con Pendientes)';
-        btnConfirmar.classList.remove('btn-primary');
-        btnConfirmar.classList.add('btn-warning');
-      } else {
-        btnConfirmar.innerHTML = '<i class="fas fa-boxes me-2"></i> Confirmar Entrega Grupal (' + (documentosIds.length + 1) + ' documentos)';
-        btnConfirmar.classList.remove('btn-primary');
-        btnConfirmar.classList.add('btn-success');
-      }
-      
-      // Cerrar modal
-      const modal = bootstrap.Modal.getInstance(document.getElementById('modalEntregaGrupalRecepcion'));
-      modal.hide();
-      
-      // Mostrar confirmación
-      const alertaGrupal = document.getElementById('alertaEntregaGrupal');
-      alertaGrupal.classList.remove('alert-info');
-      alertaGrupal.classList.add(tienePendientes ? 'alert-warning' : 'alert-success');
-      alertaGrupal.innerHTML = `
-        <div class="row align-items-center">
-          <div class="col-md-8">
-            <h6 class="alert-heading mb-1">
-              <i class="fas fa-boxes ${tienePendientes ? 'text-warning' : 'text-success'} me-2"></i>
-              <strong>🏢 Entrega Grupal Activada</strong>
-            </h6>
-            <p class="mb-0">
-              Se procesarán <strong>${documentosIds.length + 1} documentos</strong> en entrega grupal.
-              ${tienePendientes ? '<br><small class="text-warning">⚠️ Incluye documentos pendientes de pago</small>' : ''}
-              <br><small class="text-muted">Haga clic en "Confirmar Entrega Grupal" para procesar todos los documentos.</small>
-            </p>
+              {{!-- Input de código con validación mejorada --}}
+              <div class="row">
+                <div class="col-md-6">
+                  <label for="codigoVerificacion" class="form-label">
+                    <strong>Código de Verificación</strong>
+                    <span class="text-danger">*</span>
+                  </label>
+                  <div class="input-group">
+                    <input type="text" class="form-control" id="codigoVerificacion" name="codigoVerificacion" 
+                           placeholder="Ingrese código de 4 dígitos" maxlength="6" required>
+                    <button type="button" class="btn btn-outline-primary" id="validarCodigo">
+                      <i class="fas fa-check me-1"></i>Validar
+                    </button>
+                  </div>
+                  <div id="mensaje-validacion-codigo" class="mt-2"></div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Método de verificación alternativo</label>
+                  <div class="form-check">
+                    <input class="form-check-input" type="radio" name="tipoVerificacion" value="llamada" id="verificacionLlamada">
+                    <label class="form-check-label" for="verificacionLlamada">
+                      Verificación por llamada telefónica
+                    </label>
+                  </div>
+                  <div id="div-observaciones" class="mt-2 d-none">
+                    <textarea class="form-control" id="observaciones" name="observaciones" rows="2" 
+                              placeholder="Detalles de la verificación por llamada..."></textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="col-md-4 text-end">
-            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="cancelarEntregaGrupal()">
-              <i class="fas fa-times me-1"></i> Cancelar Grupal
+
+          {{!-- SECCIÓN: INFORMACIÓN DEL RECEPTOR --}}
+          <div class="card mb-4">
+            <div class="card-header">
+              <h6 class="mb-0">
+                <i class="fas fa-user-check me-2"></i>
+                Información del Receptor
+              </h6>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="nombreReceptor" class="form-label">
+                    <strong>Nombre completo del receptor</strong>
+                    <span class="text-danger">*</span>
+                  </label>
+                  <input type="text" class="form-control" id="nombreReceptor" name="nombreReceptor" 
+                         placeholder="Nombre completo de quien recibe" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="identificacionReceptor" class="form-label">
+                    <strong>Identificación del receptor</strong>
+                    <span class="text-danger">*</span>
+                  </label>
+                  <input type="text" class="form-control" id="identificacionReceptor" name="identificacionReceptor" 
+                         placeholder="Cédula o identificación" required>
+                </div>
+              </div>
+              <div class="mb-3">
+                <label for="relacionReceptor" class="form-label">
+                  <strong>Relación con el cliente</strong>
+                  <span class="text-danger">*</span>
+                </label>
+                <select class="form-select" id="relacionReceptor" name="relacionReceptor" required>
+                  <option value="">Seleccione la relación</option>
+                  <option value="titular">Titular del documento</option>
+                  <option value="representante_legal">Representante legal</option>
+                  <option value="apoderado">Apoderado</option>
+                  <option value="familiar">Familiar autorizado</option>
+                  <option value="empleado">Empleado autorizado</option>
+                  <option value="tercero_autorizado">Tercero autorizado</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {{!-- ============== NUEVA SECCIÓN: AUTORIZACIÓN PARA DOCUMENTOS PENDIENTES ============== --}}
+          {{#if documentosGrupales.requiereAutorizacion}}
+            <div class="card mb-4 border-warning" id="seccion-autorizacion">
+              <div class="card-header bg-warning text-dark">
+                <h6 class="mb-0">
+                  <i class="fas fa-exclamation-triangle me-2"></i>
+                  Autorización Requerida
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="alert alert-warning">
+                  <p class="mb-3">
+                    <strong>Se detectaron documentos con pago pendiente.</strong> 
+                    Para proceder con la entrega, debe confirmar que ha consultado con el matrizador responsable.
+                  </p>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="confirmarEntregaPendiente" name="confirmarEntregaPendiente" value="true" required>
+                    <label class="form-check-label" for="confirmarEntregaPendiente">
+                      <strong>Confirmo que he consultado con el matrizador responsable y autorizo la entrega de documentos con pago pendiente</strong>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          {{/if}}
+
+          {{!-- BOTÓN DE CONFIRMACIÓN --}}
+          <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-primary btn-lg" id="btnConfirmarEntrega">
+              <i class="fas fa-check-circle me-2"></i>
+              Confirmar Entrega
             </button>
           </div>
+        </form>
+
+      {{else}}
+        {{!-- ============== BÚSQUEDA Y LISTADO DE DOCUMENTOS ============== --}}
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">
+              <i class="fas fa-search me-2"></i>
+              Buscar Documento para Entrega
+            </h5>
+          </div>
+          <div class="card-body">
+            <form action="/recepcion/documentos/entrega" method="GET">
+              <div class="input-group mb-3">
+                <input type="text" class="form-control form-control-lg" name="codigo" 
+                       placeholder="Escanee o ingrese el código de barras del documento" 
+                       value="{{filtros.codigo}}" autofocus>
+                <button class="btn btn-primary btn-lg" type="submit">
+                  <i class="fas fa-search me-1"></i>Buscar
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
-      `;
-      
-      console.log('✅ [RECEPCIÓN] Entrega grupal configurada:', documentosIds.length + 1, 'documentos', tienePendientes ? '(con pendientes)' : '');
-    };
+
+        {{!-- LISTA DE DOCUMENTOS LISTOS CON ESTADO DE PAGO VISIBLE --}}
+        {{#if documentosListos.length}}
+          <div class="card mt-4">
+            <div class="card-header">
+              <h6 class="mb-0">
+                <i class="fas fa-list me-2"></i>
+                Documentos Listos para Entrega ({{documentosListos.length}})
+              </h6>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-hover">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Código</th>
+                      <th>Cliente</th>
+                      <th>Tipo</th>
+                      <th>Matrizador</th>
+                      <th>Valor</th>
+                      <th>Estado Pago</th>
+                      <th>Fecha Registro</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {{#each documentosListos}}
+                      <tr>
+                        <td><strong>{{this.codigoBarras}}</strong></td>
+                        <td>
+                          <div>{{this.nombreCliente}}</div>
+                          <small class="text-muted">{{this.identificacionCliente}}</small>
+                        </td>
+                        <td>
+                          <span class="badge bg-secondary">{{this.tipoDocumento}}</span>
+                        </td>
+                        <td>
+                          <span class="badge bg-info">{{#if this.matrizador}}{{this.matrizador.nombre}}{{else}}Sin asignar{{/if}}</span>
+                        </td>
+                        <td><strong>${{formatMoney this.valorFactura}}</strong></td>
+                        <td>
+                          <span class="badge {{estadoPagoClass this.estadoPago}}">
+                            {{estadoPagoTexto this.estadoPago}}
+                          </span>
+                        </td>
+                        <td>{{formatDate this.created_at}}</td>
+                        <td>
+                          <a href="/recepcion/documentos/entrega/{{this.id}}" class="btn btn-sm btn-primary">
+                            <i class="fas fa-handshake me-1"></i>Entregar
+                          </a>
+                        </td>
+                      </tr>
+                    {{/each}}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        {{else}}
+          <div class="card mt-4">
+            <div class="card-body text-center py-5">
+              <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+              <h5>No hay documentos listos para entrega</h5>
+              <p class="text-muted">Todos los documentos han sido entregados o están en proceso.</p>
+            </div>
+          </div>
+        {{/if}}
+      {{/if}}
+    </div>
+  </div>
+</div>
+
+{{!-- ============== JAVASCRIPT CORREGIDO PARA FUNCIONALIDAD ============== --}}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Configuración global (igual que admin)
+  window.documentoPrincipal = {{{json documento}}};
+  window.documentosDisponibles = {{{json documentosGrupales.documentos}}};
+  window.usuarioActual = { rol: 'recepcion' };
+  
+  // Variables del DOM (idénticas a admin y matrizador)
+  const selectAll = document.getElementById('selectAll');
+  const documentoCheckboxes = document.querySelectorAll('.documento-checkbox');
+  const contadorSeleccion = document.getElementById('contador-seleccion');
+  const codigoInput = document.getElementById('codigoVerificacion');
+  const btnValidar = document.getElementById('validarCodigo');
+  const listaCodigosValidos = document.getElementById('lista-codigos-validos');
+  const verificacionLlamada = document.getElementById('verificacionLlamada');
+  const divObservaciones = document.getElementById('div-observaciones');
+  const btnConfirmar = document.getElementById('btnConfirmarEntrega');
+  
+  // ============== GESTIÓN DE SELECCIÓN DE DOCUMENTOS (IDÉNTICA) ==============
+  function actualizarSeleccion() {
+    const seleccionados = Array.from(documentoCheckboxes).filter(cb => cb.checked);
+    const total = seleccionados.length + 1; // +1 por el documento principal
     
-    // Ocultar alerta de entrega grupal
-    window.ocultarAlertaGrupal = function() {
-      document.getElementById('alertaEntregaGrupal').style.display = 'none';
-    };
+    // Actualizar contador
+    if (contadorSeleccion) {
+      contadorSeleccion.textContent = `${total} documento(s) seleccionado(s)`;
+    }
     
-    // Cancelar entrega grupal
-    window.cancelarEntregaGrupal = function() {
-      // Resetear campos ocultos
-      document.getElementById('entregaGrupal').value = 'false';
-      document.getElementById('documentosAdicionales').value = '';
+    // Actualizar códigos válidos
+    if (listaCodigosValidos && window.documentoPrincipal) {
+      let codigosHTML = '';
       
-      // Restaurar botón original
-      const btnConfirmar = document.getElementById('btnConfirmarEntrega');
-      btnConfirmar.innerHTML = '<i class="fas fa-check-circle me-2"></i> Confirmar Entrega';
-      btnConfirmar.classList.remove('btn-success');
-      btnConfirmar.classList.add('btn-primary');
-      
-      // Restaurar alerta original
-      location.reload(); // Recargar para restaurar estado original
-    };
-    
-    // Validación antes de envío del formulario
-    document.querySelector('form').addEventListener('submit', function(e) {
-      const entregaGrupal = document.getElementById('entregaGrupal').value;
-      const tipoEntrega = document.getElementById('tipoEntregaGrupal').value;
-      
-      if (entregaGrupal === 'true') {
-        console.log('📋 [RECEPCIÓN] Enviando entrega grupal:', tipoEntrega);
-        
-        // Validar que todos los campos estén completos
-        const nombreReceptor = document.getElementById('nombreReceptor').value;
-        const identificacionReceptor = document.getElementById('identificacionReceptor').value;
-        const relacionReceptor = document.getElementById('relacionReceptor').value;
-        
-        if (!nombreReceptor || !identificacionReceptor || !relacionReceptor) {
-          e.preventDefault();
-          alert('❌ Debe completar todos los datos del receptor para entrega grupal');
-          return false;
-        }
-        
-        // Confirmar entrega grupal
-        if (!confirm(`¿Confirma la entrega grupal de ${document.getElementById('documentosAdicionales').value.split(',').length + 1} documentos?`)) {
-          e.preventDefault();
-          return false;
-        }
+      // Código del documento principal
+      if (window.documentoPrincipal.codigoVerificacion && window.documentoPrincipal.codigoVerificacion !== 'sin_codigo') {
+        codigosHTML += `<code class="bg-dark text-light px-2 py-1 rounded me-2">${window.documentoPrincipal.codigoVerificacion}</code>`;
+        codigosHTML += `<small class="text-muted me-3">(principal)</small>`;
       }
       
-      return true;
+      // Códigos de documentos seleccionados
+      seleccionados.forEach((checkbox, index) => {
+        const codigo = checkbox.dataset.codigo;
+        if (codigo && codigo !== 'sin_codigo') {
+          codigosHTML += `<code class="bg-success text-light px-2 py-1 rounded me-2">${codigo}</code>`;
+          codigosHTML += `<small class="text-muted me-3">(seleccionado ${index + 1})</small>`;
+        }
+      });
+      
+      if (codigosHTML === '') {
+        codigosHTML = '<span class="text-warning">⚠️ Documentos sin código - usar verificación alternativa</span>';
+      }
+      
+      listaCodigosValidos.innerHTML = codigosHTML;
+    }
+    
+    // Actualizar campos ocultos
+    const idsSeleccionados = seleccionados.map(cb => cb.value);
+    document.getElementById('documentos_seleccionados').value = idsSeleccionados.join(',');
+    document.getElementById('entrega_grupal').value = idsSeleccionados.length > 0 ? 'true' : 'false';
+  }
+  
+  // Event listeners (idénticos a admin y matrizador)
+  if (selectAll) {
+    selectAll.addEventListener('change', function() {
+      documentoCheckboxes.forEach(cb => {
+        cb.checked = this.checked;
+      });
+      actualizarSeleccion();
     });
+  }
+  
+  documentoCheckboxes.forEach(checkbox => {
+    checkbox.addEventListener('change', actualizarSeleccion);
   });
+  
+  // Validación de código (idéntica)
+  if (btnValidar && codigoInput) {
+    btnValidar.addEventListener('click', function() {
+      const codigoIngresado = codigoInput.value.trim();
+      const mensajeDiv = document.getElementById('mensaje-validacion-codigo');
+      
+      if (!codigoIngresado) {
+        mensajeDiv.innerHTML = '<div class="alert alert-warning alert-sm mt-2">⚠️ Ingrese un código</div>';
+        return;
+      }
+      
+      // Obtener códigos válidos (recepción puede validar todos)
+      const codigosValidos = [];
+      
+      // Código principal
+      if (window.documentoPrincipal && window.documentoPrincipal.codigoVerificacion && 
+          window.documentoPrincipal.codigoVerificacion !== 'sin_codigo') {
+        codigosValidos.push(window.documentoPrincipal.codigoVerificacion);
+      }
+      
+      // Códigos de seleccionados
+      const seleccionados = Array.from(documentoCheckboxes).filter(cb => cb.checked);
+      seleccionados.forEach(cb => {
+        const codigo = cb.dataset.codigo;
+        if (codigo && codigo !== 'sin_codigo') {
+          codigosValidos.push(codigo);
+        }
+      });
+      
+      // Validar código
+      if (codigosValidos.includes(codigoIngresado)) {
+        mensajeDiv.innerHTML = '<div class="alert alert-success alert-sm mt-2">✅ Código válido</div>';
+        codigoInput.classList.remove('is-invalid');
+        codigoInput.classList.add('is-valid');
+      } else {
+        mensajeDiv.innerHTML = `<div class="alert alert-danger alert-sm mt-2">❌ Código inválido. Códigos válidos: ${codigosValidos.join(', ')}</div>`;
+        codigoInput.classList.remove('is-valid');
+        codigoInput.classList.add('is-invalid');
+      }
+    });
+  }
+  
+  // Verificación alternativa (idéntica)
+  if (verificacionLlamada) {
+    verificacionLlamada.addEventListener('change', function() {
+      if (this.checked) {
+        divObservaciones.classList.remove('d-none');
+        document.getElementById('observaciones').setAttribute('required', '');
+        codigoInput.removeAttribute('required');
+      } else {
+        divObservaciones.classList.add('d-none');
+        document.getElementById('observaciones').removeAttribute('required');
+        codigoInput.setAttribute('required', '');
+      }
+    });
+  }
+  
+  // Validación de formulario (idéntica)
+  if (btnConfirmar) {
+    document.getElementById('formEntrega').addEventListener('submit', function(e) {
+      // ============== NUEVA VALIDACIÓN: AUTORIZACIÓN PARA DOCUMENTOS PENDIENTES ==============
+      const checkboxAutorizacion = document.getElementById('confirmarEntregaPendiente');
+      if (checkboxAutorizacion && !checkboxAutorizacion.checked) {
+        e.preventDefault();
+        alert('Debe confirmar que ha consultado con el matrizador responsable para proceder con la entrega de documentos con pago pendiente.');
+        checkboxAutorizacion.focus();
+        return false;
+      }
+      
+      const entregaGrupal = document.getElementById('entrega_grupal').value === 'true';
+      const numDocumentos = entregaGrupal ? 
+        document.getElementById('documentos_seleccionados').value.split(',').length + 1 : 1;
+      
+      if (entregaGrupal) {
+        btnConfirmar.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i>Procesando entrega grupal (${numDocumentos} documentos)...`;
+      } else {
+        btnConfirmar.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i>Procesando entrega...`;
+      }
+      
+      btnConfirmar.disabled = true;
+    });
+  }
+  
+  // Inicializar selección
+  actualizarSeleccion();
+  
+  // Funciones específicas para recepción
+  window.ocultarEntregaGrupal = function() {
+    document.getElementById('alerta-entrega-grupal').style.display = 'none';
+    document.getElementById('seccion-entrega-grupal').style.display = 'none';
+  };
+});
 </script> 

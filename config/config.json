@@ -33,12 +33,14 @@
       "habilitado": false,
       "api_url": "",
       "token": "",
-      "max_intentos": 3
+      "max_intentos": 3,
+      "modo_simulacion": true
     },
     "email": {
       "habilitado": false,
       "max_intentos": 3,
-      "delay_reintentos": 60000
+      "delay_reintentos": 60000,
+      "modo_simulacion": true
     }
   }
 } 

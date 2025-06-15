@@ -134,9 +134,10 @@ const Documento = sequelize.define('Documento', {
   },
   
   relacionReceptor: {
-    type: DataTypes.ENUM('titular', 'familiar', 'mandatario', 'otro'),
+    type: DataTypes.ENUM('titular', 'representante_legal', 'apoderado', 'familiar', 'empleado', 'tercero_autorizado'),
     field: 'relacion_receptor',
-    allowNull: true
+    allowNull: true,
+    comment: 'Relación del receptor con el cliente: titular, representante_legal, apoderado, familiar, empleado, tercero_autorizado'
   },
   
   // ============== ASIGNACIÓN Y RESPONSABILIDAD ==============

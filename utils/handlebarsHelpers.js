@@ -112,6 +112,31 @@ module.exports = {
     return a <= b;
   },
   
+  /**
+   * Operador lógico AND
+   */
+  and: function() {
+    // Convertir arguments a array y quitar el último (opciones de Handlebars)
+    const args = Array.prototype.slice.call(arguments, 0, -1);
+    return args.every(Boolean);
+  },
+  
+  /**
+   * Operador lógico OR
+   */
+  or: function() {
+    // Convertir arguments a array y quitar el último (opciones de Handlebars)
+    const args = Array.prototype.slice.call(arguments, 0, -1);
+    return args.some(Boolean);
+  },
+  
+  /**
+   * Suma de dos números
+   */
+  add: (a, b) => {
+    return (parseInt(a) || 0) + (parseInt(b) || 0);
+  },
+  
   // ============== HELPERS DE UTILIDADES ==============
   
   /**
@@ -246,20 +271,6 @@ module.exports = {
    */
   notEmpty: (value) => {
     return value != null && value !== '' && value !== undefined;
-  },
-  
-  /**
-   * Operador OR para plantillas
-   */
-  or: (a, b) => {
-    return a || b;
-  },
-  
-  /**
-   * Operador AND para plantillas
-   */
-  and: (a, b) => {
-    return a && b;
   },
   
   // ============== HELPERS PARA MODO COMPARATIVO ==============
@@ -667,5 +678,58 @@ module.exports = {
     const inicio = moment(fechaInicio).format('DD/MM/YYYY');
     const fin = moment(fechaFin).format('DD/MM/YYYY');
     return `${inicio} - ${fin}`;
+  },
+  
+  // ============== NUEVOS HELPERS PARA ESTADO DE PAGO ==============
+  
+  /**
+   * Obtener clase CSS para badge de estado de pago (CRÍTICO PARA CORRECCIÓN)
+   */
+  estadoPagoClass: (estadoPago) => {
+    switch (estadoPago) {
+      case 'pendiente':
+      case 'sin_pagar':
+        return 'bg-danger text-white';
+      case 'pago_parcial':
+        return 'bg-warning text-dark';
+      case 'pagado_completo':
+      case 'pagado_con_retencion':
+        return 'bg-success text-white';
+      default:
+        return 'bg-secondary text-white';
+    }
+  },
+
+  /**
+   * Obtener texto legible para estado de pago (CRÍTICO PARA CORRECCIÓN)
+   */
+  estadoPagoTexto: (estadoPago) => {
+    switch (estadoPago) {
+      case 'pendiente':
+      case 'sin_pagar':
+        return 'Pendiente';
+      case 'pago_parcial':
+        return 'Pago Parcial';
+      case 'pagado_completo':
+        return 'Pagado Completo';
+      case 'pagado_con_retencion':
+        return 'Pagado con Retención';
+      default:
+        return 'Desconocido';
+    }
+  },
+
+  /**
+   * Verificar si un documento está pagado completamente
+   */
+  estaPagadoCompleto: (estadoPago) => {
+    return ['pagado_completo', 'pagado_con_retencion'].includes(estadoPago);
+  },
+
+  /**
+   * Verificar si un documento tiene pago pendiente
+   */
+  tienePagoPendiente: (estadoPago) => {
+    return ['pendiente', 'sin_pagar', 'pago_parcial'].includes(estadoPago);
   }
 }; 

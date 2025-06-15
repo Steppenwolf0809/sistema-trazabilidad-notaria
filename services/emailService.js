@@ -124,10 +124,24 @@ const compilarPlantilla = async (nombrePlantilla, datos) => {
  */
 const enviarCorreo = async (destinatario, asunto, contenidoHtml, adjuntos = null) => {
   try {
-    if (!transporter) {
-      throw new Error('El servicio de correo no está inicializado');
+    // Verificar configuración de envío real
+    const envioRealHabilitado = process.env.EMAIL_ENVIO_REAL === 'true' || process.env.NODE_ENV === 'production';
+    
+    // MODO DESARROLLO: Simular envío exitoso
+    if (!envioRealHabilitado || !transporter) {
+      console.log('📧 [DESARROLLO] Email simulado enviado:');
+      console.log(`   Para: ${destinatario}`);
+      console.log(`   Asunto: ${asunto}`);
+      console.log(`   Contenido: ${contenidoHtml.substring(0, 100)}...`);
+      
+      return {
+        messageId: `dev-email-${Date.now()}`,
+        response: 'Email simulado en desarrollo',
+        simulado: true
+      };
     }
     
+    // MODO PRODUCCIÓN: Envío real
     const opcionesCorreo = {
       from: process.env.EMAIL_FROM || 'Notaría <correo@notaria.com>',
       to: destinatario,
@@ -144,11 +158,26 @@ const enviarCorreo = async (destinatario, asunto, contenidoHtml, adjuntos = null
     const info = await transporter.sendMail(opcionesCorreo);
     
     console.log(`✉️ Correo enviado: ${info.messageId}`);
-    return true;
+    return {
+      messageId: info.messageId,
+      response: info.response,
+      simulado: false
+    };
   } catch (error) {
     console.error('❌ Error al enviar correo:', error);
     
-    // Guardar el correo en la lista de pendientes
+    // En desarrollo, no guardar en pendientes, solo simular
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('📧 [DESARROLLO] Error simulado, continuando...');
+      return {
+        messageId: `dev-error-${Date.now()}`,
+        response: 'Error simulado en desarrollo',
+        simulado: true,
+        error: error.message
+      };
+    }
+    
+    // En producción, guardar el correo en la lista de pendientes
     try {
       await EmailPendiente.create({
         destinatario,

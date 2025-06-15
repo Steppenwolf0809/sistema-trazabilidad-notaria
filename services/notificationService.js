@@ -195,30 +195,64 @@ const prepararMensajes = (documento, tipoEvento, datosAdicionales = {}) => {
  */
 const registrarIntento = async (documentoId, tipoEvento, canal, resultado) => {
   try {
+    // Obtener destinatario del resultado o usar valor por defecto
+    let destinatario = resultado.destinatario || 'no-disponible';
+    
+    // Si no hay destinatario en el resultado, intentar obtenerlo del documento
+    if (!destinatario || destinatario === 'no-disponible') {
+      try {
+        const documento = await Documento.findByPk(documentoId);
+        if (documento) {
+          destinatario = canal === 'email' ? 
+            (documento.emailCliente || 'email-no-disponible') : 
+            (documento.telefonoCliente || 'telefono-no-disponible');
+        }
+      } catch (docError) {
+        console.warn('No se pudo obtener documento para destinatario:', docError.message);
+        destinatario = `${canal}-no-disponible`;
+      }
+    }
+    
     const registro = await NotificacionEnviada.create({
       documentoId,
       tipoEvento,
       canal,
-      destinatario: resultado.destinatario,
+      destinatario: destinatario,
       estado: resultado.exito ? (resultado.simulado ? 'simulado' : 'enviado') : 'fallido',
-      mensajeEnviado: resultado.mensaje,
+      mensajeEnviado: resultado.mensaje || resultado.error || 'Sin mensaje',
       respuestaApi: resultado.respuestaApi || null,
       intentos: 1,
       ultimoError: resultado.error || null,
       metadatos: {
         simulado: resultado.simulado || false,
-        timestamp: resultado.timestamp,
-        configuracion: configuracion.modoDesarrollo ? 'desarrollo' : 'produccion'
+        timestamp: resultado.timestamp || new Date().toISOString(),
+        configuracion: configuracion.modoDesarrollo ? 'desarrollo' : 'produccion',
+        envioRealHabilitado: process.env.EMAIL_ENVIO_REAL === 'true' || process.env.WHATSAPP_ENVIO_REAL === 'true'
       }
     });
     
     if (configuracion.logsDetallados) {
-      console.log(`📝 Intento registrado: ${tipoEvento} via ${canal} para documento ${documentoId}`);
+      console.log(`📝 Intento registrado: ${tipoEvento} via ${canal} para documento ${documentoId} (${resultado.simulado ? 'SIMULADO' : 'REAL'})`);
     }
     
     return registro;
   } catch (error) {
-    console.error('Error al registrar intento de notificación:', error);
+    console.error('❌ Error al registrar intento de notificación:', error.message);
+    
+    // En desarrollo, no fallar por errores de base de datos
+    if (configuracion.modoDesarrollo) {
+      console.log('📝 [DESARROLLO] Continuando sin registrar en BD...');
+      return {
+        id: `dev-${Date.now()}`,
+        documentoId,
+        tipoEvento,
+        canal,
+        estado: 'simulado',
+        simulado: true
+      };
+    }
+    
+    // En producción, re-lanzar el error
     throw error;
   }
 };
