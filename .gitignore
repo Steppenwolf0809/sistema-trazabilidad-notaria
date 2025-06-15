@@ -38,4 +38,6 @@ temp/
 *.sublime-project
 *.sublime-workspace
 *.swp
-*.swo 
+*.swo docs-cursor-temp/
+test_*.js
+repomix-output-*.xml

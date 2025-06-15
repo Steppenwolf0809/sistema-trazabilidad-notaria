@@ -87,7 +87,7 @@
               <div class="flex-grow-1">
                 <h6><i class="fas fa-boxes me-2"></i>Documentos Adicionales Detectados</h6>
                 <p class="mb-2">
-                  Se encontraron <strong>{{documentosGrupales.documentosPropios.length}} documento(s) propio(s)</strong> 
+                  Se encontraron <strong>{{documentosGrupales.cantidad}} documento(s) propio(s)</strong> 
                   adicionales del mismo cliente listos para entrega.
                 </p>
                 {{#if (gt documentosGrupales.documentosOtrosMatrizadores.length 0)}}
@@ -108,7 +108,7 @@
           </div>
 
           {{!-- Tabla de documentos propios con ESTADO DE PAGO VISIBLE --}}
-          {{#if (gt documentosGrupales.documentosPropios.length 0)}}
+          {{#if (gt documentosGrupales.cantidad 0)}}
             <div class="card mb-4" id="seccion-entrega-grupal">
               <div class="card-header">
                 <div class="d-flex justify-content-between align-items-center">
@@ -134,11 +134,11 @@
                         <th>Tipo</th>
                         <th>Valor</th>
                         <th>Estado Pago</th>
-                        <th>Código Verificación</th>
+                        <th>Estado</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {{#each documentosGrupales.documentosPropios}}
+                      {{#each documentosGrupales.documentos}}
                         <tr>
                           <td>
                             <div class="form-check">
@@ -147,7 +147,7 @@
                                 type="checkbox" 
                                 value="{{this.id}}"
                                 data-codigo="{{this.codigoVerificacion}}"
-                                data-matrizador-id="{{this.matrizadorId}}"
+                                data-matrizador-id="{{this.idMatrizador}}"
                                 id="doc_{{this.id}}">
                               <label class="form-check-label" for="doc_{{this.id}}"></label>
                             </div>
@@ -167,15 +167,7 @@
                             </span>
                           </td>
                           <td>
-                            {{#if this.codigoVerificacion}}
-                              {{#if (eq this.codigoVerificacion 'sin_codigo')}}
-                                <span class="badge bg-warning text-dark">Sin código</span>
-                              {{else}}
-                                <code>{{this.codigoVerificacion}}</code>
-                              {{/if}}
-                            {{else}}
-                              <span class="badge bg-warning text-dark">Sin código</span>
-                            {{/if}}
+                            <span class="badge bg-success">Listo</span>
                           </td>
                         </tr>
                       {{/each}}
@@ -227,7 +219,7 @@
                           <tr class="table-warning">
                             <td><strong>{{this.codigoBarras}}</strong></td>
                             <td>{{this.tipoDocumento}}</td>
-                            <td>{{this.matrizador.nombre}}</td>
+                            <td>{{#if this.matrizador}}{{this.matrizador.nombre}}{{else}}Sin asignar{{/if}}</td>
                             <td><strong>${{formatMoney this.valorFactura}}</strong></td>
                             <td>
                               <span class="badge {{estadoPagoClass this.estadoPago}}">
@@ -254,7 +246,7 @@
         {{/if}}
 
         {{!-- ============== 3. FORMULARIO DE ENTREGA CORREGIDO ============== --}}
-        <form id="formEntrega" action="/matrizador/documentos/entrega/{{documento.id}}" method="POST">
+        <form id="formEntrega" action="/matrizador/documentos/completar-entrega/{{documento.id}}" method="POST">
           {{!-- Campos ocultos para entrega grupal --}}
           <input type="hidden" id="documentos_seleccionados" name="documentosAdicionales" value="">
           <input type="hidden" id="entrega_grupal" name="entregaGrupal" value="false">
@@ -464,8 +456,12 @@
 document.addEventListener('DOMContentLoaded', function() {
   // Configuración global
   window.documentoPrincipal = {{{json documento}}};
-  window.documentosDisponibles = {{{json documentosGrupales.documentosPropios}}};
-  window.usuarioActual = { rol: 'matrizador' };
+  window.documentosDisponibles = {{{json documentosGrupales.documentos}}};
+  window.documentosOtrosMatrizadores = {{{json documentosGrupales.documentosOtrosMatrizadores}}};
+  window.usuarioActual = { 
+    rol: 'matrizador',
+    id: {{{json usuario.id}}}
+  };
   
   // Variables del DOM (igual que admin)
   const selectAll = document.getElementById('selectAll');
@@ -508,6 +504,19 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       });
       
+      // NUEVO: Mostrar códigos de documentos propios no seleccionados también
+      const matrizadorActual = window.usuarioActual?.id;
+      documentoCheckboxes.forEach((checkbox) => {
+        const matrizadorDelDocumento = checkbox.dataset.matrizadorId;
+        const codigo = checkbox.dataset.codigo;
+        
+        // Si es propio y no está seleccionado, también mostrarlo como válido
+        if (matrizadorDelDocumento == matrizadorActual && !checkbox.checked && codigo && codigo !== 'sin_codigo') {
+          codigosHTML += `<code class="bg-info text-light px-2 py-1 rounded me-2">${codigo}</code>`;
+          codigosHTML += `<small class="text-muted me-3">(disponible)</small>`;
+        }
+      });
+      
       if (codigosHTML === '') {
         codigosHTML = '<span class="text-warning">⚠️ Documentos sin código - usar verificación alternativa</span>';
       }
@@ -521,18 +530,46 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('entrega_grupal').value = idsSeleccionados.length > 0 ? 'true' : 'false';
   }
   
-  // Event listeners (idénticos a admin)
+  // Event listeners con validación para matrizador
   if (selectAll) {
     selectAll.addEventListener('change', function() {
       documentoCheckboxes.forEach(cb => {
-        cb.checked = this.checked;
+        // VALIDACIÓN: Solo permitir selección de documentos propios
+        const matrizadorDelDocumento = cb.dataset.matrizadorId;
+        const matrizadorActual = window.usuarioActual?.id;
+        
+        if (matrizadorDelDocumento == matrizadorActual) {
+          cb.checked = this.checked;
+        } else {
+          cb.checked = false;
+          cb.disabled = true;
+          console.log(`🚫 [MATRIZADOR] Documento ${cb.value} bloqueado: pertenece a otro matrizador (${matrizadorDelDocumento} vs ${matrizadorActual})`);
+        }
       });
       actualizarSeleccion();
     });
   }
   
   documentoCheckboxes.forEach(checkbox => {
-    checkbox.addEventListener('change', actualizarSeleccion);
+    // VALIDACIÓN: Solo permitir documentos propios
+    const matrizadorDelDocumento = checkbox.dataset.matrizadorId;
+    const matrizadorActual = window.usuarioActual?.id;
+    
+    if (matrizadorDelDocumento != matrizadorActual) {
+      checkbox.disabled = true;
+      checkbox.title = 'No puede seleccionar documentos de otros matrizadores';
+      console.log(`🚫 [MATRIZADOR] Documento ${checkbox.value} deshabilitado: pertenece a otro matrizador`);
+    }
+    
+    checkbox.addEventListener('change', function() {
+      // Validación adicional en el evento
+      if (matrizadorDelDocumento != matrizadorActual) {
+        this.checked = false;
+        alert('❌ No puede seleccionar documentos de otros matrizadores');
+        return false;
+      }
+      actualizarSeleccion();
+    });
   });
   
   // Misma validación de código que admin
@@ -546,7 +583,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
       }
       
-      // Obtener códigos válidos (solo de documentos propios)
+      // Obtener códigos válidos (TODOS los documentos propios, no solo seleccionados)
       const codigosValidos = [];
       
       // Código principal
@@ -555,22 +592,38 @@ document.addEventListener('DOMContentLoaded', function() {
         codigosValidos.push(window.documentoPrincipal.codigoVerificacion);
       }
       
-      // Códigos de seleccionados
-      const seleccionados = Array.from(documentoCheckboxes).filter(cb => cb.checked);
-      seleccionados.forEach(cb => {
+      // CORREGIDO: Códigos de TODOS los documentos propios disponibles (no solo seleccionados)
+      const matrizadorActual = window.usuarioActual?.id;
+      documentoCheckboxes.forEach(cb => {
+        const matrizadorDelDocumento = cb.dataset.matrizadorId;
         const codigo = cb.dataset.codigo;
-        if (codigo && codigo !== 'sin_codigo') {
+        
+        // Solo incluir códigos de documentos propios
+        if (matrizadorDelDocumento == matrizadorActual && codigo && codigo !== 'sin_codigo') {
           codigosValidos.push(codigo);
         }
       });
       
-      // Validar código
+      // Validar código con mensaje específico para matrizador
       if (codigosValidos.includes(codigoIngresado)) {
         mensajeDiv.innerHTML = '<div class="alert alert-success alert-sm mt-2">✅ Código válido</div>';
         codigoInput.classList.remove('is-invalid');
         codigoInput.classList.add('is-valid');
       } else {
-        mensajeDiv.innerHTML = `<div class="alert alert-danger alert-sm mt-2">❌ Código inválido. Códigos válidos: ${codigosValidos.join(', ')}</div>`;
+        // Verificar si está usando código de documento de otro matrizador
+        const todosLosCodigos = window.documentosOtrosMatrizadores || [];
+        const codigoDeOtroMatrizador = todosLosCodigos.some(doc => doc.codigoVerificacion === codigoIngresado);
+        
+        if (codigoDeOtroMatrizador) {
+          mensajeDiv.innerHTML = `<div class="alert alert-warning alert-sm mt-2">
+            ⚠️ <strong>Código de otro matrizador:</strong> Este código pertenece a un documento de otro matrizador.<br>
+            <small>Solo puede usar códigos de sus propios documentos: ${codigosValidos.join(', ')}</small>
+          </div>`;
+        } else if (codigosValidos.length > 0) {
+          mensajeDiv.innerHTML = `<div class="alert alert-danger alert-sm mt-2">❌ Código incorrecto. Códigos válidos: ${codigosValidos.join(', ')}</div>`;
+        } else {
+          mensajeDiv.innerHTML = '<div class="alert alert-warning alert-sm mt-2">⚠️ Sin códigos disponibles - use verificación por llamada</div>';
+        }
         codigoInput.classList.remove('is-valid');
         codigoInput.classList.add('is-invalid');
       }

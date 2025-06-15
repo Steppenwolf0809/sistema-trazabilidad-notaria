@@ -8,6 +8,13 @@
                 </div>
                 <span class="badge bg-info fs-6">{{notificaciones.length}} notificaciones</span>
             </div>
+            
+            <style>
+                .bg-purple {
+                    background-color: #6f42c1 !important;
+                    color: white;
+                }
+            </style>
 
             {{!-- Filtros avanzados para recepción --}}
             <div class="card mb-4">
@@ -30,7 +37,7 @@
                                 <select class="form-control" name="tipo">
                                     <option value="">Todos</option>
                                     <option value="documento_listo" {{#if (eq filtros.tipo 'documento_listo')}}selected{{/if}}>📋 Listo</option>
-                                    <option value="documento_entregado" {{#if (eq filtros.tipo 'documento_entregado')}}selected{{/if}}>✅ Entregado</option>
+                                    <option value="entrega_confirmada" {{#if (eq filtros.tipo 'entrega_confirmada')}}selected{{/if}}>✅ Entregado</option>
                                 </select>
                             </div>
                             <div class="col-md-2">
@@ -210,8 +217,12 @@
                                     <td>
                                         {{#if (eq this.tipo 'documento_listo')}}
                                             <span class="badge bg-success">📋 Listo</span>
-                                        {{else if (eq this.tipo 'documento_entregado')}}
+                                        {{else if (eq this.tipo 'entrega_confirmada')}}
                                             <span class="badge bg-info">✅ Entregado</span>
+                                        {{else if (eq this.tipo 'entrega_grupal')}}
+                                            <span class="badge bg-purple">📦 Entrega Grupal</span>
+                                        {{else if (eq this.tipo 'notificacion_grupal')}}
+                                            <span class="badge bg-purple">📦 Entrega Grupal</span>
                                         {{else if (eq this.tipo 'otro')}}
                                             <span class="badge bg-primary">🔔 Notificación</span>
                                         {{else if (eq this.tipo 'cambio_estado')}}

@@ -1,6 +1,7 @@
 const Documento = require('../models/Documento');
 const Matrizador = require('../models/Matrizador');
 const EventoDocumento = require('../models/EventoDocumento');
+const RegistroAuditoria = require('../models/RegistroAuditoria');
 const { sequelize } = require('../config/database');
 const { Op } = require('sequelize');
 const moment = require('moment');
@@ -102,21 +103,62 @@ async function enviarNotificacionEntrega(documento, datosEntrega, usuarioEntrega
       }
     }
 
+    // ============== GUARDAR EN HISTORIAL DE NOTIFICACIONES ==============
+    try {
+      const notificacion = await NotificacionEnviada.create({
+        documentoId: documento.id,
+        documentosIds: null, // Solo para entregas grupales
+        tipoEvento: 'entrega_confirmada',
+        tipoEntrega: 'individual',
+        canal: metodoNotificacion === 'ambos' ? 'whatsapp' : metodoNotificacion,
+        destinatario: metodoNotificacion.includes('email') ? 
+          documento.emailCliente : documento.telefonoCliente,
+        estado: 'enviado',
+        mensajeEnviado: mensajes.whatsapp || mensajes.email?.subject || 'Notificación de entrega',
+        respuestaApi: null,
+        intentos: 1,
+        metadatos: {
+          // Información del documento
+          codigoBarras: documento.codigoBarras,
+          tipoDocumento: documento.tipoDocumento,
+          nombreCliente: documento.nombreCliente,
+          identificacionCliente: documento.identificacionCliente,
+          valorFactura: documento.valorFactura,
+          estadoPago: documento.estadoPago,
+          // Información del receptor
+          nombreReceptor: datosEntrega.nombreReceptor,
+          identificacionReceptor: datosEntrega.identificacionReceptor,
+          relacionReceptor: datosEntrega.relacionReceptor,
+          // Información del usuario de recepción
+          entregadoPor: usuarioEntrega.nombre,
+          rolEntregador: 'recepcion',
+          idUsuarioRecepcion: usuarioEntrega.id,
+          // Metadatos de auditoría
+          fechaEntrega: new Date().toISOString(),
+          metodoVerificacion: datosEntrega.tipoVerificacion || 'codigo',
+          observaciones: datosEntrega.observaciones
+        }
+      });
+
+      console.log(`📝 [RECEPCION] Notificación individual guardada en historial: ID ${notificacion.id}`);
+    } catch (historialError) {
+      console.error('❌ Error guardando notificación en historial:', historialError);
+      // No interrumpir el flujo principal
+    }
+
     // Registrar en auditoría
     await RegistroAuditoria.create({
-      accion: 'notificacion_entrega_enviada',
-      tabla: 'documentos',
-      registroId: documento.id,
-      detalles: {
-        tipo: 'documento_entregado',
-        metodo: metodoNotificacion,
-        receptor: datosEntrega.nombreReceptor
-      },
-      usuarioId: usuarioEntrega.id
+      idDocumento: documento.id,
+      idMatrizador: documento.idMatrizador || usuarioEntrega.id,
+      accion: 'verificacion_codigo',
+      resultado: 'exitoso',
+      detalles: `Entrega confirmada - Receptor: ${datosEntrega.nombreReceptor} (${datosEntrega.identificacionReceptor}) - Método: ${metodoNotificacion} - Usuario: ${usuarioEntrega.nombre}`
     });
 
+    console.log(`✅ [RECEPCION] Notificación de entrega individual procesada correctamente`);
+
   } catch (error) {
-    console.error('Error enviando notificación de entrega:', error);
+    console.error('❌ [RECEPCION] Error enviando notificación de entrega:', error);
   }
 }
 
@@ -1226,7 +1268,6 @@ const recepcionController = {
         let documentosGrupales = null;
         if (documento.estado === 'listo_para_entrega' && 
             documento.fechaEntrega === null &&
-            ['pagado_completo', 'pagado_con_retencion'].includes(documento.estadoPago) &&
             documento.identificacionCliente) {
           
           console.log(`🔍 [RECEPCIÓN] Verificando documentos grupales para cliente: ${documento.identificacionCliente}`);
@@ -1236,19 +1277,20 @@ const recepcionController = {
           );
           
           // ============== NUEVA FUNCIONALIDAD: VALIDACIÓN COMPLETA INCLUYENDO DOCUMENTO PRINCIPAL ==============
-          if (documentosGrupales.tieneDocumentosAdicionales) {
-            const todosLosDocumentos = [documento, ...documentosGrupales.documentos];
-            const validacionCompleta = validarDocumentosParaEntrega(todosLosDocumentos);
-            
-            // Actualizar información de validación
-            documentosGrupales.validacionCompleta = validacionCompleta;
-            documentosGrupales.requiereAutorizacion = validacionCompleta.requiereAutorizacion;
-            documentosGrupales.alertas = validacionCompleta.alertas;
-            documentosGrupales.advertencias = validacionCompleta.advertencias;
-            documentosGrupales.documentosPendientes = validacionCompleta.documentosPendientes;
-            
-            console.log(`📋 [VALIDACIÓN] Documentos pendientes detectados: ${validacionCompleta.documentosPendientes.length}`);
-          }
+          const todosLosDocumentos = documentosGrupales.tieneDocumentosAdicionales ? 
+            [documento, ...documentosGrupales.documentos] : [documento];
+          
+          const validacionCompleta = validarDocumentosParaEntrega(todosLosDocumentos);
+          
+          // Actualizar información de validación
+          documentosGrupales.validacionCompleta = validacionCompleta;
+          documentosGrupales.requiereAutorizacion = validacionCompleta.requiereAutorizacion;
+          documentosGrupales.alertas = validacionCompleta.alertas;
+          documentosGrupales.advertencias = validacionCompleta.advertencias;
+          documentosGrupales.documentosPendientes = validacionCompleta.documentosPendientes;
+          
+          console.log(`📋 [VALIDACIÓN] Documentos pendientes detectados: ${validacionCompleta.documentosPendientes.length}`);
+          console.log(`📋 [VALIDACIÓN] Requiere autorización: ${validacionCompleta.requiereAutorizacion}`);
         }
         
         return res.render('recepcion/documentos/entrega', {
@@ -1699,16 +1741,61 @@ const recepcionController = {
         if (confirmarEntregaPendiente !== 'true') {
           await transaction.rollback();
           
+          // ============== REGENERAR VISTA CON INFORMACIÓN DE AUTORIZACIÓN ==============
+          // Detectar documentos grupales para mostrar interfaz completa
+          let documentosGrupales = null;
+          if (documento.estado === 'listo_para_entrega' && 
+              documento.fechaEntrega === null &&
+              documento.identificacionCliente) {
+            documentosGrupales = await detectarDocumentosGrupalesRecepcion(
+              documento.identificacionCliente, 
+              documento.id
+            );
+            
+            // Agregar información de autorización
+            documentosGrupales.requiereAutorizacion = true;
+            documentosGrupales.documentosPendientes = documentosConPagoPendiente;
+            documentosGrupales.alertas = documentosConPagoPendiente.map(doc => ({
+              codigo: doc.codigoBarras,
+              tipoDocumento: doc.tipoDocumento,
+              valor: doc.valorFactura,
+              estadoPago: doc.estadoPago,
+              matrizador: doc.matrizador?.nombre || 'Sin asignar'
+            }));
+          } else {
+            documentosGrupales = {
+              tieneDocumentosAdicionales: false,
+              cantidad: 0,
+              documentos: [],
+              requiereAutorizacion: true,
+              documentosPendientes: documentosConPagoPendiente,
+              alertas: documentosConPagoPendiente.map(doc => ({
+                codigo: doc.codigoBarras,
+                tipoDocumento: doc.tipoDocumento,
+                valor: doc.valorFactura,
+                estadoPago: doc.estadoPago,
+                matrizador: doc.matrizador?.nombre || 'Sin asignar'
+              }))
+            };
+          }
+          
           // Construir mensaje de error con detalles específicos
-          let mensajeError = `Se detectaron ${documentosConPagoPendiente.length} documento(s) con pago pendiente. Para continuar, debe confirmar que ha consultado con el matrizador responsable.\\n\\n`;
-          mensajeError += 'Documentos pendientes:\\n';
+          let mensajeError = `Se detectaron ${documentosConPagoPendiente.length} documento(s) con pago pendiente. Para continuar, debe confirmar que ha consultado con el matrizador responsable.`;
           
-          documentosConPagoPendiente.forEach(doc => {
-            mensajeError += `- ${doc.codigoBarras} (${doc.tipoDocumento}) - Matrizador: ${doc.matrizador?.nombre || 'Sin asignar'}\\n`;
+          return res.render('recepcion/documentos/entrega', {
+            layout: 'recepcion',
+            title: 'Entrega de Documento',
+            documento,
+            documentosGrupales,
+            error: mensajeError,
+            userRole: req.matrizador?.rol,
+            userName: req.matrizador?.nombre,
+            usuario: {
+              id: req.matrizador?.id,
+              rol: req.matrizador?.rol,
+              nombre: req.matrizador?.nombre
+            }
           });
-          
-          req.flash('error', mensajeError);
-          return res.redirect(`/recepcion/documentos/entrega/${id}`);
         } else {
           console.log(`✅ [AUTORIZACIÓN] Usuario confirmó consulta con matrizador para documentos pendientes`);
         }
@@ -2087,28 +2174,14 @@ const recepcionController = {
         documentoWhere.idMatrizador = matrizador;
       }
       
-      const notificaciones = await EventoDocumento.findAll({
+      // ============== CORRECCIÓN: CONSULTAR TABLA CORRECTA ==============
+      // Cambiar de EventoDocumento a NotificacionEnviada para mostrar notificaciones reales
+      const notificaciones = await NotificacionEnviada.findAll({
         where: {
-          tipo: {
-            [Op.in]: ['documento_listo', 'documento_entregado', 'otro', 'cambio_estado']
+          // Filtrar por tipos de evento de notificación
+          tipoEvento: {
+            [Op.in]: ['documento_listo', 'entrega_confirmada', 'entrega_grupal', 'recordatorio', 'alerta_sin_recoger']
           },
-          // Filtrar solo eventos relacionados con notificaciones
-          [Op.or]: [
-            { tipo: 'documento_listo' },
-            { tipo: 'documento_entregado' },
-            { 
-              tipo: 'otro',
-              detalles: {
-                [Op.iLike]: '%notificación%'
-              }
-            },
-            {
-              tipo: 'cambio_estado',
-              detalles: {
-                [Op.iLike]: '%listo para entrega%'
-              }
-            }
-          ],
           ...whereClause
         },
         include: [
@@ -2136,12 +2209,12 @@ const recepcionController = {
                 required: false
               }
             ],
-            required: true
+            required: false // Permitir notificaciones grupales sin documento específico
           }
         ],
         order: [['created_at', 'DESC']],
-        limit: 100, // Más resultados para recepción
-        raw: false // ✅ IMPORTANTE: Asegurar que devuelva objetos Sequelize completos
+        limit: 100,
+        raw: false
       });
       
       // ============== PROCESAR NOTIFICACIONES PARA VISTA ==============
@@ -2161,7 +2234,21 @@ const recepcionController = {
           notifData.metadatos = {};
         }
         
-        console.log(`📅 Notificación ID ${notifData.id}: fecha = ${notifData.created_at}`);
+        // ============== MAPEAR CAMPOS PARA COMPATIBILIDAD CON VISTA ==============
+        // La vista espera campos de EventoDocumento, mapear desde NotificacionEnviada
+        notifData.tipo = notifData.tipoEvento; // Mapear tipoEvento -> tipo para la vista
+        notifData.detalles = notifData.mensajeEnviado || 'Notificación enviada';
+        notifData.usuario = notifData.metadatos?.entregadoPor || 'Sistema';
+        
+        // Agregar información de canal al metadatos para la vista
+        if (!notifData.metadatos.canal) {
+          notifData.metadatos.canal = notifData.canal;
+        }
+        if (!notifData.metadatos.estado) {
+          notifData.metadatos.estado = notifData.estado;
+        }
+        
+        console.log(`📅 Notificación ID ${notifData.id}: fecha = ${notifData.created_at}, tipo = ${notifData.tipo}`);
         
         return notifData;
       });
@@ -2233,26 +2320,11 @@ const recepcionController = {
         });
       }
       
-      // Buscar el evento de notificación
-      const evento = await EventoDocumento.findOne({
+      // ============== CORRECCIÓN: BUSCAR EN TABLA CORRECTA ==============
+      // Cambiar de EventoDocumento a NotificacionEnviada
+      const notificacion = await NotificacionEnviada.findOne({
         where: {
-          id: id,
-          [Op.or]: [
-            { tipo: 'documento_listo' },
-            { tipo: 'documento_entregado' },
-            { 
-              tipo: 'otro',
-              detalles: {
-                [Op.iLike]: '%notificación%'
-              }
-            },
-            {
-              tipo: 'cambio_estado',
-              detalles: {
-                [Op.iLike]: '%listo para entrega%'
-              }
-            }
-          ]
+          id: id
         },
         include: [{
           model: Documento,
@@ -2264,159 +2336,68 @@ const recepcionController = {
             attributes: ['nombre'],
             required: false
           }],
-          required: true
+          required: false // Para notificaciones grupales
         }]
       });
       
-      if (!evento) {
+      if (!notificacion) {
         return res.status(404).json({
           exito: false,
           mensaje: 'Notificación no encontrada'
         });
       }
       
-      // ============== RECONSTRUIR MENSAJE ENVIADO ==============
-      let mensajeEnviado = '';
+      // ============== OBTENER MENSAJE ENVIADO ==============
+      // En NotificacionEnviada ya tenemos el mensaje guardado
+      let mensajeEnviado = notificacion.mensajeEnviado || 'Mensaje no disponible';
       
-      if (evento.tipo === 'documento_listo') {
-        // Reconstruir mensaje de documento listo
-        const codigoVerificacion = evento.metadatos?.codigoVerificacion || 'N/A';
-        let contextoTramite = '';
-        if (evento.documento.notas && 
-            typeof evento.documento.notas === 'string' && 
-            evento.documento.notas.trim().length > 0) {
-          contextoTramite = ` - ${evento.documento.notas.trim()}`;
+      // Si no hay mensaje guardado, usar el tipo de evento para mostrar información básica
+      if (!mensajeEnviado || mensajeEnviado === 'Notificación enviada') {
+        if (notificacion.tipoEvento === 'documento_listo') {
+          mensajeEnviado = `📋 Notificación de documento listo para entrega`;
+        } else if (notificacion.tipoEvento === 'entrega_confirmada') {
+          mensajeEnviado = `✅ Confirmación de entrega de documento`;
+        } else if (notificacion.tipoEvento === 'entrega_grupal') {
+          const totalDocs = notificacion.metadatos?.totalDocumentos || 'varios';
+          mensajeEnviado = `📦 Confirmación de entrega grupal (${totalDocs} documentos)`;
+        } else {
+          mensajeEnviado = `📱 Notificación de ${notificacion.tipoEvento}`;
         }
-        
-        mensajeEnviado = `🏛️ *NOTARÍA 18*
-
-¡Su documento está listo para retirar!
-
-📄 *Trámite:* ${evento.documento.tipoDocumento}${contextoTramite}
-📋 *Documento:* ${evento.documento.codigoBarras}
-🔢 *Código de verificación:* ${codigoVerificacion}
-👤 *Cliente:* ${evento.documento.nombreCliente}
-
-📍 Retírelo en: Notaría Décima Octava
-🕒 Horario: Lunes a Viernes 8:00-17:00
-
-⚠️ *IMPORTANTE:* Presente el código de verificación y su cédula para el retiro.`;
-        
-      } else if (evento.tipo === 'documento_entregado') {
-        // Reconstruir mensaje de documento entregado
-        const fechaEntrega = new Date(evento.createdAt).toLocaleDateString('es-EC', {
-          day: '2-digit', month: '2-digit', year: 'numeric'
-        });
-        
-        const horaEntrega = new Date(evento.createdAt).toLocaleTimeString('es-EC', {
-          hour: '2-digit', minute: '2-digit', hour12: false
-        });
-        
-        let contextoTramite = '';
-        if (evento.documento.notas && 
-            typeof evento.documento.notas === 'string' && 
-            evento.documento.notas.trim().length > 0) {
-          contextoTramite = ` - ${evento.documento.notas.trim()}`;
-        }
-        
-        const nombreReceptor = evento.metadatos?.nombreReceptor || 'Receptor no especificado';
-        const identificacionReceptor = evento.metadatos?.identificacionReceptor || 'N/A';
-        const relacionReceptor = evento.metadatos?.relacionReceptor || 'N/A';
-        
-        mensajeEnviado = `🏛️ *NOTARÍA 18*
-
-✅ *DOCUMENTO ENTREGADO EXITOSAMENTE*
-
-📄 *Documento:* ${evento.documento.tipoDocumento}${contextoTramite}
-📋 *Código:* ${evento.documento.codigoBarras}
-👤 *Cliente:* ${evento.documento.nombreCliente}
-
-📦 *DETALLES DE LA ENTREGA:*
-👨‍💼 *Retirado por:* ${nombreReceptor}
-🆔 *Identificación:* ${identificacionReceptor}
-👥 *Relación:* ${relacionReceptor}
-
-📅 *Fecha:* ${fechaEntrega}
-🕒 *Hora:* ${horaEntrega}
-📍 *Lugar:* Notaría Décima Octava, Quito
-
-✅ *Su trámite ha sido completado exitosamente.*
-
-_Guarde este mensaje como comprobante de entrega._`;
-      } else if (evento.tipo === 'otro' && evento.detalles && evento.detalles.includes('Notificación')) {
-        // Evento de notificación del NotificationService
-        const canalesEnviados = evento.metadatos?.canalesEnviados || [];
-        const codigoVerificacion = evento.documento.codigoVerificacion || 'N/A';
-        
-        let contextoTramite = '';
-        if (evento.documento.notas && 
-            typeof evento.documento.notas === 'string' && 
-            evento.documento.notas.trim().length > 0) {
-          contextoTramite = ` - ${evento.documento.notas.trim()}`;
-        }
-        
-        mensajeEnviado = `🏛️ *NOTARÍA 18*
-
-¡Su documento está listo para retirar!
-
-📄 *Trámite:* ${evento.documento.tipoDocumento}${contextoTramite}
-📋 *Documento:* ${evento.documento.codigoBarras}
-🔢 *Código de verificación:* ${codigoVerificacion}
-👤 *Cliente:* ${evento.documento.nombreCliente}
-
-📍 Retírelo en: Notaría Décima Octava
-🕒 Horario: Lunes a Viernes 8:00-17:00
-
-⚠️ *IMPORTANTE:* Presente el código de verificación y su cédula para el retiro.
-
-_Mensaje enviado por: ${canalesEnviados.join(' y ')}_`;
-        
-      } else if (evento.tipo === 'cambio_estado' && evento.detalles && evento.detalles.includes('listo para entrega')) {
-        // Evento de cambio de estado a "listo para entrega"
-        const codigoVerificacion = evento.metadatos?.codigoGenerado || evento.documento.codigoVerificacion || 'N/A';
-        
-        let contextoTramite = '';
-        if (evento.documento.notas && 
-            typeof evento.documento.notas === 'string' && 
-            evento.documento.notas.trim().length > 0) {
-          contextoTramite = ` - ${evento.documento.notas.trim()}`;
-        }
-        
-        mensajeEnviado = `📋 *DOCUMENTO MARCADO COMO LISTO*
-
-📄 *Trámite:* ${evento.documento.tipoDocumento}${contextoTramite}
-📋 *Código:* ${evento.documento.codigoBarras}
-🔢 *Código de verificación:* ${codigoVerificacion}
-👤 *Cliente:* ${evento.documento.nombreCliente}
-👨‍💼 *Marcado por:* ${evento.usuario}
-
-📅 *Fecha:* ${new Date(evento.created_at).toLocaleDateString('es-EC')}
-🕒 *Hora:* ${new Date(evento.created_at).toLocaleTimeString('es-EC')}
-
-✅ *El documento está listo para ser retirado por el cliente.*`;
       }
       
       // Preparar datos detallados
       const detalles = {
-        id: evento.id,
-        tipo: evento.tipo,
-        fecha: evento.created_at ? new Date(evento.created_at).toISOString() : null,
-        detalles: evento.detalles,
-        usuario: evento.usuario || 'Sistema',
-        documento: {
-          id: evento.documento.id,
-          codigo: evento.documento.codigoBarras,
-          tipo: evento.documento.tipoDocumento,
-          cliente: evento.documento.nombreCliente,
-          numeroFactura: evento.documento.numeroFactura,
-          estado: evento.documento.estado,
-          matrizador: evento.documento.matrizador?.nombre || 'No asignado'
+        id: notificacion.id,
+        tipo: notificacion.tipoEvento,
+        fecha: notificacion.created_at ? new Date(notificacion.created_at).toISOString() : null,
+        detalles: notificacion.mensajeEnviado || 'Notificación enviada',
+        usuario: notificacion.metadatos?.entregadoPor || 'Sistema',
+        documento: notificacion.documento ? {
+          id: notificacion.documento.id,
+          codigo: notificacion.documento.codigoBarras,
+          tipo: notificacion.documento.tipoDocumento,
+          cliente: notificacion.documento.nombreCliente,
+          numeroFactura: notificacion.documento.numeroFactura,
+          estado: notificacion.documento.estado,
+          matrizador: notificacion.documento.matrizador?.nombre || 'No asignado'
+        } : {
+          // Para notificaciones grupales sin documento específico
+          id: null,
+          codigo: 'Entrega Grupal',
+          tipo: 'Múltiples documentos',
+          cliente: notificacion.metadatos?.nombreCliente || 'Cliente no especificado',
+          numeroFactura: 'N/A',
+          estado: 'entregado',
+          matrizador: 'Varios'
         },
-        metadatos: evento.metadatos || {},
+        metadatos: notificacion.metadatos || {},
         canales: {
-          email: evento.documento.emailCliente,
-          telefono: evento.documento.telefonoCliente
+          email: notificacion.documento?.emailCliente || notificacion.metadatos?.emailCliente,
+          telefono: notificacion.documento?.telefonoCliente || notificacion.metadatos?.telefonoCliente
         },
+        canal: notificacion.canal,
+        estado: notificacion.estado,
+        destinatario: notificacion.destinatario,
         mensajeEnviado: mensajeEnviado
       };
       

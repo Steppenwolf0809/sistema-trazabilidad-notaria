@@ -128,7 +128,7 @@
                       <th>Matrizador</th>
                       <th>Valor</th>
                       <th>Estado Pago</th>
-                      <th>Código Verificación</th>
+                      <th>Estado</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -164,15 +164,7 @@
                           </span>
                         </td>
                         <td>
-                          {{#if this.codigoVerificacion}}
-                            {{#if (eq this.codigoVerificacion 'sin_codigo')}}
-                              <span class="badge bg-warning text-dark">Sin código</span>
-                            {{else}}
-                              <code>{{this.codigoVerificacion}}</code>
-                            {{/if}}
-                          {{else}}
-                            <span class="badge bg-warning text-dark">Sin código</span>
-                          {{/if}}
+                          <span class="badge bg-success">Listo</span>
                         </td>
                       </tr>
                     {{/each}}

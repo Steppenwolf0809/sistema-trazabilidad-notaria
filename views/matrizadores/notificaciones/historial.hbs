@@ -8,8 +8,12 @@
     background-color: #007bff;
     color: white;
   }
-  .notification-badge.documento_entregado {
+  .notification-badge.entrega_confirmada {
     background-color: #28a745;
+    color: white;
+  }
+  .bg-purple {
+    background-color: #6f42c1 !important;
     color: white;
   }
   .table-responsive {
@@ -91,7 +95,7 @@
                         <select class="form-control" name="tipo">
                             <option value="">Todos</option>
                             <option value="documento_listo" {{#if (eq filtros.tipo 'documento_listo')}}selected{{/if}}>📋 Listo</option>
-                            <option value="documento_entregado" {{#if (eq filtros.tipo 'documento_entregado')}}selected{{/if}}>✅ Entregado</option>
+                            <option value="entrega_confirmada" {{#if (eq filtros.tipo 'entrega_confirmada')}}selected{{/if}}>✅ Entregado</option>
                         </select>
                     </div>
                     <div class="col-md-2">
@@ -228,8 +232,12 @@
                             <td>
                                 {{#if (eq this.tipo 'documento_listo')}}
                                     <span class="badge bg-info">📋 Listo para Retiro</span>
-                                {{else if (eq this.tipo 'documento_entregado')}}
+                                {{else if (eq this.tipo 'entrega_confirmada')}}
                                     <span class="badge bg-success">✅ Entregado</span>
+                                {{else if (eq this.tipo 'entrega_grupal')}}
+                                    <span class="badge bg-purple">📦 Entrega Grupal</span>
+                                {{else if (eq this.tipo 'notificacion_grupal')}}
+                                    <span class="badge bg-purple">📦 Entrega Grupal</span>
                                 {{else}}
                                     <span class="badge bg-secondary">{{this.tipo}}</span>
                                 {{/if}}

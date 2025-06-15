@@ -25,6 +25,7 @@ const {
 } = require('../utils/documentoUtils');
 const NotificationService = require('../services/notificationService');
 const configNotaria = require('../config/notaria');
+const NotificacionEnviada = require('../models/NotificacionEnviada');
 
 // ============== FUNCIONES PARA CONSTRUCCIÓN DE MENSAJES PROFESIONALES ==============
 
@@ -202,6 +203,174 @@ function construirMensajeEntregaGrupalMatrizador(documentos, datosEntrega) {
 // ============== FUNCIONES PARA NOTIFICACIONES GRUPALES - MATRIZADOR ==============
 
 /**
+ * Guarda notificación grupal en el historial de la base de datos
+ * @param {Array} documentos - Array de documentos entregados
+ * @param {Object} datosEntrega - Datos de la entrega
+ * @param {Object} usuarioEntrega - Usuario que realizó la entrega
+ * @param {string} metodoNotificacion - Método de notificación usado
+ * @param {string} mensajeEnviado - Mensaje que se envió
+ * @returns {Object} Notificación guardada
+ */
+async function guardarNotificacionGrupalEnHistorialMatrizador(documentos, datosEntrega, usuarioEntrega, metodoNotificacion, mensajeEnviado) {
+  try {
+    const documentoPrincipal = documentos[0];
+    
+    // Detectar documentos con pago pendiente
+    const documentosPendientes = documentos.filter(doc => 
+      !['pagado_completo', 'pagado_con_retencion'].includes(doc.estadoPago)
+    );
+    
+    const notificacion = await NotificacionEnviada.create({
+      // Para entrega grupal, documento_id es null y usamos documentos_ids
+      documentoId: null,
+      documentosIds: documentos.map(doc => doc.id),
+      tipoEvento: 'entrega_grupal',
+      tipoEntrega: 'grupal',
+      canal: metodoNotificacion === 'ambos' ? 'whatsapp' : metodoNotificacion,
+      destinatario: metodoNotificacion.includes('email') ? 
+        documentoPrincipal.emailCliente : documentoPrincipal.telefonoCliente,
+      estado: 'enviado',
+      mensajeEnviado: mensajeEnviado,
+      respuestaApi: null,
+      intentos: 1,
+      metadatos: {
+        // Información básica de la entrega
+        totalDocumentos: documentos.length,
+        nombreCliente: documentoPrincipal.nombreCliente,
+        identificacionCliente: documentoPrincipal.identificacionCliente,
+        // Información del receptor
+        nombreReceptor: datosEntrega.nombreReceptor,
+        identificacionReceptor: datosEntrega.identificacionReceptor,
+        relacionReceptor: datosEntrega.relacionReceptor,
+        // Información del usuario que procesó
+        entregadoPor: usuarioEntrega.nombre,
+        rolEntregador: usuarioEntrega.rol,
+        idUsuarioEntregador: usuarioEntrega.id,
+        // Lista de documentos incluidos
+        documentosIncluidos: documentos.map(doc => ({
+          id: doc.id,
+          codigo: doc.codigoBarras,
+          tipo: doc.tipoDocumento,
+          valor: doc.valorFactura,
+          estadoPago: doc.estadoPago,
+          matrizador: doc.matrizador?.nombre || 'Sin asignar'
+        })),
+        // Información especial de validaciones
+        documentosPendientes: documentosPendientes.length,
+        requirioAutorizacion: false, // Matrizador no requiere autorización para propios
+        entregaConPendientes: documentosPendientes.length > 0,
+        // Códigos de los documentos
+        codigosDocumentos: documentos.map(doc => doc.codigoBarras),
+        tiposDocumentos: documentos.map(doc => doc.tipoDocumento),
+        // Metadatos de auditoría
+        fechaEntrega: new Date().toISOString(),
+        tipoEntregaGrupal: 'matrizador_propios',
+        metodoVerificacion: datosEntrega.tipoVerificacion || 'codigo',
+        observaciones: datosEntrega.observaciones
+      }
+    });
+
+    console.log(`📝 [HISTORIAL MATRIZADOR] Notificación grupal guardada en historial: ID ${notificacion.id}`);
+    
+    return notificacion;
+  } catch (error) {
+    console.error('❌ Error guardando notificación grupal en historial matrizador:', error);
+    throw error;
+  }
+}
+
+/**
+ * Envía notificación de entrega individual para matrizadores
+ * @param {Object} documento - Documento entregado
+ * @param {Object} datosEntrega - Datos de la entrega
+ * @param {Object} usuarioEntrega - Usuario que realizó la entrega
+ */
+async function enviarNotificacionEntrega(documento, datosEntrega, usuarioEntrega) {
+  try {
+    const mensajes = construirMensajeDocumentoEntregado(documento, {
+      ...datosEntrega,
+      usuarioEntrega: usuarioEntrega.nombre
+    });
+
+    const metodoNotificacion = documento.metodoNotificacion || 'email';
+    
+    // Enviar según configuración
+    if (metodoNotificacion === 'whatsapp' || metodoNotificacion === 'ambos') {
+      if (documento.telefonoCliente) {
+        // Aquí se integraría con el servicio de WhatsApp
+        console.log(`📱 [MATRIZADOR] Confirmación entrega enviada por WhatsApp a ${documento.telefonoCliente}`);
+        console.log(`Mensaje: ${mensajes.whatsapp}`);
+      }
+    }
+
+    if (metodoNotificacion === 'email' || metodoNotificacion === 'ambos') {
+      if (documento.emailCliente) {
+        // Aquí se integraría con el servicio de Email
+        console.log(`📧 [MATRIZADOR] Confirmación entrega enviada por email a ${documento.emailCliente}`);
+        console.log(`Asunto: ${mensajes.email.subject}`);
+      }
+    }
+
+    // ============== GUARDAR EN HISTORIAL DE NOTIFICACIONES ==============
+    try {
+      const notificacion = await NotificacionEnviada.create({
+        documentoId: documento.id,
+        documentosIds: null, // Solo para entregas grupales
+        tipoEvento: 'entrega_confirmada',
+        tipoEntrega: 'individual',
+        canal: metodoNotificacion === 'ambos' ? 'whatsapp' : metodoNotificacion,
+        destinatario: metodoNotificacion.includes('email') ? 
+          documento.emailCliente : documento.telefonoCliente,
+        estado: 'enviado',
+        mensajeEnviado: mensajes.whatsapp || mensajes.email?.subject || 'Notificación de entrega',
+        respuestaApi: null,
+        intentos: 1,
+        metadatos: {
+          // Información del documento
+          codigoBarras: documento.codigoBarras,
+          tipoDocumento: documento.tipoDocumento,
+          nombreCliente: documento.nombreCliente,
+          identificacionCliente: documento.identificacionCliente,
+          valorFactura: documento.valorFactura,
+          estadoPago: documento.estadoPago,
+          // Información del receptor
+          nombreReceptor: datosEntrega.nombreReceptor,
+          identificacionReceptor: datosEntrega.identificacionReceptor,
+          relacionReceptor: datosEntrega.relacionReceptor,
+          // Información del matrizador
+          entregadoPor: usuarioEntrega.nombre,
+          rolEntregador: 'matrizador',
+          idMatrizador: usuarioEntrega.id,
+          // Metadatos de auditoría
+          fechaEntrega: new Date().toISOString(),
+          metodoVerificacion: datosEntrega.tipoVerificacion || 'codigo',
+          observaciones: datosEntrega.observaciones
+        }
+      });
+
+      console.log(`📝 [MATRIZADOR] Notificación individual guardada en historial: ID ${notificacion.id}`);
+    } catch (historialError) {
+      console.error('❌ Error guardando notificación en historial:', historialError);
+      // No interrumpir el flujo principal
+    }
+
+    // Registrar en auditoría
+    await RegistroAuditoria.create({
+      idDocumento: documento.id,
+      idMatrizador: usuarioEntrega.id,
+      accion: 'verificacion_codigo',
+      resultado: 'exitoso',
+      detalles: `Entrega confirmada - Receptor: ${datosEntrega.nombreReceptor} (${datosEntrega.identificacionReceptor}) - Método: ${metodoNotificacion} - Matrizador: ${usuarioEntrega.nombre}`
+    });
+
+    console.log(`✅ [MATRIZADOR] Notificación de entrega individual procesada correctamente`);
+
+  } catch (error) {
+    console.error('❌ [MATRIZADOR] Error enviando notificación de entrega:', error);
+  }
+}
+
+/**
  * Envía notificación de entrega grupal (UNA SOLA NOTIFICACIÓN PARA TODOS LOS DOCUMENTOS)
  * @param {Array} documentos - Array de documentos entregados
  * @param {Object} datosEntrega - Datos de la entrega
@@ -279,6 +448,20 @@ async function enviarNotificacionEntregaGrupalMatrizador(documentos, datosEntreg
 
     console.log(`✅ [ENTREGA GRUPAL MATRIZADOR] Notificación única enviada exitosamente para ${documentos.length} documentos`);
 
+    // ============== NUEVO: GUARDAR EN HISTORIAL DE NOTIFICACIONES ==============
+    try {
+      await guardarNotificacionGrupalEnHistorialMatrizador(
+        documentos, 
+        datosEntrega, 
+        usuarioEntrega, 
+        metodoNotificacion, 
+        mensajes.whatsapp
+      );
+    } catch (historialError) {
+      console.error('❌ Error guardando en historial matrizador (continuando):', historialError);
+      // No detener el flujo si falla el historial
+    }
+
   } catch (error) {
     console.error('Error enviando notificación de entrega grupal matrizador:', error);
   }
@@ -315,23 +498,21 @@ async function detectarDocumentosGrupalesMatrizador(identificacionCliente, docum
     });
     
     // Separar documentos propios vs de otros matrizadores
-    const documentosPropios = todosLosDocumentos.filter(doc => doc.matrizadorId == matrizadorId);
-    const documentosOtros = todosLosDocumentos.filter(doc => doc.matrizadorId != matrizadorId);
+    const documentosPropios = todosLosDocumentos.filter(doc => doc.idMatrizador == matrizadorId);
+    const documentosOtros = todosLosDocumentos.filter(doc => doc.idMatrizador != matrizadorId);
     
     console.log(`📄 [MATRIZADOR] Encontrados ${documentosPropios.length} propios, ${documentosOtros.length} de otros`);
+    console.log(`📄 [MATRIZADOR] Documentos propios:`, documentosPropios.map(d => ({ id: d.id, codigo: d.codigoBarras, matrizador: d.idMatrizador })));
+    console.log(`📄 [MATRIZADOR] Documentos otros:`, documentosOtros.map(d => ({ id: d.id, codigo: d.codigoBarras, matrizador: d.idMatrizador })));
     
     return {
-      tieneDocumentosAdicionales: documentosPropios.length > 0,
+      tieneDocumentosAdicionales: documentosPropios.length > 0 || documentosOtros.length > 0,
       cantidad: documentosPropios.length,
       documentos: documentosPropios, // Solo puede entregar los suyos
+      documentosPropios: documentosPropios,
+      documentosOtrosMatrizadores: documentosOtros,
       tipoDeteccion: 'matrizador_limitada',
-      permisoTotal: false,
-      // NUEVA INFORMACIÓN: Documentos de otros matrizadores
-      documentosOtrosMatrizadores: {
-        cantidad: documentosOtros.length,
-        documentos: documentosOtros,
-        tieneDocumentosOtros: documentosOtros.length > 0
-      }
+      permisoTotal: false
     };
   } catch (error) {
     console.error('❌ Error detectando documentos grupales para matrizador:', error);
@@ -339,13 +520,10 @@ async function detectarDocumentosGrupalesMatrizador(identificacionCliente, docum
       tieneDocumentosAdicionales: false, 
       cantidad: 0, 
       documentos: [],
+      documentosPropios: [],
+      documentosOtrosMatrizadores: [],
       tipoDeteccion: 'matrizador_limitada',
-      permisoTotal: false,
-      documentosOtrosMatrizadores: {
-        cantidad: 0,
-        documentos: [],
-        tieneDocumentosOtros: false
-      }
+      permisoTotal: false
     };
   }
 }
@@ -2089,11 +2267,13 @@ const matrizadorController = {
         ];
       }
       
-      // Solo mostrar notificaciones de documentos del matrizador actual
-      const notificaciones = await EventoDocumento.findAll({
+      // ============== CORRECCIÓN: CONSULTAR TABLA CORRECTA ==============
+      // Cambiar de EventoDocumento a NotificacionEnviada para mostrar notificaciones reales
+      const notificaciones = await NotificacionEnviada.findAll({
         where: {
-          tipo: {
-            [Op.in]: ['documento_listo', 'documento_entregado']
+          // Filtrar por tipos de evento de notificación
+          tipoEvento: {
+            [Op.in]: ['documento_listo', 'entrega_confirmada', 'entrega_grupal', 'recordatorio', 'alerta_sin_recoger']
           },
           ...whereClause
         },
@@ -2102,10 +2282,10 @@ const matrizadorController = {
           as: 'documento',
           attributes: ['codigoBarras', 'tipoDocumento', 'nombreCliente', 'numeroFactura', 'identificacionCliente'],
           where: documentoWhereClause,
-          required: true
+          required: false // Permitir notificaciones grupales sin documento específico
         }],
-        order: [['created_at', 'DESC']], // Más recientes primero
-        limit: 50 // Limitar para performance
+        order: [['created_at', 'DESC']],
+        limit: 50
       });
       
       // ============== PROCESAR NOTIFICACIONES PARA VISTA ==============
@@ -2113,11 +2293,11 @@ const matrizadorController = {
         const notifData = notif.toJSON ? notif.toJSON() : notif;
         
         // Asegurar que las fechas estén en formato ISO string
-        if (notifData.createdAt) {
-          notifData.created_at = new Date(notifData.createdAt).toISOString();
+        if (notifData.created_at) {
+          notifData.created_at = new Date(notifData.created_at).toISOString();
         }
-        if (notifData.updatedAt) {
-          notifData.updated_at = new Date(notifData.updatedAt).toISOString();
+        if (notifData.updated_at) {
+          notifData.updated_at = new Date(notifData.updated_at).toISOString();
         }
         
         // Asegurar que metadatos existan
@@ -2125,7 +2305,21 @@ const matrizadorController = {
           notifData.metadatos = {};
         }
         
-        console.log(`📅 Notificación ID ${notifData.id}: fecha = ${notifData.created_at}`);
+        // ============== MAPEAR CAMPOS PARA COMPATIBILIDAD CON VISTA ==============
+        // La vista espera campos de EventoDocumento, mapear desde NotificacionEnviada
+        notifData.tipo = notifData.tipoEvento; // Mapear tipoEvento -> tipo para la vista
+        notifData.detalles = notifData.mensajeEnviado || 'Notificación enviada';
+        notifData.usuario = notifData.metadatos?.entregadoPor || 'Sistema';
+        
+        // Agregar información de canal al metadatos para la vista
+        if (!notifData.metadatos.canal) {
+          notifData.metadatos.canal = notifData.canal;
+        }
+        if (!notifData.metadatos.estado) {
+          notifData.metadatos.estado = notifData.estado;
+        }
+        
+        console.log(`📅 [MATRIZADOR] Notificación ID ${notifData.id}: fecha = ${notifData.created_at}, tipo = ${notifData.tipo}`);
         
         return notifData;
       });
@@ -2133,9 +2327,9 @@ const matrizadorController = {
       // ============== CALCULAR ESTADÍSTICAS ==============
       const stats = {
         total: notificaciones.length,
-        enviadas: notificaciones.filter(n => n.metadatos?.estado === 'enviado').length,
-        fallidas: notificaciones.filter(n => n.metadatos?.estado === 'error').length,
-        pendientes: notificaciones.filter(n => n.metadatos?.estado === 'pendiente').length
+        enviadas: notificaciones.filter(n => n.estado === 'enviado').length,
+        fallidas: notificaciones.filter(n => n.estado === 'fallido').length,
+        pendientes: notificaciones.filter(n => n.estado === 'pendiente').length
       };
       
       res.render('matrizadores/notificaciones/historial', {
@@ -2174,13 +2368,11 @@ const matrizadorController = {
         });
       }
       
-      // Buscar el evento de notificación
-      const evento = await EventoDocumento.findOne({
+      // ============== CORRECCIÓN: BUSCAR EN TABLA CORRECTA ==============
+      // Cambiar de EventoDocumento a NotificacionEnviada
+      const notificacion = await NotificacionEnviada.findOne({
         where: {
-          id: id,
-          tipo: {
-            [Op.in]: ['documento_listo', 'documento_entregado']
-          }
+          id: id
         },
         include: [{
           model: Documento,
@@ -2189,104 +2381,60 @@ const matrizadorController = {
           where: {
             idMatrizador: req.matrizador.id
           },
-          required: true
+          required: false // Para notificaciones grupales
         }]
       });
       
-      if (!evento) {
+      if (!notificacion) {
         return res.status(404).json({
           exito: false,
           mensaje: 'Notificación no encontrada o no tienes permisos para verla'
         });
       }
       
-      // ============== RECONSTRUIR MENSAJE ENVIADO ==============
-      let mensajeEnviado = '';
+      // ============== OBTENER MENSAJE ENVIADO ==============
+      // En NotificacionEnviada ya tenemos el mensaje guardado
+      let mensajeEnviado = notificacion.mensajeEnviado || 'Mensaje no disponible';
       
-      if (evento.tipo === 'documento_listo') {
-        // Reconstruir mensaje de documento listo
-        const codigoVerificacion = evento.metadatos?.codigoVerificacion || 'N/A';
-        let contextoTramite = '';
-        if (evento.documento.notas && 
-            typeof evento.documento.notas === 'string' && 
-            evento.documento.notas.trim().length > 0) {
-          contextoTramite = ` - ${evento.documento.notas.trim()}`;
+      // Si no hay mensaje guardado, usar el tipo de evento para mostrar información básica
+      if (!mensajeEnviado || mensajeEnviado === 'Notificación enviada') {
+        if (notificacion.tipoEvento === 'documento_listo') {
+          mensajeEnviado = `📋 Notificación de documento listo para entrega`;
+        } else if (notificacion.tipoEvento === 'entrega_confirmada') {
+          mensajeEnviado = `✅ Confirmación de entrega de documento`;
+        } else if (notificacion.tipoEvento === 'entrega_grupal') {
+          const totalDocs = notificacion.metadatos?.totalDocumentos || 'varios';
+          mensajeEnviado = `📦 Confirmación de entrega grupal (${totalDocs} documentos)`;
+        } else {
+          mensajeEnviado = `📱 Notificación de ${notificacion.tipoEvento}`;
         }
-        
-        mensajeEnviado = `🏛️ *NOTARÍA 18*
-
-¡Su documento está listo para retirar!
-
-📄 *Trámite:* ${evento.documento.tipoDocumento}${contextoTramite}
-📋 *Documento:* ${evento.documento.codigoBarras}
-🔢 *Código de verificación:* ${codigoVerificacion}
-👤 *Cliente:* ${evento.documento.nombreCliente}
-
-📍 Retírelo en: Notaría Décima Octava
-🕒 Horario: Lunes a Viernes 8:00-17:00
-
-⚠️ *IMPORTANTE:* Presente el código de verificación y su cédula para el retiro.`;
-        
-      } else if (evento.tipo === 'documento_entregado') {
-        // Reconstruir mensaje de documento entregado
-        const fechaEntrega = new Date(evento.createdAt).toLocaleDateString('es-EC', {
-          day: '2-digit', month: '2-digit', year: 'numeric'
-        });
-        
-        const horaEntrega = new Date(evento.createdAt).toLocaleTimeString('es-EC', {
-          hour: '2-digit', minute: '2-digit', hour12: false
-        });
-        
-        let contextoTramite = '';
-        if (evento.documento.notas && 
-            typeof evento.documento.notas === 'string' && 
-            evento.documento.notas.trim().length > 0) {
-          contextoTramite = ` - ${evento.documento.notas.trim()}`;
-        }
-        
-        const nombreReceptor = evento.metadatos?.nombreReceptor || 'Receptor no especificado';
-        const identificacionReceptor = evento.metadatos?.identificacionReceptor || 'N/A';
-        const relacionReceptor = evento.metadatos?.relacionReceptor || 'N/A';
-        
-        mensajeEnviado = `🏛️ *NOTARÍA 18*
-
-✅ *DOCUMENTO ENTREGADO EXITOSAMENTE*
-
-📄 *Documento:* ${evento.documento.tipoDocumento}${contextoTramite}
-📋 *Código:* ${evento.documento.codigoBarras}
-👤 *Cliente:* ${evento.documento.nombreCliente}
-
-📦 *DETALLES DE LA ENTREGA:*
-👨‍💼 *Retirado por:* ${nombreReceptor}
-🆔 *Identificación:* ${identificacionReceptor}
-👥 *Relación:* ${relacionReceptor}
-
-📅 *Fecha:* ${fechaEntrega}
-🕒 *Hora:* ${horaEntrega}
-📍 *Lugar:* Notaría Décima Octava, Quito
-
-✅ *Su trámite ha sido completado exitosamente.*
-
-_Guarde este mensaje como comprobante de entrega._`;
       }
       
       // Preparar datos detallados
       const detalles = {
-        id: evento.id,
-        tipo: evento.tipo,
-        fecha: evento.createdAt ? new Date(evento.createdAt).toISOString() : null,
-        detalles: evento.detalles,
-        usuario: evento.usuario,
-        documento: {
-          codigo: evento.documento.codigoBarras,
-          tipo: evento.documento.tipoDocumento,
-          cliente: evento.documento.nombreCliente
+        id: notificacion.id,
+        tipo: notificacion.tipoEvento,
+        fecha: notificacion.created_at ? new Date(notificacion.created_at).toISOString() : null,
+        detalles: notificacion.mensajeEnviado || 'Notificación enviada',
+        usuario: notificacion.metadatos?.entregadoPor || 'Sistema',
+        documento: notificacion.documento ? {
+          codigo: notificacion.documento.codigoBarras,
+          tipo: notificacion.documento.tipoDocumento,
+          cliente: notificacion.documento.nombreCliente
+        } : {
+          // Para notificaciones grupales sin documento específico
+          codigo: 'Entrega Grupal',
+          tipo: 'Múltiples documentos',
+          cliente: notificacion.metadatos?.nombreCliente || 'Cliente no especificado'
         },
-        metadatos: evento.metadatos || {},
+        metadatos: notificacion.metadatos || {},
         canales: {
-          email: evento.documento.emailCliente,
-          telefono: evento.documento.telefonoCliente
+          email: notificacion.documento?.emailCliente || notificacion.metadatos?.emailCliente,
+          telefono: notificacion.documento?.telefonoCliente || notificacion.metadatos?.telefonoCliente
         },
+        canal: notificacion.canal,
+        estado: notificacion.estado,
+        destinatario: notificacion.destinatario,
         mensajeEnviado: mensajeEnviado // ← NUEVO: Mensaje completo enviado
       };
       
@@ -2732,17 +2880,74 @@ _Guarde este mensaje como comprobante de entrega._`;
         return res.redirect('/matrizador/documentos/entrega');
       }
       
-      // Verificar código a menos que sea verificación por llamada
-      if (tipoVerificacion !== 'llamada' && documento.codigoVerificacion !== codigoVerificacion) {
-        await transaction.rollback();
-        return res.render('matrizadores/documentos/entrega', {
-          layout: 'matrizador',
-          title: 'Entrega de Documento',
-          documento,
-          error: 'El código de verificación es incorrecto, por favor verifique e intente nuevamente',
-          userRole: req.matrizador?.rol,
-          userName: req.matrizador?.nombre
-        });
+      // ============== VERIFICACIÓN DE CÓDIGO MEJORADA PARA ENTREGA GRUPAL ==============
+      if (tipoVerificacion !== 'llamada') {
+        let codigoValido = false;
+        
+        // Verificar código del documento principal
+        if (documento.codigoVerificacion === codigoVerificacion) {
+          codigoValido = true;
+          console.log(`✅ [MATRIZADOR] Código válido: documento principal ${documento.codigoBarras}`);
+        }
+        
+        // Si hay entrega grupal, verificar códigos de documentos adicionales también
+        if (!codigoValido && entregaGrupal === 'true' && documentosAdicionales) {
+          const documentosIds = documentosAdicionales.split(',')
+            .map(id => parseInt(id.trim()))
+            .filter(id => !isNaN(id) && id > 0);
+          
+          if (documentosIds.length > 0) {
+            const documentosAdicionalesToValidar = await Documento.findAll({
+              where: {
+                id: { [Op.in]: documentosIds },
+                idMatrizador: req.matrizador.id, // Solo documentos del matrizador
+                estado: 'listo_para_entrega'
+              },
+              transaction
+            });
+            
+            // Verificar si el código coincide con algún documento adicional
+            for (const docAdicional of documentosAdicionalesToValidar) {
+              if (docAdicional.codigoVerificacion === codigoVerificacion) {
+                codigoValido = true;
+                console.log(`✅ [MATRIZADOR] Código válido: documento adicional ${docAdicional.codigoBarras}`);
+                break;
+              }
+            }
+          }
+        }
+        
+        // Si ningún código coincide, error
+        if (!codigoValido) {
+          await transaction.rollback();
+          
+          // Regenerar detección de documentos grupales para mostrar interfaz completa
+          let documentosGrupales = null;
+          if (documento.estado === 'listo_para_entrega' && 
+              documento.fechaEntrega === null &&
+              documento.identificacionCliente) {
+            documentosGrupales = await detectarDocumentosGrupalesMatrizador(
+              documento.identificacionCliente, 
+              documento.id,
+              req.matrizador.id
+            );
+          }
+          
+          return res.render('matrizadores/documentos/entrega', {
+            layout: 'matrizador',
+            title: 'Entrega de Documento',
+            documento,
+            documentosGrupales,
+            error: 'El código de verificación es incorrecto. Use el código del documento principal o de cualquier documento adicional que vaya a entregar.',
+            userRole: req.matrizador?.rol,
+            userName: req.matrizador?.nombre,
+            usuario: {
+              id: req.matrizador?.id,
+              rol: req.matrizador?.rol,
+              nombre: req.matrizador?.nombre
+            }
+          });
+        }
       }
       
       // Actualizar el documento

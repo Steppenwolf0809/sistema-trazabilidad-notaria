@@ -7,6 +7,7 @@ const Documento = require('../models/Documento');
 const Matrizador = require('../models/Matrizador');
 const EventoDocumento = require('../models/EventoDocumento');
 const RegistroAuditoria = require('../models/RegistroAuditoria');
+const NotificacionEnviada = require('../models/NotificacionEnviada');
 const { sequelize } = require('../config/database');
 const { Op } = require('sequelize');
 const moment = require('moment');
@@ -3404,10 +3405,13 @@ exports.historialNotificaciones = async (req, res) => {
       documentoWhere.idMatrizador = matrizador;
     }
     
-    const notificaciones = await EventoDocumento.findAll({
+    // ============== CORRECCIÓN: CONSULTAR TABLA CORRECTA ==============
+    // Cambiar de EventoDocumento a NotificacionEnviada para mostrar notificaciones reales
+    const notificaciones = await NotificacionEnviada.findAll({
       where: {
-        tipo: {
-          [Op.in]: ['documento_listo', 'documento_entregado']
+        // Filtrar por tipos de evento de notificación
+        tipoEvento: {
+          [Op.in]: ['documento_listo', 'entrega_confirmada', 'entrega_grupal', 'recordatorio', 'alerta_sin_recoger']
         },
         ...whereClause
       },
@@ -3436,11 +3440,11 @@ exports.historialNotificaciones = async (req, res) => {
               required: false
             }
           ],
-          required: true
+          required: false // Permitir notificaciones grupales sin documento específico
         }
       ],
       order: [['created_at', 'DESC']],
-      limit: 100 // Más resultados para admin
+      limit: 100
     });
     
     // Obtener lista de matrizadores para filtro
@@ -3450,19 +3454,55 @@ exports.historialNotificaciones = async (req, res) => {
       order: [['nombre', 'ASC']]
     });
     
+    // ============== PROCESAR NOTIFICACIONES PARA VISTA ==============
+    const notificacionesProcesadas = notificaciones.map(notif => {
+      const notifData = notif.toJSON ? notif.toJSON() : notif;
+      
+      // Asegurar que las fechas estén en formato ISO string
+      if (notifData.created_at) {
+        notifData.created_at = new Date(notifData.created_at).toISOString();
+      }
+      if (notifData.updated_at) {
+        notifData.updated_at = new Date(notifData.updated_at).toISOString();
+      }
+      
+      // Asegurar que metadatos existan
+      if (!notifData.metadatos) {
+        notifData.metadatos = {};
+      }
+      
+      // ============== MAPEAR CAMPOS PARA COMPATIBILIDAD CON VISTA ==============
+      // La vista espera campos de EventoDocumento, mapear desde NotificacionEnviada
+      notifData.tipo = notifData.tipoEvento; // Mapear tipoEvento -> tipo para la vista
+      notifData.detalles = notifData.mensajeEnviado || 'Notificación enviada';
+      notifData.usuario = notifData.metadatos?.entregadoPor || 'Sistema';
+      
+      // Agregar información de canal al metadatos para la vista
+      if (!notifData.metadatos.canal) {
+        notifData.metadatos.canal = notifData.canal;
+      }
+      if (!notifData.metadatos.estado) {
+        notifData.metadatos.estado = notifData.estado;
+      }
+      
+      console.log(`📅 [ADMIN] Notificación ID ${notifData.id}: fecha = ${notifData.created_at}, tipo = ${notifData.tipo}`);
+      
+      return notifData;
+    });
+    
     // ============== CALCULAR ESTADÍSTICAS ==============
     const stats = {
       total: notificaciones.length,
-      enviadas: notificaciones.filter(n => n.metadatos?.estado === 'enviado').length || 0,
-      fallidas: notificaciones.filter(n => n.metadatos?.estado === 'error').length || 0,
-      pendientes: notificaciones.filter(n => n.metadatos?.estado === 'pendiente').length || 0
+      enviadas: notificaciones.filter(n => n.estado === 'enviado').length || 0,
+      fallidas: notificaciones.filter(n => n.estado === 'fallido').length || 0,
+      pendientes: notificaciones.filter(n => n.estado === 'pendiente').length || 0
     };
     
     res.render('admin/notificaciones/historial', {
       layout: 'admin',
       title: 'Control de Notificaciones',
       activeNotificaciones: true,
-      notificaciones,
+      notificaciones: notificacionesProcesadas,
       matrizadores,
       stats,
       filtros: { 
@@ -3509,13 +3549,11 @@ exports.obtenerDetalleNotificacion = async (req, res) => {
       });
     }
     
-    // Buscar el evento de notificación
-    const evento = await EventoDocumento.findOne({
+    // ============== CORRECCIÓN: BUSCAR EN TABLA CORRECTA ==============
+    // Cambiar de EventoDocumento a NotificacionEnviada
+    const notificacion = await NotificacionEnviada.findOne({
       where: {
-        id: id,
-        tipo: {
-          [Op.in]: ['documento_listo', 'documento_entregado']
-        }
+        id: id
       },
       include: [{
         model: Documento,
@@ -3526,11 +3564,12 @@ exports.obtenerDetalleNotificacion = async (req, res) => {
           as: 'matrizador',
           attributes: ['nombre'],
           required: false
-        }]
+        }],
+        required: false // Para notificaciones grupales
       }]
     });
     
-    if (!evento) {
+    if (!notificacion) {
       return res.status(404).json({
         exito: false,
         mensaje: 'Notificación no encontrada'
@@ -3539,25 +3578,35 @@ exports.obtenerDetalleNotificacion = async (req, res) => {
     
     // Preparar datos para la respuesta
     const datos = {
-      tipo: evento.tipo,
-      fecha: evento.created_at,
-      usuario: evento.usuario || 'Sistema',
-      metadatos: evento.metadatos || {},
-      detalles: evento.descripcion || '',
-      documento: {
-        codigo: evento.documento?.codigoBarras || 'N/A',
-        tipo: evento.documento?.tipoDocumento || 'N/A',
-        cliente: evento.documento?.nombreCliente || 'N/A',
-        estado: evento.documento?.estado || 'N/A',
-        matrizador: evento.documento?.matrizador?.nombre || 'Sin asignar',
-        numeroFactura: evento.documento?.numeroFactura || null
+      tipo: notificacion.tipoEvento,
+      fecha: notificacion.created_at,
+      usuario: notificacion.metadatos?.entregadoPor || 'Sistema',
+      metadatos: notificacion.metadatos || {},
+      detalles: notificacion.mensajeEnviado || 'Notificación enviada',
+      documento: notificacion.documento ? {
+        codigo: notificacion.documento.codigoBarras,
+        tipo: notificacion.documento.tipoDocumento,
+        cliente: notificacion.documento.nombreCliente,
+        estado: notificacion.documento.estado,
+        matrizador: notificacion.documento.matrizador?.nombre || 'Sin asignar',
+        numeroFactura: notificacion.documento.numeroFactura || null
+      } : {
+        // Para notificaciones grupales sin documento específico
+        codigo: 'Entrega Grupal',
+        tipo: 'Múltiples documentos',
+        cliente: notificacion.metadatos?.nombreCliente || 'Cliente no especificado',
+        estado: 'entregado',
+        matrizador: 'Varios',
+        numeroFactura: null
       },
       canales: {
-        email: evento.documento?.emailCliente || null,
-        telefono: evento.documento?.telefonoCliente || null
+        email: notificacion.documento?.emailCliente || notificacion.metadatos?.emailCliente,
+        telefono: notificacion.documento?.telefonoCliente || notificacion.metadatos?.telefonoCliente
       },
-      // MEJORA: Construir mensaje completo basado en el tipo de evento
-      mensajeEnviado: construirMensajeCompleto(evento, evento.documento)
+      canal: notificacion.canal,
+      estado: notificacion.estado,
+      destinatario: notificacion.destinatario,
+      mensajeEnviado: notificacion.mensajeEnviado || 'Mensaje no disponible'
     };
     
     res.json({
@@ -3731,6 +3780,83 @@ _Guarde este mensaje como comprobante de entrega grupal._`;
 }
 
 /**
+ * Guarda notificación grupal en el historial de la base de datos
+ * @param {Array} documentos - Array de documentos entregados
+ * @param {Object} datosEntrega - Datos de la entrega
+ * @param {Object} usuarioEntrega - Usuario que realizó la entrega
+ * @param {string} metodoNotificacion - Método de notificación usado
+ * @param {string} mensajeEnviado - Mensaje que se envió
+ * @returns {Object} Notificación guardada
+ */
+async function guardarNotificacionGrupalEnHistorialAdmin(documentos, datosEntrega, usuarioEntrega, metodoNotificacion, mensajeEnviado) {
+  try {
+    const documentoPrincipal = documentos[0];
+    
+    // Detectar documentos con pago pendiente
+    const documentosPendientes = documentos.filter(doc => 
+      !['pagado_completo', 'pagado_con_retencion'].includes(doc.estadoPago)
+    );
+    
+    const notificacion = await NotificacionEnviada.create({
+      // Para entrega grupal, documento_id es null y usamos documentos_ids
+      documentoId: null,
+      documentosIds: documentos.map(doc => doc.id),
+      tipoEvento: 'entrega_grupal',
+      tipoEntrega: 'grupal',
+      canal: metodoNotificacion === 'ambos' ? 'whatsapp' : metodoNotificacion,
+      destinatario: metodoNotificacion.includes('email') ? 
+        documentoPrincipal.emailCliente : documentoPrincipal.telefonoCliente,
+      estado: 'enviado',
+      mensajeEnviado: mensajeEnviado,
+      respuestaApi: null,
+      intentos: 1,
+      metadatos: {
+        // Información básica de la entrega
+        totalDocumentos: documentos.length,
+        nombreCliente: documentoPrincipal.nombreCliente,
+        identificacionCliente: documentoPrincipal.identificacionCliente,
+        // Información del receptor
+        nombreReceptor: datosEntrega.nombreReceptor,
+        identificacionReceptor: datosEntrega.identificacionReceptor,
+        relacionReceptor: datosEntrega.relacionReceptor,
+        // Información del usuario que procesó
+        entregadoPor: usuarioEntrega.nombre,
+        rolEntregador: usuarioEntrega.rol,
+        idUsuarioEntregador: usuarioEntrega.id,
+        // Lista de documentos incluidos
+        documentosIncluidos: documentos.map(doc => ({
+          id: doc.id,
+          codigo: doc.codigoBarras,
+          tipo: doc.tipoDocumento,
+          valor: doc.valorFactura,
+          estadoPago: doc.estadoPago,
+          matrizador: doc.matrizador?.nombre || 'Sin asignar'
+        })),
+        // Información especial de validaciones
+        documentosPendientes: documentosPendientes.length,
+        requirioAutorizacion: false, // Admin no requiere autorización
+        entregaConPendientes: documentosPendientes.length > 0,
+        // Códigos de los documentos
+        codigosDocumentos: documentos.map(doc => doc.codigoBarras),
+        tiposDocumentos: documentos.map(doc => doc.tipoDocumento),
+        // Metadatos de auditoría
+        fechaEntrega: new Date().toISOString(),
+        tipoEntregaGrupal: 'admin_completa',
+        metodoVerificacion: datosEntrega.tipoVerificacion || 'codigo',
+        observaciones: datosEntrega.observaciones
+      }
+    });
+
+    console.log(`📝 [HISTORIAL ADMIN] Notificación grupal guardada en historial: ID ${notificacion.id}`);
+    
+    return notificacion;
+  } catch (error) {
+    console.error('❌ Error guardando notificación grupal en historial admin:', error);
+    throw error;
+  }
+}
+
+/**
  * Envía notificación de entrega grupal (UNA SOLA NOTIFICACIÓN PARA TODOS LOS DOCUMENTOS)
  * @param {Array} documentos - Array de documentos entregados
  * @param {Object} datosEntrega - Datos de la entrega
@@ -3769,6 +3895,20 @@ async function enviarNotificacionEntregaGrupalAdmin(documentos, datosEntrega, us
         console.log(`📧 Confirmación entrega grupal enviada por email a ${documentoPrincipal.emailCliente}`);
         console.log(`Asunto: ${mensajes.email.subject}`);
       }
+    }
+
+    // ============== NUEVO: GUARDAR EN HISTORIAL DE NOTIFICACIONES ==============
+    try {
+      await guardarNotificacionGrupalEnHistorialAdmin(
+        documentos, 
+        datosEntrega, 
+        usuarioEntrega, 
+        metodoNotificacion, 
+        mensajes.whatsapp
+      );
+    } catch (historialError) {
+      console.error('❌ Error guardando en historial admin (continuando):', historialError);
+      // No detener el flujo si falla el historial
     }
 
     // Registrar evento de notificación grupal para cada documento
