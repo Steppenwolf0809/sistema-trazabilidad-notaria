@@ -131,6 +131,96 @@ module.exports = {
   },
   
   /**
+   * Helper para unir arrays con separador
+   */
+  join: (array, separator) => {
+    if (!Array.isArray(array)) return '';
+    return array.join(separator || ', ');
+  },
+  
+  /**
+   * Helper para verificar si hay elementos en un array
+   */
+  hasElements: (array) => {
+    return Array.isArray(array) && array.length > 0;
+  },
+  
+  /**
+   * Helper para verificar si un array está vacío
+   */
+  isEmpty: (array) => {
+    return !Array.isArray(array) || array.length === 0;
+  },
+  
+  /**
+   * Helper para verificar si un array no está vacío
+   */
+  isNotEmpty: (array) => {
+    return Array.isArray(array) && array.length > 0;
+  },
+  
+  /**
+   * Helper para obtener la longitud de un array
+   */
+  length: (array) => {
+    if (!Array.isArray(array)) return 0;
+    return array.length;
+  },
+  
+  /**
+   * Helper para verificar si un valor está en un array
+   */
+  includes: (array, value) => {
+    if (!Array.isArray(array)) return false;
+    return array.includes(value);
+  },
+  
+  /**
+   * Helper para sumar valores de un array
+   */
+  sum: (array, property) => {
+    if (!Array.isArray(array)) return 0;
+    
+    if (property) {
+      return array.reduce((total, item) => {
+        const value = parseFloat(item[property]) || 0;
+        return total + value;
+      }, 0);
+    } else {
+      return array.reduce((total, item) => {
+        const value = parseFloat(item) || 0;
+        return total + value;
+      }, 0);
+    }
+  },
+  
+  /**
+   * Helper para obtener clase CSS según estado de pago
+   */
+  estadoPagoClass: (estado) => {
+    const clases = {
+      'pendiente': 'bg-warning text-dark',
+      'pago_parcial': 'bg-info text-white',
+      'pagado_completo': 'bg-success text-white',
+      'pagado_con_retencion': 'bg-success text-white'
+    };
+    return clases[estado] || 'bg-secondary text-white';
+  },
+  
+  /**
+   * Helper para obtener texto legible del estado de pago
+   */
+  estadoPagoTexto: (estado) => {
+    const textos = {
+      'pendiente': 'Pendiente',
+      'pago_parcial': 'Pago Parcial',
+      'pagado_completo': 'Pagado Completo',
+      'pagado_con_retencion': 'Pagado con Retención'
+    };
+    return textos[estado] || estado;
+  },
+  
+  /**
    * Suma de dos números
    */
   add: (a, b) => {
@@ -731,5 +821,253 @@ module.exports = {
    */
   tienePagoPendiente: (estadoPago) => {
     return ['pendiente', 'sin_pagar', 'pago_parcial'].includes(estadoPago);
-  }
+  },
+
+  // ============== NUEVOS HELPERS PARA FUNCIONALIDAD JERÁRQUICA ==============
+
+  /**
+   * Helper para unir arrays con separador
+   */
+  join: function(array, separator) {
+    if (!Array.isArray(array)) return '';
+    return array.join(separator || ', ');
+  },
+
+  /**
+   * Helper para verificar si hay elementos en un array
+   */
+  hasElements: function(array) {
+    return Array.isArray(array) && array.length > 0;
+  },
+
+  /**
+   * Helper para verificar si un valor está en un array
+   */
+  includes: function(array, value) {
+    if (!Array.isArray(array)) return false;
+    return array.includes(value);
+  },
+
+  /**
+   * Helper para obtener la longitud de un array
+   */
+  length: function(array) {
+    if (!Array.isArray(array)) return 0;
+    return array.length;
+  },
+
+  /**
+   * Helper para formatear números con separadores de miles
+   */
+  formatNumber: function(number) {
+    if (typeof number !== 'number') return '0';
+    return number.toLocaleString('es-EC');
+  },
+
+  /**
+   * Helper para verificar si un documento es principal
+   */
+  esDocumentoPrincipal: function(documento) {
+    return documento && documento.esDocumentoPrincipal === true;
+  },
+
+  /**
+   * Helper para verificar si un documento es habilitante
+   */
+  esDocumentoHabilitante: function(documento) {
+    return documento && documento.esDocumentoPrincipal === false && documento.documentoPrincipalId;
+  },
+
+  /**
+   * Helper para obtener el tipo de documento con formato
+   */
+  tipoDocumentoFormateado: function(tipo) {
+    const tipos = {
+      'Protocolo': '📜 Protocolo',
+      'Diligencias': '📋 Diligencias', 
+      'Certificaciones': '🏆 Certificaciones',
+      'Arrendamientos': '🏠 Arrendamientos',
+      'Otros': '📄 Otros'
+    };
+    return tipos[tipo] || `📄 ${tipo}`;
+  },
+
+  /**
+   * Helper para formatear estado de pago con emoji
+   */
+  estadoPagoConEmoji: function(estado) {
+    const estados = {
+      'pendiente': '⏳ Pendiente',
+      'pago_parcial': '🔄 Parcial',
+      'pagado_completo': '✅ Pagado',
+      'pagado_con_retencion': '✅ Pagado (Ret.)'
+    };
+    return estados[estado] || `❓ ${estado}`;
+  },
+
+  /**
+   * Helper para verificar si un array está vacío
+   */
+  isEmpty: function(array) {
+    return !Array.isArray(array) || array.length === 0;
+  },
+
+  /**
+   * Helper para verificar si un array no está vacío
+   */
+  isNotEmpty: function(array) {
+    return Array.isArray(array) && array.length > 0;
+  },
+
+  /**
+   * Helper para obtener el primer elemento de un array
+   */
+  first: function(array) {
+    if (!Array.isArray(array) || array.length === 0) return null;
+    return array[0];
+  },
+
+  /**
+   * Helper para obtener el último elemento de un array
+   */
+  last: function(array) {
+    if (!Array.isArray(array) || array.length === 0) return null;
+    return array[array.length - 1];
+  },
+
+  /**
+   * Helper para sumar valores de un array
+   */
+  sum: function(array, property) {
+    if (!Array.isArray(array)) return 0;
+    
+    if (property) {
+      return array.reduce((total, item) => {
+        const value = parseFloat(item[property]) || 0;
+        return total + value;
+      }, 0);
+    } else {
+      return array.reduce((total, item) => {
+        const value = parseFloat(item) || 0;
+        return total + value;
+      }, 0);
+    }
+  },
+
+  /**
+   * Helper para contar elementos que cumplen una condición
+   */
+  count: function(array, property, value) {
+    if (!Array.isArray(array)) return 0;
+    
+    if (property && value !== undefined) {
+      return array.filter(item => item[property] === value).length;
+    } else {
+      return array.length;
+    }
+  },
+
+  /**
+   * Helper para filtrar array por propiedad
+   */
+  filter: function(array, property, value) {
+    if (!Array.isArray(array)) return [];
+    
+    if (property && value !== undefined) {
+      return array.filter(item => item[property] === value);
+    } else {
+      return array;
+    }
+  },
+
+  /**
+   * Helper para mapear array a una propiedad específica
+   */
+  map: function(array, property) {
+    if (!Array.isArray(array)) return [];
+    
+    if (property) {
+      return array.map(item => item[property]);
+    } else {
+      return array;
+    }
+  },
+
+  /**
+   * Helper para verificar si un número es mayor que otro
+   */
+  gt: function(a, b) {
+    return parseFloat(a) > parseFloat(b);
+  },
+
+  /**
+   * Helper para verificar si un número es menor que otro
+   */
+  lt: function(a, b) {
+    return parseFloat(a) < parseFloat(b);
+  },
+
+  /**
+   * Helper para verificar si un número es mayor o igual que otro
+   */
+  gte: function(a, b) {
+    return parseFloat(a) >= parseFloat(b);
+  },
+
+  /**
+   * Helper para verificar si un número es menor o igual que otro
+   */
+  lte: function(a, b) {
+    return parseFloat(a) <= parseFloat(b);
+  },
+
+  /**
+   * Helper para verificar igualdad estricta
+   */
+  eq: function(a, b) {
+    return a === b;
+  },
+
+  /**
+   * Helper para verificar desigualdad
+   */
+  ne: function(a, b) {
+    return a !== b;
+  },
+
+  /**
+   * Helper para operador NOT lógico
+   */
+  not: function(value) {
+    return !value;
+  },
+
+  /**
+   * Helper para convertir a JSON string
+   */
+  json: function(obj) {
+    return JSON.stringify(obj);
+  },
+
+  /**
+   * Helper para formatear fecha relativa (hace X tiempo)
+   */
+  timeAgo: function(date) {
+    if (!date) return '';
+    
+    const now = new Date();
+    const past = new Date(date);
+    const diffMs = now - past;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'Hace menos de un minuto';
+    if (diffMins < 60) return `Hace ${diffMins} minuto${diffMins > 1 ? 's' : ''}`;
+    if (diffHours < 24) return `Hace ${diffHours} hora${diffHours > 1 ? 's' : ''}`;
+    if (diffDays < 30) return `Hace ${diffDays} día${diffDays > 1 ? 's' : ''}`;
+    
+    return moment(date).format('DD/MM/YYYY');
+  },
+
 }; 

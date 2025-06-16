@@ -394,6 +394,113 @@ async function enviarNotificacionEntregaGrupal(documentos, datosEntrega, usuario
 // ============== FUNCIONES PARA ENTREGA GRUPAL - RECEPCIÓN ==============
 
 /**
+ * Estructura documentos de manera jerárquica para mejorar UX
+ * Separa documentos principales con sus habilitantes vs documentos independientes
+ * @param {Array} documentos - Array de documentos a estructurar
+ * @returns {Object} Estructura jerárquica de documentos
+ */
+function estructurarDocumentosJerarquicamente(documentos) {
+  const gruposRelacionados = [];
+  const documentosIndependientes = [];
+  const documentosYaProcesados = new Set();
+  
+  // ============== PASO 1: IDENTIFICAR GRUPOS PRINCIPAL + HABILITANTES ==============
+  for (const documento of documentos) {
+    // Si ya fue procesado, omitir
+    if (documentosYaProcesados.has(documento.id)) {
+      continue;
+    }
+    
+    // Si es un documento principal, buscar sus habilitantes
+    if (documento.esDocumentoPrincipal) {
+      const habilitantes = documentos.filter(doc => 
+        !doc.esDocumentoPrincipal && 
+        doc.documentoPrincipalId === documento.id &&
+        !documentosYaProcesados.has(doc.id)
+      );
+      
+      if (habilitantes.length > 0) {
+        // Crear grupo con principal + habilitantes
+        const grupo = {
+          principal: {
+            ...documento.toJSON(),
+            esGrupoPrincipal: true
+          },
+          habilitantes: habilitantes.map(hab => ({
+            ...hab.toJSON(),
+            esGrupoHabilitante: true,
+            principalCodigo: documento.codigoBarras
+          })),
+          totalDocumentos: 1 + habilitantes.length,
+          codigosGrupo: [documento.codigoBarras, ...habilitantes.map(h => h.codigoBarras)],
+          valorTotalGrupo: parseFloat(documento.valorFactura || 0) + 
+                          habilitantes.reduce((sum, h) => sum + parseFloat(h.valorFactura || 0), 0)
+        };
+        
+        gruposRelacionados.push(grupo);
+        
+        // Marcar como procesados
+        documentosYaProcesados.add(documento.id);
+        habilitantes.forEach(hab => documentosYaProcesados.add(hab.id));
+        
+        console.log(`📦 [ESTRUCTURA] Grupo creado: ${documento.codigoBarras} + ${habilitantes.length} habilitante(s)`);
+      } else {
+        // Documento principal sin habilitantes = independiente
+        documentosIndependientes.push({
+          ...documento.toJSON(),
+          esDocumentoIndependiente: true
+        });
+        documentosYaProcesados.add(documento.id);
+        
+        console.log(`📄 [ESTRUCTURA] Documento independiente: ${documento.codigoBarras}`);
+      }
+    }
+  }
+  
+  // ============== PASO 2: PROCESAR DOCUMENTOS HABILITANTES HUÉRFANOS ==============
+  for (const documento of documentos) {
+    if (documentosYaProcesados.has(documento.id)) {
+      continue;
+    }
+    
+    // Si es habilitante pero no se encontró su principal, tratarlo como independiente
+    if (!documento.esDocumentoPrincipal && documento.documentoPrincipalId) {
+      console.log(`⚠️ [ESTRUCTURA] Habilitante huérfano tratado como independiente: ${documento.codigoBarras}`);
+      documentosIndependientes.push({
+        ...documento.toJSON(),
+        esDocumentoIndependiente: true,
+        esHabilitanteHuerfano: true,
+        advertencia: `Documento habilitante sin principal disponible`
+      });
+      documentosYaProcesados.add(documento.id);
+    }
+  }
+  
+  // ============== PASO 3: PROCESAR DOCUMENTOS RESTANTES ==============
+  for (const documento of documentos) {
+    if (!documentosYaProcesados.has(documento.id)) {
+      documentosIndependientes.push({
+        ...documento.toJSON(),
+        esDocumentoIndependiente: true
+      });
+      documentosYaProcesados.add(documento.id);
+      
+      console.log(`📄 [ESTRUCTURA] Documento restante como independiente: ${documento.codigoBarras}`);
+    }
+  }
+  
+  console.log(`📊 [ESTRUCTURA] Resultado: ${gruposRelacionados.length} grupos, ${documentosIndependientes.length} independientes`);
+  
+  return {
+    gruposRelacionados,
+    documentosIndependientes,
+    totalGrupos: gruposRelacionados.length,
+    totalIndependientes: documentosIndependientes.length,
+    totalDocumentos: gruposRelacionados.reduce((sum, g) => sum + g.totalDocumentos, 0) + documentosIndependientes.length
+  };
+}
+
+/**
  * Valida documentos para entrega y genera alertas específicas
  * @param {Array} documentos - Array de documentos a validar
  * @returns {Object} Validación con alertas específicas
@@ -450,50 +557,124 @@ async function detectarDocumentosGrupalesRecepcion(identificacionCliente, docume
   try {
     console.log(`🔍 [RECEPCIÓN] Detectando documentos grupales para cliente: ${identificacionCliente}`);
     
-    // NUEVA LÓGICA: Detectar TODOS los documentos listos, independientemente del pago
+    // CORRECCIÓN CRÍTICA: Detectar SOLO documentos que realmente están listos para entrega
+    // EXCLUIR documentos habilitantes ya entregados automáticamente
     const documentosListos = await Documento.findAll({
       where: {
         identificacionCliente: identificacionCliente,
-        estado: 'listo_para_entrega',
-        fechaEntrega: null,
-        id: { [Op.ne]: documentoActualId },
-        motivoEliminacion: null
-        // REMOVIDO: Validación de estadoPago
+        estado: 'listo_para_entrega', // Solo documentos en estado listo
+        fechaEntrega: null, // Solo documentos no entregados
+        id: { [Op.ne]: documentoActualId }, // Excluir documento actual
+        motivoEliminacion: null, // Solo documentos no eliminados
+        // NUEVA CONDICIÓN: Excluir documentos habilitantes que ya fueron procesados
+        [Op.or]: [
+          { esDocumentoPrincipal: true }, // Incluir todos los documentos principales
+          { 
+            [Op.and]: [
+              { esDocumentoPrincipal: false }, // Para habilitantes
+              { documentoPrincipalId: { [Op.ne]: null } }, // Que tengan principal
+                              // Solo incluir si el principal NO está entregado (evita habilitantes huérfanos)
+                sequelize.literal(`NOT EXISTS (
+                  SELECT 1 FROM documentos dp 
+                  WHERE dp.id = "Documento"."documento_principal_id" 
+                  AND dp.estado = 'entregado'
+                )`)
+            ]
+          }
+        ]
       },
-      include: [{ 
-        model: Matrizador, 
-        as: 'matrizador',
-        attributes: ['id', 'nombre'] 
-      }],
+
       order: [['created_at', 'ASC']]
     });
     
-    // SEPARAR documentos por estado de pago
-    const documentosPagados = documentosListos.filter(doc => 
+    // NUEVA VALIDACIÓN: Filtrar documentos que realmente están disponibles
+    const documentosDisponibles = [];
+    
+    for (const doc of documentosListos) {
+      // Refresh del documento para obtener estado más actual
+      const docActualizado = await Documento.findByPk(doc.id, {
+        attributes: ['id', 'codigoBarras', 'estado', 'fechaEntrega', 'esDocumentoPrincipal', 'documentoPrincipalId']
+      });
+      
+      if (!docActualizado) {
+        console.log(`⚠️ [RECEPCIÓN] Documento ${doc.id} ya no existe, omitiendo`);
+        continue;
+      }
+      
+      // VALIDACIÓN MEJORADA: Verificar disponibilidad real
+      const estaDisponible = docActualizado.estado === 'listo_para_entrega' && 
+                            docActualizado.fechaEntrega === null;
+      
+      // VALIDACIÓN ESPECIAL: Para documentos habilitantes, verificar que el principal no esté entregado
+      if (!docActualizado.esDocumentoPrincipal && docActualizado.documentoPrincipalId) {
+        const principal = await Documento.findByPk(docActualizado.documentoPrincipalId, {
+          attributes: ['estado', 'codigoBarras']
+        });
+        
+        if (principal && principal.estado === 'entregado') {
+          console.log(`⏭️ [RECEPCIÓN] Documento habilitante ${doc.codigoBarras} omitido: principal ${principal.codigoBarras} ya entregado`);
+          continue;
+        }
+      }
+      
+      if (estaDisponible) {
+        documentosDisponibles.push(doc);
+        console.log(`✅ [RECEPCIÓN] Documento ${doc.codigoBarras} disponible para entrega grupal`);
+      } else {
+        console.log(`⏭️ [RECEPCIÓN] Documento ${doc.codigoBarras} ya no disponible: estado="${docActualizado.estado}", fechaEntrega=${docActualizado.fechaEntrega ? 'SI' : 'NO'}`);
+      }
+    }
+    
+    console.log(`📄 [RECEPCIÓN] Documentos realmente disponibles: ${documentosDisponibles.length} de ${documentosListos.length} iniciales`);
+    
+    // SEPARAR documentos disponibles por estado de pago
+    const documentosPagados = documentosDisponibles.filter(doc => 
       ['pagado_completo', 'pagado_con_retencion'].includes(doc.estadoPago)
     );
     
-    const documentosPendientes = documentosListos.filter(doc => 
+    const documentosPendientes = documentosDisponibles.filter(doc => 
       !['pagado_completo', 'pagado_con_retencion'].includes(doc.estadoPago)
     );
     
-    console.log(`📄 [RECEPCIÓN] Encontrados ${documentosListos.length} documentos adicionales (${documentosPagados.length} pagados, ${documentosPendientes.length} pendientes)`);
+    console.log(`📄 [RECEPCIÓN] Encontrados ${documentosDisponibles.length} documentos adicionales (${documentosPagados.length} pagados, ${documentosPendientes.length} pendientes)`);
     
-    // ============== NUEVA FUNCIONALIDAD: VALIDACIÓN Y ALERTAS ==============
-    const validacion = validarDocumentosParaEntrega(documentosListos);
+    // ============== NUEVA FUNCIONALIDAD: ESTRUCTURACIÓN JERÁRQUICA CORREGIDA ==============
+    // CORRECCIÓN CRÍTICA: Incluir el documento actual en la estructuración
+    // para que se puedan formar grupos correctamente
+    
+    // Obtener el documento actual para incluirlo en la estructuración
+    const documentoActual = await Documento.findByPk(documentoActualId);
+    
+    // Crear lista completa incluyendo el documento actual
+    const todosLosDocumentos = documentoActual ? [documentoActual, ...documentosDisponibles] : documentosDisponibles;
+    
+    console.log(`🔧 [RECEPCIÓN] Estructurando ${todosLosDocumentos.length} documentos (incluyendo actual)`);
+    todosLosDocumentos.forEach(doc => {
+      console.log(`   - ${doc.codigoBarras} (ID: ${doc.id}, Principal: ${doc.esDocumentoPrincipal}, PrincipalID: ${doc.documentoPrincipalId || 'null'})`);
+    });
+    
+    const documentosEstructurados = estructurarDocumentosJerarquicamente(todosLosDocumentos);
+    
+    // ============== VALIDACIÓN Y ALERTAS ==============
+    const validacion = validarDocumentosParaEntrega(documentosDisponibles);
     
     return {
-      tieneDocumentosAdicionales: documentosListos.length > 0,
-      cantidad: documentosListos.length,
-      documentos: documentosListos,
+      tieneDocumentosAdicionales: documentosDisponibles.length > 0,
+      cantidad: documentosDisponibles.length,
+      documentos: documentosDisponibles, // Mantener para compatibilidad
       documentosPagados: documentosPagados,
       documentosPendientes: documentosPendientes,
-      tipoDeteccion: 'recepcion_completa',
+      tipoDeteccion: 'recepcion_completa_corregida',
       // Nueva información de validación
       validacion: validacion,
       requiereAutorizacion: validacion.requiereAutorizacion,
       alertas: validacion.alertas,
-      advertencias: validacion.advertencias
+      advertencias: validacion.advertencias,
+      // ============== NUEVA ESTRUCTURA JERÁRQUICA ==============
+      gruposRelacionados: documentosEstructurados.gruposRelacionados,
+      documentosIndependientes: documentosEstructurados.documentosIndependientes,
+      tieneGruposRelacionados: documentosEstructurados.gruposRelacionados.length > 0,
+      tieneDocumentosIndependientes: documentosEstructurados.documentosIndependientes.length > 0
     };
   } catch (error) {
     console.error('❌ Error detectando documentos grupales para recepción:', error);
@@ -514,6 +695,7 @@ async function detectarDocumentosGrupalesRecepcion(identificacionCliente, docume
 
 /**
  * Procesa entrega grupal para recepción (sin restricciones de matrizador)
+ * VERSIÓN MEJORADA: Corrige problemas con documentos habilitantes
  * @param {Array} documentosIds - IDs de documentos a entregar
  * @param {Object} datosEntrega - Datos del receptor
  * @param {Object} usuario - Usuario que procesa la entrega
@@ -523,22 +705,81 @@ async function detectarDocumentosGrupalesRecepcion(identificacionCliente, docume
 async function procesarEntregaGrupalRecepcion(documentosIds, datosEntrega, usuario, transaction) {
   try {
     console.log(`🏢 [RECEPCIÓN] Procesando entrega grupal de ${documentosIds.length} documentos`);
+    console.log(`📋 [RECEPCIÓN] IDs a procesar: [${documentosIds.join(', ')}]`);
     
     const documentosActualizados = [];
     const erroresValidacion = [];
     
+    // ============== PASO 1: PRE-VALIDACIÓN Y REFRESH ==============
+    console.log('🔄 [RECEPCIÓN] Refrescando documentos desde BD...');
+    
+    const documentosParaValidar = [];
+    
     for (const docId of documentosIds) {
       try {
-        const documento = await Documento.findByPk(docId, { transaction });
+        // REFRESH EXPLÍCITO: Recargar documento desde BD para evitar problemas de caché
+        const documento = await Documento.findByPk(docId, { 
+          transaction,
+          rejectOnEmpty: false
+        });
         
         if (!documento) {
           erroresValidacion.push(`Documento ${docId} no encontrado`);
+          console.log(`❌ [RECEPCIÓN] Documento ID ${docId} no encontrado en BD`);
           continue;
         }
         
-        // VALIDACIONES DE SEGURIDAD BÁSICAS (SIN VALIDACIÓN ESTRICTA DE PAGO)
+        console.log(`🔍 [RECEPCIÓN] ${documento.codigoBarras}: estado="${documento.estado}", principal=${documento.esDocumentoPrincipal}, principalId=${documento.documentoPrincipalId}`);
+        
+        documentosParaValidar.push(documento);
+        
+      } catch (preError) {
+        console.error(`❌ [RECEPCIÓN] Error en pre-validación documento ${docId}:`, preError);
+        erroresValidacion.push(`Error pre-validación documento ${docId}: ${preError.message}`);
+      }
+    }
+    
+    // ============== PASO 2: VALIDACIÓN ESPECÍFICA PARA HABILITANTES ==============
+    for (const documento of documentosParaValidar) {
+      try {
+        // VALIDACIÓN ESPECÍFICA PARA DOCUMENTOS HABILITANTES
+        if (!documento.esDocumentoPrincipal && documento.documentoPrincipalId) {
+          console.log(`📄 [RECEPCIÓN] Validando documento habilitante: ${documento.codigoBarras}`);
+          
+          // Verificar que el documento principal existe y está en estado correcto
+          const principal = await Documento.findByPk(documento.documentoPrincipalId, { transaction });
+          
+          if (!principal) {
+            erroresValidacion.push(`Documento habilitante ${documento.codigoBarras} es huérfano (principal ID ${documento.documentoPrincipalId} no existe)`);
+            console.log(`❌ [RECEPCIÓN] Documento habilitante ${documento.codigoBarras} es huérfano`);
+            continue;
+          }
+          
+          console.log(`🔗 [RECEPCIÓN] Principal ${principal.codigoBarras}: estado="${principal.estado}"`);
+          
+          // El principal debe estar listo o ya entregado para que el habilitante pueda entregarse
+          if (!['listo_para_entrega', 'entregado'].includes(principal.estado)) {
+            erroresValidacion.push(`Documento habilitante ${documento.codigoBarras} no puede entregarse porque el principal ${principal.codigoBarras} no está listo (estado: ${principal.estado})`);
+            console.log(`❌ [RECEPCIÓN] Principal ${principal.codigoBarras} no está en estado válido: ${principal.estado}`);
+            continue;
+          }
+        }
+        
+        // ============== VALIDACIONES ESTÁNDAR ==============
+        
+        // VALIDACIÓN ESPECIAL: Si es un documento habilitante ya entregado, omitir silenciosamente
+        if (!documento.esDocumentoPrincipal && documento.documentoPrincipalId && documento.estado === 'entregado') {
+          console.log(`⏭️ [RECEPCIÓN] Documento habilitante ${documento.codigoBarras} ya entregado, omitiendo de validación`);
+          continue;
+        }
+        
+        // Validación de estado (LA LÍNEA 541 ORIGINAL - AHORA CON MEJOR LOGGING)
         if (documento.estado !== 'listo_para_entrega') {
-          erroresValidacion.push(`Documento ${documento.codigoBarras} no está listo para entrega`);
+          const error = `Documento ${documento.codigoBarras} no está listo para entrega`;
+          erroresValidacion.push(error);
+          console.log(`❌ [RECEPCIÓN] ERROR: ${error}`);
+          console.log(`   Estado encontrado: "${documento.estado}" (length: ${documento.estado.length})`);
+          console.log(`   Estado esperado: "listo_para_entrega"`);
           continue;
         }
         
@@ -552,6 +793,25 @@ async function procesarEntregaGrupalRecepcion(documentosIds, datosEntrega, usuar
           continue;
         }
         
+        console.log(`✅ [RECEPCIÓN] Documento ${documento.codigoBarras} pasa todas las validaciones`);
+        
+      } catch (validationError) {
+        console.error(`❌ [RECEPCIÓN] Error validando documento ${documento.codigoBarras}:`, validationError);
+        erroresValidacion.push(`Error validación ${documento.codigoBarras}: ${validationError.message}`);
+      }
+    }
+    
+    // ============== VERIFICAR ERRORES ANTES DE PROCEDER ==============
+    if (erroresValidacion.length > 0) {
+      console.log(`❌ [RECEPCIÓN] Se encontraron ${erroresValidacion.length} errores de validación`);
+      throw new Error(`Errores de validación: ${erroresValidacion.join('; ')}`);
+    }
+    
+    // ============== PROCESAR ENTREGA (SOLO SI NO HAY ERRORES) ==============
+    console.log('✅ [RECEPCIÓN] Todas las validaciones pasaron, procesando entrega...');
+    
+    for (const documento of documentosParaValidar) {
+      try {
         // NUEVA LÓGICA: Registrar estado de pago pero no bloquear entrega
         const tienePagoPendiente = !['pagado_completo', 'pagado_con_retencion'].includes(documento.estadoPago);
         if (tienePagoPendiente) {
@@ -572,34 +832,39 @@ async function procesarEntregaGrupalRecepcion(documentosIds, datosEntrega, usuar
           documentoId: documento.id,
           tipo: 'entrega_grupal',
           categoria: 'entrega',
-          titulo: 'Entrega Grupal - Recepción',
+          titulo: 'Entrega Grupal - Recepción (Mejorada)',
           descripcion: `Documento entregado en entrega grupal por recepción a ${datosEntrega.nombreReceptor}`,
           detalles: {
             entregaGrupal: true,
             totalDocumentosGrupo: documentosIds.length,
-            tipoEntregaGrupal: 'recepcion_completa',
+            tipoEntregaGrupal: 'recepcion_completa_mejorada',
             rolProcesador: 'recepcion',
             nombreReceptor: datosEntrega.nombreReceptor,
             identificacionReceptor: datosEntrega.identificacionReceptor,
             relacionReceptor: datosEntrega.relacionReceptor,
-            // NUEVA INFORMACIÓN: Estado de pago al momento de entrega
+            // Información específica del documento
+            esDocumentoPrincipal: documento.esDocumentoPrincipal,
+            documentoPrincipalId: documento.documentoPrincipalId,
             estadoPagoAlEntrega: documento.estadoPago,
             tienePagoPendiente: tienePagoPendiente,
             entregaConPendientes: datosEntrega.confirmarEntregaPendiente === 'true',
             validacionesAplicadas: [
+              'refresh_documento',
+              'validacion_habilitante',
               'estado_verificado',
               'no_entregado_previamente',
               'pertenencia_cliente_confirmada'
-              // REMOVIDO: 'pago_validado' (ya no es obligatorio)
             ],
             metodoVerificacion: datosEntrega.tipoVerificacion,
-            observaciones: datosEntrega.observaciones
+            observaciones: datosEntrega.observaciones,
+            // Info de corrección
+            versionProcesamiento: 'mejorada_v1.0'
           },
           usuario: usuario.nombre,
           metadatos: {
             canal: 'sistema',
             estado: 'procesada',
-            tipo: 'entrega_grupal',
+            tipo: 'entrega_grupal_mejorada',
             idUsuario: usuario.id,
             rolUsuario: usuario.rol,
             timestamp: new Date().toISOString()
@@ -607,26 +872,30 @@ async function procesarEntregaGrupalRecepcion(documentosIds, datosEntrega, usuar
         }, { transaction });
         
         documentosActualizados.push(documento);
-        console.log(`✅ [RECEPCIÓN] Documento ${documento.codigoBarras} entregado grupalmente`);
+        console.log(`✅ [RECEPCIÓN] Documento ${documento.codigoBarras} entregado grupalmente (mejorado)`);
         
-      } catch (docError) {
-        console.error(`❌ Error procesando documento ${docId}:`, docError);
-        erroresValidacion.push(`Error en documento ${docId}: ${docError.message}`);
+      } catch (updateError) {
+        console.error(`❌ [RECEPCIÓN] Error actualizando documento ${documento.codigoBarras}:`, updateError);
+        erroresValidacion.push(`Error actualización ${documento.codigoBarras}: ${updateError.message}`);
       }
     }
     
+    // Verificar errores finales
     if (erroresValidacion.length > 0) {
-      throw new Error(`Errores de validación: ${erroresValidacion.join('; ')}`);
+      throw new Error(`Errores en actualización: ${erroresValidacion.join('; ')}`);
     }
+    
+    console.log(`✅ [RECEPCIÓN] Entrega grupal completada exitosamente: ${documentosActualizados.length} documentos`);
     
     return {
       exito: true,
       documentosActualizados: documentosActualizados.length,
-      documentos: documentosActualizados
+      documentos: documentosActualizados,
+      version: 'mejorada_v1.0'
     };
     
   } catch (error) {
-    console.error('❌ Error en procesamiento grupal recepción:', error);
+    console.error('❌ Error en procesamiento grupal recepción (mejorado):', error);
     throw error;
   }
 }
@@ -2520,4 +2789,7 @@ const recepcionController = {
   },
 };
 
-module.exports = recepcionController; 
+// Exportar también las funciones para uso en otros controladores
+module.exports = recepcionController;
+module.exports.estructurarDocumentosJerarquicamente = estructurarDocumentosJerarquicamente;
+module.exports.detectarDocumentosGrupalesRecepcion = detectarDocumentosGrupalesRecepcion; 

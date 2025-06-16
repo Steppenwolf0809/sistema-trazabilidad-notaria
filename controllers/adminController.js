@@ -3949,22 +3949,41 @@ async function detectarDocumentosGrupalesAdmin(identificacionCliente, documentoA
         id: { [Op.ne]: documentoActualId },
         motivoEliminacion: null
       },
-      include: [{ 
-        model: Matrizador, 
-        as: 'matrizador',
-        attributes: ['id', 'nombre'] 
-      }],
       order: [['created_at', 'ASC']]
     });
     
     console.log(`📄 [ADMIN] Encontrados ${documentosListos.length} documentos adicionales`);
     
+    // ============== NUEVA FUNCIONALIDAD: ESTRUCTURACIÓN JERÁRQUICA CORREGIDA ==============
+    // CORRECCIÓN CRÍTICA: Incluir el documento actual en la estructuración
+    // para que se puedan formar grupos correctamente
+    
+    // Obtener el documento actual para incluirlo en la estructuración
+    const documentoActual = await Documento.findByPk(documentoActualId);
+    
+    // Crear lista completa incluyendo el documento actual
+    const todosLosDocumentos = documentoActual ? [documentoActual, ...documentosListos] : documentosListos;
+    
+    console.log(`🔧 [ADMIN] Estructurando ${todosLosDocumentos.length} documentos (incluyendo actual)`);
+    todosLosDocumentos.forEach(doc => {
+      console.log(`   - ${doc.codigoBarras} (ID: ${doc.id}, Principal: ${doc.esDocumentoPrincipal}, PrincipalID: ${doc.documentoPrincipalId || 'null'})`);
+    });
+    
+    // Importar la función de estructuración desde recepcionController
+    const { estructurarDocumentosJerarquicamente } = require('./recepcionController');
+    const documentosEstructurados = estructurarDocumentosJerarquicamente(todosLosDocumentos);
+    
     return {
       tieneDocumentosAdicionales: documentosListos.length > 0,
       cantidad: documentosListos.length,
-      documentos: documentosListos,
+      documentos: documentosListos, // Mantener para compatibilidad
       tipoDeteccion: 'admin_completa',
-      permisoTotal: true // Admin puede entregar todos
+      permisoTotal: true, // Admin puede entregar todos
+      // ============== NUEVA ESTRUCTURA JERÁRQUICA ==============
+      gruposRelacionados: documentosEstructurados.gruposRelacionados,
+      documentosIndependientes: documentosEstructurados.documentosIndependientes,
+      tieneGruposRelacionados: documentosEstructurados.gruposRelacionados.length > 0,
+      tieneDocumentosIndependientes: documentosEstructurados.documentosIndependientes.length > 0
     };
   } catch (error) {
     console.error('❌ Error detectando documentos grupales para admin:', error);
@@ -3973,7 +3992,11 @@ async function detectarDocumentosGrupalesAdmin(identificacionCliente, documentoA
       cantidad: 0, 
       documentos: [],
       tipoDeteccion: 'admin_completa',
-      permisoTotal: true
+      permisoTotal: true,
+      gruposRelacionados: [],
+      documentosIndependientes: [],
+      tieneGruposRelacionados: false,
+      tieneDocumentosIndependientes: false
     };
   }
 }

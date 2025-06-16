@@ -477,11 +477,6 @@ async function detectarDocumentosGrupalesMatrizador(identificacionCliente, docum
         id: { [Op.ne]: documentoActualId },
         motivoEliminacion: null
       },
-      include: [{ 
-        model: Matrizador, 
-        as: 'matrizador',
-        attributes: ['id', 'nombre'] 
-      }],
       order: [['created_at', 'ASC']]
     });
     
@@ -493,6 +488,31 @@ async function detectarDocumentosGrupalesMatrizador(identificacionCliente, docum
     console.log(`📄 [MATRIZADOR] Documentos propios:`, documentosPropios.map(d => ({ id: d.id, codigo: d.codigoBarras, matrizador: d.idMatrizador })));
     console.log(`📄 [MATRIZADOR] Documentos otros:`, documentosOtros.map(d => ({ id: d.id, codigo: d.codigoBarras, matrizador: d.idMatrizador })));
     
+    // ============== NUEVA FUNCIONALIDAD: ESTRUCTURACIÓN JERÁRQUICA CORREGIDA ==============
+    // CORRECCIÓN CRÍTICA: Incluir el documento actual en la estructuración
+    // para que se puedan formar grupos correctamente (solo con documentos propios)
+    
+    // Obtener el documento actual para incluirlo en la estructuración
+    const documentoActual = await Documento.findByPk(documentoActualId);
+    
+    // Crear lista completa incluyendo el documento actual (solo si es del matrizador)
+    let documentosParaEstructurar = documentosPropios;
+    if (documentoActual && documentoActual.idMatrizador == matrizadorId) {
+      documentosParaEstructurar = [documentoActual, ...documentosPropios];
+      console.log(`🔧 [MATRIZADOR] Incluyendo documento actual en estructuración (es propio)`);
+    } else if (documentoActual) {
+      console.log(`⚠️ [MATRIZADOR] Documento actual no es del matrizador, no se incluye en estructuración`);
+    }
+    
+    console.log(`🔧 [MATRIZADOR] Estructurando ${documentosParaEstructurar.length} documentos propios (incluyendo actual si aplica)`);
+    documentosParaEstructurar.forEach(doc => {
+      console.log(`   - ${doc.codigoBarras} (ID: ${doc.id}, Principal: ${doc.esDocumentoPrincipal}, PrincipalID: ${doc.documentoPrincipalId || 'null'})`);
+    });
+    
+    // Importar la función de estructuración desde recepcionController
+    const { estructurarDocumentosJerarquicamente } = require('./recepcionController');
+    const documentosEstructurados = estructurarDocumentosJerarquicamente(documentosParaEstructurar);
+    
     return {
       tieneDocumentosAdicionales: documentosPropios.length > 0 || documentosOtros.length > 0,
       cantidad: documentosPropios.length,
@@ -500,7 +520,12 @@ async function detectarDocumentosGrupalesMatrizador(identificacionCliente, docum
       documentosPropios: documentosPropios,
       documentosOtrosMatrizadores: documentosOtros,
       tipoDeteccion: 'matrizador_limitada',
-      permisoTotal: false
+      permisoTotal: false,
+      // ============== NUEVA ESTRUCTURA JERÁRQUICA (SOLO DOCUMENTOS PROPIOS) ==============
+      gruposRelacionados: documentosEstructurados.gruposRelacionados,
+      documentosIndependientes: documentosEstructurados.documentosIndependientes,
+      tieneGruposRelacionados: documentosEstructurados.gruposRelacionados.length > 0,
+      tieneDocumentosIndependientes: documentosEstructurados.documentosIndependientes.length > 0
     };
   } catch (error) {
     console.error('❌ Error detectando documentos grupales para matrizador:', error);
@@ -511,7 +536,11 @@ async function detectarDocumentosGrupalesMatrizador(identificacionCliente, docum
       documentosPropios: [],
       documentosOtrosMatrizadores: [],
       tipoDeteccion: 'matrizador_limitada',
-      permisoTotal: false
+      permisoTotal: false,
+      gruposRelacionados: [],
+      documentosIndependientes: [],
+      tieneGruposRelacionados: false,
+      tieneDocumentosIndependientes: false
     };
   }
 }
