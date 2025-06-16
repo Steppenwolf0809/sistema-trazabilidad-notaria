@@ -139,6 +139,211 @@
           <textarea class="form-control" id="observaciones" name="observaciones" rows="3" placeholder="Observaciones adicionales..."></textarea>
         </div>
 
+        <!-- NUEVA SECCIÓN: Gestión de Pago Inmediato -->
+        <div class="card mb-4" id="seccion-gestion-pago">
+          <div class="card-header bg-success text-white py-2">
+            <h6 class="mb-0">
+              <i class="fas fa-money-bill-wave me-2"></i>💰 GESTIÓN DE PAGO
+            </h6>
+          </div>
+          <div class="card-body">
+            <!-- Toggle para activar pago inmediato -->
+            <div class="d-flex align-items-center justify-content-between mb-3">
+              <div>
+                <h6 class="mb-1">¿El cliente paga en este momento?</h6>
+                <small class="text-muted">Active esta opción si el cliente realiza el pago al crear el documento</small>
+              </div>
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="togglePagoInmediato" style="transform: scale(1.5);">
+                <label class="form-check-label fw-bold" for="togglePagoInmediato" id="labelTogglePago">
+                  <span class="text-danger">❌ No paga ahora</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Formulario de pago (inicialmente oculto) -->
+            <div id="formulario-pago-inmediato" style="display: none;">
+              <div class="alert alert-info">
+                <div class="row">
+                  <div class="col-md-8">
+                    <h6><i class="fas fa-info-circle text-primary"></i> Información del Pago</h6>
+                    <p class="mb-1">Se registrará el documento y el pago en una sola operación.</p>
+                    <small class="text-info">✅ Operación segura - Si falla el pago, no se crea el documento</small>
+                  </div>
+                  <div class="col-md-4 text-end">
+                    <div class="bg-white p-2 rounded border">
+                      <div class="text-muted small">VALOR FACTURA</div>
+                      <div class="fs-4 text-success" id="valor-factura-pago">$0.00</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tipo de pago -->
+              <div class="row mb-3">
+                <div class="col-12">
+                  <label class="form-label fw-bold">
+                    <i class="fas fa-hand-holding-usd text-success"></i> Tipo de Pago
+                  </label>
+                  <div class="row">
+                    <div class="col-md-4">
+                      <div class="card border-2 tipo-pago-card" id="card-pago-completo" style="cursor: pointer;">
+                        <div class="card-body text-center py-3">
+                          <input type="radio" name="tipoPago" id="pago-completo" value="completo" style="display: none;">
+                          <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                          <h6 class="card-title text-success">PAGO COMPLETO</h6>
+                          <p class="card-text small mb-0">Paga el valor total</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                      <div class="card border-2 tipo-pago-card" id="card-pago-parcial" style="cursor: pointer;">
+                        <div class="card-body text-center py-3">
+                          <input type="radio" name="tipoPago" id="pago-parcial" value="parcial" style="display: none;">
+                          <i class="fas fa-coins fa-2x text-warning mb-2"></i>
+                          <h6 class="card-title text-warning">PAGO PARCIAL</h6>
+                          <p class="card-text small mb-0">Monto específico</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                      <div class="card border-2 tipo-pago-card" id="card-pago-retencion" style="cursor: pointer;">
+                        <div class="card-body text-center py-3">
+                          <input type="radio" name="tipoPago" id="pago-retencion" value="retencion" style="display: none;">
+                          <i class="fas fa-receipt fa-2x text-info mb-2"></i>
+                          <h6 class="card-title text-info">CON RETENCIÓN</h6>
+                          <p class="card-text small mb-0">Incluye retención</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Campos específicos según tipo de pago -->
+              <div id="campos-pago-especificos">
+                
+                <!-- Campos para pago parcial -->
+                <div id="campos-pago-parcial" style="display: none;">
+                  <div class="row mb-3">
+                    <div class="col-md-6">
+                      <label for="montoPagoParcial" class="form-label">
+                        <i class="fas fa-dollar-sign text-warning"></i> Monto a Pagar ($)
+                      </label>
+                      <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control" id="montoPagoParcial" 
+                               step="0.01" min="0.01" placeholder="0.00">
+                      </div>
+                      <div class="form-text">Debe ser menor al valor total de la factura</div>
+                    </div>
+                    <div class="col-md-6">
+                      <label for="metodoPagoParcial" class="form-label">
+                        <i class="fas fa-credit-card text-primary"></i> Método de Pago
+                      </label>
+                      <select class="form-select" id="metodoPagoParcial">
+                        <option value="">Seleccionar método</option>
+                        <option value="efectivo">💵 Efectivo</option>
+                        <option value="tarjeta_credito">💳 Tarjeta de Crédito</option>
+                        <option value="tarjeta_debito">💳 Tarjeta de Débito</option>
+                        <option value="transferencia">🏦 Transferencia Bancaria</option>
+                        <option value="cheque">📝 Cheque</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Campos para pago completo -->
+                <div id="campos-pago-completo" style="display: none;">
+                  <div class="row mb-3">
+                    <div class="col-md-6">
+                      <label for="metodoPagoCompleto" class="form-label">
+                        <i class="fas fa-credit-card text-primary"></i> Método de Pago
+                      </label>
+                      <select class="form-select" id="metodoPagoCompleto">
+                        <option value="">Seleccionar método</option>
+                        <option value="efectivo">💵 Efectivo</option>
+                        <option value="tarjeta_credito">💳 Tarjeta de Crédito</option>
+                        <option value="tarjeta_debito">💳 Tarjeta de Débito</option>
+                        <option value="transferencia">🏦 Transferencia Bancaria</option>
+                        <option value="cheque">📝 Cheque</option>
+                      </select>
+                    </div>
+                    <div class="col-md-6">
+                      <label for="numeroComprobante" class="form-label">
+                        <i class="fas fa-hashtag text-secondary"></i> N° Comprobante (Opcional)
+                      </label>
+                      <input type="text" class="form-control" id="numeroComprobante" 
+                             placeholder="Número de referencia">
+                      <div class="form-text">Ej: número de transacción, cheque, etc.</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Campos para pago con retención -->
+                <div id="campos-pago-retencion" style="display: none;">
+                  <div class="alert alert-warning">
+                    <h6><i class="fas fa-exclamation-triangle text-warning"></i> Pago con Retención</h6>
+                    <p class="mb-2">El cliente pagará un monto menor debido a retenciones aplicadas.</p>
+                    <small class="text-warning">⚠️ La retención se elaborará después según normativa específica del cliente</small>
+                  </div>
+                  
+                  <div class="row mb-3">
+                    <div class="col-md-4">
+                      <label for="montoPagoRetencion" class="form-label">
+                        <i class="fas fa-dollar-sign text-info"></i> Monto Pagado ($)
+                      </label>
+                      <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control" id="montoPagoRetencion" 
+                               step="0.01" min="0.01" placeholder="0.00">
+                      </div>
+                      <div class="form-text">Monto efectivamente recibido</div>
+                    </div>
+                    <div class="col-md-4">
+                      <label for="metodoPagoRetencion" class="form-label">
+                        <i class="fas fa-credit-card text-primary"></i> Método de Pago
+                      </label>
+                      <select class="form-select" id="metodoPagoRetencion">
+                        <option value="">Seleccionar método</option>
+                        <option value="efectivo">💵 Efectivo</option>
+                        <option value="tarjeta_credito">💳 Tarjeta de Crédito</option>
+                        <option value="tarjeta_debito">💳 Tarjeta de Débito</option>
+                        <option value="transferencia">🏦 Transferencia Bancaria</option>
+                        <option value="cheque">📝 Cheque</option>
+                      </select>
+                    </div>
+                    <div class="col-md-4">
+                      <label for="montoRetencionEstimado" class="form-label">
+                        <i class="fas fa-receipt text-secondary"></i> Retención Estimada ($)
+                      </label>
+                      <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control" id="montoRetencionEstimado" 
+                               step="0.01" min="0" placeholder="0.00" readonly>
+                      </div>
+                      <div class="form-text">Calculado automáticamente</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Observaciones del pago -->
+                <div class="row mb-3">
+                  <div class="col-12">
+                    <label for="observacionesPago" class="form-label">
+                      <i class="fas fa-sticky-note text-secondary"></i> Observaciones del Pago (Opcional)
+                    </label>
+                    <textarea class="form-control" id="observacionesPago" rows="2" 
+                              placeholder="Detalles adicionales sobre el pago..."></textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Información del XML (solo lectura) -->
         <div class="alert alert-light">
           <h6><i class="fas fa-file-code me-2"></i>Información del XML</h6>
@@ -159,7 +364,7 @@
             <i class="fas fa-arrow-left me-1"></i> Cargar Otro XML
           </button>
           <button type="submit" class="btn btn-success" id="btnConfirmarRegistro">
-            <i class="fas fa-check me-1"></i> Confirmar y Registrar Documento
+              <i class="fas fa-check me-1"></i> Confirmar y Registrar Documento
           </button>
         </div>
       </form>
@@ -209,6 +414,227 @@ document.addEventListener('DOMContentLoaded', function() {
   const errorProcesamiento = document.getElementById('error-procesamiento');
   
   let datosDocumento = null;
+  let pagoInmediatoActivo = false;
+  
+  // ==================== GESTIÓN DE PAGO INMEDIATO ====================
+  
+  // Toggle para activar/desactivar pago inmediato
+  document.getElementById('togglePagoInmediato').addEventListener('change', function() {
+    pagoInmediatoActivo = this.checked;
+    const formularioPago = document.getElementById('formulario-pago-inmediato');
+    const labelToggle = document.getElementById('labelTogglePago');
+    const textoBoton = document.getElementById('textoBotonConfirmar');
+    const btnConfirmar = document.getElementById('btnConfirmarRegistro');
+    
+    if (pagoInmediatoActivo) {
+      // Activar pago inmediato
+      formularioPago.style.display = 'block';
+      labelToggle.innerHTML = '<span class="text-success">✅ Paga ahora</span>';
+      textoBoton.textContent = 'Guardar Documento + Pago';
+      btnConfirmar.className = 'btn btn-primary';
+      
+      // Actualizar valor de factura en la sección de pago
+      actualizarValorFacturaPago();
+      
+      // Animación suave
+      formularioPago.style.opacity = '0';
+      setTimeout(() => {
+        formularioPago.style.transition = 'opacity 0.3s ease-in-out';
+        formularioPago.style.opacity = '1';
+      }, 50);
+    } else {
+      // Desactivar pago inmediato
+      formularioPago.style.display = 'none';
+      labelToggle.innerHTML = '<span class="text-danger">❌ No paga ahora</span>';
+      textoBoton.textContent = 'Confirmar y Registrar Documento';
+      btnConfirmar.className = 'btn btn-success';
+      
+      // Limpiar formulario de pago
+      limpiarFormularioPago();
+    }
+  });
+  
+  // Manejo de selección de tipo de pago
+  document.querySelectorAll('.tipo-pago-card').forEach(card => {
+    card.addEventListener('click', function() {
+      // Remover selección anterior
+      document.querySelectorAll('.tipo-pago-card').forEach(c => {
+        c.classList.remove('border-primary', 'bg-light');
+        c.querySelector('input[type="radio"]').checked = false;
+      });
+      
+      // Seleccionar nueva opción
+      this.classList.add('border-primary', 'bg-light');
+      this.querySelector('input[type="radio"]').checked = true;
+      
+      // Mostrar campos específicos
+      mostrarCamposEspecificosPago(this.querySelector('input[type="radio"]').value);
+    });
+  });
+  
+  // Función para mostrar campos específicos según tipo de pago
+  function mostrarCamposEspecificosPago(tipoPago) {
+    // Ocultar todos los campos específicos
+    document.getElementById('campos-pago-parcial').style.display = 'none';
+    document.getElementById('campos-pago-completo').style.display = 'none';
+    document.getElementById('campos-pago-retencion').style.display = 'none';
+    
+    // Mostrar campos según tipo seleccionado
+    switch (tipoPago) {
+      case 'completo':
+        document.getElementById('campos-pago-completo').style.display = 'block';
+        break;
+      case 'parcial':
+        document.getElementById('campos-pago-parcial').style.display = 'block';
+        break;
+      case 'retencion':
+        document.getElementById('campos-pago-retencion').style.display = 'block';
+        break;
+    }
+  }
+  
+  // Función para actualizar el valor de factura en la sección de pago
+  function actualizarValorFacturaPago() {
+    const valorFactura = document.getElementById('valorFactura').value;
+    const valorFormateado = valorFactura ? parseFloat(valorFactura).toFixed(2) : '0.00';
+    document.getElementById('valor-factura-pago').textContent = '$' + valorFormateado;
+    
+    // Actualizar límites en campos de pago
+    document.getElementById('montoPagoParcial').max = valorFactura;
+    document.getElementById('montoPagoRetencion').max = valorFactura;
+    
+    // Calcular retención estimada (aproximada)
+    if (valorFactura > 0) {
+      const retencionEstimada = calcularRetencionEstimada(parseFloat(valorFactura));
+      document.getElementById('montoRetencionEstimado').value = retencionEstimada.toFixed(2);
+    }
+  }
+  
+  // Función para calcular retención estimada (aproximada)
+  function calcularRetencionEstimada(valorTotal) {
+    // Cálculo aproximado: 
+    // Subtotal sin IVA = valorTotal / 1.15
+    // Retención IVA (100%) = (valorTotal - subtotal) 
+    // Retención Renta (10%) = subtotal * 0.10
+    const subtotalSinIva = valorTotal / 1.15;
+    const iva = valorTotal - subtotalSinIva;
+    const retencionIva = iva; // 100% del IVA
+    const retencionRenta = subtotalSinIva * 0.10; // 10% del subtotal
+    
+    return retencionIva + retencionRenta;
+  }
+  
+  // Función para limpiar formulario de pago
+  function limpiarFormularioPago() {
+    // Limpiar selección de tipo de pago
+    document.querySelectorAll('.tipo-pago-card').forEach(card => {
+      card.classList.remove('border-primary', 'bg-light');
+      card.querySelector('input[type="radio"]').checked = false;
+    });
+    
+    // Limpiar campos específicos
+    document.getElementById('montoPagoParcial').value = '';
+    document.getElementById('metodoPagoParcial').value = '';
+    document.getElementById('metodoPagoCompleto').value = '';
+    document.getElementById('numeroComprobante').value = '';
+    document.getElementById('montoPagoRetencion').value = '';
+    document.getElementById('metodoPagoRetencion').value = '';
+    document.getElementById('observacionesPago').value = '';
+    
+    // Ocultar campos específicos
+    mostrarCamposEspecificosPago('');
+  }
+  
+     // Listener para actualizar valor de factura en tiempo real
+   document.getElementById('valorFactura').addEventListener('input', function() {
+     if (pagoInmediatoActivo) {
+       actualizarValorFacturaPago();
+     }
+   });
+   
+   // Función para validar datos de pago
+   function validarDatosPago() {
+    if (!pagoInmediatoActivo) {
+      return { valido: true }; // No hay pago, no hay que validar
+    }
+    
+    const tipoPagoSeleccionado = document.querySelector('input[name="tipoPago"]:checked');
+    if (!tipoPagoSeleccionado) {
+      return { valido: false, mensaje: 'Debe seleccionar un tipo de pago' };
+    }
+    
+    const tipoPago = tipoPagoSeleccionado.value;
+    const valorFactura = parseFloat(document.getElementById('valorFactura').value) || 0;
+    
+    switch (tipoPago) {
+      case 'completo':
+        const metodoPagoCompleto = document.getElementById('metodoPagoCompleto').value;
+        if (!metodoPagoCompleto) {
+          return { valido: false, mensaje: 'Debe seleccionar un método de pago' };
+        }
+        return { 
+          valido: true, 
+          datos: {
+            tipoPago: 'completo',
+            monto: valorFactura,
+            metodoPago: metodoPagoCompleto,
+            numeroComprobante: document.getElementById('numeroComprobante').value,
+            observaciones: document.getElementById('observacionesPago').value
+          }
+        };
+        
+      case 'parcial':
+        const montoParcial = parseFloat(document.getElementById('montoPagoParcial').value) || 0;
+        const metodoPagoParcial = document.getElementById('metodoPagoParcial').value;
+        
+        if (montoParcial <= 0) {
+          return { valido: false, mensaje: 'El monto del pago parcial debe ser mayor a 0' };
+        }
+        if (montoParcial >= valorFactura) {
+          return { valido: false, mensaje: 'El monto del pago parcial debe ser menor al valor total' };
+        }
+        if (!metodoPagoParcial) {
+          return { valido: false, mensaje: 'Debe seleccionar un método de pago' };
+        }
+        
+        return { 
+          valido: true, 
+          datos: {
+            tipoPago: 'parcial',
+            monto: montoParcial,
+            metodoPago: metodoPagoParcial,
+            observaciones: document.getElementById('observacionesPago').value
+          }
+        };
+        
+      case 'retencion':
+        const montoPagoRetencion = parseFloat(document.getElementById('montoPagoRetencion').value) || 0;
+        const metodoPagoRetencion = document.getElementById('metodoPagoRetencion').value;
+        
+        if (montoPagoRetencion <= 0) {
+          return { valido: false, mensaje: 'El monto pagado debe ser mayor a 0' };
+        }
+        if (montoPagoRetencion >= valorFactura) {
+          return { valido: false, mensaje: 'El monto pagado debe ser menor al valor total (hay retención)' };
+        }
+        if (!metodoPagoRetencion) {
+          return { valido: false, mensaje: 'Debe seleccionar un método de pago' };
+        }
+        
+        return { 
+          valido: true, 
+          datos: {
+            tipoPago: 'retencion',
+            monto: montoPagoRetencion,
+            metodoPago: metodoPagoRetencion,
+            observaciones: document.getElementById('observacionesPago').value
+          }
+        };
+        
+      default:
+        return { valido: false, mensaje: 'Tipo de pago no válido' };
+    }
+  }
   
   // ==================== PASO 1: PROCESAR XML ====================
   formUpload.addEventListener('submit', function(event) {
@@ -305,6 +731,11 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('numeroFactura').value = datos.numeroFactura || '';
     document.getElementById('valorFactura').value = datos.valorFactura || '';
     
+    // Actualizar valor de factura en sección de pago si está activa
+    if (pagoInmediatoActivo) {
+      actualizarValorFacturaPago();
+    }
+    
     // Convertir fecha si es necesario (DD/MM/YYYY a YYYY-MM-DD)
     if (datos.fechaFactura) {
       let fechaFormatted = datos.fechaFactura;
@@ -350,7 +781,7 @@ document.addEventListener('DOMContentLoaded', function() {
   formConfirmar.addEventListener('submit', function(event) {
     event.preventDefault();
     
-    // Validar campos requeridos
+    // Validar campos requeridos del documento
     const campos = ['codigoBarras', 'nombreCliente', 'identificacionCliente', 'idMatrizador'];
     const tipoDocumento = document.querySelector('input[name="tipoDocumento"]:checked');
     
@@ -364,6 +795,15 @@ document.addEventListener('DOMContentLoaded', function() {
       if (!elemento.value.trim()) {
         alert(`El campo ${campo} es requerido`);
         elemento.focus();
+        return false;
+      }
+    }
+    
+    // Validar datos de pago si está activo
+    if (pagoInmediatoActivo) {
+      const validacionPago = validarDatosPago();
+      if (!validacionPago.valido) {
+        alert('Error en datos de pago: ' + validacionPago.mensaje);
         return false;
       }
     }
@@ -386,6 +826,17 @@ document.addEventListener('DOMContentLoaded', function() {
       idMatrizador: document.getElementById('idMatrizador').value,
       observaciones: document.getElementById('observaciones').value
     };
+    
+    // Agregar datos de pago si está activo
+    if (pagoInmediatoActivo) {
+      const validacionPago = validarDatosPago();
+      if (validacionPago.valido && validacionPago.datos) {
+        datosFormulario.pagoInmediato = true;
+        datosFormulario.datosPago = validacionPago.datos;
+      }
+    } else {
+      datosFormulario.pagoInmediato = false;
+    }
     
     console.log('Enviando datos para registro:', datosFormulario);
     
@@ -426,8 +877,7 @@ document.addEventListener('DOMContentLoaded', function() {
     resultadoExitoso.style.display = 'block';
     
     // Mostrar datos del documento registrado
-    const datosDiv = document.getElementById('datos-documento-final');
-    datosDiv.innerHTML = `
+    let htmlResultado = `
       <div class="row">
         <div class="col-md-6">
           <strong>📋 ID del Documento:</strong> ${data.documento.id}<br>
@@ -438,10 +888,33 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="col-md-6">
           <strong>👨‍💼 Matrizador:</strong> ${data.documento.matrizador}<br>
           <strong>📅 Fecha de Registro:</strong> ${new Date().toLocaleDateString()}<br>
-          <strong>✅ Estado:</strong> En Proceso
+          <strong>✅ Estado:</strong> ${data.pago ? 'Con Pago Registrado' : 'En Proceso'}
         </div>
       </div>
     `;
+    
+    // Agregar información del pago si se registró
+    if (data.pago) {
+      htmlResultado += `
+        <div class="alert alert-success mt-3">
+          <h6><i class="fas fa-money-bill-wave text-success"></i> Pago Registrado Exitosamente</h6>
+          <div class="row">
+            <div class="col-md-6">
+              <strong>💰 Monto Pagado:</strong> $${data.pago.monto}<br>
+              <strong>💳 Método:</strong> ${data.pago.metodoPago}<br>
+              <strong>📊 Estado:</strong> <span class="badge bg-success">${data.pago.estadoPago}</span>
+            </div>
+            <div class="col-md-6">
+              <strong>📅 Fecha Pago:</strong> ${new Date().toLocaleDateString()}<br>
+              ${data.pago.numeroComprobante ? `<strong>🧾 Comprobante:</strong> ${data.pago.numeroComprobante}<br>` : ''}
+              ${data.pago.valorPendiente > 0 ? `<strong>⚠️ Pendiente:</strong> $${data.pago.valorPendiente}` : '<strong>✅ Pagado Completo</strong>'}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    document.getElementById('datos-documento-final').innerHTML = htmlResultado;
     
     // Configurar botón para ver documento
     document.getElementById('btnVerDocumentoFinal').onclick = function() {
@@ -472,4 +945,95 @@ document.addEventListener('DOMContentLoaded', function() {
     volverACarga();
   };
 });
-</script> 
+</script>
+
+<style>
+/* Estilos para la funcionalidad de pago inmediato */
+.tipo-pago-card {
+  transition: all 0.3s ease;
+  border: 2px solid #dee2e6 !important;
+}
+
+.tipo-pago-card:hover {
+  border-color: #0d6efd !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.tipo-pago-card.border-primary {
+  border-color: #0d6efd !important;
+  background-color: #f8f9ff !important;
+}
+
+.form-check-input:checked {
+  background-color: #198754;
+  border-color: #198754;
+}
+
+.form-check-input:focus {
+  border-color: #86b7fe;
+  outline: 0;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* Animación para el formulario de pago */
+#formulario-pago-inmediato {
+  transition: all 0.3s ease-in-out;
+}
+
+/* Estilos para campos específicos de pago */
+#campos-pago-especificos > div {
+  transition: all 0.3s ease-in-out;
+}
+
+/* Mejorar apariencia de inputs de dinero */
+.input-group-text {
+  background-color: #e9ecef;
+  border-color: #ced4da;
+  color: #495057;
+  font-weight: 600;
+}
+
+/* Estilos para alertas de información */
+.alert-info {
+  border-left: 4px solid #0dcaf0;
+}
+
+.alert-warning {
+  border-left: 4px solid #ffc107;
+}
+
+/* Botón dinámico */
+#btnConfirmarRegistro {
+  transition: all 0.3s ease;
+  min-width: 250px;
+}
+
+/* Valor de factura destacado */
+#valor-factura-pago {
+  font-weight: 700;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+}
+
+/* Mejorar apariencia de selects */
+.form-select:focus {
+  border-color: #86b7fe;
+  outline: 0;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* Responsive para cards de tipo de pago */
+@media (max-width: 768px) {
+  .tipo-pago-card {
+    margin-bottom: 1rem;
+  }
+  
+  .tipo-pago-card .card-body {
+    padding: 1rem;
+  }
+  
+  .tipo-pago-card i {
+    font-size: 1.5rem !important;
+  }
+}
+</style> 

@@ -2194,7 +2194,8 @@ const cajaController = {
   },
 
   /**
-   * NUEVO: Registrar documento después de confirmación en vista previa
+   * MEJORADO: Registrar documento después de confirmación en vista previa
+   * NUEVA FUNCIONALIDAD: Soporte para pago inmediato en una transacción
    */
   registrarDocumentoDesdeXML: async (req, res) => {
     try {
@@ -2212,7 +2213,9 @@ const cajaController = {
         valorFactura,
         fechaFactura,
         idMatrizador,
-        observaciones
+        observaciones,
+        pagoInmediato,
+        datosPago
       } = req.body;
 
       // Validaciones básicas
@@ -2244,36 +2247,177 @@ const cajaController = {
         });
       }
 
-      // Registrar documento
-      const nuevoDocumento = await Documento.create({
-        codigoBarras: codigoBarras,
-        tipoDocumento: tipoDocumento,
-        nombreCliente: nombreCliente,
-        identificacionCliente: identificacionCliente,
-        emailCliente: emailCliente || null,
-        telefonoCliente: telefonoCliente || null,
-        numeroFactura: numeroFactura || null,
-        valorFactura: parseFloat(valorFactura || 0),
-        fechaFactura: fechaFactura ? new Date(fechaFactura) : new Date(),
-        estado: 'en_proceso',
-        estadoPago: 'pendiente',
-        idMatrizador: idMatrizador,
-        observaciones: observaciones || 'Documento registrado desde XML mediante vista previa'
-      });
-
-      console.log('✅ Documento registrado exitosamente:', nuevoDocumento.id);
-
-      res.json({
-        success: true,
-        message: 'Documento registrado exitosamente',
-        documento: {
-          id: nuevoDocumento.id,
-          codigoBarras: nuevoDocumento.codigoBarras,
-          tipoDocumento: nuevoDocumento.tipoDocumento,
-          nombreCliente: nuevoDocumento.nombreCliente,
-          matrizador: matrizador.nombre
+      // Validar datos de pago si está activo
+      if (pagoInmediato && datosPago) {
+        console.log('💰 Pago inmediato activado, validando datos:', datosPago);
+        
+        // Validaciones específicas de pago
+        if (!datosPago.monto || datosPago.monto <= 0) {
+          return res.status(400).json({
+            success: false,
+            message: 'El monto del pago debe ser mayor a 0'
+          });
         }
-      });
+        
+        if (!datosPago.metodoPago) {
+          return res.status(400).json({
+            success: false,
+            message: 'Debe especificar un método de pago'
+          });
+        }
+        
+        const valorFacturaNum = parseFloat(valorFactura || 0);
+        if (datosPago.monto > valorFacturaNum) {
+          return res.status(400).json({
+            success: false,
+            message: 'El monto del pago no puede ser mayor al valor de la factura'
+          });
+        }
+      }
+
+      // OPERACIÓN ATÓMICA: Crear documento + pago en una transacción
+      const transaction = await sequelize.transaction();
+      
+      try {
+        console.log('🔄 Iniciando transacción: documento + pago...');
+        
+        // 1. Crear el documento
+        const nuevoDocumento = await Documento.create({
+          codigoBarras: codigoBarras,
+          tipoDocumento: tipoDocumento,
+          nombreCliente: nombreCliente,
+          identificacionCliente: identificacionCliente,
+          emailCliente: emailCliente || null,
+          telefonoCliente: telefonoCliente || null,
+          numeroFactura: numeroFactura || null,
+          valorFactura: parseFloat(valorFactura || 0),
+          fechaFactura: fechaFactura ? new Date(fechaFactura) : new Date(),
+          estado: 'en_proceso',
+          estadoPago: pagoInmediato ? 'pendiente' : 'pendiente', // Se actualizará si hay pago
+          idMatrizador: idMatrizador,
+          observaciones: observaciones || 'Documento registrado desde XML mediante vista previa'
+        }, { transaction });
+
+        console.log('✅ Documento creado en transacción:', nuevoDocumento.id);
+
+        let datosRespuestaPago = null;
+
+        // 2. Registrar pago si está activo
+        if (pagoInmediato && datosPago) {
+          console.log('💰 Procesando pago inmediato...');
+          
+          const valorFacturaNum = parseFloat(valorFactura || 0);
+          const montoPago = parseFloat(datosPago.monto);
+          
+          // Calcular estado de pago
+          let estadoPago;
+          let valorPagado = montoPago;
+          let valorPendiente = valorFacturaNum - montoPago;
+          
+          if (datosPago.tipoPago === 'completo') {
+            estadoPago = 'pagado_completo';
+            valorPagado = valorFacturaNum;
+            valorPendiente = 0;
+          } else if (datosPago.tipoPago === 'retencion') {
+            // Para pago con retención, el estado depende del monto
+            if (valorPendiente <= 0.01) {
+              estadoPago = 'pagado_con_retencion';
+            } else {
+              estadoPago = 'pago_parcial';
+            }
+          } else {
+            // Pago parcial
+            estadoPago = 'pago_parcial';
+          }
+          
+          // Actualizar documento con información de pago
+          await nuevoDocumento.update({
+            estadoPago: estadoPago,
+            metodoPago: datosPago.metodoPago,
+            fechaPago: new Date(),
+            fechaUltimoPago: new Date(),
+            valorPagado: valorPagado,
+            valorPendiente: Math.max(0, valorPendiente),
+            numeroComprobante: datosPago.numeroComprobante || null,
+            observaciones: (observaciones || 'Documento registrado desde XML mediante vista previa') + 
+                          (datosPago.observaciones ? ` | Pago: ${datosPago.observaciones}` : '')
+          }, { transaction });
+          
+          console.log('✅ Pago registrado en transacción:', {
+            monto: valorPagado,
+            estado: estadoPago,
+            pendiente: valorPendiente
+          });
+          
+          // Crear evento del pago
+          const EventoDocumento = require('../models/EventoDocumento');
+          await EventoDocumento.create({
+            documentoId: nuevoDocumento.id,
+            usuarioId: req.matrizador?.id || null,
+            tipo: 'pago',
+            categoria: 'financiero',
+            titulo: '💰 Pago Inmediato al Crear Documento',
+            descripcion: `Pago de $${valorPagado.toFixed(2)} registrado al crear documento desde XML mediante ${datosPago.metodoPago}`,
+            detalles: JSON.stringify({
+              monto: valorPagado,
+              metodoPago: datosPago.metodoPago,
+              tipoPago: datosPago.tipoPago,
+              estadoPagoNuevo: estadoPago,
+              usuarioCaja: req.matrizador?.nombre || 'Sistema',
+              numeroComprobante: datosPago.numeroComprobante,
+              observaciones: datosPago.observaciones,
+              pagoInmediato: true
+            }),
+            usuario: req.matrizador?.nombre || 'Sistema',
+            metadatos: JSON.stringify({
+              montoPago: valorPagado,
+              metodoPago: datosPago.metodoPago,
+              estadoPagoNuevo: estadoPago,
+              procesadoPor: req.matrizador?.nombre || 'Sistema',
+              fechaProcesamiento: new Date().toISOString(),
+              origenPago: 'creacion_xml'
+            })
+          }, { transaction });
+          
+          datosRespuestaPago = {
+            monto: valorPagado.toFixed(2),
+            metodoPago: datosPago.metodoPago,
+            estadoPago: estadoPago,
+            valorPendiente: valorPendiente.toFixed(2),
+            numeroComprobante: datosPago.numeroComprobante
+          };
+        }
+
+        // Confirmar transacción
+        await transaction.commit();
+        console.log('✅ Transacción completada exitosamente');
+
+        // Preparar respuesta
+        const respuesta = {
+          success: true,
+          message: pagoInmediato ? 'Documento y pago registrados exitosamente' : 'Documento registrado exitosamente',
+          documento: {
+            id: nuevoDocumento.id,
+            codigoBarras: nuevoDocumento.codigoBarras,
+            tipoDocumento: nuevoDocumento.tipoDocumento,
+            nombreCliente: nuevoDocumento.nombreCliente,
+            matrizador: matrizador.nombre
+          }
+        };
+
+        // Agregar información del pago si se registró
+        if (datosRespuestaPago) {
+          respuesta.pago = datosRespuestaPago;
+        }
+
+        res.json(respuesta);
+
+      } catch (transactionError) {
+        // Rollback en caso de error
+        await transaction.rollback();
+        console.error('❌ Error en transacción, rollback ejecutado:', transactionError);
+        throw transactionError;
+      }
 
     } catch (error) {
       console.error('❌ Error registrando documento desde XML:', error);
