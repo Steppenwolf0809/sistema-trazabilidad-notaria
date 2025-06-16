@@ -118,6 +118,18 @@
               </div>
             </div>
             <div class="card-body">
+              {{!-- Encabezado con nombre del cliente --}}
+              <div class="alert alert-primary border-primary mb-3">
+                <div class="d-flex align-items-center">
+                  <i class="fas fa-user me-3 fs-4"></i>
+                  <div>
+                    <h6 class="mb-1">📄 <strong>DOCUMENTOS PARA:</strong></h6>
+                    <h5 class="mb-0 text-primary"><strong>{{documento.nombreCliente}}</strong></h5>
+                    <small class="text-muted">ID: {{documento.identificacionCliente}}</small>
+                  </div>
+                </div>
+              </div>
+              
               <div class="table-responsive">
                 <table class="table table-hover table-sm">
                   <thead class="table-light">

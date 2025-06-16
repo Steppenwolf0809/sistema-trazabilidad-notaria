@@ -185,33 +185,141 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <div class="d-flex flex-column">
-                                            <span class="fw-bold text-primary">{{this.documento.codigoBarras}}</span>
-                                            <small class="text-muted">{{this.documento.tipoDocumento}}</small>
-                                            {{#if this.documento.numeroFactura}}
-                                            <small class="text-info">🧾 {{this.documento.numeroFactura}}</small>
-                                            {{/if}}
-                                            <small class="badge bg-{{#if (eq this.documento.estado 'entregado')}}success{{else if (eq this.documento.estado 'listo_para_entrega')}}warning{{else}}secondary{{/if}}">
-                                                {{this.documento.estado}}
-                                            </small>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex flex-column">
-                                            <span class="fw-bold">{{this.documento.nombreCliente}}</span>
-                                            {{#if this.documento.emailCliente}}
-                                            <small class="text-muted">📧 {{substring this.documento.emailCliente 0 20}}{{#if (gt this.documento.emailCliente.length 20)}}...{{/if}}</small>
-                                            {{/if}}
-                                            {{#if this.documento.telefonoCliente}}
-                                            <small class="text-muted">📱 {{this.documento.telefonoCliente}}</small>
-                                            {{/if}}
-                                        </div>
-                                    </td>
-                                    <td>
-                                        {{#if this.documento.matrizador}}
-                                            <span class="badge bg-info">{{this.documento.matrizador.nombre}}</span>
+                                        {{#if (or (eq this.tipo 'entrega_grupal') (eq this.tipo 'notificacion_grupal'))}}
+                                            {{!-- Para entrega grupal, mostrar resumen de documentos --}}
+                                            <div class="d-flex flex-column">
+                                                <span class="fw-bold text-success">📦 ENTREGA GRUPAL</span>
+                                                {{#if this.metadatos.totalDocumentos}}
+                                                    <small class="text-info">{{this.metadatos.totalDocumentos}} documentos entregados</small>
+                                                {{/if}}
+                                                {{#if this.metadatos.codigosDocumentos}}
+                                                    <div class="mt-1">
+                                                        {{#each this.metadatos.codigosDocumentos}}
+                                                            {{#if (lt @index 3)}}
+                                                                <small class="badge bg-light text-dark me-1">{{this}}</small>
+                                                            {{/if}}
+                                                        {{/each}}
+                                                        {{#if (gt this.metadatos.codigosDocumentos.length 3)}}
+                                                            <small class="text-muted">+{{subtract this.metadatos.codigosDocumentos.length 3}} más</small>
+                                                        {{/if}}
+                                                    </div>
+                                                {{/if}}
+                                            </div>
                                         {{else}}
-                                            <span class="text-muted">-</span>
+                                            {{!-- Para notificaciones individuales --}}
+                                            <div class="d-flex flex-column">
+                                                <span class="fw-bold text-primary">{{this.documento.codigoBarras}}</span>
+                                                <small class="text-muted">{{this.documento.tipoDocumento}}</small>
+                                                {{#if this.documento.numeroFactura}}
+                                                <small class="text-info">🧾 {{this.documento.numeroFactura}}</small>
+                                                {{/if}}
+                                                <small class="badge bg-{{#if (eq this.documento.estado 'entregado')}}success{{else if (eq this.documento.estado 'listo_para_entrega')}}warning{{else}}secondary{{/if}}">
+                                                    {{this.documento.estado}}
+                                                </small>
+                                            </div>
+                                        {{/if}}
+                                    </td>
+                                    <td>
+                                        <div class="d-flex flex-column">
+                                            {{#if (or (eq this.tipo 'entrega_grupal') (eq this.tipo 'notificacion_grupal'))}}
+                                                {{!-- Para entrega grupal, mostrar información del receptor --}}
+                                                <div class="d-flex flex-column">
+                                                    {{#if this.metadatos.nombreReceptor}}
+                                                        <small class="fw-bold">👤 {{this.metadatos.nombreReceptor}}</small>
+                                                    {{/if}}
+                                                    {{#if this.metadatos.identificacionReceptor}}
+                                                        <small class="text-muted">🆔 {{this.metadatos.identificacionReceptor}}</small>
+                                                    {{/if}}
+                                                    {{#if this.metadatos.relacionReceptor}}
+                                                        <small class="text-info">🔗 {{this.metadatos.relacionReceptor}}</small>
+                                                    {{/if}}
+                                                    {{!-- Mostrar canales de contacto del cliente --}}
+                                                    {{#if this.documento.emailCliente}}
+                                                    <small class="text-muted">📧 {{substring this.documento.emailCliente 0 15}}{{#if (gt this.documento.emailCliente.length 15)}}...{{/if}}</small>
+                                                    {{/if}}
+                                                    {{#if this.documento.telefonoCliente}}
+                                                    <small class="text-muted">📱 {{this.documento.telefonoCliente}}</small>
+                                                    {{/if}}
+                                                </div>
+                                            {{else}}
+                                                {{!-- Para notificaciones individuales --}}
+                                                <span class="fw-bold">{{this.documento.nombreCliente}}</span>
+                                                {{#if this.documento.emailCliente}}
+                                                <small class="text-muted">📧 {{substring this.documento.emailCliente 0 20}}{{#if (gt this.documento.emailCliente.length 20)}}...{{/if}}</small>
+                                                {{/if}}
+                                                {{#if this.documento.telefonoCliente}}
+                                                <small class="text-muted">📱 {{this.documento.telefonoCliente}}</small>
+                                                {{/if}}
+                                            {{/if}}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {{#if (or (eq this.tipo 'entrega_grupal') (eq this.tipo 'notificacion_grupal'))}}
+                                            {{!-- Para entrega grupal, mostrar matrizadores de los documentos --}}
+                                            {{#if this.metadatos.documentosIncluidos}}
+                                                <div class="d-flex flex-column">
+                                                    {{#each this.metadatos.documentosIncluidos}}
+                                                        {{#if (lt @index 3)}}
+                                                            {{#if this.matrizador}}
+                                                                {{#if (ne this.matrizador "Sin asignar")}}
+                                                                    <small class="badge bg-info mb-1">{{this.matrizador}}</small>
+                                                                {{else}}
+                                                                    <small class="badge bg-secondary mb-1">📋 Sin Matrizador</small>
+                                                                {{/if}}
+                                                            {{else}}
+                                                                <small class="badge bg-secondary mb-1">📋 Sin Matrizador</small>
+                                                            {{/if}}
+                                                        {{/if}}
+                                                    {{/each}}
+                                                    {{#if (gt this.metadatos.documentosIncluidos.length 3)}}
+                                                        <small class="text-muted">+{{subtract this.metadatos.documentosIncluidos.length 3}} más</small>
+                                                    {{/if}}
+                                                </div>
+                                            {{else if this.metadatos.entregadoPor}}
+                                                <span class="badge bg-warning">👨‍💼 {{this.metadatos.entregadoPor}}</span>
+                                            {{else}}
+                                                <span class="text-muted">-</span>
+                                            {{/if}}
+                                        {{else}}
+                                            {{!-- Para notificaciones individuales --}}
+                                            {{#if this.documento.matrizador}}
+                                                <span class="badge bg-info">👨‍💼 {{this.documento.matrizador.nombre}}</span>
+                                            {{else}}
+                                                <span class="badge bg-secondary">📋 Sin Matrizador</span>
+                                            {{/if}}
+                                        {{/if}}
+                                    </td>
+                                    <td>
+                                        {{#if (or (eq this.tipo 'entrega_grupal') (eq this.tipo 'notificacion_grupal'))}}
+                                            {{!-- Para entrega grupal, mostrar información del receptor --}}
+                                            <div class="d-flex flex-column">
+                                                {{#if this.metadatos.nombreReceptor}}
+                                                    <small class="fw-bold">👤 {{this.metadatos.nombreReceptor}}</small>
+                                                {{/if}}
+                                                {{#if this.metadatos.identificacionReceptor}}
+                                                    <small class="text-muted">🆔 {{this.metadatos.identificacionReceptor}}</small>
+                                                {{/if}}
+                                                {{#if this.metadatos.relacionReceptor}}
+                                                    <small class="text-info">🔗 {{this.metadatos.relacionReceptor}}</small>
+                                                {{/if}}
+                                                {{!-- Mostrar canales de contacto del cliente --}}
+                                                {{#if this.documento.emailCliente}}
+                                                <small class="text-muted">📧 {{substring this.documento.emailCliente 0 15}}{{#if (gt this.documento.emailCliente.length 15)}}...{{/if}}</small>
+                                                {{/if}}
+                                                {{#if this.documento.telefonoCliente}}
+                                                <small class="text-muted">📱 {{this.documento.telefonoCliente}}</small>
+                                                {{/if}}
+                                            </div>
+                                        {{else}}
+                                            {{!-- Para notificaciones individuales --}}
+                                            <div class="d-flex flex-column">
+                                                {{#if this.documento.emailCliente}}
+                                                <small>📧 {{substring this.documento.emailCliente 0 15}}{{#if (gt this.documento.emailCliente.length 15)}}...{{/if}}</small>
+                                                {{/if}}
+                                                {{#if this.documento.telefonoCliente}}
+                                                <small>📱 {{this.documento.telefonoCliente}}</small>
+                                                {{/if}}
+                                            </div>
                                         {{/if}}
                                     </td>
                                     <td>
@@ -220,9 +328,25 @@
                                         {{else if (eq this.tipo 'entrega_confirmada')}}
                                             <span class="badge bg-info">✅ Entregado</span>
                                         {{else if (eq this.tipo 'entrega_grupal')}}
-                                            <span class="badge bg-purple">📦 Entrega Grupal</span>
+                                            <div class="d-flex flex-column">
+                                                <span class="badge bg-purple mb-1">📦 Entrega Grupal</span>
+                                                {{#if this.metadatos.totalDocumentos}}
+                                                    <small class="text-muted">{{this.metadatos.totalDocumentos}} documentos</small>
+                                                {{/if}}
+                                                {{#if this.metadatos.nombreCliente}}
+                                                    <small class="text-primary fw-bold">{{this.metadatos.nombreCliente}}</small>
+                                                {{/if}}
+                                            </div>
                                         {{else if (eq this.tipo 'notificacion_grupal')}}
-                                            <span class="badge bg-purple">📦 Entrega Grupal</span>
+                                            <div class="d-flex flex-column">
+                                                <span class="badge bg-purple mb-1">📦 Entrega Grupal</span>
+                                                {{#if this.metadatos.totalDocumentos}}
+                                                    <small class="text-muted">{{this.metadatos.totalDocumentos}} documentos</small>
+                                                {{/if}}
+                                                {{#if this.metadatos.nombreCliente}}
+                                                    <small class="text-primary fw-bold">{{this.metadatos.nombreCliente}}</small>
+                                                {{/if}}
+                                            </div>
                                         {{else if (eq this.tipo 'otro')}}
                                             <span class="badge bg-primary">🔔 Notificación</span>
                                         {{else if (eq this.tipo 'cambio_estado')}}
@@ -250,32 +374,24 @@
                                     </td>
                                     <td>
                                         <div class="d-flex flex-column">
-                                            {{#if this.documento.emailCliente}}
-                                            <small>📧 {{substring this.documento.emailCliente 0 15}}{{#if (gt this.documento.emailCliente.length 15)}}...{{/if}}</small>
-                                            {{/if}}
-                                            {{#if this.documento.telefonoCliente}}
-                                            <small>📱 {{this.documento.telefonoCliente}}</small>
+                                            {{#if this.metadatos.estado}}
+                                                {{#if (eq this.metadatos.estado 'enviada')}}
+                                                    <span class="badge bg-success">✅ Enviada</span>
+                                                {{else if (eq this.metadatos.estado 'simulada')}}
+                                                    <span class="badge bg-warning">🔄 Simulada</span>
+                                                {{else if (eq this.metadatos.estado 'fallida')}}
+                                                    <span class="badge bg-danger">❌ Fallida</span>
+                                                {{else if (eq this.metadatos.estado 'procesada')}}
+                                                    <span class="badge bg-info">⚙️ Procesada</span>
+                                                {{else if (eq this.metadatos.estado 'pendiente')}}
+                                                    <span class="badge bg-secondary">⏳ Pendiente</span>
+                                                {{else}}
+                                                    <span class="badge bg-secondary">{{this.metadatos.estado}}</span>
+                                                {{/if}}
+                                            {{else}}
+                                                <span class="badge bg-light text-dark">Sin estado</span>
                                             {{/if}}
                                         </div>
-                                    </td>
-                                    <td>
-                                        {{#if this.metadatos.estado}}
-                                            {{#if (eq this.metadatos.estado 'enviada')}}
-                                                <span class="badge bg-success">✅ Enviada</span>
-                                            {{else if (eq this.metadatos.estado 'simulada')}}
-                                                <span class="badge bg-warning">🔄 Simulada</span>
-                                            {{else if (eq this.metadatos.estado 'fallida')}}
-                                                <span class="badge bg-danger">❌ Fallida</span>
-                                            {{else if (eq this.metadatos.estado 'procesada')}}
-                                                <span class="badge bg-info">⚙️ Procesada</span>
-                                            {{else if (eq this.metadatos.estado 'pendiente')}}
-                                                <span class="badge bg-secondary">⏳ Pendiente</span>
-                                            {{else}}
-                                                <span class="badge bg-secondary">{{this.metadatos.estado}}</span>
-                                            {{/if}}
-                                        {{else}}
-                                            <span class="badge bg-light text-dark">Sin estado</span>
-                                        {{/if}}
                                     </td>
                                     <td>
                                         <div class="btn-group" role="group">

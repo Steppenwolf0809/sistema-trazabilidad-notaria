@@ -21,7 +21,9 @@ const {
   formatearValorMonetario,
   obtenerTimestampEcuador,
   formatearTimestamp,
-  formatearFechaSinHora
+  formatearFechaSinHora,
+  construirListaDocumentosDetallada,
+  construirInformacionEntregaCensurada
 } = require('../utils/documentoUtils');
 const NotificationService = require('../services/notificationService');
 const configNotaria = require('../config/notaria');
@@ -139,37 +141,22 @@ function construirMensajeDocumentoEntregado(documento, datosEntrega) {
  * @returns {Object} Mensajes para WhatsApp y Email
  */
 function construirMensajeEntregaGrupalMatrizador(documentos, datosEntrega) {
-  const fechaEntrega = new Date().toLocaleDateString('es-EC', {
-    day: '2-digit', month: '2-digit', year: 'numeric'
-  });
+  // Construir lista detallada de documentos usando función utilitaria
+  const listaDocumentos = construirListaDocumentosDetallada(documentos);
   
-  const horaEntrega = new Date().toLocaleTimeString('es-EC', {
-    hour: '2-digit', minute: '2-digit', hour12: false
-  });
-
-  // Construir lista de documentos
-  let listaDocumentos = '';
-  documentos.forEach((doc, index) => {
-    let contextoTramite = '';
-    if (doc.detallesAdicionales && 
-        typeof doc.detallesAdicionales === 'string' && 
-        doc.detallesAdicionales.trim().length > 0) {
-      contextoTramite = ` - ${doc.detallesAdicionales.trim()}`;
-    }
-    
-    listaDocumentos += `${index + 1}. ${doc.tipoDocumento}${contextoTramite}\n   📋 Código: ${doc.codigoBarras}\n`;
-  });
+  // Construir información de entrega con datos censurados
+  const infoEntrega = construirInformacionEntregaCensurada(datosEntrega);
 
   // Mensaje WhatsApp usando plantilla centralizada
   const mensajeWhatsApp = configNotaria.plantillas.entregaGrupal.whatsapp
     .replace('{{nombreCliente}}', documentos[0].nombreCliente)
     .replace('{{totalDocumentos}}', documentos.length)
     .replace('{{listaDocumentos}}', listaDocumentos)
-    .replace('{{nombreReceptor}}', datosEntrega.nombreReceptor)
-    .replace('{{identificacionReceptor}}', datosEntrega.identificacionReceptor)
-    .replace('{{relacionReceptor}}', datosEntrega.relacionReceptor)
-    .replace('{{fechaEntrega}}', fechaEntrega)
-    .replace('{{horaEntrega}}', horaEntrega);
+    .replace('{{nombreReceptor}}', infoEntrega.nombreReceptor)
+    .replace('{{identificacionCensurada}}', infoEntrega.identificacionCensurada)
+    .replace('{{relacionReceptor}}', infoEntrega.relacionReceptor)
+    .replace('{{fechaEntrega}}', infoEntrega.fechaEntrega)
+    .replace('{{horaEntrega}}', infoEntrega.horaEntrega);
 
   // Datos para email de confirmación grupal
   const datosEmail = {
@@ -180,11 +167,12 @@ function construirMensajeEntregaGrupalMatrizador(documentos, datosEntrega) {
       codigoBarras: doc.codigoBarras,
       detallesAdicionales: doc.detallesAdicionales?.trim() || null
     })),
-    nombreReceptor: datosEntrega.nombreReceptor,
-    identificacionReceptor: datosEntrega.identificacionReceptor,
-    relacionReceptor: datosEntrega.relacionReceptor,
-    fechaEntrega: fechaEntrega,
-    horaEntrega: horaEntrega,
+    nombreReceptor: infoEntrega.nombreReceptor,
+    identificacionCensurada: infoEntrega.identificacionCensurada,
+    identificacionReceptor: infoEntrega.identificacionCompleta, // Para uso interno del email si es necesario
+    relacionReceptor: infoEntrega.relacionReceptor,
+    fechaEntrega: infoEntrega.fechaEntrega,
+    horaEntrega: infoEntrega.horaEntrega,
     usuarioEntrega: datosEntrega.usuarioEntrega || 'Matrizador',
     fechaGeneracion: new Date().toLocaleString('es-EC')
   };

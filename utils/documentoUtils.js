@@ -259,6 +259,118 @@ function mapearMetodoPagoInverso(metodoPago) {
   return mapeo[metodoPago] || 'Pendiente';
 }
 
+/**
+ * Formatea información detallada de un documento para mensajes de entrega grupal
+ * @param {Object} documento - Objeto documento con toda la información
+ * @param {number} indice - Índice del documento en la lista (1, 2, 3...)
+ * @returns {string} - Información formateada del documento
+ */
+function formatearDocumentoParaEntregaGrupal(documento, indice) {
+  let informacionDetallada = '';
+  
+  // Número y tipo de documento
+  const numeroEmoji = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'][indice - 1] || `${indice}️⃣`;
+  informacionDetallada += `${numeroEmoji} **${documento.tipoDocumento}**\n`;
+  
+  // Código del documento
+  informacionDetallada += `   📋 *Código:* ${documento.codigoBarras}\n`;
+  
+  // Información de factura si está disponible (sin valor monetario)
+  if (documento.numeroFactura) {
+    informacionDetallada += `   📄 *Factura:* ${documento.numeroFactura}\n`;
+  }
+  
+  // Fecha del documento si está disponible
+  if (documento.fechaFactura) {
+    const fechaFormateada = formatearFechaSinHora(documento.fechaFactura);
+    informacionDetallada += `   📅 *Fecha:* ${fechaFormateada}\n`;
+  }
+  
+  // Notas o descripción del trámite si está disponible
+  if (documento.notas && typeof documento.notas === 'string' && documento.notas.trim().length > 0) {
+    const notasLimitadas = documento.notas.trim().length > 80 
+      ? documento.notas.trim().substring(0, 80) + '...' 
+      : documento.notas.trim();
+    informacionDetallada += `   📝 *Descripción:* ${notasLimitadas}\n`;
+  }
+  
+  // Agregar línea en blanco entre documentos (excepto el último)
+  informacionDetallada += '\n';
+  
+  return informacionDetallada;
+}
+
+/**
+ * Construye la lista completa de documentos para entrega grupal
+ * @param {Array} documentos - Array de documentos
+ * @returns {string} - Lista formateada de todos los documentos
+ */
+function construirListaDocumentosDetallada(documentos) {
+  if (!documentos || documentos.length === 0) {
+    return 'No hay documentos para mostrar';
+  }
+  
+  let listaCompleta = '';
+  
+  documentos.forEach((documento, index) => {
+    listaCompleta += formatearDocumentoParaEntregaGrupal(documento, index + 1);
+  });
+  
+  // Remover la última línea en blanco
+  return listaCompleta.trim();
+}
+
+/**
+ * Censura parcialmente un número de identificación para proteger la privacidad
+ * Muestra los primeros 2 y últimos 2 dígitos, censurando el resto
+ * @param {string} identificacion - Número de identificación completo
+ * @returns {string} - Identificación parcialmente censurada
+ */
+function censurarIdentificacion(identificacion) {
+  if (!identificacion || typeof identificacion !== 'string') {
+    return 'No especificado';
+  }
+  
+  // Remover espacios y caracteres especiales, mantener solo números
+  const numeroLimpio = identificacion.replace(/\D/g, '');
+  
+  if (numeroLimpio.length < 4) {
+    // Si es muy corto, censurar todo excepto el último dígito
+    return '*'.repeat(numeroLimpio.length - 1) + numeroLimpio.slice(-1);
+  }
+  
+  // Formato estándar: mostrar primeros 2 y últimos 2 dígitos
+  const inicio = numeroLimpio.substring(0, 2);
+  const fin = numeroLimpio.substring(numeroLimpio.length - 2);
+  const asteriscos = '*'.repeat(numeroLimpio.length - 4);
+  
+  return `${inicio}${asteriscos}${fin}`;
+}
+
+/**
+ * Construye información de entrega con datos censurados para mensajes
+ * @param {Object} datosEntrega - Datos de la entrega
+ * @returns {Object} - Información de entrega formateada y censurada
+ */
+function construirInformacionEntregaCensurada(datosEntrega) {
+  const fechaEntrega = new Date().toLocaleDateString('es-EC', {
+    day: '2-digit', month: '2-digit', year: 'numeric'
+  });
+  
+  const horaEntrega = new Date().toLocaleTimeString('es-EC', {
+    hour: '2-digit', minute: '2-digit', hour12: false
+  });
+  
+  return {
+    nombreReceptor: datosEntrega.nombreReceptor || 'No especificado',
+    identificacionCensurada: censurarIdentificacion(datosEntrega.identificacionReceptor),
+    identificacionCompleta: datosEntrega.identificacionReceptor, // Para uso interno si es necesario
+    relacionReceptor: datosEntrega.relacionReceptor || 'No especificado',
+    fechaEntrega: fechaEntrega,
+    horaEntrega: horaEntrega
+  };
+}
+
 module.exports = {
   // Funciones de fecha simplificadas
   obtenerTimestampEcuador,
@@ -273,6 +385,12 @@ module.exports = {
   formatearValorMonetario,
   mapearMetodoPago,
   mapearMetodoPagoInverso,
+  
+  // Nuevas funciones para entrega grupal
+  formatearDocumentoParaEntregaGrupal,
+  construirListaDocumentosDetallada,
+  censurarIdentificacion,
+  construirInformacionEntregaCensurada,
   
   // Constante de zona horaria
   TIMEZONE_ECUADOR

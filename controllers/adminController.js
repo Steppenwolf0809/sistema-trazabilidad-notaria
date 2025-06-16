@@ -16,7 +16,9 @@ const {
   convertirRangoParaSQL,
   formatearTimestamp,
   formatearFechaSinHora,
-  formatearValorMonetario
+  formatearValorMonetario,
+  construirListaDocumentosDetallada,
+  construirInformacionEntregaCensurada
 } = require('../utils/documentoUtils');
 
 // NUEVO: Importar sistema de logging
@@ -3705,50 +3707,22 @@ _Guarde este mensaje como comprobante de entrega._`;
  * @returns {Object} Mensajes para WhatsApp y Email
  */
 function construirMensajeEntregaGrupalAdmin(documentos, datosEntrega) {
-  const fechaEntrega = new Date().toLocaleDateString('es-EC', {
-    day: '2-digit', month: '2-digit', year: 'numeric'
-  });
+  // Construir lista detallada de documentos usando función utilitaria
+  const listaDocumentos = construirListaDocumentosDetallada(documentos);
   
-  const horaEntrega = new Date().toLocaleTimeString('es-EC', {
-    hour: '2-digit', minute: '2-digit', hour12: false
-  });
+  // Construir información de entrega con datos censurados
+  const infoEntrega = construirInformacionEntregaCensurada(datosEntrega);
 
-  // Construir lista de documentos
-  let listaDocumentos = '';
-  documentos.forEach((doc, index) => {
-    let contextoTramite = '';
-    if (doc.detallesAdicionales && 
-        typeof doc.detallesAdicionales === 'string' && 
-        doc.detallesAdicionales.trim().length > 0) {
-      contextoTramite = ` - ${doc.detallesAdicionales.trim()}`;
-    }
-    
-    listaDocumentos += `${index + 1}. ${doc.tipoDocumento}${contextoTramite}\n   📋 Código: ${doc.codigoBarras}\n`;
-  });
-
-  // Mensaje WhatsApp para entrega grupal
-  const mensajeWhatsApp = `🏛️ *NOTARÍA 18*
-
-✅ *ENTREGA GRUPAL COMPLETADA EXITOSAMENTE*
-
-👤 *Cliente:* ${documentos[0].nombreCliente}
-📦 *Total de documentos:* ${documentos.length}
-
-📄 *DOCUMENTOS ENTREGADOS:*
-${listaDocumentos}
-
-📦 *DETALLES DE LA ENTREGA:*
-👨‍💼 *Retirado por:* ${datosEntrega.nombreReceptor}
-🆔 *Identificación:* ${datosEntrega.identificacionReceptor}
-👥 *Relación:* ${datosEntrega.relacionReceptor}
-
-📅 *Fecha:* ${fechaEntrega}
-🕒 *Hora:* ${horaEntrega}
-📍 *Lugar:* Notaría Décima Octava, Quito
-
-✅ *Todos sus trámites han sido completados exitosamente.*
-
-_Guarde este mensaje como comprobante de entrega grupal._`;
+  // Mensaje WhatsApp usando plantilla centralizada
+  const mensajeWhatsApp = configNotaria.plantillas.entregaGrupal.whatsapp
+    .replace('{{nombreCliente}}', documentos[0].nombreCliente)
+    .replace('{{totalDocumentos}}', documentos.length)
+    .replace('{{listaDocumentos}}', listaDocumentos)
+    .replace('{{nombreReceptor}}', infoEntrega.nombreReceptor)
+    .replace('{{identificacionCensurada}}', infoEntrega.identificacionCensurada)
+    .replace('{{relacionReceptor}}', infoEntrega.relacionReceptor)
+    .replace('{{fechaEntrega}}', infoEntrega.fechaEntrega)
+    .replace('{{horaEntrega}}', infoEntrega.horaEntrega);
 
   // Datos para email de confirmación grupal
   const datosEmail = {
@@ -3759,11 +3733,12 @@ _Guarde este mensaje como comprobante de entrega grupal._`;
       codigoBarras: doc.codigoBarras,
       detallesAdicionales: doc.detallesAdicionales?.trim() || null
     })),
-    nombreReceptor: datosEntrega.nombreReceptor,
-    identificacionReceptor: datosEntrega.identificacionReceptor,
-    relacionReceptor: datosEntrega.relacionReceptor,
-    fechaEntrega: fechaEntrega,
-    horaEntrega: horaEntrega,
+    nombreReceptor: infoEntrega.nombreReceptor,
+    identificacionCensurada: infoEntrega.identificacionCensurada,
+    identificacionReceptor: infoEntrega.identificacionCompleta, // Para uso interno del email si es necesario
+    relacionReceptor: infoEntrega.relacionReceptor,
+    fechaEntrega: infoEntrega.fechaEntrega,
+    horaEntrega: infoEntrega.horaEntrega,
     usuarioEntrega: datosEntrega.usuarioEntrega || 'Administrador',
     fechaGeneracion: new Date().toLocaleString('es-EC')
   };
@@ -3771,8 +3746,8 @@ _Guarde este mensaje como comprobante de entrega grupal._`;
   return {
     whatsapp: mensajeWhatsApp,
     email: {
-      subject: `Entrega Grupal Completada - ${documentos.length} documentos - Notaría 18`,
-      template: 'confirmacion-entrega-grupal',
+      subject: configNotaria.plantillas.entregaGrupal.email.subject.replace('{{totalDocumentos}}', documentos.length),
+      template: configNotaria.plantillas.entregaGrupal.email.template,
       data: datosEmail
     },
     tipo: 'entrega_grupal'

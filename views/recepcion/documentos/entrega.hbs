@@ -145,6 +145,18 @@
               </div>
             </div>
             <div class="card-body">
+              {{!-- Encabezado con nombre del cliente --}}
+              <div class="alert alert-info border-info mb-3">
+                <div class="d-flex align-items-center">
+                  <i class="fas fa-user me-3 fs-4"></i>
+                  <div>
+                    <h6 class="mb-1">📄 <strong>DOCUMENTOS PARA:</strong></h6>
+                    <h5 class="mb-0 text-info"><strong>{{documento.nombreCliente}}</strong></h5>
+                    <small class="text-muted">ID: {{documento.identificacionCliente}}</small>
+                  </div>
+                </div>
+              </div>
+              
               <div class="table-responsive">
                 <table class="table table-hover table-sm">
                   <thead class="table-light">
@@ -486,7 +498,7 @@ document.addEventListener('DOMContentLoaded', function() {
       
       // Código del documento principal
       if (window.documentoPrincipal.codigoVerificacion && window.documentoPrincipal.codigoVerificacion !== 'sin_codigo') {
-        codigosHTML += `<code class="bg-dark text-light px-2 py-1 rounded me-2">${window.documentoPrincipal.codigoVerificacion}</code>`;
+        codigosHTML += `<code class="bg-dark text-light px-2 py-1 rounded me-2">{{documento.codigoVerificacion}}</code>`;
         codigosHTML += `<small class="text-muted me-3">(principal)</small>`;
       }
       

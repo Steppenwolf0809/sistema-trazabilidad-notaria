@@ -125,6 +125,18 @@
                 </div>
               </div>
               <div class="card-body">
+                {{!-- Encabezado con nombre del cliente --}}
+                <div class="alert alert-success border-success mb-3">
+                  <div class="d-flex align-items-center">
+                    <i class="fas fa-user me-3 fs-4"></i>
+                    <div>
+                      <h6 class="mb-1">📄 <strong>DOCUMENTOS PARA:</strong></h6>
+                      <h5 class="mb-0 text-success"><strong>{{documento.nombreCliente}}</strong></h5>
+                      <small class="text-muted">ID: {{documento.identificacionCliente}}</small>
+                    </div>
+                  </div>
+                </div>
+                
                 <div class="table-responsive">
                   <table class="table table-hover table-sm">
                     <thead class="table-light">
@@ -201,6 +213,18 @@
                     <strong>Atención:</strong> Se detectaron <strong>{{documentosGrupales.documentosOtrosMatrizadores.length}} documento(s)</strong> 
                     del mismo cliente asignados a otros matrizadores.
                   </p>
+                  
+                  {{!-- Encabezado con nombre del cliente para documentos de otros --}}
+                  <div class="alert alert-light border-warning mb-3">
+                    <div class="d-flex align-items-center">
+                      <i class="fas fa-user me-3 fs-5"></i>
+                      <div>
+                        <h6 class="mb-1">📄 <strong>DOCUMENTOS ADICIONALES PARA:</strong></h6>
+                        <h6 class="mb-0 text-warning"><strong>{{documento.nombreCliente}}</strong></h6>
+                        <small class="text-muted">ID: {{documento.identificacionCliente}} - <em>Asignados a otros matrizadores</em></small>
+                      </div>
+                    </div>
+                  </div>
                   
                   {{!-- Lista de documentos de otros matrizadores --}}
                   <div class="table-responsive">

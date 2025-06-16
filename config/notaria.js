@@ -45,7 +45,7 @@ const configNotaria = {
 
 📦 *DETALLES DE LA ENTREGA:*
 👨‍💼 *Retirado por:* {{nombreReceptor}}
-🆔 *Identificación:* {{identificacionReceptor}}
+🆔 *Identificación:* {{identificacionCensurada}}
 👥 *Relación:* {{relacionReceptor}}
 
 📅 *Fecha:* {{fechaEntrega}}
@@ -75,7 +75,7 @@ _Guarde este mensaje como comprobante de entrega._`,
 
 📦 *DETALLES DE LA ENTREGA:*
 👨‍💼 *Retirado por:* {{nombreReceptor}}
-🆔 *Identificación:* {{identificacionReceptor}}
+🆔 *Identificación:* {{identificacionCensurada}}
 👥 *Relación:* {{relacionReceptor}}
 
 📅 *Fecha:* {{fechaEntrega}}
