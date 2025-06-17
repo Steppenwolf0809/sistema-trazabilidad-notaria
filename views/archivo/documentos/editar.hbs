@@ -1,0 +1,430 @@
+<div class="container mt-4">
+    <h2>Editar Documento <small class="text-muted">#{{documento.codigoBarras}}</small></h2>
+    <hr>
+
+    {{#if error}}
+        <div class="alert alert-danger" role="alert">
+            {{error}}
+        </div>
+    {{/if}}
+    {{#if success}}
+        <div class="alert alert-success" role="alert">
+            {{success}}
+        </div>
+    {{/if}}
+
+    <form method="POST" action="/archivo/documentos/editar/{{documento.id}}">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="tipoDocumento" class="form-label">Tipo de Documento</label>
+                    <select class="form-control" id="tipoDocumento" name="tipoDocumento" required>
+                        <option value="Protocolo" {{#if (eq documento.tipoDocumento "Protocolo")}}selected{{/if}}>📋 Protocolo</option>
+                        <option value="Diligencias" {{#if (eq documento.tipoDocumento "Diligencias")}}selected{{/if}}>⚖️ Diligencias</option>
+                        <option value="Certificaciones" {{#if (eq documento.tipoDocumento "Certificaciones")}}selected{{/if}}>📜 Certificaciones</option>
+                        <option value="Arrendamientos" {{#if (eq documento.tipoDocumento "Arrendamientos")}}selected{{/if}}>🏠 Arrendamientos</option>
+                        <option value="Otros" {{#if (eq documento.tipoDocumento "Otros")}}selected{{/if}}>📄 Otros</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="codigoBarras" class="form-label">Código de Barras</label>
+                    <input type="text" class="form-control" id="codigoBarras" name="codigoBarras" value="{{documento.codigoBarras}}" readonly>
+                    <small class="form-text text-muted">El código de barras no se puede modificar.</small>
+                </div>
+            </div>
+        </div>
+
+        <h5 class="mt-4">Información del Cliente</h5>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="nombreCliente" class="form-label">Nombre del Cliente</label>
+                    <input type="text" class="form-control" id="nombreCliente" name="nombreCliente" value="{{documento.nombreCliente}}" required>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="identificacionCliente" class="form-label">Identificación del Cliente</label>
+                    <input type="text" class="form-control" id="identificacionCliente" name="identificacionCliente" value="{{documento.identificacionCliente}}" required>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="emailCliente" class="form-label">Email del Cliente</label>
+                    <input type="email" class="form-control" id="emailCliente" name="emailCliente" value="{{documento.emailCliente}}">
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="telefonoCliente" class="form-label">Teléfono del Cliente</label>
+                    <input type="tel" class="form-control" id="telefonoCliente" name="telefonoCliente" value="{{documento.telefonoCliente}}" pattern="[0-9+\-\s\(\)]*" inputmode="numeric">
+                </div>
+            </div>
+        </div>
+
+        <h5 class="mt-4">Detalles Adicionales</h5>
+        <div class="mb-3">
+            <label for="notas" class="form-label">Notas</label>
+            <textarea class="form-control" id="notas" name="notas" rows="3">{{documento.notas}}</textarea>
+        </div>
+        
+        <!-- Sección de Configuración de Notificaciones -->
+        <div class="card mt-4">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-bell me-2"></i> Configuración de Notificaciones
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Configure cómo y cuándo notificar al cliente sobre este documento.
+                </div>
+                
+                <!-- Opciones principales (simplificadas a 2) -->
+                <div class="mb-4">
+                    <label class="form-label fw-bold">Política de Notificación:</label>
+                    
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="radio" name="politicaNotificacion" id="notificarAutomatico" value="automatico" 
+                               {{#if (and documento.notificarAutomatico (ne documento.metodoNotificacion 'ninguno'))}}checked{{else}}checked{{/if}}>
+                        <label class="form-check-label" for="notificarAutomatico">
+                            <i class="fas fa-bell text-success me-1"></i>
+                            <strong>🔔 Notificar automáticamente</strong>
+                            <small class="text-muted d-block">Cliente autoriza notificaciones cuando el documento esté listo y al entregarlo</small>
+                        </label>
+                    </div>
+                    
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="radio" name="politicaNotificacion" id="noNotificar" value="no_notificar" 
+                               {{#if (eq documento.metodoNotificacion 'ninguno')}}checked{{/if}}>
+                        <label class="form-check-label" for="noNotificar">
+                            <i class="fas fa-bell-slash text-danger me-1"></i>
+                            <strong>🚫 No notificar</strong>
+                            <small class="text-muted d-block">Cliente no autoriza ningún tipo de notificación</small>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Canales de notificación (solo visible si "Notificar automáticamente") -->
+                <div id="canalesGroup" class="mb-3">
+                    <label for="canalNotificacion" class="form-label">
+                        <i class="fas fa-share-alt me-1"></i> Canales de Notificación:
+                    </label>
+                    <select class="form-select" id="canalNotificacion" name="canalNotificacion">
+                        <option value="ambos" {{#if (eq documento.metodoNotificacion 'ambos')}}selected{{/if}}>
+                            📱📧 WhatsApp y Email (Recomendado)
+                        </option>
+                        <option value="whatsapp" {{#if (eq documento.metodoNotificacion 'whatsapp')}}selected{{/if}}>
+                            📱 Solo WhatsApp
+                        </option>
+                        <option value="email" {{#if (eq documento.metodoNotificacion 'email')}}selected{{/if}}>
+                            📧 Solo Email
+                        </option>
+                    </select>
+                    <div class="form-text">
+                        <i class="fas fa-lightbulb text-warning me-1"></i>
+                        WhatsApp es más efectivo para notificaciones inmediatas. Email es mejor para confirmaciones formales.
+                    </div>
+                </div>
+                
+                <!-- Razón para no notificar (solo visible si "No notificar") -->
+                <div id="razonGroup" class="mb-3" style="display: none;">
+                    <label for="razonSinNotificar" class="form-label">
+                        <i class="fas fa-comment-alt me-1"></i> Razón para no notificar: <span class="text-danger">*</span>
+                    </label>
+                    <textarea class="form-control" id="razonSinNotificar" name="razonSinNotificar" rows="3" 
+                              placeholder="Ejemplo: Cliente no autoriza notificaciones, Cliente prefiere contacto directo, etc.">{{documento.razonSinNotificar}}</textarea>
+                    <div class="form-text text-muted">
+                        <strong>Campo obligatorio:</strong> Debe especificar por qué el cliente no autoriza notificaciones.
+                    </div>
+                    <div class="invalid-feedback" id="razonSinNotificarError">
+                        Debe especificar la razón para no notificar al cliente.
+                    </div>
+                    <!-- Botón de ayuda para llenar rápidamente -->
+                    <div class="mt-2">
+                        <small class="text-muted">Razones comunes:</small>
+                        <div class="btn-group-sm mt-1" role="group">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="llenarRazonRapida('Cliente no autoriza notificaciones electrónicas')">
+                                No autoriza
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="llenarRazonRapida('Cliente prefiere contacto telefónico directo')">
+                                Prefiere llamada
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="llenarRazonRapida('Cliente recogerá personalmente sin notificación previa')">
+                                Recoge personalmente
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Opciones especiales -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="entregaInmediata" name="entregaInmediata" value="true" 
+                                   {{#if documento.entregadoInmediatamente}}checked{{/if}}>
+                            <label class="form-check-label" for="entregaInmediata">
+                                <i class="fas fa-bolt text-warning me-1"></i>
+                                <strong>Entrega inmediata</strong>
+                                <small class="text-muted d-block">El documento se entregará en el momento</small>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="esHabilitante" name="esHabilitante" value="true" 
+                                   {{#if documento.documentoPrincipalId}}checked{{/if}}>
+                            <label class="form-check-label" for="esHabilitante">
+                                <i class="fas fa-link text-info me-1"></i>
+                                <strong>🔗 Documento habilitante</strong>
+                                <small class="text-muted d-block">Este documento es parte de otro documento principal</small>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Búsqueda de documento principal (solo visible si es habilitante) -->
+                <div id="busquedaDocumentoPrincipal" class="mt-3" style="display: none;">
+                    <label for="documentoPrincipalId" class="form-label">
+                        <i class="fas fa-file-alt me-1"></i> Documento Principal: <span class="text-danger">*</span>
+                    </label>
+                    <select class="form-select" id="documentoPrincipalId" name="documentoPrincipalId">
+                        <option value="">Seleccione el documento principal...</option>
+                        <!-- Las opciones se cargarán dinámicamente -->
+                    </select>
+                    <div class="form-text text-muted">
+                        Las notificaciones se enviarán solo para el documento principal.
+                    </div>
+                </div>
+                
+                <!-- Información de contacto requerida -->
+                <div class="alert alert-warning mt-3">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Información de contacto:</strong>
+                    Para enviar notificaciones, asegúrese de que el cliente tenga al menos un email o teléfono válido.
+                </div>
+            </div>
+        </div>
+
+        <p class="mt-3">
+            <strong>Matrizador Asignado:</strong> {{documento.matrizador.nombre}} (No editable)<br>
+            <strong>Estado Actual:</strong> {{documento.estado}} (No editable)
+        </p>
+
+        <div class="mt-4">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save me-1"></i> Actualizar Documento
+            </button>
+            <a href="/archivo/documentos/detalle/{{documento.id}}" class="btn btn-secondary">
+                <i class="fas fa-times me-1"></i> Cancelar
+            </a>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('editarDocumentoForm');
+    
+    // Elementos de notificaciones
+    const politicaRadios = document.querySelectorAll('input[name="politicaNotificacion"]');
+    const canalesGroup = document.getElementById('canalesGroup');
+    const razonGroup = document.getElementById('razonGroup');
+    const razonTextarea = document.getElementById('razonSinNotificar');
+    const esHabilitanteCheck = document.getElementById('esHabilitante');
+    const busquedaDocumentoPrincipal = document.getElementById('busquedaDocumentoPrincipal');
+    
+    // Manejar cambios en política de notificación
+    politicaRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.value === 'automatico') {
+                canalesGroup.style.display = 'block';
+                razonGroup.style.display = 'none';
+                razonTextarea.required = false;
+            } else if (this.value === 'no_notificar') {
+                canalesGroup.style.display = 'none';
+                razonGroup.style.display = 'block';
+                razonTextarea.required = true;
+            }
+        });
+    });
+    
+    // Manejar checkbox de documento habilitante
+    esHabilitanteCheck.addEventListener('change', function() {
+        if (this.checked) {
+            busquedaDocumentoPrincipal.style.display = 'block';
+            cargarDocumentosPrincipales();
+        } else {
+            busquedaDocumentoPrincipal.style.display = 'none';
+            document.getElementById('documentoPrincipalId').value = '';
+        }
+    });
+    
+    // Función para llenar razón rápida
+    window.llenarRazonRapida = function(razon) {
+        razonTextarea.value = razon;
+    };
+    
+    // Función para cargar documentos principales disponibles
+    function cargarDocumentosPrincipales() {
+        const select = document.getElementById('documentoPrincipalId');
+        const clienteId = document.getElementById('identificacionCliente').value;
+        
+        if (!clienteId) {
+            alert('Primero debe ingresar la identificación del cliente');
+            esHabilitanteCheck.checked = false;
+            busquedaDocumentoPrincipal.style.display = 'none';
+            return;
+        }
+        
+        // Limpiar opciones existentes
+        select.innerHTML = '<option value="">Cargando documentos...</option>';
+        
+        // Llamada AJAX para buscar documentos del mismo cliente
+        fetch(`/archivo/api/documentos/mismo-cliente?identificacionCliente=${encodeURIComponent(clienteId)}&documentoActualId={{documento.id}}`)
+            .then(response => response.json())
+            .then(data => {
+                select.innerHTML = '<option value="">Seleccione el documento principal...</option>';
+                
+                if (data.error) {
+                    console.error('Error:', data.error);
+                    select.innerHTML = '<option value="">Error al cargar documentos</option>';
+                    return;
+                }
+                
+                if (data.documentos && data.documentos.length > 0) {
+                    data.documentos.forEach(doc => {
+                        const option = document.createElement('option');
+                        option.value = doc.id;
+                        option.textContent = `${doc.codigoBarras} - ${doc.tipoDocumento} (${doc.estado})`;
+                        select.appendChild(option);
+                    });
+                } else {
+                    select.innerHTML = '<option value="">No hay otros documentos de este cliente</option>';
+                }
+            })
+            .catch(error => {
+                console.error('Error al cargar documentos:', error);
+                select.innerHTML = '<option value="">Error al cargar documentos</option>';
+            });
+    }
+    
+    // Inicializar estado al cargar
+    const politicaActual = document.querySelector('input[name="politicaNotificacion"]:checked');
+    if (politicaActual) {
+        politicaActual.dispatchEvent(new Event('change'));
+    }
+    
+    if (esHabilitanteCheck.checked) {
+        busquedaDocumentoPrincipal.style.display = 'block';
+    }
+    
+    // Validaciones del formulario
+    form.addEventListener('submit', function(e) {
+        const nombreCliente = document.getElementById('nombreCliente').value.trim();
+        const identificacionCliente = document.getElementById('identificacionCliente').value.trim();
+        const politicaSeleccionada = document.querySelector('input[name="politicaNotificacion"]:checked');
+        
+        if (!nombreCliente || !identificacionCliente) {
+            e.preventDefault();
+            alert('Por favor complete todos los campos obligatorios');
+            return false;
+        }
+        
+        // Validar razón si no se notifica
+        if (politicaSeleccionada && politicaSeleccionada.value === 'no_notificar') {
+            const razon = razonTextarea.value.trim();
+            if (!razon) {
+                e.preventDefault();
+                razonTextarea.classList.add('is-invalid');
+                document.getElementById('razonSinNotificarError').style.display = 'block';
+                alert('Debe especificar la razón para no notificar al cliente');
+                return false;
+            }
+        }
+        
+        // Validar documento principal si es habilitante
+        if (esHabilitanteCheck.checked) {
+            const docPrincipal = document.getElementById('documentoPrincipalId').value;
+            if (!docPrincipal) {
+                e.preventDefault();
+                alert('Debe seleccionar el documento principal');
+                return false;
+            }
+        }
+    });
+    
+    // Limpiar errores al escribir
+    razonTextarea.addEventListener('input', function() {
+        this.classList.remove('is-invalid');
+        document.getElementById('razonSinNotificarError').style.display = 'none';
+    });
+});
+</script>
+
+<script>
+// Función de validación de teléfono
+function validarTelefonoFrontend(telefono) {
+    if (!telefono) return { valido: true };
+    const telefonoLimpio = telefono.replace(/\D/g, '');
+    if (telefonoLimpio.length !== 10) {
+        return { valido: false, mensaje: "El número telefónico debe contener exactamente 10 dígitos." };
+    }
+    return { valido: true };
+}
+
+// Función de validación de email
+function validarEmailFrontend(email) {
+    if (!email) return { valido: true };
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!regex.test(email)) {
+        return { valido: false, mensaje: "Ingrese un correo electrónico válido." };
+    }
+    return { valido: true };
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const telefonoInput = document.getElementById('telefonoCliente');
+    const emailInput = document.getElementById('emailCliente');
+
+    if (form && telefonoInput) {
+        telefonoInput.addEventListener('input', function() {
+            const telefono = telefonoInput.value.trim();
+            if (telefono) {
+                const telefonoLimpio = telefono.replace(/\D/g, '');
+                const validacion = validarTelefonoFrontend(telefonoLimpio);
+                if (!validacion.valido) {
+                    telefonoInput.classList.add('is-invalid');
+                } else {
+                    telefonoInput.classList.remove('is-invalid');
+                }
+            } else {
+                telefonoInput.classList.remove('is-invalid');
+            }
+        });
+    }
+
+    if (form && emailInput) {
+        emailInput.addEventListener('input', function() {
+            const email = emailInput.value.trim();
+            const validacion = validarEmailFrontend(email);
+            if (email) {
+                if (!validacion.valido) {
+                    emailInput.classList.add('is-invalid');
+                } else {
+                    emailInput.classList.remove('is-invalid');
+                }
+            } else {
+                emailInput.classList.remove('is-invalid');
+            }
+        });
+    }
+});
+</script> 

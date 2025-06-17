@@ -166,6 +166,17 @@ module.exports = {
     if (!Array.isArray(array)) return 0;
     return array.length;
   },
+
+  /**
+   * Helper para generar un rango de números (útil para paginación)
+   */
+  range: (start, end) => {
+    const result = [];
+    for (let i = start; i <= end; i++) {
+      result.push(i);
+    }
+    return result;
+  },
   
   /**
    * Helper para verificar si un valor está en un array

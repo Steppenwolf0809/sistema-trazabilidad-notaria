@@ -85,7 +85,8 @@ const evaluarCondicionesNotificacion = (documento) => {
   }
   
   // Condición 4: Verificar si es documento habilitante
-  if (documento.documentoPrincipalId !== null) {
+  // NOTA: Para documentos de archivo, permitimos notificaciones incluso si son habilitantes
+  if (documento.documentoPrincipalId !== null && documento.rolUsuarioCreador !== 'archivo') {
     condiciones.debeNotificar = false;
     condiciones.razones.push('Es un documento habilitante (no principal)');
   }

@@ -471,6 +471,7 @@ const documentoRelacionRoutes = require('./routes/documentoRelacionRoutes');
 const recepcionRoutes = require('./routes/recepcionRoutes');
 const cajaRoutes = require('./routes/cajaRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const archivoRoutes = require('./routes/archivoRoutes');
 const eliminacionRoutes = require('./routes/eliminacionRoutes');
 
 // Importar middleware de autenticación
@@ -483,6 +484,7 @@ app.use('/matrizador', matrizadorRoutes);
 app.use('/recepcion', recepcionRoutes);
 app.use('/caja', cajaRoutes);
 app.use('/admin', adminRoutes);
+app.use('/archivo', archivoRoutes);
 // Rutas de eliminación definitiva (solo para administradores)
 app.use('/api/admin', verificarToken, eliminacionRoutes);
 
@@ -518,6 +520,8 @@ app.get('/', (req, res) => {
         return res.redirect('/caja');
       case 'caja_archivo':
         return res.redirect('/caja'); // caja_archivo redirige a caja por defecto
+      case 'archivo':
+        return res.redirect('/archivo');
       default:
         return res.redirect('/login');
     }
@@ -578,6 +582,9 @@ app.use(async (req, res) => {
               break;
             case 'caja_archivo':
               layout = 'caja'; // caja_archivo usa layout de caja
+              break;
+            case 'archivo':
+              layout = 'archivo';
               break;
             default:
               layout = 'main';

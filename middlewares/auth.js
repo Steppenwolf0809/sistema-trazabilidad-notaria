@@ -268,7 +268,7 @@ const esCaja = (req, res, next) => {
   }
   
   // Verificar que el rol sea válido para esta función
-  const rolesPermitidos = ['admin', 'matrizador', 'caja', 'caja_archivo'];
+  const rolesPermitidos = ['admin', 'matrizador', 'caja', 'caja_archivo', 'archivo'];
   if (!rolesPermitidos.includes(req.matrizador.rol)) {
     if (req.path.startsWith('/api/')) {
       return res.status(403).json({
@@ -279,7 +279,8 @@ const esCaja = (req, res, next) => {
     
     // Determinar layout correcto según el rol del usuario actual
     const layout = req.matrizador.rol === 'recepcion' ? 'recepcion' : 
-                   (req.matrizador.rol === 'caja' || req.matrizador.rol === 'caja_archivo') ? 'caja' : 'admin';
+                   (req.matrizador.rol === 'caja' || req.matrizador.rol === 'caja_archivo') ? 'caja' : 
+                   req.matrizador.rol === 'archivo' ? 'archivo' : 'admin';
     
     return res.render('error', {
       layout,
@@ -316,6 +317,8 @@ function redirigirSegunRol(req, res) {
     case 'caja':
     case 'caja_archivo':
       return res.redirect('/caja');
+    case 'archivo':
+      return res.redirect('/archivo');
     default:
       return res.redirect('/login');
   }
@@ -417,6 +420,8 @@ function obtenerDashboardPorRol(rol) {
     case 'caja':
     case 'caja_archivo':
       return '/caja';
+    case 'archivo':
+      return '/archivo';
     default:
       return '/login';
   }

@@ -40,6 +40,8 @@
                   <span class="badge bg-warning">Caja</span>
                   {{else if (eq this.rol "caja_archivo")}}
                   <span class="badge bg-info">Caja + Archivo</span>
+                  {{else if (eq this.rol "archivo")}}
+                  <span class="badge bg-purple">Archivo</span>
                   {{else}}
                   <span class="badge bg-secondary">Consulta</span>
                   {{/if}}
@@ -120,6 +122,7 @@
               <option value="recepcion">Recepción</option>
               <option value="caja">Caja</option>
               <option value="caja_archivo">Caja + Archivo</option>
+              <option value="archivo">Archivo</option>
               <option value="consulta">Consulta</option>
             </select>
           </div>
@@ -173,6 +176,7 @@
               <option value="recepcion">Recepción</option>
               <option value="caja">Caja</option>
               <option value="caja_archivo">Caja + Archivo</option>
+              <option value="archivo">Archivo</option>
               <option value="consulta">Consulta</option>
             </select>
           </div>

@@ -709,7 +709,7 @@ const cajaController = {
       const matrizadores = await Matrizador.findAll({
         where: {
           rol: {
-            [Op.in]: ['matrizador', 'caja_archivo']
+            [Op.in]: ['matrizador', 'caja_archivo', 'archivo']
           },
           activo: true
         },
@@ -960,7 +960,7 @@ const cajaController = {
       // Obtener lista de matrizadores para el modal de cambio
       const matrizadores = await Matrizador.findAll({
         where: {
-          rol: { [Op.in]: ['matrizador', 'caja_archivo'] },
+          rol: { [Op.in]: ['matrizador', 'caja_archivo', 'archivo'] },
           activo: true
         },
         attributes: ['id', 'nombre'],
@@ -1630,7 +1630,7 @@ const cajaController = {
       const matrizadores = await Matrizador.findAll({
         where: {
           rol: {
-            [Op.in]: ['matrizador', 'caja_archivo']
+            [Op.in]: ['matrizador', 'caja_archivo', 'archivo']
           },
           activo: true
         },
@@ -1745,7 +1745,7 @@ const cajaController = {
       const matrizadores = await Matrizador.findAll({
         where: {
           rol: {
-            [Op.in]: ['matrizador', 'caja_archivo'] // CAMBIO: incluir caja_archivo
+            [Op.in]: ['matrizador', 'caja_archivo', 'archivo'] // CAMBIO: incluir caja_archivo y archivo
           },
           activo: true
         },
@@ -1877,7 +1877,7 @@ const cajaController = {
           AND d.estado_pago IN ('pagado_completo', 'pagado_con_retencion')
           AND d.fecha_ultimo_pago BETWEEN :fechaInicio AND :fechaFin
           AND d.estado NOT IN ('eliminado', 'nota_credito')
-        WHERE m.rol IN ('matrizador', 'caja_archivo')
+        WHERE m.rol IN ('matrizador', 'caja_archivo', 'archivo')
         AND m.activo = true
         ${whereMatrizador}
         GROUP BY m.id, m.nombre, m.email
@@ -1932,7 +1932,7 @@ const cajaController = {
         where: { 
           activo: true, 
           rol: {
-            [Op.in]: ['matrizador', 'caja_archivo']
+            [Op.in]: ['matrizador', 'caja_archivo', 'archivo']
           }
         },
         order: [['nombre', 'ASC']],
@@ -2112,7 +2112,7 @@ const cajaController = {
             },
             activo: true,
             rol: {
-              [Op.in]: ['matrizador', 'caja_archivo']
+              [Op.in]: ['matrizador', 'caja_archivo', 'archivo']
             }
           }
         });
@@ -2129,7 +2129,7 @@ const cajaController = {
         where: { 
           activo: true,
           rol: {
-            [Op.in]: ['matrizador', 'caja_archivo']
+            [Op.in]: ['matrizador', 'caja_archivo', 'archivo']
           }
         },
         order: [['nombre', 'ASC']]

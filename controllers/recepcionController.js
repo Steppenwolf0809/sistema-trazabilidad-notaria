@@ -1450,7 +1450,7 @@ const recepcionController = {
       // Obtener lista de matrizadores para el modal de cambio
       const matrizadores = await Matrizador.findAll({
         where: {
-          rol: { [Op.in]: ['matrizador', 'caja_archivo'] },
+          rol: { [Op.in]: ['matrizador', 'caja_archivo', 'archivo'] },
           activo: true
         },
         attributes: ['id', 'nombre'],

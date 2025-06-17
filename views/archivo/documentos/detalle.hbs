@@ -1,0 +1,316 @@
+{{! Detalle de Documento - Archivo }}
+{{#if documento}}
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <div>
+      <i class="fas fa-file-alt me-2"></i> Detalle de Documento
+    </div>
+    <div>
+      <a href="/archivo/documentos/mis-documentos" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i> Volver
+      </a>
+      
+      {{#if esDocumentoPropio}}
+        <a href="/archivo/documentos/editar/{{documento.id}}" class="btn btn-sm btn-primary ms-1">
+          <i class="fas fa-edit me-1"></i> Editar
+        </a>
+        
+        {{#if (eq documento.estado "en_proceso")}}
+        <button type="button" class="btn btn-sm btn-success ms-1" onclick="marcarListo({{documento.id}})">
+          <i class="fas fa-check me-1"></i> Marcar como listo
+        </button>
+        {{/if}}
+        
+        {{#if (eq documento.estado "listo_para_entrega")}}
+        <a href="/archivo/documentos/entrega/{{documento.id}}" class="btn btn-sm btn-info ms-1">
+          <i class="fas fa-hand-holding me-1"></i> Entrega
+        </a>
+        {{/if}}
+      {{else}}
+        <span class="badge bg-warning">Solo Lectura</span>
+      {{/if}}
+    </div>
+  </div>
+  <div class="card-body">
+    <!-- Información general -->
+    <div class="row mb-4">
+      <div class="col-md-4">
+        <div class="mb-3">
+          <h5 class="border-bottom pb-2">Información General</h5>
+          <p><strong>Número Documento:</strong> <span class="badge bg-primary fs-6">{{documento.codigoBarras}}</span></p>
+          <p><strong>Tipo:</strong> {{documento.tipoDocumento}}</p>
+          <p><strong>Estado:</strong> 
+            {{#if (eq documento.estado "en_proceso")}}
+            <span class="badge bg-warning">En Proceso</span>
+            {{else if (eq documento.estado "listo_para_entrega")}}
+            <span class="badge bg-success">Listo para Entrega</span>
+            {{else if (eq documento.estado "entregado")}}
+            <span class="badge bg-primary">Entregado</span>
+            {{else if (eq documento.estado "cancelado")}}
+            <span class="badge bg-danger">Cancelado</span>
+            {{else}}
+            <span class="badge bg-secondary">{{documento.estado}}</span>
+            {{/if}}
+          </p>
+          <p><strong>📅 Fecha Registro:</strong> {{formatDate documento.createdAt}}</p>
+          {{#if documento.fechaEntrega}}
+          <p><strong>🚀 Fecha Entrega:</strong> {{formatDate documento.fechaEntrega}}</p>
+          {{/if}}
+        </div>
+      </div>
+      
+      <div class="col-md-4">
+        <div class="mb-3">
+          <h5 class="border-bottom pb-2">Cliente</h5>
+          <p><strong>Nombre:</strong> {{documento.nombreCliente}}</p>
+          <p><strong>Identificación:</strong> {{documento.identificacionCliente}}</p>
+          {{#if documento.emailCliente}}
+          <p><strong>Email:</strong> {{documento.emailCliente}}</p>
+          {{/if}}
+          {{#if documento.telefonoCliente}}
+          <p><strong>Teléfono:</strong> {{documento.telefonoCliente}}</p>
+          {{/if}}
+        </div>
+      </div>
+      
+      <div class="col-md-4">
+        <div class="mb-3">
+          <h5 class="border-bottom pb-2">Responsable</h5>
+          <p><strong>Matrizador:</strong> {{documento.matrizador.nombre}}</p>
+          {{#if esDocumentoPropio}}
+            <p><strong>Mi Documento:</strong> <span class="badge bg-success">✅ Asignado a mí</span></p>
+            {{#if (eq documento.estado "listo_para_entrega")}}
+            <p><strong>🔑 Código de Entrega:</strong> 
+              <span class="badge bg-success fs-5">{{documento.codigoVerificacion}}</span>
+            </p>
+            {{/if}}
+          {{else}}
+            <p><strong>Acceso:</strong> <span class="badge bg-warning">Solo Lectura</span></p>
+          {{/if}}
+        </div>
+      </div>
+    </div>
+    
+    <!-- Información financiera -->
+    {{#if documento.valorFactura}}
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-money-bill-wave me-2"></i>Información Financiera</h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6">
+                <p><strong>💰 Valor Total:</strong> <span class="fs-5 text-primary">${{formatMoney documento.valorFactura}}</span></p>
+                <p><strong>🏷️ Estado Pago:</strong> 
+                  {{#if (eq documento.estadoPago "pagado_completo")}}
+                  <span class="badge bg-success">Pagado Completo</span>
+                  {{else if (eq documento.estadoPago "pagado_con_retencion")}}
+                  <span class="badge bg-info">Con Retención</span>
+                  {{else if (eq documento.estadoPago "pago_parcial")}}
+                  <span class="badge bg-warning">Pago Parcial</span>
+                  {{else}}
+                  <span class="badge bg-danger">Pendiente</span>
+                  {{/if}}
+                </p>
+              </div>
+              <div class="col-md-6">
+                {{#if documento.metodoPago}}
+                <p><strong>💳 Método de Pago:</strong> {{documento.metodoPago}}</p>
+                {{/if}}
+                {{#if documento.fechaPago}}
+                <p><strong>📅 Fecha de Pago:</strong> {{formatDateTime documento.fechaPago}}</p>
+                {{/if}}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {{/if}}
+    
+    <!-- Notas -->
+    {{#if documento.notas}}
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-sticky-note me-2"></i>Notas</h5>
+          </div>
+          <div class="card-body">
+            <p>{{documento.notas}}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    {{/if}}
+    
+    <!-- Historial de eventos -->
+    <div class="row">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-history me-2"></i>Historial de Eventos</h5>
+          </div>
+          <div class="card-body">
+            {{#if eventos.length}}
+            <div class="timeline">
+              {{#each eventos}}
+              <div class="timeline-item">
+                <div class="timeline-marker bg-primary"></div>
+                <div class="timeline-content">
+                  <h6 class="timeline-title">
+                    {{#if (eq this.tipo "creacion")}}
+                      <i class="fas fa-plus-circle text-success"></i> Documento Creado
+                    {{else if (eq this.tipo "modificacion")}}
+                      <i class="fas fa-edit text-warning"></i> Documento Modificado
+                    {{else if (eq this.tipo "cambio_estado")}}
+                      <i class="fas fa-exchange-alt text-info"></i> Cambio de Estado
+                    {{else if (eq this.tipo "pago")}}
+                      <i class="fas fa-money-bill-wave text-success"></i> Pago Registrado
+                    {{else if (eq this.tipo "entrega")}}
+                      <i class="fas fa-hand-holding text-primary"></i> Documento Entregado
+                    {{else if (eq this.tipo "actualizacion")}}
+                      <i class="fas fa-sync text-info"></i> Actualización
+                    {{else if (eq this.tipo "estado")}}
+                      <i class="fas fa-flag text-warning"></i> Cambio de Estado
+                    {{else}}
+                      <i class="fas fa-info-circle text-secondary"></i> {{this.tipo}}
+                    {{/if}}
+                  </h6>
+                  <p class="timeline-description">{{this.descripcion}}</p>
+                  {{#if this.detalles}}
+                  <div class="timeline-details">
+                    <small class="text-muted">
+                      {{#if this.detalles.valorAnterior}}
+                        <strong>Valor anterior:</strong> {{this.detalles.valorAnterior}}<br>
+                      {{/if}}
+                      {{#if this.detalles.valorNuevo}}
+                        <strong>Valor nuevo:</strong> {{this.detalles.valorNuevo}}<br>
+                      {{/if}}
+                      {{#if this.detalles.estadoAnterior}}
+                        <strong>Estado anterior:</strong> {{this.detalles.estadoAnterior}}<br>
+                      {{/if}}
+                      {{#if this.detalles.estadoNuevo}}
+                        <strong>Estado nuevo:</strong> {{this.detalles.estadoNuevo}}<br>
+                      {{/if}}
+                      {{#if this.detalles.nombreReceptor}}
+                        <strong>Recibido por:</strong> {{this.detalles.nombreReceptor}}<br>
+                      {{/if}}
+                      {{#if this.detalles.fechaEntrega}}
+                        <strong>Fecha entrega:</strong> {{formatDateTime this.detalles.fechaEntrega}}<br>
+                      {{/if}}
+                    </small>
+                  </div>
+                  {{/if}}
+                  <div class="timeline-footer">
+                    <small class="text-muted">
+                      {{#if this.matrizador}}
+                        <i class="fas fa-user"></i> {{this.matrizador.nombre}} • 
+                      {{/if}}
+                      <i class="fas fa-clock"></i> {{formatDateTime this.created_at}}
+                    </small>
+                  </div>
+                </div>
+              </div>
+              {{/each}}
+            </div>
+            {{else}}
+            <div class="text-center py-4">
+              <i class="fas fa-history fa-3x text-muted mb-3"></i>
+              <p class="text-muted">No hay eventos registrados para este documento.</p>
+            </div>
+            {{/if}}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{{else}}
+<div class="alert alert-danger">
+  <h4>Documento no encontrado</h4>
+  <p>El documento solicitado no existe o no tienes permisos para verlo.</p>
+  <a href="/archivo/documentos/mis-documentos" class="btn btn-primary">Volver a mis documentos</a>
+</div>
+{{/if}}
+
+<style>
+.timeline {
+  position: relative;
+  padding-left: 30px;
+}
+
+.timeline-item {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.timeline-marker {
+  position: absolute;
+  left: -35px;
+  top: 5px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.timeline-item:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: -30px;
+  top: 17px;
+  width: 2px;
+  height: calc(100% + 5px);
+  background-color: #dee2e6;
+}
+
+.timeline-content {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+  border-left: 3px solid #007bff;
+}
+
+.timeline-title {
+  margin-bottom: 5px;
+  color: #495057;
+}
+
+.timeline-description {
+  margin-bottom: 10px;
+  color: #6c757d;
+}
+
+.timeline-footer {
+  border-top: 1px solid #dee2e6;
+  padding-top: 8px;
+}
+</style>
+
+<script>
+function marcarListo(documentoId) {
+  if (confirm('¿Está seguro de marcar este documento como listo para entrega?')) {
+    fetch(`/archivo/documentos/marcar-listo/${documentoId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.exito) {
+        alert('Documento marcado como listo exitosamente');
+        location.reload();
+      } else {
+        alert('Error: ' + data.mensaje);
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error al marcar documento como listo');
+    });
+  }
+}
+</script> 

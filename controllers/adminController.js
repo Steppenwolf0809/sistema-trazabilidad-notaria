@@ -766,7 +766,7 @@ exports.dashboard = async (req, res) => {
       LEFT JOIN documentos d ON m.id = d.id_matrizador
         AND d.updated_at >= :hace7Dias
         AND d.estado NOT IN ('eliminado', 'nota_credito')
-      WHERE m.rol IN ('matrizador', 'caja_archivo') AND m.activo = true
+              WHERE m.rol IN ('matrizador', 'caja_archivo', 'archivo') AND m.activo = true
       GROUP BY m.id, m.nombre
       ORDER BY documentos_procesados DESC
       LIMIT 5
@@ -2093,7 +2093,7 @@ exports.reporteMatrizadores = async (req, res) => {
       LEFT JOIN documentos d ON m.id = d.id_matrizador
         AND d.created_at BETWEEN :fechaInicio AND :fechaFin
         AND d.estado NOT IN ('eliminado', 'nota_credito')
-      WHERE m.rol IN ('matrizador', 'caja_archivo')
+      WHERE m.rol IN ('matrizador', 'caja_archivo', 'archivo')
       GROUP BY m.id, m.nombre
       ORDER BY facturacion_total DESC
     `, {
@@ -2271,7 +2271,7 @@ exports.reporteFinanciero = async (req, res) => {
     const matrizadores = await Matrizador.findAll({
       where: {
         rol: {
-          [Op.in]: ['matrizador', 'caja_archivo']
+          [Op.in]: ['matrizador', 'caja_archivo', 'archivo']
         },
         activo: true
       },
@@ -2752,7 +2752,7 @@ exports.reporteCobrosMatrizador = async (req, res) => {
         AND d.estado_pago IN ('pagado_completo', 'pagado_con_retencion', 'pago_parcial')
         AND d.fecha_ultimo_pago BETWEEN :fechaInicio AND :fechaFin
         AND d.estado NOT IN ('eliminado', 'nota_credito')
-      WHERE m.rol IN ('matrizador', 'caja_archivo')
+      WHERE m.rol IN ('matrizador', 'caja_archivo', 'archivo')
       AND m.activo = true
       ${whereMatrizador}
       GROUP BY m.id, m.nombre, m.email
@@ -2809,7 +2809,7 @@ exports.reporteCobrosMatrizador = async (req, res) => {
       where: { 
         activo: true, 
         rol: {
-          [Op.in]: ['matrizador', 'caja_archivo']
+          [Op.in]: ['matrizador', 'caja_archivo', 'archivo']
         }
       },
       order: [['nombre', 'ASC']],
@@ -2987,7 +2987,7 @@ exports.reporteProductividadMatrizadores = async (req, res) => {
     // Obtener todos los matrizadores activos
     const matrizadores = await Matrizador.findAll({
       where: {
-        rol: { [Op.in]: ['matrizador', 'caja_archivo'] },
+        rol: { [Op.in]: ['matrizador', 'caja_archivo', 'archivo'] },
         activo: true
       },
       attributes: ['id', 'nombre', 'email'],
@@ -3258,7 +3258,7 @@ exports.reporteDocumentosSinPago = async (req, res) => {
     // Obtener lista de matrizadores para filtros
     const matrizadores = await Matrizador.findAll({
       where: {
-        rol: { [Op.in]: ['matrizador', 'caja_archivo'] },
+        rol: { [Op.in]: ['matrizador', 'caja_archivo', 'archivo'] },
         activo: true
       },
       attributes: ['id', 'nombre'],

@@ -809,7 +809,7 @@ const matrizadorController = {
       };
       
       // Validar que el rol sea válido
-      const rolesValidos = ['admin', 'matrizador', 'recepcion', 'consulta', 'caja', 'caja_archivo'];
+      const rolesValidos = ['admin', 'matrizador', 'recepcion', 'consulta', 'caja', 'caja_archivo', 'archivo'];
       if (rol && !rolesValidos.includes(rol)) {
         datosMatrizador.rol = 'matrizador'; // Rol por defecto si no es válido
       }

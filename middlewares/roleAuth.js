@@ -32,13 +32,21 @@ module.exports = function roleAuth(rolesPermitidos) {
       return next();
     }
     
+    // ============== PERMISOS ESPECÍFICOS PARA ROL ARCHIVO ==============
+    
+    // Regla especial: Si la ruta comienza con '/archivo' y el usuario es archivo, permitir acceso
+    if (req.path.startsWith('/archivo') && req.matrizador.rol === 'archivo') {
+      return next();
+    }
+    
     console.log(`Acceso denegado: El usuario ${req.matrizador.nombre} con rol '${req.matrizador.rol}' intentó acceder a la ruta ${req.originalUrl} que requiere alguno de estos roles: ${rolesPermitidos.join(', ')}`);
     
     // Si no tiene permiso, renderizar página de acceso denegado con el layout correspondiente
     const layout = req.matrizador.rol === 'matrizador' ? 'matrizador' : 
                    req.matrizador.rol === 'recepcion' ? 'recepcion' : 
                    req.matrizador.rol === 'caja' ? 'caja' :
-                   req.matrizador.rol === 'caja_archivo' ? 'caja' : 'admin'; // caja_archivo usa layout de caja por defecto
+                   req.matrizador.rol === 'caja_archivo' ? 'caja' : 
+                   req.matrizador.rol === 'archivo' ? 'archivo' : 'admin';
                    
     return res.status(403).render('acceso_denegado', {
       layout,
@@ -74,5 +82,29 @@ const esCajaArchivo = (req, res, next) => {
   });
 };
 
+/**
+ * Middleware específico para usuarios archivo
+ */
+const esArchivo = (req, res, next) => {
+  if (!req.matrizador || !req.matrizador.rol) {
+    return res.redirect('/login?error=no_autorizado');
+  }
+  
+  const rol = req.matrizador.rol;
+  if (rol === 'archivo' || rol === 'admin') {
+    return next();
+  }
+  
+  const layout = req.matrizador.rol === 'archivo' ? 'archivo' : 'admin';
+  return res.status(403).render('acceso_denegado', {
+    layout,
+    title: 'Acceso denegado',
+    message: 'Esta función solo está disponible para usuarios con rol archivo',
+    userName: req.matrizador.nombre,
+    userRole: req.matrizador.rol
+  });
+};
+
 // Exportar tanto la función principal como los middlewares específicos
-module.exports.esCajaArchivo = esCajaArchivo; 
+module.exports.esCajaArchivo = esCajaArchivo;
+module.exports.esArchivo = esArchivo; 

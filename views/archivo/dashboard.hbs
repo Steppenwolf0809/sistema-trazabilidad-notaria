@@ -1,0 +1,204 @@
+<!-- Encabezado del Dashboard -->
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="bi bi-archive text-primary me-2"></i>
+        Dashboard de Archivo
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-archivo btn-sm" onclick="location.reload()">
+                <i class="bi bi-arrow-clockwise"></i>
+                Actualizar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Estadísticas Generales -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stats-card text-center">
+            <h3>{{estadisticas.totalDocumentos}}</h3>
+            <p><i class="bi bi-files"></i> Total Documentos</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center" style="background: linear-gradient(135deg, #00b894 0%, #00cec9 100%); color: white;">
+            <div class="card-body">
+                <h3 class="card-title">{{estadisticas.documentosListos}}</h3>
+                <p class="card-text"><i class="bi bi-check-circle"></i> Listos para Entrega</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center" style="background: linear-gradient(135deg, #fdcb6e 0%, #e17055 100%); color: white;">
+            <div class="card-body">
+                <h3 class="card-title">{{estadisticas.documentosPendientes}}</h3>
+                <p class="card-text"><i class="bi bi-clock"></i> En Proceso</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center" style="background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%); color: white;">
+            <div class="card-body">
+                <h3 class="card-title">{{estadisticas.documentosEntregados}}</h3>
+                <p class="card-text"><i class="bi bi-check2-all"></i> Entregados</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Accesos Rápidos -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-lightning-charge text-primary me-2"></i>
+                    Accesos Rápidos
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <a href="/archivo/documentos/todos" class="btn btn-outline-primary w-100 h-100 d-flex flex-column justify-content-center">
+                            <i class="bi bi-collection display-6 mb-2"></i>
+                            <span>Todos los Documentos</span>
+                            <small class="text-muted">Ver estado de todos</small>
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="/archivo/documentos/mis-documentos" class="btn btn-outline-success w-100 h-100 d-flex flex-column justify-content-center">
+                            <i class="bi bi-file-earmark-person display-6 mb-2"></i>
+                            <span>Mis Documentos</span>
+                            <small class="text-muted">Documentos asignados</small>
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="/archivo/notificaciones/historial" class="btn btn-outline-info w-100 h-100 d-flex flex-column justify-content-center">
+                            <i class="bi bi-bell-fill display-6 mb-2"></i>
+                            <span>Notificaciones</span>
+                            <small class="text-muted">Historial de envíos</small>
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="/archivo/documentos/todos?estado=listo" class="btn btn-outline-warning w-100 h-100 d-flex flex-column justify-content-center">
+                            <i class="bi bi-exclamation-triangle display-6 mb-2"></i>
+                            <span>Pendientes Entrega</span>
+                            <small class="text-muted">Listos para recoger</small>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alertas de Documentos -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="table-container">
+            <h5 class="mb-3">
+                <i class="bi bi-exclamation-triangle text-warning me-2"></i>
+                Alertas de Documentos (Más de 20 días desde creación sin completar)
+            </h5>
+            
+            {{#if alertasDocumentos}}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Número Documento</th>
+                            <th>Cliente</th>
+                            <th>Tipo</th>
+                            <th>Matrizador</th>
+                            <th>Estado</th>
+                            <th>Días Sin Avance</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{#each alertasDocumentos}}
+                        <tr class="table-warning">
+                            <td>
+                                <a href="/archivo/documentos/detalle/{{this.id}}" class="fw-bold text-decoration-none">
+                                    <span style="font-size: 1.1em;">{{this.codigoBarras}}</span>
+                                </a>
+                            </td>
+                            <td>
+                                <div>
+                                    <strong>{{this.nombreCliente}}</strong>
+                                    {{#if this.identificacionCliente}}
+                                        <br><small class="text-muted">{{this.identificacionCliente}}</small>
+                                    {{/if}}
+                                    {{#if this.telefonoCliente}}
+                                        <br><small class="text-info">📞 {{this.telefonoCliente}}</small>
+                                    {{/if}}
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{this.tipoDocumento}}</span>
+                            </td>
+                            <td>
+                                {{#if this.matrizador}}
+                                    <small>{{this.matrizador.nombre}}</small>
+                                {{else}}
+                                    <span class="text-muted">Sin asignar</span>
+                                {{/if}}
+                            </td>
+                            <td>
+                                {{#if (eq this.estado 'en_proceso')}}
+                                    <span class="badge bg-warning">En Proceso</span>
+                                {{else if (eq this.estado 'listo_para_entrega')}}
+                                    <span class="badge bg-success">Listo</span>
+                                {{else if (eq this.estado 'entregado')}}
+                                    <span class="badge bg-primary">Entregado</span>
+                                {{else if (eq this.estado 'cancelado')}}
+                                    <span class="badge bg-danger">Cancelado</span>
+                                {{else}}
+                                    <span class="badge bg-light text-dark">{{this.estado}}</span>
+                                {{/if}}
+                            </td>
+                            <td>
+                                <span class="badge bg-danger">{{this.diasSinActualizar}} días</span>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="/archivo/documentos/detalle/{{this.id}}" 
+                                       class="btn btn-outline-primary btn-sm" 
+                                       data-bs-toggle="tooltip" 
+                                       title="Ver detalle">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {{/each}}
+                    </tbody>
+                </table>
+            </div>
+            {{else}}
+            <div class="text-center py-4">
+                <i class="bi bi-check-circle display-1 text-success"></i>
+                <p class="text-success mt-2 fw-bold">¡Excelente! No hay documentos con alertas</p>
+                <small class="text-muted">Todos los documentos están al día</small>
+            </div>
+            {{/if}}
+        </div>
+    </div>
+</div>
+
+<!-- Información del Rol -->
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="alert alert-info">
+            <h6><i class="bi bi-info-circle me-2"></i>Información del Rol Archivo</h6>
+            <ul class="mb-0">
+                <li><strong>Visualización:</strong> Puedes ver TODOS los documentos del sistema</li>
+                <li><strong>Edición:</strong> Solo puedes modificar tus propios documentos asignados</li>
+                <li><strong>Notificaciones:</strong> Sistema completo para tus documentos</li>
+                <li><strong>Supervisión:</strong> Monitoreo del estado general de documentos</li>
+            </ul>
+        </div>
+    </div>
+</div> 

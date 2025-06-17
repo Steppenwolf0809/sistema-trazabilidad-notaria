@@ -1,0 +1,277 @@
+<!-- Encabezado -->
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="bi bi-collection text-primary me-2"></i>
+        Todos los Documentos del Sistema
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="/archivo" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left"></i>
+                Volver al Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h6 class="mb-0">
+            <i class="bi bi-funnel me-2"></i>
+            Filtros de Búsqueda
+        </h6>
+    </div>
+    <div class="card-body">
+        <form method="GET" action="/archivo/documentos/todos">
+            <div class="row">
+                <div class="col-md-3">
+                    <label for="buscar" class="form-label">Buscar</label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="buscar" 
+                           name="buscar" 
+                           placeholder="Protocolo, cliente, identificación..."
+                           value="{{filtros.buscar}}">
+                </div>
+                <div class="col-md-2">
+                    <label for="estado" class="form-label">Estado</label>
+                    <select class="form-select" id="estado" name="estado">
+                        <option value="">Todos</option>
+                        <option value="borrador" {{#if (eq filtros.estado 'borrador')}}selected{{/if}}>Borrador</option>
+                        <option value="proceso" {{#if (eq filtros.estado 'proceso')}}selected{{/if}}>En Proceso</option>
+                        <option value="listo" {{#if (eq filtros.estado 'listo')}}selected{{/if}}>Listo</option>
+                        <option value="entregado" {{#if (eq filtros.estado 'entregado')}}selected{{/if}}>Entregado</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="estadoPago" class="form-label">Estado Pago</label>
+                    <select class="form-select" id="estadoPago" name="estadoPago">
+                        <option value="">Todos</option>
+                        <option value="pendiente" {{#if (eq filtros.estadoPago 'pendiente')}}selected{{/if}}>Pendiente</option>
+                        <option value="pago_parcial" {{#if (eq filtros.estadoPago 'pago_parcial')}}selected{{/if}}>Pago Parcial</option>
+                        <option value="pagado_completo" {{#if (eq filtros.estadoPago 'pagado_completo')}}selected{{/if}}>Pagado Completo</option>
+                        <option value="pagado_con_retencion" {{#if (eq filtros.estadoPago 'pagado_con_retencion')}}selected{{/if}}>Con Retención</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="tipoDocumento" class="form-label">Tipo</label>
+                    <select class="form-select" id="tipoDocumento" name="tipoDocumento">
+                        <option value="">Todos</option>
+                        <option value="Protocolo" {{#if (eq filtros.tipoDocumento 'Protocolo')}}selected{{/if}}>Protocolo</option>
+                        <option value="Diligencias" {{#if (eq filtros.tipoDocumento 'Diligencias')}}selected{{/if}}>Diligencias</option>
+                        <option value="Certificaciones" {{#if (eq filtros.tipoDocumento 'Certificaciones')}}selected{{/if}}>Certificaciones</option>
+                        <option value="Arrendamientos" {{#if (eq filtros.tipoDocumento 'Arrendamientos')}}selected{{/if}}>Arrendamientos</option>
+                        <option value="Otros" {{#if (eq filtros.tipoDocumento 'Otros')}}selected{{/if}}>Otros</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="matrizador" class="form-label">Matrizador</label>
+                    <select class="form-select" id="matrizador" name="matrizador">
+                        <option value="">Todos</option>
+                        {{#each matrizadores}}
+                        <option value="{{this.id}}" {{#if (eq ../filtros.matrizador this.id)}}selected{{/if}}>
+                            {{this.nombre}}
+                        </option>
+                        {{/each}}
+                    </select>
+                </div>
+                <div class="col-md-1 d-flex align-items-end">
+                    <button type="submit" class="btn btn-archivo w-100">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="row mt-2">
+                <div class="col-md-12">
+                    <a href="/archivo/documentos/todos" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-x-circle"></i>
+                        Limpiar Filtros
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Información de Resultados -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <span class="text-muted">
+            Mostrando {{paginacion.totalDocuments}} documento(s) encontrado(s)
+        </span>
+    </div>
+    <div>
+        <span class="badge bg-info">Solo lectura para documentos ajenos</span>
+    </div>
+</div>
+
+<!-- Tabla de Documentos -->
+{{#if documentos}}
+<div class="table-container">
+    <div class="table-responsive">
+        <table class="table table-hover table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th style="width: 150px;">Número Documento</th>
+                    <th>Cliente</th>
+                    <th>Tipo</th>
+                    <th>Matrizador</th>
+                    <th>Estado</th>
+                    <th>Estado Pago</th>
+                    <th>Valor</th>
+                    <th>Última Act.</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{#each documentos}}
+                <tr>
+                    <td>
+                        <a href="/archivo/documentos/detalle/{{this.id}}" class="fw-bold text-decoration-none" style="font-size: 1.1em;">
+                            {{this.codigoBarras}}
+                        </a>
+                    </td>
+                    <td>
+                        <div>
+                            <strong>{{this.nombreCliente}}</strong>
+                            {{#if this.identificacionCliente}}
+                                <br><small class="text-muted">{{this.identificacionCliente}}</small>
+                            {{/if}}
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge bg-info">{{this.tipoDocumento}}</span>
+                    </td>
+                    <td>
+                        {{#if this.matrizador}}
+                            <div class="d-flex align-items-center">
+                                {{#if (eq this.matrizador.id ../userId)}}
+                                    <i class="bi bi-person-check text-success me-1" title="Tu documento"></i>
+                                {{/if}}
+                                <small>{{this.matrizador.nombre}}</small>
+                            </div>
+                        {{else}}
+                            <span class="text-muted">Sin asignar</span>
+                        {{/if}}
+                    </td>
+                    <td>
+                        {{#if (eq this.estado 'en_proceso')}}
+                            <span class="badge bg-warning">En Proceso</span>
+                        {{else if (eq this.estado 'listo_para_entrega')}}
+                            <span class="badge bg-success">Listo</span>
+                        {{else if (eq this.estado 'entregado')}}
+                            <span class="badge bg-primary">Entregado</span>
+                        {{else if (eq this.estado 'cancelado')}}
+                            <span class="badge bg-danger">Cancelado</span>
+                        {{else}}
+                            <span class="badge bg-light text-dark">{{this.estado}}</span>
+                        {{/if}}
+                    </td>
+                    <td>
+                        {{#if (eq this.estadoPago 'pendiente')}}
+                            <span class="badge bg-danger">Pendiente</span>
+                        {{else if (eq this.estadoPago 'pago_parcial')}}
+                            <span class="badge bg-warning">Parcial</span>
+                        {{else if (eq this.estadoPago 'pagado_completo')}}
+                            <span class="badge bg-success">Pagado</span>
+                        {{else if (eq this.estadoPago 'pagado_con_retencion')}}
+                            <span class="badge bg-info">Con Retención</span>
+                        {{else}}
+                            <span class="badge bg-light text-dark">{{this.estadoPago}}</span>
+                        {{/if}}
+                    </td>
+                    <td>
+                        {{#if this.valorFactura}}
+                            <strong>${{formatMoney this.valorFactura}}</strong>
+                        {{else}}
+                            <span class="text-muted">-</span>
+                        {{/if}}
+                    </td>
+                    <td>
+                        <small>{{formatDateTime this.updated_at}}</small>
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <a href="/archivo/documentos/detalle/{{this.id}}" 
+                               class="btn btn-outline-primary btn-sm" 
+                               data-bs-toggle="tooltip" 
+                               title="Ver detalle">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            {{#if (eq this.matrizador.id ../userId)}}
+                                <span class="btn btn-success btn-sm" data-bs-toggle="tooltip" title="Tu documento">
+                                    <i class="bi bi-check"></i>
+                                </span>
+                            {{else}}
+                                <span class="btn btn-outline-secondary btn-sm" data-bs-toggle="tooltip" title="Solo lectura">
+                                    <i class="bi bi-lock"></i>
+                                </span>
+                            {{/if}}
+                        </div>
+                    </td>
+                </tr>
+                {{/each}}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Paginación -->
+{{#if (gt paginacion.totalPages 1)}}
+<nav aria-label="Paginación de documentos" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {{#if paginacion.hasPrevPage}}
+            <li class="page-item">
+                <a class="page-link" href="?page={{paginacion.prevPage}}&{{#each filtros}}{{@key}}={{this}}&{{/each}}">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+            </li>
+        {{/if}}
+        
+        {{#each (range 1 paginacion.totalPages)}}
+            <li class="page-item {{#if (eq this ../paginacion.currentPage)}}active{{/if}}">
+                <a class="page-link" href="?page={{this}}&{{#each ../filtros}}{{@key}}={{this}}&{{/each}}">
+                    {{this}}
+                </a>
+            </li>
+        {{/each}}
+        
+        {{#if paginacion.hasNextPage}}
+            <li class="page-item">
+                <a class="page-link" href="?page={{paginacion.nextPage}}&{{#each filtros}}{{@key}}={{this}}&{{/each}}">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </li>
+        {{/if}}
+    </ul>
+</nav>
+{{/if}}
+
+{{else}}
+<!-- Sin resultados -->
+<div class="text-center py-5">
+    <i class="bi bi-search display-1 text-muted"></i>
+    <h4 class="text-muted mt-3">No se encontraron documentos</h4>
+    <p class="text-muted">Intenta ajustar los filtros de búsqueda</p>
+    <a href="/archivo/documentos/todos" class="btn btn-archivo">
+        <i class="bi bi-arrow-clockwise"></i>
+        Ver todos los documentos
+    </a>
+</div>
+{{/if}}
+
+<!-- Información adicional -->
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="alert alert-info">
+            <h6><i class="bi bi-info-circle me-2"></i>Información sobre la Vista</h6>
+            <ul class="mb-0">
+                <li><strong>Visualización:</strong> Esta vista muestra TODOS los documentos del sistema de todos los matrizadores</li>
+                <li><strong>Tus documentos:</strong> Los documentos asignados a ti aparecen marcados con <i class="bi bi-person-check text-success"></i></li>
+                <li><strong>Permisos:</strong> Solo puedes editar documentos asignados a ti (marcados en verde)</li>
+                <li><strong>Documentos ajenos:</strong> Solo tienes acceso de lectura (marcados con <i class="bi bi-lock"></i>)</li>
+            </ul>
+        </div>
+    </div>
+</div> 
