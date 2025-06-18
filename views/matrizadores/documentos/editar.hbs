@@ -135,19 +135,13 @@
                         <i class="fas fa-share-alt me-1"></i> Canales de Notificación:
                     </label>
                     <select class="form-select" id="canalNotificacion" name="canalNotificacion">
-                        <option value="ambos" {{#if (eq documento.metodoNotificacion 'ambos')}}selected{{/if}}>
-                            📱📧 WhatsApp y Email (Recomendado)
-                        </option>
-                        <option value="whatsapp" {{#if (eq documento.metodoNotificacion 'whatsapp')}}selected{{/if}}>
-                            📱 Solo WhatsApp
-                        </option>
-                        <option value="email" {{#if (eq documento.metodoNotificacion 'email')}}selected{{/if}}>
-                            📧 Solo Email
+                        <option value="whatsapp" {{#if (or (eq documento.metodoNotificacion 'whatsapp') (eq documento.metodoNotificacion 'ambos') (eq documento.metodoNotificacion 'email'))}}selected{{/if}}>
+                            📱 WhatsApp
                         </option>
                     </select>
                     <div class="form-text">
                         <i class="fas fa-lightbulb text-warning me-1"></i>
-                        WhatsApp es más efectivo para notificaciones inmediatas. Email es mejor para confirmaciones formales.
+                        WhatsApp es más efectivo para notificaciones inmediatas en Ecuador.
                     </div>
                 </div>
                 
@@ -226,7 +220,7 @@
                 <div class="alert alert-warning mt-3">
                     <i class="fas fa-exclamation-triangle me-2"></i>
                     <strong>Información de contacto:</strong>
-                    Para enviar notificaciones, asegúrese de que el cliente tenga al menos un email o teléfono válido.
+                    Para enviar notificaciones por WhatsApp, asegúrese de que el cliente tenga un número de teléfono válido.
                 </div>
             </div>
         </div>

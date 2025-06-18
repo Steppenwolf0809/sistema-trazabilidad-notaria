@@ -3432,13 +3432,14 @@ exports.historialNotificaciones = async (req, res) => {
             'numeroFactura',
             'estado',
             'identificacionCliente',
-            'notas'
+            'notas',
+            'idMatrizador' // AÑADIDO: incluir idMatrizador
           ],
           include: [
             {
               model: Matrizador,
               as: 'matrizador',
-              attributes: ['nombre'],
+              attributes: ['id', 'nombre', 'email'],
               required: false
             }
           ],
@@ -3487,7 +3488,35 @@ exports.historialNotificaciones = async (req, res) => {
         notifData.metadatos.estado = notifData.estado;
       }
       
-      console.log(`📅 [ADMIN] Notificación ID ${notifData.id}: fecha = ${notifData.created_at}, tipo = ${notifData.tipo}`);
+      // ============== CORREGIR INFORMACIÓN DEL MATRIZADOR PARA ADMIN ==============
+      // Si no hay documento (notificaciones grupales), usar metadatos
+      if (!notifData.documento && notifData.metadatos) {
+        // Crear documento virtual para notificaciones grupales
+        notifData.documento = {
+          codigoBarras: 'ENTREGA GRUPAL',
+          tipoDocumento: 'Múltiples tipos',
+          nombreCliente: notifData.metadatos.nombreCliente || 'Cliente no especificado',
+          emailCliente: notifData.metadatos.emailCliente || null,
+          telefonoCliente: notifData.metadatos.telefonoCliente || null,
+          numeroFactura: null,
+          identificacionCliente: notifData.metadatos.identificacionCliente || null,
+          estado: 'entregado',
+          matrizador: {
+            id: notifData.metadatos.idMatrizador || null,
+            nombre: notifData.metadatos.entregadoPor || 'Sistema',
+            email: null
+          }
+        };
+      } else if (notifData.documento && !notifData.documento.matrizador && notifData.metadatos?.entregadoPor) {
+        // Si el documento no tiene matrizador cargado, usar metadatos
+        notifData.documento.matrizador = {
+          id: notifData.metadatos.idUsuarioEntregador || null,
+          nombre: notifData.metadatos.entregadoPor || 'Sistema',
+          email: null
+        };
+      }
+      
+      console.log(`📅 [ADMIN] Notificación ID ${notifData.id}: fecha = ${notifData.created_at}, tipo = ${notifData.tipo}, matrizador = ${notifData.documento?.matrizador?.nombre || 'No disponible'}`);
       
       return notifData;
     });

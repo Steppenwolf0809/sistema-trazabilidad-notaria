@@ -617,6 +617,21 @@ app.listen(PORT, async () => {
     
     // Sincronizar modelos con la base de datos
     await syncModels();
+    
+    // Inicializar el servicio de notificaciones después de la conexión a BD
+    try {
+      const notificationService = require('./services/notificationService');
+      const servicioInicializado = await notificationService.inicializar();
+      
+      if (servicioInicializado) {
+        console.log('📱 Servicio de notificaciones WhatsApp inicializado correctamente');
+      } else {
+        console.log('⚠️ El servicio de notificaciones no se pudo inicializar completamente');
+      }
+    } catch (notificationError) {
+      console.error('❌ Error al inicializar servicio de notificaciones:', notificationError.message);
+      console.log('   El sistema funcionará sin notificaciones automáticas');
+    }
   } else {
     console.log('⚠️ No se pudo conectar a la base de datos');
   }

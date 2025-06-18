@@ -579,11 +579,11 @@ const archivoController = {
         notas
       };
       
-      // Procesar configuración de notificaciones
+      // Procesar configuración de notificaciones - SIMPLIFICADO A SOLO WHATSAPP
       if (req.body.politicaNotificacion) {
         if (req.body.politicaNotificacion === 'automatico') {
           datosActualizacion.notificarAutomatico = true;
-          datosActualizacion.metodoNotificacion = req.body.canalNotificacion || 'ambos';
+          datosActualizacion.metodoNotificacion = 'whatsapp'; // Solo WhatsApp
           datosActualizacion.razonSinNotificar = null;
         } else if (req.body.politicaNotificacion === 'no_notificar') {
           datosActualizacion.notificarAutomatico = false;
@@ -741,13 +741,45 @@ const archivoController = {
         });
       }
 
-      // Generar código de verificación de 4 dígitos numéricos (según validaciones del modelo)
-      const codigoVerificacion = Math.floor(1000 + Math.random() * 9000).toString();
+      // ============== GENERACIÓN CONDICIONAL DE CÓDIGO DE VERIFICACIÓN - SOLO WHATSAPP ==============
+      
+      // Verificar si debe generar código de verificación - SOLO WHATSAPP
+      const debeNotificar = !documento.omitirNotificacion && 
+                           documento.telefonoCliente;
+      
+      const esEntregaInmediata = documento.entregadoInmediatamente || false;
+      
+      let codigoVerificacion = null;
+      let mensajeNotificacion = '';
+      
+      if (debeNotificar && !esEntregaInmediata) {
+        // Solo generar código si se va a notificar Y no es entrega inmediata
+        codigoVerificacion = Math.floor(1000 + Math.random() * 9000).toString();
+        mensajeNotificacion = 'Se enviará código de verificación al cliente';
+        console.log(`✅ [ARCHIVO] Generando código de verificación: ${codigoVerificacion} para documento ${documento.codigoBarras}`);
+      } else {
+        // No generar código en estos casos:
+        // - Omitir notificación activado
+        // - Sin número de teléfono del cliente
+        // - Entrega inmediata
+        codigoVerificacion = null;
+        
+        if (documento.omitirNotificacion) {
+          mensajeNotificacion = 'Sin código - notificación omitida por configuración';
+          console.log(`⏭️ [ARCHIVO] No se generará código para documento ${documento.codigoBarras}: notificación omitida`);
+        } else if (esEntregaInmediata) {
+          mensajeNotificacion = 'Sin código - entrega inmediata configurada';
+          console.log(`⚡ [ARCHIVO] No se generará código para documento ${documento.codigoBarras}: entrega inmediata`);
+        } else {
+          mensajeNotificacion = 'Sin código - falta número de teléfono del cliente';
+          console.log(`⚠️ [ARCHIVO] No se generará código para documento ${documento.codigoBarras}: sin teléfono`);
+        }
+      }
       
       // Actualizar el estado y código
       await documento.update({
         estado: 'listo_para_entrega',
-        codigoVerificacion: codigoVerificacion
+        codigoVerificacion: codigoVerificacion // Puede ser null
       }, { transaction });
 
       // Crear evento de cambio de estado
@@ -770,35 +802,55 @@ const archivoController = {
 
       // Enviar notificación después de confirmar la transacción
       try {
-        console.log(`🔔 Enviando notificación para documento ${documento.codigoBarras} desde archivo`);
-        
-        // Recargar documento con datos actualizados para notificación
-        const documentoActualizado = await Documento.findByPk(documentoId);
-        
-        const resultadoNotificacion = await notificationService.enviarNotificacionDocumentoListo(documentoActualizado.id);
-        
-        console.log('✅ Notificación procesada para documento', documentoActualizado.codigoBarras);
-        console.log('   Canales enviados:', resultadoNotificacion.canalesEnviados || 'ninguno');
-        console.log('   Errores:', resultadoNotificacion.errores?.length || 0);
-        
-        if (resultadoNotificacion.canalesEnviados && resultadoNotificacion.canalesEnviados.length > 0) {
-          console.log(`📱 NOTIFICACIÓN ENVIADA: Código ${codigoVerificacion} enviado por ${resultadoNotificacion.canalesEnviados.join(' y ')} al cliente ${documentoActualizado.nombreCliente}`);
-        } else {
-          console.log(`❌ NOTIFICACIÓN FALLÓ: No se pudo enviar por ningún canal configurado`);
-          if (resultadoNotificacion.errores && resultadoNotificacion.errores.length > 0) {
-            resultadoNotificacion.errores.forEach(error => {
-              console.log(`   - Error en ${error.canal}: ${error.error}`);
-            });
+        // Solo enviar notificación si se generó código
+        if (codigoVerificacion) {
+          console.log(`🔔 [ARCHIVO] Enviando notificación para documento ${documento.codigoBarras}`);
+          
+          // Recargar documento con datos actualizados para notificación
+          const documentoActualizado = await Documento.findByPk(documentoId);
+          
+          const resultadoNotificacion = await notificationService.enviarNotificacionDocumentoListo(documentoActualizado.id);
+          
+          console.log('✅ [ARCHIVO] Notificación procesada para documento', documentoActualizado.codigoBarras);
+          console.log('   Canales enviados:', resultadoNotificacion.canalesEnviados || 'ninguno');
+          console.log('   Errores:', resultadoNotificacion.errores?.length || 0);
+          
+          if (resultadoNotificacion.canalesEnviados && resultadoNotificacion.canalesEnviados.length > 0) {
+            console.log(`📱 [ARCHIVO] NOTIFICACIÓN ENVIADA: Código ${codigoVerificacion} enviado por ${resultadoNotificacion.canalesEnviados.join(' y ')} al cliente ${documentoActualizado.nombreCliente}`);
+          } else {
+            console.log(`❌ [ARCHIVO] NOTIFICACIÓN FALLÓ: No se pudo enviar por ningún canal configurado`);
+            if (resultadoNotificacion.errores && resultadoNotificacion.errores.length > 0) {
+              resultadoNotificacion.errores.forEach(error => {
+                console.log(`   - Error en ${error.canal}: ${error.error}`);
+              });
+            }
           }
+        } else {
+          console.log(`⏭️ [ARCHIVO] NO SE ENVIÓ NOTIFICACIÓN: ${mensajeNotificacion} para documento ${documento.codigoBarras}`);
         }
       } catch (notificationError) {
-        console.error('❌ Error al enviar notificación de documento listo:', notificationError);
+        console.error('❌ [ARCHIVO] Error al enviar notificación de documento listo:', notificationError);
         // No afectar el flujo principal si falla la notificación
+      }
+
+      // Mensaje de respuesta personalizado según la configuración del documento
+      let mensajeRespuesta = '';
+      
+      if (codigoVerificacion) {
+        mensajeRespuesta = 'Documento marcado como listo y notificación enviada por WhatsApp';
+      } else {
+        if (documento.omitirNotificacion) {
+          mensajeRespuesta = 'Documento marcado como listo. No se envió notificación según configuración';
+        } else if (esEntregaInmediata) {
+          mensajeRespuesta = 'Documento marcado como listo para entrega inmediata';
+        } else {
+          mensajeRespuesta = 'Documento marcado como listo. No se pudo enviar notificación por falta de teléfono';
+        }
       }
 
       res.json({
         exito: true,
-        mensaje: 'Documento marcado como listo y notificación enviada',
+        mensaje: mensajeRespuesta,
         codigoVerificacion: codigoVerificacion
       });
 
@@ -960,42 +1012,147 @@ const archivoController = {
    */
   historialNotificaciones: async (req, res) => {
     try {
-      const page = parseInt(req.query.page) || 1;
-      const limit = 20;
-      const offset = (page - 1) * limit;
+      const { fechaDesde, fechaHasta, tipo, canal, busqueda } = req.query;
+      
+      let whereClause = {};
+      let documentoWhereClause = {
+        idMatrizador: req.matrizador.id
+      };
+      
+      // Filtros de fecha
+      if (fechaDesde || fechaHasta) {
+        whereClause.created_at = {};
+        if (fechaDesde) {
+          whereClause.created_at[Op.gte] = new Date(fechaDesde + 'T00:00:00');
+        }
+        if (fechaHasta) {
+          whereClause.created_at[Op.lte] = new Date(fechaHasta + 'T23:59:59');
+        }
+      }
+      
+      // Filtros de tipo y canal
+      if (tipo) whereClause.tipoEvento = tipo;
+      if (canal && canal !== '') {
+        whereClause.canal = canal;
+      }
+      
+      // Búsqueda por texto
+      if (busqueda && busqueda.trim() !== '') {
+        const textoBusqueda = busqueda.trim();
+        documentoWhereClause[Op.or] = [
+          { codigoBarras: { [Op.iLike]: `%${textoBusqueda}%` } },
+          { nombreCliente: { [Op.iLike]: `%${textoBusqueda}%` } },
+          { numeroFactura: { [Op.iLike]: `%${textoBusqueda}%` } },
+          { identificacionCliente: { [Op.iLike]: `%${textoBusqueda}%` } }
+        ];
+      }
 
       // Solo notificaciones de documentos propios
-      const { count, rows: notificaciones } = await NotificacionEnviada.findAndCountAll({
-        include: [
-          {
-            model: Documento,
-            as: 'documento',
-            where: {
-              idMatrizador: req.matrizador.id // Solo documentos propios
-            },
-            attributes: ['id', 'codigoBarras', 'nombreCliente', 'tipoDocumento']
-          }
-        ],
+      const notificaciones = await NotificacionEnviada.findAll({
+        where: {
+          tipoEvento: {
+            [Op.in]: ['documento_listo', 'entrega_confirmada', 'entrega_grupal', 'recordatorio', 'alerta_sin_recoger']
+          },
+          ...whereClause
+        },
+        include: [{
+          model: Documento,
+          as: 'documento',
+          where: documentoWhereClause,
+          attributes: [
+            'id', 
+            'codigoBarras', 
+            'nombreCliente', 
+            'tipoDocumento',
+            'emailCliente',
+            'telefonoCliente',
+            'numeroFactura',
+            'identificacionCliente',
+            'idMatrizador',
+            'estado'
+          ],
+          include: [{
+            model: Matrizador,
+            as: 'matrizador',
+            attributes: ['id', 'nombre', 'email'],
+            required: false
+          }],
+          required: false
+        }],
         order: [['created_at', 'DESC']],
-        limit,
-        offset
+        limit: 50
       });
 
-      const totalPages = Math.ceil(count / limit);
+      // Procesar notificaciones para vista
+      const notificacionesProcesadas = notificaciones.map(notif => {
+        const notifData = notif.toJSON ? notif.toJSON() : notif;
+        
+        // Asegurar fechas en formato ISO
+        if (notifData.created_at) {
+          notifData.created_at = new Date(notifData.created_at).toISOString();
+        }
+        
+        // Asegurar metadatos
+        if (!notifData.metadatos) {
+          notifData.metadatos = {};
+        }
+        
+        // Mapear campos para compatibilidad con vista
+        notifData.tipo = notifData.tipoEvento;
+        notifData.detalles = notifData.mensajeEnviado || 'Notificación enviada';
+        notifData.usuario = notifData.metadatos?.entregadoPor || req.matrizador?.nombre || 'Sistema';
+        
+        // Agregar información de canal al metadatos
+        if (!notifData.metadatos.canal) {
+          notifData.metadatos.canal = notifData.canal;
+        }
+        if (!notifData.metadatos.estado) {
+          notifData.metadatos.estado = notifData.estado;
+        }
+        
+        // Corregir información del matrizador
+        if (!notifData.documento && notifData.metadatos) {
+          // Crear documento virtual para notificaciones grupales
+          notifData.documento = {
+            codigoBarras: 'ENTREGA GRUPAL',
+            tipoDocumento: 'Múltiples tipos',
+            nombreCliente: notifData.metadatos.nombreCliente || 'Cliente no especificado',
+            emailCliente: notifData.metadatos.emailCliente || null,
+            telefonoCliente: notifData.metadatos.telefonoCliente || null,
+            numeroFactura: null,
+            identificacionCliente: notifData.metadatos.identificacionCliente || null,
+            matrizador: {
+              id: req.matrizador.id,
+              nombre: req.matrizador.nombre,
+              email: req.matrizador.email
+            }
+          };
+        } else if (notifData.documento && !notifData.documento.matrizador) {
+          // Si el documento no tiene matrizador cargado, usar el matrizador actual
+          notifData.documento.matrizador = {
+            id: req.matrizador.id,
+            nombre: req.matrizador.nombre,
+            email: req.matrizador.email
+          };
+        }
+        
+        return notifData;
+      });
+
+      // Calcular estadísticas
+      const stats = {
+        total: notificaciones.length,
+        enviadas: notificaciones.filter(n => n.estado === 'enviado').length,
+        fallidas: notificaciones.filter(n => n.estado === 'fallido').length,
+        pendientes: notificaciones.filter(n => n.estado === 'pendiente').length
+      };
 
       res.render('archivo/notificaciones/historial', {
         layout: 'archivo',
         title: 'Historial de Notificaciones',
-        notificaciones,
-        paginacion: {
-          currentPage: page,
-          totalPages,
-          totalNotifications: count,
-          hasNextPage: page < totalPages,
-          hasPrevPage: page > 1,
-          nextPage: page + 1,
-          prevPage: page - 1
-        },
+        notificaciones: notificacionesProcesadas,
+        stats,
+        filtros: { fechaDesde, fechaHasta, tipo, canal, busqueda },
         userRole: req.matrizador?.rol,
         userName: req.matrizador?.nombre,
         userId: req.matrizador?.id

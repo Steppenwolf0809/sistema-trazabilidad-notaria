@@ -1,28 +1,23 @@
 /**
  * Servicio principal de notificaciones
- * Coordina el envío de notificaciones por diferentes canales (WhatsApp, Email)
- * y maneja la lógica de evaluación de condiciones
+ * Coordina el envío de notificaciones solo por WhatsApp usando Twilio
+ * Integrado con whatsappService funcional
  */
 
 const Documento = require('../models/Documento');
 const NotificacionEnviada = require('../models/NotificacionEnviada');
 const EventoDocumento = require('../models/EventoDocumento');
 const whatsappService = require('./whatsappService');
-const emailService = require('./emailService');
 const { sequelize } = require('../config/database');
 
-// Configuración del servicio
+// Configuración del servicio - SOLO WHATSAPP
 let configuracion = {
-  modoDesarrollo: true,
+  modoDesarrollo: process.env.NODE_ENV === 'development',
   logsDetallados: true,
   whatsapp: {
-    habilitado: false,
+    habilitado: process.env.WHATSAPP_ENABLED === 'true',
+    testMode: process.env.TEST_MODE === 'true',
     maxIntentos: 3
-  },
-  email: {
-    habilitado: false,
-    maxIntentos: 3,
-    delayReintentos: 60000
   }
 };
 
@@ -37,14 +32,21 @@ const inicializar = async (config = {}) => {
       ...config
     };
     
-    // Inicializar servicios de comunicación
-    whatsappService.inicializar(configuracion.whatsapp);
+    // Inicializar solo el servicio de WhatsApp
+    const whatsappInicializado = whatsappService.inicializar(configuracion.whatsapp);
+    
+    if (!whatsappInicializado) {
+      console.warn('⚠️ WhatsApp no se pudo inicializar, funcionará en modo simulado');
+    }
     
     if (configuracion.modoDesarrollo) {
-      console.log('🔔 Servicio de notificaciones inicializado en MODO DESARROLLO');
+      console.log('🔔 Servicio de notificaciones inicializado en MODO DESARROLLO (SOLO WHATSAPP)');
       console.log('   - Las notificaciones se simularán sin envío real');
+      if (configuracion.whatsapp.testMode) {
+        console.log('   - TEST_MODE activado: solo envíos al número de prueba');
+      }
     } else {
-      console.log('✅ Servicio de notificaciones inicializado correctamente');
+      console.log('✅ Servicio de notificaciones inicializado en PRODUCCIÓN (SOLO WHATSAPP)');
     }
     
     return true;
@@ -91,43 +93,22 @@ const evaluarCondicionesNotificacion = (documento) => {
     condiciones.razones.push('Es un documento habilitante (no principal)');
   }
   
-  // Condición 5: Verificar información de contacto
-  const tieneEmail = documento.emailCliente && documento.emailCliente.trim() !== '';
+  // Condición 5: Verificar información de contacto - SOLO WHATSAPP
   const tieneTelefono = documento.telefonoCliente && documento.telefonoCliente.trim() !== '';
   
-  if (!tieneEmail && !tieneTelefono) {
+  if (!tieneTelefono) {
     condiciones.debeNotificar = false;
-    condiciones.razones.push('Falta información de contacto (email y teléfono)');
+    condiciones.razones.push('Falta número de teléfono para WhatsApp');
   }
   
-  // Determinar canales permitidos si debe notificar
+  // Determinar canales permitidos si debe notificar - SOLO WHATSAPP
   if (condiciones.debeNotificar) {
-    switch (documento.metodoNotificacion) {
-      case 'whatsapp':
-        if (tieneTelefono) {
-          condiciones.canalesPermitidos.push('whatsapp');
-        } else {
-          condiciones.debeNotificar = false;
-          condiciones.razones.push('Método WhatsApp seleccionado pero falta teléfono');
-        }
-        break;
-      case 'email':
-        if (tieneEmail) {
-          condiciones.canalesPermitidos.push('email');
-        } else {
-          condiciones.debeNotificar = false;
-          condiciones.razones.push('Método Email seleccionado pero falta email');
-        }
-        break;
-      case 'ambos':
-        if (tieneEmail) condiciones.canalesPermitidos.push('email');
-        if (tieneTelefono) condiciones.canalesPermitidos.push('whatsapp');
-        
-        if (condiciones.canalesPermitidos.length === 0) {
-          condiciones.debeNotificar = false;
-          condiciones.razones.push('Método "ambos" seleccionado pero falta email y teléfono');
-        }
-        break;
+    // Todas las configuraciones de método se tratan como WhatsApp
+    if (tieneTelefono) {
+      condiciones.canalesPermitidos.push('whatsapp');
+    } else {
+      condiciones.debeNotificar = false;
+      condiciones.razones.push('WhatsApp seleccionado pero falta teléfono');
     }
   }
   
@@ -138,52 +119,6 @@ const evaluarCondicionesNotificacion = (documento) => {
   }
   
   return condiciones;
-};
-
-/**
- * Prepara los mensajes para un documento según el tipo de evento
- * @param {Object} documento - Documento para el cual preparar mensajes
- * @param {string} tipoEvento - Tipo de evento ('documento_listo', 'entrega_confirmada')
- * @param {Object} datosAdicionales - Datos adicionales según el tipo de evento
- * @returns {Object} Mensajes preparados para cada canal
- */
-const prepararMensajes = (documento, tipoEvento, datosAdicionales = {}) => {
-  const mensajes = {
-    whatsapp: null,
-    email: null
-  };
-  
-  switch (tipoEvento) {
-    case 'documento_listo':
-      mensajes.whatsapp = {
-        destinatario: documento.telefonoCliente,
-        asunto: 'Documento listo para retirar',
-        plantilla: 'documento_listo_whatsapp'
-      };
-      
-      mensajes.email = {
-        destinatario: documento.emailCliente,
-        asunto: `Documento listo para retirar - ${documento.tipoDocumento}`,
-        plantilla: 'documento_listo_email'
-      };
-      break;
-      
-    case 'entrega_confirmada':
-      mensajes.whatsapp = {
-        destinatario: documento.telefonoCliente,
-        asunto: 'Confirmación de entrega',
-        plantilla: 'entrega_confirmada_whatsapp'
-      };
-      
-      mensajes.email = {
-        destinatario: documento.emailCliente,
-        asunto: `Confirmación de entrega - ${documento.tipoDocumento}`,
-        plantilla: 'entrega_confirmada_email'
-      };
-      break;
-  }
-  
-  return mensajes;
 };
 
 /**
@@ -204,9 +139,8 @@ const registrarIntento = async (documentoId, tipoEvento, canal, resultado) => {
       try {
         const documento = await Documento.findByPk(documentoId);
         if (documento) {
-          destinatario = canal === 'email' ? 
-            (documento.emailCliente || 'email-no-disponible') : 
-            (documento.telefonoCliente || 'telefono-no-disponible');
+          // Solo WhatsApp, siempre usar teléfono
+          destinatario = documento.telefonoCliente || 'telefono-no-disponible';
         }
       } catch (docError) {
         console.warn('No se pudo obtener documento para destinatario:', docError.message);
@@ -228,7 +162,7 @@ const registrarIntento = async (documentoId, tipoEvento, canal, resultado) => {
         simulado: resultado.simulado || false,
         timestamp: resultado.timestamp || new Date().toISOString(),
         configuracion: configuracion.modoDesarrollo ? 'desarrollo' : 'produccion',
-        envioRealHabilitado: process.env.EMAIL_ENVIO_REAL === 'true' || process.env.WHATSAPP_ENVIO_REAL === 'true'
+        whatsappServiceVersion: 'v2-twilio'
       }
     });
     
@@ -304,61 +238,38 @@ const enviarNotificacionDocumentoListo = async (documentoId) => {
       documento: documento.codigoBarras
     };
     
-    // Enviar por cada canal permitido
-    for (const canal of evaluacion.canalesPermitidos) {
-      try {
-        let resultado;
-        
-        switch (canal) {
-          case 'whatsapp':
-            resultado = await whatsappService.enviarNotificacionDocumentoListo(
-              documento.telefonoCliente,
-              documento
-            );
-            break;
-            
-          case 'email':
-            resultado = await emailService.enviarNotificacionDocumentoListo(
-              documento,
-              {
-                email: documento.emailCliente,
-                nombre: documento.nombreCliente
-              }
-            );
-            break;
-            
-          default:
-            throw new Error(`Canal no soportado: ${canal}`);
-        }
-        
-        // Registrar el intento
-        await registrarIntento(documentoId, 'documento_listo', canal, resultado);
-        
-        if (resultado.exito) {
-          resultados.canalesEnviados.push(canal);
-        } else {
-          resultados.errores.push({
-            canal,
-            error: resultado.error
-          });
-        }
-      } catch (error) {
-        console.error(`Error al enviar por ${canal}:`, error);
+    // Enviar solo por WhatsApp - SIMPLIFICADO
+    try {
+      console.log(`📱 Enviando notificación WhatsApp para documento ${documento.codigoBarras}`);
+      
+      const resultado = await whatsappService.enviarNotificacionDocumentoListo(
+        documento.telefonoCliente,
+        documento
+      );
+      
+      // Registrar el intento
+      await registrarIntento(documentoId, 'documento_listo', 'whatsapp', resultado);
+      
+      if (resultado.exito) {
+        resultados.canalesEnviados.push('whatsapp');
+        console.log(`✅ WhatsApp enviado correctamente a ${documento.telefonoCliente}`);
+      } else {
         resultados.errores.push({
-          canal,
-          error: error.message
+          canal: 'whatsapp',
+          error: resultado.error
         });
+        console.log(`❌ Error al enviar WhatsApp: ${resultado.error}`);
       }
+    } catch (error) {
+      console.error(`❌ Error al enviar por WhatsApp:`, error);
+      resultados.errores.push({
+        canal: 'whatsapp',
+        error: error.message
+      });
     }
     
-    // ============== CORRECCIÓN: REGISTRO MEJORADO DE EVENTO ==============
     // Determinar el canal principal para el registro
-    let canalPrincipal = 'ninguno';
-    if (resultados.canalesEnviados.length === 1) {
-      canalPrincipal = resultados.canalesEnviados[0];
-    } else if (resultados.canalesEnviados.length > 1) {
-      canalPrincipal = 'ambos';
-    }
+    let canalPrincipal = 'whatsapp';
     
     // Determinar el estado principal
     let estadoPrincipal = 'enviada';
@@ -372,7 +283,7 @@ const enviarNotificacionDocumentoListo = async (documentoId) => {
     await EventoDocumento.create({
       documentoId: documentoId,
       tipo: 'otro',
-      detalles: `Notificación de documento listo enviada por: ${resultados.canalesEnviados.join(', ') || 'ningún canal'}`,
+      detalles: `Notificación de documento listo enviada por WhatsApp${resultados.canalesEnviados.length > 0 ? ' ✓' : ' ✗'}`,
       usuario: 'Sistema de Notificaciones',
       metadatos: {
         // ✅ CAMPOS CORREGIDOS PARA HISTORIAL
@@ -387,9 +298,9 @@ const enviarNotificacionDocumentoListo = async (documentoId) => {
         // Información adicional para auditoría
         documentoId: documentoId,
         codigoDocumento: documento.codigoBarras,
-        clienteEmail: documento.emailCliente,
         clienteTelefono: documento.telefonoCliente,
-        metodoNotificacion: documento.metodoNotificacion
+        metodoNotificacion: documento.metodoNotificacion,
+        whatsappServiceVersion: 'v2-twilio'
       }
     }, { transaction });
     
@@ -432,20 +343,19 @@ const enviarNotificacionEntrega = async (documentoId, datosEntrega) => {
       console.log(`🔔 Enviando confirmación de entrega para documento ${documento.codigoBarras}`);
     }
     
-    // Para confirmación de entrega, evaluamos condiciones más flexibles
-    const tieneEmail = documento.emailCliente && documento.emailCliente.trim() !== '';
+    // Para confirmación de entrega, evaluar solo WhatsApp
     const tieneTelefono = documento.telefonoCliente && documento.telefonoCliente.trim() !== '';
     
-    if (!tieneEmail && !tieneTelefono) {
+    if (!tieneTelefono) {
       if (configuracion.logsDetallados) {
-        console.log(`⏭️ No se enviará confirmación: falta información de contacto`);
+        console.log(`⏭️ No se enviará confirmación: falta número de teléfono`);
       }
       
       await transaction.commit();
       return {
         exito: true,
         notificacionEnviada: false,
-        razones: ['Falta información de contacto'],
+        razones: ['Falta número de teléfono'],
         documento: documento.codigoBarras
       };
     }
@@ -458,82 +368,47 @@ const enviarNotificacionEntrega = async (documentoId, datosEntrega) => {
       documento: documento.codigoBarras
     };
     
-    // Determinar canales según método de notificación
-    const canales = [];
-    switch (documento.metodoNotificacion) {
-      case 'whatsapp':
-        if (tieneTelefono) canales.push('whatsapp');
-        break;
-      case 'email':
-        if (tieneEmail) canales.push('email');
-        break;
-      case 'ambos':
-        if (tieneEmail) canales.push('email');
-        if (tieneTelefono) canales.push('whatsapp');
-        break;
-      case 'ninguno':
-        // Para confirmación de entrega, enviamos aunque esté en "ninguno"
-        if (tieneEmail) canales.push('email');
-        break;
-    }
-    
-    // Enviar por cada canal
-    for (const canal of canales) {
-      try {
-        let resultado;
-        
-        switch (canal) {
-          case 'whatsapp':
-            resultado = await whatsappService.enviarConfirmacionEntrega(
-              documento.telefonoCliente,
-              documento,
-              datosEntrega
-            );
-            break;
-            
-          case 'email':
-            resultado = await emailService.enviarConfirmacionEntrega(
-              documento,
-              {
-                email: documento.emailCliente,
-                nombre: documento.nombreCliente
-              },
-              datosEntrega
-            );
-            break;
-        }
-        
-        // Registrar el intento
-        await registrarIntento(documentoId, 'entrega_confirmada', canal, resultado);
-        
-        if (resultado.exito) {
-          resultados.canalesEnviados.push(canal);
-        } else {
-          resultados.errores.push({
-            canal,
-            error: resultado.error
-          });
-        }
-      } catch (error) {
-        console.error(`Error al enviar confirmación por ${canal}:`, error);
+    // Enviar solo por WhatsApp
+    try {
+      console.log(`📱 Enviando confirmación de entrega WhatsApp para documento ${documento.codigoBarras}`);
+      
+      const resultado = await whatsappService.enviarConfirmacionEntrega(
+        documento.telefonoCliente,
+        documento,
+        datosEntrega
+      );
+      
+      // Registrar el intento
+      await registrarIntento(documentoId, 'entrega_confirmada', 'whatsapp', resultado);
+      
+      if (resultado.exito) {
+        resultados.canalesEnviados.push('whatsapp');
+      } else {
         resultados.errores.push({
-          canal,
-          error: error.message
+          canal: 'whatsapp',
+          error: resultado.error
         });
       }
+    } catch (error) {
+      console.error(`Error al enviar confirmación por WhatsApp:`, error);
+      resultados.errores.push({
+        canal: 'whatsapp',
+        error: error.message
+      });
     }
     
     // Registrar evento en el documento
     await EventoDocumento.create({
       documentoId: documentoId,
       tipo: 'otro',
-      detalles: `Confirmación de entrega enviada por: ${resultados.canalesEnviados.join(', ')}`,
+      detalles: `Confirmación de entrega enviada por WhatsApp${resultados.canalesEnviados.length > 0 ? ' ✓' : ' ✗'}`,
       usuario: 'Sistema de Notificaciones',
       metadatos: {
         canalesEnviados: resultados.canalesEnviados,
         errores: resultados.errores,
         datosEntrega,
-        modoDesarrollo: configuracion.modoDesarrollo
+        modoDesarrollo: configuracion.modoDesarrollo,
+        whatsappServiceVersion: 'v2-twilio'
       }
     }, { transaction });
     
@@ -576,11 +451,14 @@ const obtenerHistorialNotificaciones = async (documentoId) => {
  * @returns {Object} Configuración actual
  */
 const obtenerConfiguracion = () => {
-  return { ...configuracion };
+  return { 
+    ...configuracion,
+    whatsappStatus: whatsappService.obtenerConfiguracion()
+  };
 };
 
 /**
- * Actualiza la configuración del servicio
+ * Actualiza la configuración del servicio - SOLO WHATSAPP
  * @param {Object} nuevaConfig - Nueva configuración
  */
 const actualizarConfiguracion = (nuevaConfig) => {
@@ -589,14 +467,17 @@ const actualizarConfiguracion = (nuevaConfig) => {
     ...nuevaConfig
   };
   
-  // Actualizar configuración de servicios dependientes
-  whatsappService.actualizarConfiguracion(configuracion.whatsapp);
+  // Actualizar configuración solo de WhatsApp
+  if (configuracion.whatsapp) {
+    whatsappService.actualizarConfiguracion(configuracion.whatsapp);
+  }
+  
+  console.log('🔧 Configuración del servicio de notificaciones actualizada (SOLO WHATSAPP)');
 };
 
 module.exports = {
   inicializar,
   evaluarCondicionesNotificacion,
-  prepararMensajes,
   registrarIntento,
   enviarNotificacionDocumentoListo,
   enviarNotificacionEntrega,

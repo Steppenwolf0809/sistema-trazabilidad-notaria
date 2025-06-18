@@ -315,13 +315,13 @@ const Documento = sequelize.define('Documento', {
     comment: 'Indica si el documento debe ser notificado automáticamente cuando esté listo'
   },
   
-  // Método de notificación preferido
+  // Método de notificación preferido - SIMPLIFICADO A SOLO WHATSAPP
   metodoNotificacion: {
-    type: DataTypes.ENUM('whatsapp', 'email', 'ambos', 'ninguno'),
+    type: DataTypes.ENUM('whatsapp', 'ninguno'),
     field: 'metodo_notificacion',
-    defaultValue: 'ambos',
+    defaultValue: 'whatsapp',
     allowNull: false,
-    comment: 'Método preferido para notificar al cliente'
+    comment: 'Método preferido para notificar al cliente - Solo WhatsApp o ninguno'
   },
   
   // Referencia al documento principal (self-referencing)

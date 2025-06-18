@@ -290,6 +290,44 @@
                                         {{/if}}
                                     </td>
                                     <td>
+                                        {{#if (eq this.tipo 'documento_listo')}}
+                                            <span class="badge bg-info">📋 Listo para Retiro</span>
+                                        {{else if (eq this.tipo 'entrega_confirmada')}}
+                                            <span class="badge bg-success">✅ Entregado</span>
+                                        {{else if (eq this.tipo 'entrega_grupal')}}
+                                            <div class="d-flex flex-column">
+                                                <span class="badge bg-purple mb-1">📦 Entrega Grupal</span>
+                                                {{#if this.metadatos.totalDocumentos}}
+                                                    <small class="text-muted">{{this.metadatos.totalDocumentos}} documentos</small>
+                                                {{/if}}
+                                            </div>
+                                        {{else if (eq this.tipo 'notificacion_grupal')}}
+                                            <div class="d-flex flex-column">
+                                                <span class="badge bg-purple mb-1">📦 Entrega Grupal</span>
+                                                {{#if this.metadatos.totalDocumentos}}
+                                                    <small class="text-muted">{{this.metadatos.totalDocumentos}} documentos</small>
+                                                {{/if}}
+                                            </div>
+                                        {{else}}
+                                            <span class="badge bg-secondary">{{this.tipo}}</span>
+                                        {{/if}}
+                                    </td>
+                                    <td>
+                                        {{#if this.metadatos.canal}}
+                                            {{#if (eq this.metadatos.canal 'whatsapp')}}
+                                                <span class="badge bg-success">📱 WhatsApp</span>
+                                            {{else if (eq this.metadatos.canal 'email')}}
+                                                <span class="badge bg-primary">📧 Email</span>
+                                            {{else if (eq this.metadatos.canal 'ambos')}}
+                                                <span class="badge bg-info">📱📧 Ambos</span>
+                                            {{else}}
+                                                <span class="badge bg-secondary">{{this.metadatos.canal}}</span>
+                                            {{/if}}
+                                        {{else}}
+                                            <span class="badge bg-secondary">No especificado</span>
+                                        {{/if}}
+                                    </td>
+                                    <td>
                                         {{#if (or (eq this.tipo 'entrega_grupal') (eq this.tipo 'notificacion_grupal'))}}
                                             {{!-- Para entrega grupal, mostrar información del receptor --}}
                                             <div class="d-flex flex-column">
@@ -301,13 +339,6 @@
                                                 {{/if}}
                                                 {{#if this.metadatos.relacionReceptor}}
                                                     <small class="text-info">🔗 {{this.metadatos.relacionReceptor}}</small>
-                                                {{/if}}
-                                                {{!-- Mostrar canales de contacto del cliente --}}
-                                                {{#if this.documento.emailCliente}}
-                                                <small class="text-muted">📧 {{substring this.documento.emailCliente 0 15}}{{#if (gt this.documento.emailCliente.length 15)}}...{{/if}}</small>
-                                                {{/if}}
-                                                {{#if this.documento.telefonoCliente}}
-                                                <small class="text-muted">📱 {{this.documento.telefonoCliente}}</small>
                                                 {{/if}}
                                             </div>
                                         {{else}}
@@ -323,75 +354,19 @@
                                         {{/if}}
                                     </td>
                                     <td>
-                                        {{#if (eq this.tipo 'documento_listo')}}
-                                            <span class="badge bg-success">📋 Listo</span>
-                                        {{else if (eq this.tipo 'entrega_confirmada')}}
-                                            <span class="badge bg-info">✅ Entregado</span>
-                                        {{else if (eq this.tipo 'entrega_grupal')}}
-                                            <div class="d-flex flex-column">
-                                                <span class="badge bg-purple mb-1">📦 Entrega Grupal</span>
-                                                {{#if this.metadatos.totalDocumentos}}
-                                                    <small class="text-muted">{{this.metadatos.totalDocumentos}} documentos</small>
-                                                {{/if}}
-                                                {{#if this.metadatos.nombreCliente}}
-                                                    <small class="text-primary fw-bold">{{this.metadatos.nombreCliente}}</small>
-                                                {{/if}}
-                                            </div>
-                                        {{else if (eq this.tipo 'notificacion_grupal')}}
-                                            <div class="d-flex flex-column">
-                                                <span class="badge bg-purple mb-1">📦 Entrega Grupal</span>
-                                                {{#if this.metadatos.totalDocumentos}}
-                                                    <small class="text-muted">{{this.metadatos.totalDocumentos}} documentos</small>
-                                                {{/if}}
-                                                {{#if this.metadatos.nombreCliente}}
-                                                    <small class="text-primary fw-bold">{{this.metadatos.nombreCliente}}</small>
-                                                {{/if}}
-                                            </div>
-                                        {{else if (eq this.tipo 'otro')}}
-                                            <span class="badge bg-primary">🔔 Notificación</span>
-                                        {{else if (eq this.tipo 'cambio_estado')}}
-                                            <span class="badge bg-warning">🔄 Cambio Estado</span>
-                                        {{else}}
-                                            <span class="badge bg-secondary">{{this.tipo}}</span>
-                                        {{/if}}
-                                    </td>
-                                    <td>
-                                        {{#if this.metadatos.canal}}
-                                            {{#if (eq this.metadatos.canal 'whatsapp')}}
-                                                <span class="badge bg-success">📱 WhatsApp</span>
-                                            {{else if (eq this.metadatos.canal 'email')}}
-                                                <span class="badge bg-primary">📧 Email</span>
-                                            {{else if (eq this.metadatos.canal 'ambos')}}
-                                                <span class="badge bg-info">📱📧 Ambos</span>
-                                            {{else if (eq this.metadatos.canal 'ninguno')}}
-                                                <span class="badge bg-secondary">❌ Sin Canal</span>
+                                        {{#if this.metadatos.estado}}
+                                            {{#if (eq this.metadatos.estado 'enviado')}}
+                                                <span class="badge bg-success">✅ Enviado</span>
+                                            {{else if (eq this.metadatos.estado 'error')}}
+                                                <span class="badge bg-danger">❌ Error</span>
+                                            {{else if (eq this.metadatos.estado 'simulado')}}
+                                                <span class="badge bg-warning">🔄 Simulado</span>
                                             {{else}}
-                                                <span class="badge bg-secondary">{{this.metadatos.canal}}</span>
+                                                <span class="badge bg-secondary">{{this.metadatos.estado}}</span>
                                             {{/if}}
                                         {{else}}
-                                            <span class="badge bg-light text-dark">No especificado</span>
+                                            <span class="badge bg-secondary">Sin estado</span>
                                         {{/if}}
-                                    </td>
-                                    <td>
-                                        <div class="d-flex flex-column">
-                                            {{#if this.metadatos.estado}}
-                                                {{#if (eq this.metadatos.estado 'enviada')}}
-                                                    <span class="badge bg-success">✅ Enviada</span>
-                                                {{else if (eq this.metadatos.estado 'simulada')}}
-                                                    <span class="badge bg-warning">🔄 Simulada</span>
-                                                {{else if (eq this.metadatos.estado 'fallida')}}
-                                                    <span class="badge bg-danger">❌ Fallida</span>
-                                                {{else if (eq this.metadatos.estado 'procesada')}}
-                                                    <span class="badge bg-info">⚙️ Procesada</span>
-                                                {{else if (eq this.metadatos.estado 'pendiente')}}
-                                                    <span class="badge bg-secondary">⏳ Pendiente</span>
-                                                {{else}}
-                                                    <span class="badge bg-secondary">{{this.metadatos.estado}}</span>
-                                                {{/if}}
-                                            {{else}}
-                                                <span class="badge bg-light text-dark">Sin estado</span>
-                                            {{/if}}
-                                        </div>
                                     </td>
                                     <td>
                                         <div class="btn-group" role="group">

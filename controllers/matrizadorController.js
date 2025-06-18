@@ -2263,13 +2263,12 @@ const matrizadorController = {
       }
       
       // Filtros de tipo y canal
-      if (tipo) whereClause.tipo = tipo;
+      if (tipo) whereClause.tipoEvento = tipo; // CORREGIDO: usar tipoEvento
       if (canal && canal !== '') {
-        // Buscar en metadatos.canal
-        whereClause['metadatos.canal'] = canal;
+        whereClause.canal = canal; // CORREGIDO: usar campo directo
       }
       
-      // ============== NUEVO: BÚSQUEDA POR TEXTO ==============
+      // ============== BÚSQUEDA POR TEXTO ==============
       if (busqueda && busqueda.trim() !== '') {
         const textoBusqueda = busqueda.trim();
         documentoWhereClause[Op.or] = [
@@ -2284,8 +2283,7 @@ const matrizadorController = {
         ];
       }
       
-      // ============== CORRECCIÓN: CONSULTAR TABLA CORRECTA ==============
-      // Cambiar de EventoDocumento a NotificacionEnviada para mostrar notificaciones reales
+      // ============== CORRECCIÓN: CONSULTAR CON RELACIONES CORRECTAS ==============
       const notificaciones = await NotificacionEnviada.findAll({
         where: {
           // Filtrar por tipos de evento de notificación
@@ -2297,7 +2295,24 @@ const matrizadorController = {
         include: [{
           model: Documento,
           as: 'documento',
-          attributes: ['codigoBarras', 'tipoDocumento', 'nombreCliente', 'numeroFactura', 'identificacionCliente'],
+          attributes: [
+            'id',
+            'codigoBarras', 
+            'tipoDocumento', 
+            'nombreCliente', 
+            'emailCliente', 
+            'telefonoCliente',
+            'numeroFactura', 
+            'identificacionCliente',
+            'idMatrizador', // AÑADIDO: incluir idMatrizador
+            'estado'
+          ],
+          include: [{
+            model: Matrizador,
+            as: 'matrizador',
+            attributes: ['id', 'nombre', 'email'],
+            required: false
+          }],
           where: documentoWhereClause,
           required: false // Permitir notificaciones grupales sin documento específico
         }],
@@ -2322,11 +2337,10 @@ const matrizadorController = {
           notifData.metadatos = {};
         }
         
-        // ============== MAPEAR CAMPOS PARA COMPATIBILIDAD CON VISTA ==============
-        // La vista espera campos de EventoDocumento, mapear desde NotificacionEnviada
+        // ============== CORREGIR MAPEO DE CAMPOS ==============
         notifData.tipo = notifData.tipoEvento; // Mapear tipoEvento -> tipo para la vista
         notifData.detalles = notifData.mensajeEnviado || 'Notificación enviada';
-        notifData.usuario = notifData.metadatos?.entregadoPor || 'Sistema';
+        notifData.usuario = notifData.metadatos?.entregadoPor || req.matrizador?.nombre || 'Sistema';
         
         // Agregar información de canal al metadatos para la vista
         if (!notifData.metadatos.canal) {
@@ -2336,7 +2350,34 @@ const matrizadorController = {
           notifData.metadatos.estado = notifData.estado;
         }
         
-        console.log(`📅 [MATRIZADOR] Notificación ID ${notifData.id}: fecha = ${notifData.created_at}, tipo = ${notifData.tipo}`);
+        // ============== CORREGIR INFORMACIÓN DEL MATRIZADOR ==============
+        // Si no hay documento (notificaciones grupales), usar metadatos
+        if (!notifData.documento && notifData.metadatos) {
+          // Crear documento virtual para notificaciones grupales
+          notifData.documento = {
+            codigoBarras: 'ENTREGA GRUPAL',
+            tipoDocumento: 'Múltiples tipos',
+            nombreCliente: notifData.metadatos.nombreCliente || 'Cliente no especificado',
+            emailCliente: notifData.metadatos.emailCliente || null,
+            telefonoCliente: notifData.metadatos.telefonoCliente || null,
+            numeroFactura: null,
+            identificacionCliente: notifData.metadatos.identificacionCliente || null,
+            matrizador: {
+              id: req.matrizador.id,
+              nombre: req.matrizador.nombre,
+              email: req.matrizador.email
+            }
+          };
+        } else if (notifData.documento && !notifData.documento.matrizador) {
+          // Si el documento no tiene matrizador cargado, usar el matrizador actual
+          notifData.documento.matrizador = {
+            id: req.matrizador.id,
+            nombre: req.matrizador.nombre,
+            email: req.matrizador.email
+          };
+        }
+        
+        console.log(`📅 [MATRIZADOR] Notificación ID ${notifData.id}: fecha = ${notifData.created_at}, tipo = ${notifData.tipo}, matrizador = ${notifData.documento?.matrizador?.nombre || 'No disponible'}`);
         
         return notifData;
       });
@@ -2534,9 +2575,8 @@ const matrizadorController = {
       
       // ============== CORRECCIÓN: GENERACIÓN CONDICIONAL DE CÓDIGO DE VERIFICACIÓN ==============
       
-      // Verificar si debe generar código de verificación
+      // Verificar si debe generar código de verificación - SOLO WHATSAPP
       const debeNotificar = !documento.omitirNotificacion && 
-                           documento.emailCliente && 
                            documento.telefonoCliente;
       
       const esEntregaInmediata = documento.entregadoInmediatamente || false;
@@ -2563,8 +2603,8 @@ const matrizadorController = {
           mensajeNotificacion = 'Sin código - entrega inmediata configurada';
           console.log(`⚡ No se generará código para documento ${documento.codigoBarras}: entrega inmediata`);
         } else {
-          mensajeNotificacion = 'Sin código - faltan datos de contacto del cliente';
-          console.log(`⚠️ No se generará código para documento ${documento.codigoBarras}: sin datos de contacto`);
+          mensajeNotificacion = 'Sin código - falta número de teléfono del cliente';
+          console.log(`⚠️ No se generará código para documento ${documento.codigoBarras}: sin teléfono`);
         }
       }
       
@@ -2598,9 +2638,8 @@ const matrizadorController = {
           for (const habilitante of documentosHabilitantes) {
             // ============== APLICAR MISMA LÓGICA CONDICIONAL A HABILITANTES ==============
             
-            // Verificar si el habilitante debe tener código
+            // Verificar si el habilitante debe tener código - SOLO WHATSAPP
             const debeNotificarHabilitante = !habilitante.omitirNotificacion && 
-                                           habilitante.emailCliente && 
                                            habilitante.telefonoCliente;
             
             const esEntregaInmediataHabilitante = habilitante.entregadoInmediatamente || false;
@@ -2733,7 +2772,7 @@ const matrizadorController = {
         } else if (esEntregaInmediata) {
           mensajeExito = `El documento ha sido marcado como listo para entrega inmediata. No se requiere código de verificación.`;
         } else {
-          mensajeExito = `El documento ha sido marcado como listo para entrega. No se pudo enviar notificación por falta de datos de contacto.`;
+          mensajeExito = `El documento ha sido marcado como listo para entrega. No se pudo enviar notificación por falta de número de teléfono.`;
         }
       }
       
