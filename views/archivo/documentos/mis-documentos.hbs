@@ -39,10 +39,8 @@
           <select name="estadoPago" class="form-select">
             <option value="">Todos</option>
             <option value="pendiente" {{#if (eq filtros.estadoPago "pendiente")}}selected{{/if}}>Pendiente</option>
-            <option value="pagado_completo" {{#if (eq filtros.estadoPago "pagado_completo")}}selected{{/if}}>Pagado Completo</option>
-            <option value="pagado" {{#if (eq filtros.estadoPago "pagado")}}selected{{/if}}>Pagado</option>
             <option value="pago_parcial" {{#if (eq filtros.estadoPago "pago_parcial")}}selected{{/if}}>Pago Parcial</option>
-            <option value="parcial" {{#if (eq filtros.estadoPago "parcial")}}selected{{/if}}>Parcial</option>
+            <option value="pagado_completo" {{#if (eq filtros.estadoPago "pagado_completo")}}selected{{/if}}>Pagado Completo</option>
             <option value="pagado_con_retencion" {{#if (eq filtros.estadoPago "pagado_con_retencion")}}selected{{/if}}>Pagado con Retención</option>
           </select>
         </div>
@@ -107,21 +105,13 @@
                       <span class="badge bg-danger">
                         <i class="fas fa-clock me-1"></i>Pendiente
                       </span>
-                    {{else if (eq this.estadoPago "pagado_completo")}}
-                      <span class="badge bg-success">
-                        <i class="fas fa-check-circle me-1"></i>Pagado Completo
-                      </span>
-                    {{else if (eq this.estadoPago "pagado")}}
-                      <span class="badge bg-success">
-                        <i class="fas fa-check me-1"></i>Pagado
-                      </span>
                     {{else if (eq this.estadoPago "pago_parcial")}}
                       <span class="badge bg-warning">
                         <i class="fas fa-coins me-1"></i>Pago Parcial
                       </span>
-                    {{else if (eq this.estadoPago "parcial")}}
-                      <span class="badge bg-warning">
-                        <i class="fas fa-coins me-1"></i>Parcial
+                    {{else if (eq this.estadoPago "pagado_completo")}}
+                      <span class="badge bg-success">
+                        <i class="fas fa-check-circle me-1"></i>Pagado Completo
                       </span>
                     {{else if (eq this.estadoPago "pagado_con_retencion")}}
                       <span class="badge bg-info">

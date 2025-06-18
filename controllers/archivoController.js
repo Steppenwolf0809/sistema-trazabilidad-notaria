@@ -23,57 +23,88 @@ const archivoController = {
 
   /**
    * Dashboard principal del archivo
-   * Muestra solo los documentos asignados al usuario archivo
+   * Muestra documentos atrasados de TODOS los matrizadores (función supervisora)
    */
   dashboard: async (req, res) => {
     try {
       console.log('🗂️ Acceso al dashboard de archivo:', req.matrizador?.nombre);
       
-      // Obtener estadísticas solo de documentos asignados al usuario archivo
-      const estadisticas = await obtenerEstadisticasArchivo(req.matrizador.id);
+      // 1. OBTENER ESTADÍSTICAS GLOBALES DEL SISTEMA (para rol archivo)
+      const estadisticas = await obtenerEstadisticasGlobalesArchivo();
       
-      // Obtener documentos con alertas (más de 20 días desde creación sin estar listos o entregados)
-      // Solo documentos asignados al usuario archivo
+      // 2. CONSULTA PRINCIPAL: Documentos atrasados (más de 15 días en proceso)
+      // Archivo puede ver TODOS los documentos del sistema como supervisor
       const fechaLimite = new Date();
-      fechaLimite.setDate(fechaLimite.getDate() - 20);
+      fechaLimite.setDate(fechaLimite.getDate() - 15);
       
-      const alertasDocumentos = await Documento.findAll({
+      const documentosAtrasados = await Documento.findAll({
         where: {
-          idMatrizador: req.matrizador.id, // Solo documentos propios
-          estado: {
-            [Op.notIn]: ['entregado', 'cancelado']
-          },
+          estado: 'en_proceso', // Solo documentos en proceso
           created_at: {
-            [Op.lt]: fechaLimite
+            [Op.lt]: fechaLimite  // Más de 15 días desde creación
           }
         },
         include: [
           {
             model: Matrizador,
             as: 'matrizador',
-            attributes: ['id', 'nombre']
+            attributes: ['id', 'nombre'],
+            required: false // LEFT JOIN para incluir documentos sin matrizador
           }
         ],
-        order: [['created_at', 'ASC']],
-        limit: 20,
+        order: [['created_at', 'ASC']], // Más antiguos primero
+        limit: 50, // Límite para rendimiento
         attributes: [
-          'id', 'codigoBarras', 'tipoDocumento', 'fechaFactura', 'valorFactura',
-          'estadoPago', 'estado', 'nombreCliente', 'identificacionCliente',
-          'telefonoCliente', 'created_at', 'idMatrizador'
+          'id', 'codigoBarras', 'tipoDocumento', 'nombreCliente', 
+          'created_at', 'idMatrizador', 'fechaFactura'
         ]
       });
 
-      // Calcular días desde creación para cada documento
-      alertasDocumentos.forEach(doc => {
-        const diffTime = Math.abs(new Date() - new Date(doc.created_at));
-        doc.diasSinActualizar = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      // 3. PROCESAR DATOS PARA VISTA
+      const documentosConDias = documentosAtrasados.map(doc => {
+        const fechaCreacion = new Date(doc.created_at);
+        const hoy = new Date();
+        const diasTranscurridos = Math.floor((hoy - fechaCreacion) / (1000 * 60 * 60 * 24));
+        
+        // Extraer número de libro del código de barras
+        // Formato ejemplo: 20251701018D00531
+        // Año: 2025, Libro: 701018 (posiciones 4-10)
+        let numeroLibro = 'N/A';
+        if (doc.codigoBarras && doc.codigoBarras.length >= 10) {
+          numeroLibro = doc.codigoBarras.substring(4, 10);
+        }
+        
+        return {
+          id: doc.id,
+          codigoBarras: doc.codigoBarras,
+          nombreCliente: doc.nombreCliente,
+          tipoDocumento: doc.tipoDocumento,
+          fechaCreacion: doc.created_at,
+          diasTranscurridos,
+          numeroLibro,
+          matrizador: {
+            nombre: doc.matrizador ? doc.matrizador.nombre : 'Sin asignar',
+            id: doc.matrizador ? doc.matrizador.id : null
+          },
+          // Clasificación de prioridad según días
+          prioridad: diasTranscurridos > 30 ? 'Crítica' : 
+                    diasTranscurridos > 20 ? 'Alta' : 'Media',
+          clasePrioridad: diasTranscurridos > 30 ? 'danger' : 
+                         diasTranscurridos > 20 ? 'warning' : 'info'
+        };
       });
+
+      // 4. ESTADÍSTICAS ADICIONALES PARA ARCHIVO
+      const estadisticasAdicionales = await calcularEstadisticasAdicionales(documentosConDias);
 
       res.render('archivo/dashboard', {
         layout: 'archivo',
         title: 'Dashboard de Archivo',
         estadisticas,
-        alertasDocumentos,
+        alertasDocumentos: documentosConDias, // Cambiar nombre para compatibilidad
+        documentosAtrasados: documentosConDias,
+        totalAtrasados: documentosConDias.length,
+        estadisticasAdicionales,
         userRole: req.matrizador?.rol,
         userName: req.matrizador?.nombre,
         userId: req.matrizador?.id
@@ -100,15 +131,23 @@ const archivoController = {
       const limit = parseInt(req.query.limit) || 25;
       const offset = (page - 1) * limit;
 
-      // Construir filtros
+      // Construir filtros con mapeo correcto de valores
       const whereConditions = {};
       
       if (req.query.estado) {
-        whereConditions.estado = req.query.estado;
+        // Mapear valores del formulario a valores correctos del enum
+        const estadoMapeado = mapearEstadoFormulario(req.query.estado);
+        if (estadoMapeado) {
+          whereConditions.estado = estadoMapeado;
+        }
       }
       
       if (req.query.estadoPago) {
-        whereConditions.estadoPago = req.query.estadoPago;
+        // Mapear valores del formulario a valores correctos del enum
+        const estadoPagoMapeado = mapearEstadoPagoFormulario(req.query.estadoPago);
+        if (estadoPagoMapeado) {
+          whereConditions.estadoPago = estadoPagoMapeado;
+        }
       }
       
       if (req.query.tipoDocumento) {
@@ -200,11 +239,19 @@ const archivoController = {
       };
       
       if (req.query.estado) {
-        whereConditions.estado = req.query.estado;
+        // Mapear valores del formulario a valores correctos del enum
+        const estadoMapeado = mapearEstadoFormulario(req.query.estado);
+        if (estadoMapeado) {
+          whereConditions.estado = estadoMapeado;
+        }
       }
       
       if (req.query.estadoPago) {
-        whereConditions.estadoPago = req.query.estadoPago;
+        // Mapear valores del formulario a valores correctos del enum
+        const estadoPagoMapeado = mapearEstadoPagoFormulario(req.query.estadoPago);
+        if (estadoPagoMapeado) {
+          whereConditions.estadoPago = estadoPagoMapeado;
+        }
       }
       
       if (req.query.tipoDocumento) {
@@ -1064,6 +1111,60 @@ const archivoController = {
 };
 
 /**
+ * Mapea valores del formulario a valores correctos del enum de estado
+ */
+function mapearEstadoFormulario(estadoFormulario) {
+  const mapeoEstados = {
+    // Valores del formulario → Valores del enum en BD
+    'borrador': 'en_proceso',      // Borrador se considera en proceso
+    'proceso': 'en_proceso',       // En proceso
+    'en_proceso': 'en_proceso',    // Ya correcto
+    'listo': 'listo_para_entrega', // Listo para entrega
+    'listo_para_entrega': 'listo_para_entrega', // Ya correcto
+    'entregado': 'entregado',      // Entregado
+    'cancelado': 'cancelado',      // Cancelado
+    'eliminado': 'eliminado',      // Eliminado
+    'nota_credito': 'nota_credito' // Nota de crédito
+  };
+  
+  const estadoMapeado = mapeoEstados[estadoFormulario];
+  
+  if (estadoMapeado) {
+    console.log(`🔄 Mapeo de estado: '${estadoFormulario}' → '${estadoMapeado}'`);
+    return estadoMapeado;
+  } else {
+    console.warn(`⚠️ Estado no reconocido: '${estadoFormulario}', valores válidos:`, Object.keys(mapeoEstados));
+    return null;
+  }
+}
+
+/**
+ * Mapea valores del formulario a valores correctos del enum de estado de pago
+ */
+function mapearEstadoPagoFormulario(estadoPagoFormulario) {
+  const mapeoEstadosPago = {
+    'pendiente': 'pendiente',
+    'pago_parcial': 'pago_parcial',
+    'parcial': 'pago_parcial',
+    'pagado_completo': 'pagado_completo',
+    'pagado': 'pagado_completo',
+    'completo': 'pagado_completo',
+    'pagado_con_retencion': 'pagado_con_retencion',
+    'retencion': 'pagado_con_retencion'
+  };
+  
+  const estadoPagoMapeado = mapeoEstadosPago[estadoPagoFormulario];
+  
+  if (estadoPagoMapeado) {
+    console.log(`🔄 Mapeo de estado de pago: '${estadoPagoFormulario}' → '${estadoPagoMapeado}'`);
+    return estadoPagoMapeado;
+  } else {
+    console.warn(`⚠️ Estado de pago no reconocido: '${estadoPagoFormulario}', valores válidos:`, Object.keys(mapeoEstadosPago));
+    return null;
+  }
+}
+
+/**
  * Función auxiliar para obtener estadísticas solo de documentos del archivo
  */
 async function obtenerEstadisticasArchivo(matrizadorId) {
@@ -1099,6 +1200,136 @@ async function obtenerEstadisticasArchivo(matrizadorId) {
       documentosListos: 0,
       documentosEntregados: 0,
       documentosCancelados: 0
+    };
+  }
+}
+
+/**
+ * Función auxiliar para obtener estadísticas globales del sistema (para rol archivo)
+ */
+async function obtenerEstadisticasGlobalesArchivo() {
+  try {
+    console.log('📊 Calculando estadísticas globales para archivo...');
+    
+    const [
+      totalDocumentos,
+      documentosPendientes,
+      documentosListos,
+      documentosEntregados,
+      documentosCancelados
+    ] = await Promise.all([
+      Documento.count(),
+      Documento.count({ where: { estado: 'en_proceso' } }),
+      Documento.count({ where: { estado: 'listo_para_entrega' } }),
+      Documento.count({ where: { estado: 'entregado' } }),
+      Documento.count({ where: { estado: 'cancelado' } })
+    ]);
+
+    console.log('📊 Estadísticas globales calculadas:', {
+      totalDocumentos,
+      documentosPendientes,
+      documentosListos,
+      documentosEntregados,
+      documentosCancelados
+    });
+
+    return {
+      totalDocumentos,
+      documentosPendientes,
+      documentosListos,
+      documentosEntregados,
+      documentosCancelados
+    };
+  } catch (error) {
+    console.error('❌ Error al obtener estadísticas globales de archivo:', error);
+    return {
+      totalDocumentos: 0,
+      documentosPendientes: 0,
+      documentosListos: 0,
+      documentosEntregados: 0,
+      documentosCancelados: 0
+    };
+  }
+}
+
+/**
+ * Calcula estadísticas adicionales para archivo basadas en documentos atrasados
+ */
+async function calcularEstadisticasAdicionales(documentosAtrasados) {
+  try {
+    console.log('📈 Calculando estadísticas adicionales para archivo...');
+    
+    // 1. Calcular tiempo promedio de procesamiento de documentos completados en últimos 30 días
+    const fechaTreintaDiasAtras = new Date();
+    fechaTreintaDiasAtras.setDate(fechaTreintaDiasAtras.getDate() - 30);
+    
+    const documentosCompletados = await Documento.findAll({
+      where: {
+        estado: {
+          [Op.in]: ['listo_para_entrega', 'entregado']
+        },
+        updated_at: {
+          [Op.gte]: fechaTreintaDiasAtras
+        }
+      },
+      attributes: ['created_at', 'updated_at']
+    });
+    
+    let promedioTiempos = 0;
+    if (documentosCompletados.length > 0) {
+      const totalDias = documentosCompletados.reduce((sum, doc) => {
+        const inicio = new Date(doc.created_at);
+        const fin = new Date(doc.updated_at);
+        const dias = Math.floor((fin - inicio) / (1000 * 60 * 60 * 24));
+        return sum + dias;
+      }, 0);
+      promedioTiempos = Math.round(totalDias / documentosCompletados.length);
+    }
+    
+    // 2. Encontrar matrizador con más atrasos
+    let matrizadorMasAtrasos = null;
+    if (documentosAtrasados.length > 0) {
+      const conteoMatrizadores = {};
+      documentosAtrasados.forEach(doc => {
+        const matrizador = doc.matrizador.nombre;
+        conteoMatrizadores[matrizador] = (conteoMatrizadores[matrizador] || 0) + 1;
+      });
+      
+      const matrizadorTop = Object.entries(conteoMatrizadores)
+        .sort(([,a], [,b]) => b - a)[0];
+      
+      if (matrizadorTop) {
+        matrizadorMasAtrasos = {
+          nombre: matrizadorTop[0],
+          cantidad: matrizadorTop[1]
+        };
+      }
+    }
+    
+    // 3. Estadísticas por prioridad
+    const estadisticasPrioridad = {
+      critica: documentosAtrasados.filter(doc => doc.prioridad === 'Crítica').length,
+      alta: documentosAtrasados.filter(doc => doc.prioridad === 'Alta').length,
+      media: documentosAtrasados.filter(doc => doc.prioridad === 'Media').length
+    };
+    
+    const estadisticas = {
+      promedioTiempos,
+      matrizadorMasAtrasos,
+      estadisticasPrioridad,
+      documentosCompletadosUltimos30Dias: documentosCompletados.length
+    };
+    
+    console.log('📈 Estadísticas adicionales calculadas:', estadisticas);
+    
+    return estadisticas;
+  } catch (error) {
+    console.error('❌ Error al calcular estadísticas adicionales:', error);
+    return {
+      promedioTiempos: 0,
+      matrizadorMasAtrasos: null,
+      estadisticasPrioridad: { critica: 0, alta: 0, media: 0 },
+      documentosCompletadosUltimos30Dias: 0
     };
   }
 }

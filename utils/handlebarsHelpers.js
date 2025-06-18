@@ -6,6 +6,8 @@
 const moment = require('moment');
 moment.locale('es'); // Configurar moment en español
 
+const Handlebars = require('handlebars');
+
 module.exports = {
   // ============== HELPERS DE FECHA Y TIEMPO ==============
   
@@ -1081,4 +1083,155 @@ module.exports = {
     return moment(date).format('DD/MM/YYYY');
   },
 
-}; 
+};
+
+// Helper para formatear fechas
+Handlebars.registerHelper('formatDate', function(date, format) {
+  if (!date) return 'N/A';
+  
+  const d = new Date(date);
+  
+  // Verificar si la fecha es válida
+  if (isNaN(d.getTime())) return 'Fecha inválida';
+  
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  
+  switch (format) {
+    case 'DD/MM/YYYY':
+      return `${day}/${month}/${year}`;
+    case 'DD/MM/YYYY HH:mm':
+      return `${day}/${month}/${year} ${hours}:${minutes}`;
+    case 'YYYY-MM-DD':
+      return `${year}-${month}-${day}`;
+    default:
+      return d.toLocaleDateString('es-EC');
+  }
+});
+
+// Helper para comparación mayor que
+Handlebars.registerHelper('gt', function(a, b) {
+  return Number(a) > Number(b);
+});
+
+// Helper para comparación mayor o igual que
+Handlebars.registerHelper('gte', function(a, b) {
+  return Number(a) >= Number(b);
+});
+
+// Helper para comparación menor que
+Handlebars.registerHelper('lt', function(a, b) {
+  return Number(a) < Number(b);
+});
+
+// Helper para comparación menor o igual que
+Handlebars.registerHelper('lte', function(a, b) {
+  return Number(a) <= Number(b);
+});
+
+// Helper para comparación de igualdad
+Handlebars.registerHelper('eq', function(a, b) {
+  return a === b;
+});
+
+// Helper para comparación de no igualdad
+Handlebars.registerHelper('ne', function(a, b) {
+  return a !== b;
+});
+
+// Helper para formatear números como dinero
+Handlebars.registerHelper('formatMoney', function(value) {
+  if (!value || isNaN(value)) return '$0.00';
+  
+  return new Intl.NumberFormat('es-EC', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2
+  }).format(value);
+});
+
+// Helper para formatear números con separadores de miles
+Handlebars.registerHelper('formatNumber', function(value) {
+  if (!value || isNaN(value)) return '0';
+  
+  return new Intl.NumberFormat('es-EC').format(value);
+});
+
+// Helper para condicional if con múltiples operadores
+Handlebars.registerHelper('ifCond', function(v1, operator, v2, options) {
+  switch (operator) {
+    case '==':
+      return (v1 == v2) ? options.fn(this) : options.inverse(this);
+    case '===':
+      return (v1 === v2) ? options.fn(this) : options.inverse(this);
+    case '!=':
+      return (v1 != v2) ? options.fn(this) : options.inverse(this);
+    case '!==':
+      return (v1 !== v2) ? options.fn(this) : options.inverse(this);
+    case '<':
+      return (v1 < v2) ? options.fn(this) : options.inverse(this);
+    case '<=':
+      return (v1 <= v2) ? options.fn(this) : options.inverse(this);
+    case '>':
+      return (v1 > v2) ? options.fn(this) : options.inverse(this);
+    case '>=':
+      return (v1 >= v2) ? options.fn(this) : options.inverse(this);
+    case '&&':
+      return (v1 && v2) ? options.fn(this) : options.inverse(this);
+    case '||':
+      return (v1 || v2) ? options.fn(this) : options.inverse(this);
+    default:
+      return options.inverse(this);
+  }
+});
+
+// Helper para obtener la clase CSS de prioridad
+Handlebars.registerHelper('getPriorityClass', function(dias) {
+  const d = Number(dias);
+  if (d > 30) return 'danger';
+  if (d > 20) return 'warning';
+  return 'info';
+});
+
+// Helper para obtener el texto de prioridad
+Handlebars.registerHelper('getPriorityText', function(dias) {
+  const d = Number(dias);
+  if (d > 30) return 'Crítica';
+  if (d > 20) return 'Alta';
+  return 'Media';
+});
+
+// Helper para obtener icono de prioridad
+Handlebars.registerHelper('getPriorityIcon', function(dias) {
+  const d = Number(dias);
+  if (d > 30) return 'fas fa-exclamation-triangle';
+  if (d > 20) return 'fas fa-exclamation';
+  return 'fas fa-info';
+});
+
+// Helper para capitalizar primera letra
+Handlebars.registerHelper('capitalize', function(str) {
+  if (!str || typeof str !== 'string') return '';
+  return str.charAt(0).toUpperCase() + str.slice(1);
+});
+
+// Helper para truncar texto
+Handlebars.registerHelper('truncate', function(str, length) {
+  if (!str || typeof str !== 'string') return '';
+  if (str.length <= length) return str;
+  return str.substring(0, length) + '...';
+});
+
+// Helper para pluralizar
+Handlebars.registerHelper('pluralize', function(count, singular, plural) {
+  return Number(count) === 1 ? singular : plural;
+});
+
+// Helper para debugging (solo en desarrollo)
+Handlebars.registerHelper('debug', function(value) {
+  console.log('🐛 Handlebars Debug:', value);
+  return '';
+}); 

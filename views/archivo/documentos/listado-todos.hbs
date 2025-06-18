@@ -38,10 +38,10 @@
                     <label for="estado" class="form-label">Estado</label>
                     <select class="form-select" id="estado" name="estado">
                         <option value="">Todos</option>
-                        <option value="borrador" {{#if (eq filtros.estado 'borrador')}}selected{{/if}}>Borrador</option>
                         <option value="proceso" {{#if (eq filtros.estado 'proceso')}}selected{{/if}}>En Proceso</option>
                         <option value="listo" {{#if (eq filtros.estado 'listo')}}selected{{/if}}>Listo</option>
                         <option value="entregado" {{#if (eq filtros.estado 'entregado')}}selected{{/if}}>Entregado</option>
+                        <option value="cancelado" {{#if (eq filtros.estado 'cancelado')}}selected{{/if}}>Cancelado</option>
                     </select>
                 </div>
                 <div class="col-md-2">
