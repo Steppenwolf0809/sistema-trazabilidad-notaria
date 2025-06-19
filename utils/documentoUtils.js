@@ -322,29 +322,77 @@ function construirListaDocumentosDetallada(documentos) {
 
 /**
  * Censura parcialmente un número de identificación para proteger la privacidad
- * Muestra los primeros 2 y últimos 2 dígitos, censurando el resto
+ * Algoritmo inteligente que se adapta al tipo y longitud de identificación
  * @param {string} identificacion - Número de identificación completo
  * @returns {string} - Identificación parcialmente censurada
  */
 function censurarIdentificacion(identificacion) {
+  // Validaciones básicas
   if (!identificacion || typeof identificacion !== 'string') {
-    return 'No especificado';
+    return '***';
   }
   
-  // Remover espacios y caracteres especiales, mantener solo números
-  const numeroLimpio = identificacion.replace(/\D/g, '');
+  // Limpiar espacios y caracteres especiales, mantener solo números y letras
+  const id = identificacion.replace(/\s|-/g, '').trim();
   
-  if (numeroLimpio.length < 4) {
-    // Si es muy corto, censurar todo excepto el último dígito
-    return '*'.repeat(numeroLimpio.length - 1) + numeroLimpio.slice(-1);
+  // Casos especiales por longitud
+  if (id.length < 6) {
+    return '***'; // Muy corta para censurar seguramente
   }
   
-  // Formato estándar: mostrar primeros 2 y últimos 2 dígitos
-  const inicio = numeroLimpio.substring(0, 2);
-  const fin = numeroLimpio.substring(numeroLimpio.length - 2);
-  const asteriscos = '*'.repeat(numeroLimpio.length - 4);
+  // Algoritmo adaptativo por longitud y tipo
+  let inicioVisible, finalVisible;
   
-  return `${inicio}${asteriscos}${fin}`;
+  // Detectar si contiene letras (pasaporte)
+  const tieneLetras = /[A-Za-z]/.test(id);
+  
+  if (id.length === 10 && !tieneLetras) {
+    // Cédulas ecuatorianas estándar (10 dígitos): 2 inicio + 3 final
+    // Ejemplo: 1717171717 → 17*****717
+    inicioVisible = 2;
+    finalVisible = 3;
+  } else if (id.length === 9 && !tieneLetras) {
+    // Cédulas ecuatorianas de 9 dígitos: 2 inicio + 3 final
+    // Ejemplo: 171717171 → 17****171
+    inicioVisible = 2;
+    finalVisible = 3;
+  } else if (id.length === 13 && !tieneLetras) {
+    // RUC ecuatoriano: 3 inicio + 3 final
+    // Ejemplo: 1717171717001 → 171*******001
+    inicioVisible = 3;
+    finalVisible = 3;
+  } else if (id.length <= 8) {
+    // IDs cortas: 1 inicio + 2 final
+    inicioVisible = 1;
+    finalVisible = 2;
+  } else if (tieneLetras && id.length <= 10) {
+    // Pasaportes estándar: 2 inicio + 3 final
+    // Ejemplo: AB1234567 → AB****567
+    inicioVisible = 2;
+    finalVisible = 3;
+  } else if (tieneLetras && id.length > 10) {
+    // Pasaportes largos: 3 inicio + 3 final
+    // Ejemplo: USA123456789 → USA*****789
+    inicioVisible = 3;
+    finalVisible = 3;
+  } else {
+    // IDs muy largas: 3 inicio + 4 final
+    inicioVisible = 3;
+    finalVisible = 4;
+  }
+  
+  // Validar que no se muestren más dígitos de los disponibles
+  if (inicioVisible + finalVisible >= id.length) {
+    // Si la identificación es muy corta, mostrar solo asteriscos
+    return '***';
+  }
+  
+  // Construcción del resultado
+  const inicio = id.substring(0, inicioVisible);
+  const final = id.substring(id.length - finalVisible);
+  const asteriscos = '*'.repeat(id.length - inicioVisible - finalVisible);
+  
+  return `${inicio}${asteriscos}${final}`;
 }
 
 /**

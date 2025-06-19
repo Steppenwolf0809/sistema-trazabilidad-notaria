@@ -153,17 +153,14 @@
         </a>
       </li>
       
-      <div class="sidebar-heading">Documentos</div>
+      <div class="sidebar-heading">📄 Documentos Asignados</div>
       
-      <li class="nav-item">
-        <a class="nav-link {{#if activeRegistro}}active{{/if}}" href="/matrizador/documentos/registro">
-          <i class="fas fa-file-alt"></i> Registrar Documento
-        </a>
-      </li>
+      {{!-- ELIMINADO POR SEGREGACIÓN: Solo Caja puede crear documentos --}}
+      {{!-- Matrizadores solo procesan documentos que les han sido asignados --}}
       
       <li class="nav-item">
         <a class="nav-link {{#if activeListado}}active{{/if}}" href="/matrizador/documentos">
-          <i class="fas fa-list"></i> Listado de Documentos
+          <i class="fas fa-tasks"></i> Mis Documentos Asignados
         </a>
       </li>
       
@@ -173,12 +170,20 @@
         </a>
       </li>
       
-      <div class="sidebar-heading">Notificaciones</div>
+      <div class="sidebar-heading">🔔 Notificaciones</div>
       
       <li class="nav-item">
         <a class="nav-link {{#if activeNotificaciones}}active{{/if}}" href="/matrizador/notificaciones/historial">
           <i class="fas fa-bell"></i> Historial de Notificaciones
         </a>
+      </li>
+      
+      <div class="sidebar-heading">ℹ️ Información</div>
+      
+      <li class="nav-item">
+        <div class="nav-link text-muted small">
+          <i class="fas fa-info-circle"></i> Nuevos documentos: Solo Caja
+        </div>
       </li>
     </ul>
   </div>

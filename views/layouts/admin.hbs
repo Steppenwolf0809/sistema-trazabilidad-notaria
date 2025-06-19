@@ -147,60 +147,39 @@
     </div>
     
     <ul class="nav flex-column">
-      {{!-- ELIMINADO: Dashboard duplicado de la sección principal --}}
-      {{!-- <li class="nav-item">
-        <a class="nav-link {{#if activeDashboard}}active{{/if}}" href="/admin">
-          <i class="fas fa-tachometer-alt"></i> Dashboard
-        </a>
-      </li> --}}
-      
-      <div class="sidebar-heading">Documentos</div>
-      
-      <!-- Opción visible para todos (temporalmente) -->
+      {{!-- ✅ DASHBOARD COMO PRIMERA OPCIÓN --}}
       <li class="nav-item">
-        <a class="nav-link {{#if activeRegistro}}active{{/if}}" href="/admin/documentos/registro">
-          <i class="fas fa-file-alt"></i> Registrar Documento
+        <a class="nav-link {{#if activeDashboard}}active{{/if}}" href="/admin">
+          <i class="fas fa-tachometer-alt"></i> Dashboard Ejecutivo
         </a>
       </li>
       
+      <div class="sidebar-heading">📊 Supervisión</div>
+      
+      {{!-- ✅ FUNCIÓN DE SUPERVISIÓN: Solo lectura de documentos --}}
       <li class="nav-item">
         <a class="nav-link {{#if activeListado}}active{{/if}}" href="/admin/documentos/listado">
-          <i class="fas fa-list"></i> Listado de Documentos
+          <i class="fas fa-binoculars"></i> Supervisar Documentos
         </a>
       </li>
       
-      <!-- Opción visible para todos (temporalmente) -->
-      <li class="nav-item">
-        <a class="nav-link {{#if activeEntrega}}active{{/if}}" href="/admin/documentos/entrega">
-          <i class="fas fa-hand-holding"></i> Entrega de Documentos
-        </a>
-      </li>
+      <div class="sidebar-heading">👥 Gestión de Personal</div>
       
-      <div class="sidebar-heading">Matrizadores</div>
-      
-      <!-- Opción visible para todos (temporalmente) -->
       <li class="nav-item">
         <a class="nav-link {{#if activeMatrizadores}}active{{/if}}" href="/admin/matrizadores">
           <i class="fas fa-users"></i> Gestionar Matrizadores
         </a>
       </li>
       
-      <div class="sidebar-heading">Reportes y Estadísticas</div>
-      
-      <!-- Dashboard y estadísticas generales -->
-      <li class="nav-item">
-        <a class="nav-link {{#if activeDashboard}}active{{/if}}" href="/admin/dashboard">
-          <i class="fas fa-tachometer-alt"></i> Dashboard
-        </a>
-      </li>
+      <div class="sidebar-heading">📈 Reportes y Análisis</div>
       
       <li class="nav-item">
         <a class="nav-link {{#if activeReportes}}active{{/if}}" href="/admin/reportes">
-          <i class="fas fa-chart-bar"></i> Reportes
+          <i class="fas fa-chart-bar"></i> Reportes Financieros
         </a>
       </li>
       
-      <div class="sidebar-heading">Auditoría</div>
+      <div class="sidebar-heading">🔍 Auditoría y Control</div>
       
       <li class="nav-item">
         <a class="nav-link {{#if activeAuditoria}}active{{/if}}" href="/admin/auditoria">
@@ -214,7 +193,7 @@
         </a>
       </li>
       
-      <div class="sidebar-heading">Notificaciones</div>
+      <div class="sidebar-heading">🔔 Notificaciones</div>
       
       <li class="nav-item">
         <a class="nav-link {{#if activeNotificaciones}}active{{/if}}" href="/admin/notificaciones/historial">
@@ -222,10 +201,12 @@
         </a>
       </li>
       
+      <div class="sidebar-heading">🚪 Segregación de Funciones</div>
+      
       <li class="nav-item">
-        <a class="nav-link {{#if activeReporteNotificaciones}}active{{/if}}" href="/admin/reportes/notificaciones">
-          <i class="fas fa-chart-line"></i> Análisis de Notificaciones
-        </a>
+        <div class="nav-link text-muted small">
+          <i class="fas fa-info-circle"></i> Solo supervisión - No operación
+        </div>
       </li>
     </ul>
   </div>

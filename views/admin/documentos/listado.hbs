@@ -1,9 +1,20 @@
+{{!-- VISTA DE SUPERVISIÓN - SOLO LECTURA PARA ADMIN --}}
+{{!-- SEGREGACIÓN DE FUNCIONES: Admin solo puede VER documentos, no crear/editar/entregar --}}
+
 <div class="card">
   <div class="card-header d-flex justify-content-between align-items-center">
-    <span><i class="fas fa-list me-2"></i> Listado de Documentos</span>
+    <span><i class="fas fa-binoculars me-2"></i> Supervisión de Documentos - Solo Lectura</span>
+    {{#unless soloLectura}}
     <a href="/admin/documentos/registro" class="btn btn-sm btn-primary">
       <i class="fas fa-plus me-1"></i> Nuevo Documento
     </a>
+    {{/unless}}
+    {{#if soloLectura}}
+    <div class="alert alert-info mb-0 py-1 px-2 small">
+      <i class="fas fa-info-circle me-1"></i> 
+      <strong>Modo Supervisión:</strong> Solo puede consultar información, no crear/editar/entregar documentos
+    </div>
+    {{/if}}
   </div>
   <div class="card-body">
     <!-- Filtros -->
@@ -13,52 +24,63 @@
           <div class="card-body p-3">
             <form id="filtrosForm" method="GET" action="/admin/documentos/listado">
               <div class="row">
-                <div class="col-md-3 mb-2">
+                <div class="col-md-2 mb-2">
                   <label for="filtroEstado" class="form-label small">Estado</label>
                   <select class="form-select form-select-sm" id="filtroEstado" name="estado">
                     <option value="">Todos</option>
-                    <option value="en_proceso" {{#if filtros.estado.en_proceso}}selected{{/if}}>En Proceso</option>
-                    <option value="listo_para_entrega" {{#if filtros.estado.listo_para_entrega}}selected{{/if}}>Listos para Entrega</option>
-                    <option value="entregado" {{#if filtros.estado.entregado}}selected{{/if}}>Entregados</option>
-                    <!-- Solo admin puede ver estados especiales -->
-                    {{#if (eq userRole "admin")}}
-                    <option value="nota_credito" {{#if filtros.estado.nota_credito}}selected{{/if}}>Notas de Crédito</option>
-                    {{/if}}
+                    <option value="en_proceso" {{#if (eq filtros.estado 'en_proceso')}}selected{{/if}}>En Proceso</option>
+                    <option value="listo_para_entrega" {{#if (eq filtros.estado 'listo_para_entrega')}}selected{{/if}}>Listos para Entrega</option>
+                    <option value="entregado" {{#if (eq filtros.estado 'entregado')}}selected{{/if}}>Entregados</option>
+                    <option value="nota_credito" {{#if (eq filtros.estado 'nota_credito')}}selected{{/if}}>Notas de Crédito</option>
                   </select>
                 </div>
                 
-                <div class="col-md-3 mb-2">
-                  <label for="filtroTipo" class="form-label small">Tipo de Documento</label>
-                  <select class="form-select form-select-sm" id="filtroTipo" name="tipoDocumento">
+                <div class="col-md-2 mb-2">
+                  <label for="filtroEstadoPago" class="form-label small">Estado Pago</label>
+                  <select class="form-select form-select-sm" id="filtroEstadoPago" name="estadoPago">
                     <option value="">Todos</option>
-                    {{#each tiposDocumento}}
-                    <option value="{{this}}" {{#if (eq ../filtros.tipoDocumento this)}}selected{{/if}}>{{this}}</option>
-                    {{/each}}
+                    <option value="pendiente" {{#if (eq filtros.estadoPago 'pendiente')}}selected{{/if}}>Pendiente</option>
+                    <option value="pagado_completo" {{#if (eq filtros.estadoPago 'pagado_completo')}}selected{{/if}}>Pagado Completo</option>
+                    <option value="pagado_con_retencion" {{#if (eq filtros.estadoPago 'pagado_con_retencion')}}selected{{/if}}>Con Retención</option>
+                    <option value="pago_parcial" {{#if (eq filtros.estadoPago 'pago_parcial')}}selected{{/if}}>Pago Parcial</option>
                   </select>
                 </div>
                 
-                <div class="col-md-3 mb-2">
+                <div class="col-md-2 mb-2">
                   <label for="filtroMatrizador" class="form-label small">Matrizador</label>
-                  <select class="form-select form-select-sm" id="filtroMatrizador" name="idMatrizador">
+                  <select class="form-select form-select-sm" id="filtroMatrizador" name="matrizadorId">
                     <option value="">Todos</option>
                     {{#each matrizadores}}
-                    <option value="{{this.id}}" {{#if (eq ../filtros.idMatrizador this.id)}}selected{{/if}}>{{this.nombre}}</option>
+                    <option value="{{this.id}}" {{#if (eq ../filtros.matrizadorId this.id)}}selected{{/if}}>{{this.nombre}}</option>
                     {{/each}}
                   </select>
                 </div>
                 
-                <div class="col-md-3 mb-2">
-                  <label for="filtroBusqueda" class="form-label small">Búsqueda</label>
-                  <input type="text" class="form-control form-control-sm" id="filtroBusqueda" name="busqueda" placeholder="Código o nombre del cliente" value="{{filtros.busqueda}}">
+                <div class="col-md-2 mb-2">
+                  <label for="fechaDesde" class="form-label small">Desde</label>
+                  <input type="date" class="form-control form-control-sm" id="fechaDesde" name="fechaDesde" value="{{filtros.fechaDesde}}">
                 </div>
                 
-                <div class="col-md-12 text-end">
+                <div class="col-md-2 mb-2">
+                  <label for="fechaHasta" class="form-label small">Hasta</label>
+                  <input type="date" class="form-control form-control-sm" id="fechaHasta" name="fechaHasta" value="{{filtros.fechaHasta}}">
+                </div>
+                
+                <div class="col-md-2 mb-2">
+                  <label for="filtroBusqueda" class="form-label small">Búsqueda</label>
+                  <input type="text" class="form-control form-control-sm" id="filtroBusqueda" name="busqueda" placeholder="Código, cliente, factura" value="{{filtros.busqueda}}">
+                </div>
+                
+                <div class="col-md-12 text-end mt-2">
                   <button type="submit" class="btn btn-sm btn-primary">
                     <i class="fas fa-filter me-1"></i> Filtrar
                   </button>
                   <a href="/admin/documentos/listado" class="btn btn-sm btn-outline-secondary ms-1">
                     <i class="fas fa-times me-1"></i> Limpiar
                   </a>
+                  <button type="button" class="btn btn-sm btn-success ms-2" onclick="exportarDatos()">
+                    <i class="fas fa-download me-1"></i> Exportar
+                  </button>
                 </div>
               </div>
             </form>
@@ -66,50 +88,74 @@
         </div>
       </div>
     </div>
+
+    <!-- Resumen de resultados -->
+    {{#if documentos}}
+    <div class="row mb-3">
+      <div class="col-md-12">
+        <div class="alert alert-light mb-0 py-2">
+          <i class="fas fa-chart-bar me-2"></i>
+          <strong>Resultados:</strong> {{documentos.length}} documentos encontrados
+          {{#if pagination.totalPages}}
+          (Página {{pagination.currentPage}} de {{pagination.totalPages}})
+          {{/if}}
+        </div>
+      </div>
+    </div>
+    {{/if}}
     
     <!-- Tabla de documentos -->
     <div class="table-responsive">
       <table class="table table-hover table-striped tabla-ordenable">
-        <thead class="table-light">
+        <thead class="table-dark">
           <tr>
             <th class="ordenable" data-columna="codigo" data-tipo="texto">Código</th>
             <th class="ordenable" data-columna="tipo" data-tipo="texto">Tipo</th>
             <th class="ordenable" data-columna="cliente" data-tipo="texto">Cliente</th>
             <th class="ordenable" data-columna="matrizador" data-tipo="texto">Matrizador</th>
-            <th class="ordenable" data-columna="fecha" data-tipo="fecha">Fecha Registro Sistema</th>
-            <th class="ordenable" data-columna="fecha_factura" data-tipo="fecha">Fecha Factura</th>
+            <th class="ordenable" data-columna="fecha" data-tipo="fecha">Fecha Registro</th>
             <th class="ordenable" data-columna="estado" data-tipo="estado">Estado</th>
-            <th>Pago</th>
+            <th class="ordenable" data-columna="pago" data-tipo="estado">Estado Pago</th>
+            <th class="ordenable" data-columna="valor" data-tipo="numero">Valor</th>
             <th>Acciones</th>
           </tr>
         </thead>
         <tbody>
           {{#each documentos}}
           <tr>
-            <td><span class="small">{{this.codigoBarras}}</span></td>
-            <td>{{this.tipoDocumento}}</td>
+            <td><code class="small">{{this.codigoBarras}}</code></td>
             <td>
-              {{this.nombreCliente}}
-              <div class="small text-muted">{{this.identificacionCliente}}</div>
+              <span class="badge bg-secondary">{{this.tipoDocumento}}</span>
             </td>
-            <td>{{this.matrizador.nombre}}</td>
-            <td>{{formatDateDocument this.created_at}}</td>
             <td>
-              {{#if this.fechaFactura}}
-              {{formatDateDocument this.fechaFactura}}
+              <strong>{{this.nombreCliente}}</strong>
+              <div class="small text-muted">CI: {{this.identificacionCliente}}</div>
+              {{#if this.emailCliente}}
+              <div class="small text-muted"><i class="fas fa-envelope me-1"></i>{{this.emailCliente}}</div>
+              {{/if}}
+            </td>
+            <td>
+              {{#if this.matrizador}}
+              <span class="badge bg-info">{{this.matrizador.nombre}}</span>
               {{else}}
-              <span class="text-muted">-</span>
+              <span class="text-muted">Sin asignar</span>
+              {{/if}}
+            </td>
+            <td>
+              <span class="small">{{formatDateDocument this.created_at}}</span>
+              {{#if this.fechaFactura}}
+              <div class="small text-muted">Fact: {{formatDateDocument this.fechaFactura}}</div>
               {{/if}}
             </td>
             <td>
               {{#if (eq this.estado "en_proceso")}}
-              <span class="badge bg-warning">En Proceso</span>
+              <span class="badge bg-warning text-dark"><i class="fas fa-cog me-1"></i>En Proceso</span>
               {{else if (eq this.estado "listo_para_entrega")}}
-              <span class="badge bg-success">Listo</span>
+              <span class="badge bg-success"><i class="fas fa-check me-1"></i>Listo</span>
               {{else if (eq this.estado "entregado")}}
-              <span class="badge bg-info">Entregado</span>
+              <span class="badge bg-primary"><i class="fas fa-handshake me-1"></i>Entregado</span>
               {{else if (eq this.estado "nota_credito")}}
-              <span class="badge bg-danger">Nota Crédito</span>
+              <span class="badge bg-danger"><i class="fas fa-minus-circle me-1"></i>Nota Crédito</span>
               {{else}}
               <span class="badge bg-secondary">{{this.estado}}</span>
               {{/if}}
@@ -117,11 +163,11 @@
             <td>
               {{#if this.numeroFactura}}
                 {{#if (eq this.estadoPago "pagado_completo")}}
-                <span class="badge bg-success"><i class="fas fa-check me-1"></i>Pagado Completo</span>
+                <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Pagado</span>
                 {{else if (eq this.estadoPago "pagado_con_retencion")}}
-                <span class="badge bg-info"><i class="fas fa-receipt me-1"></i>Pagado con Retención</span>
+                <span class="badge bg-info"><i class="fas fa-receipt me-1"></i>Con Retención</span>
                 {{else if (eq this.estadoPago "pago_parcial")}}
-                <span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i>Pago Parcial</span>
+                <span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i>Parcial</span>
                 {{else}}
                 <span class="badge bg-danger"><i class="fas fa-exclamation-triangle me-1"></i>Pendiente</span>
                 {{/if}}
@@ -130,31 +176,39 @@
               {{/if}}
             </td>
             <td>
+              {{#if this.valorFactura}}
+              <strong class="text-success">${{formatMoney this.valorFactura}}</strong>
+              {{#if this.numero_factura}}
+              <div class="small text-muted">Fact: {{this.numero_factura}}</div>
+              {{/if}}
+              {{else}}
+              <span class="text-muted">-</span>
+              {{/if}}
+            </td>
+            <td>
               <div class="btn-group">
-                <a href="/admin/documentos/detalle/{{this.id}}" class="btn btn-sm btn-outline-primary" title="Ver Detalles">
+                <!-- SOLO LECTURA: Admin puede VER detalles -->
+                <a href="/admin/documentos/detalle/{{this.id}}" class="btn btn-sm btn-outline-primary" title="Ver Detalles (Solo Lectura)">
                   <i class="fas fa-eye"></i>
                 </a>
                 
+                {{!-- ELIMINADO POR SEGREGACIÓN: Admin NO puede editar --}}
+                {{#unless soloLectura}}
                 {{#if (puedeEditarDocumento ../usuario this)}}
                 <a href="/admin/documentos/editar/{{this.id}}" class="btn btn-sm btn-primary" title="Editar Documento">
                   <i class="fas fa-edit"></i>
                 </a>
                 {{/if}}
                 
-                {{#if (eq this.estado "en_proceso")}}
-                <button type="button" class="btn btn-sm btn-outline-success" onclick="marcarListo({{this.id}})" title="Marcar como Listo">
-                  <i class="fas fa-check"></i>
-                </button>
-                {{/if}}
+                {{!-- ELIMINADO POR SEGREGACIÓN: Admin NO puede marcar documentos como listos --}}
+                {{!-- Solo Matrizadores pueden marcar documentos como listos --}}
                 
-                {{#if (eq this.estado "listo_para_entrega")}}
-                <a href="/admin/documentos/entrega/{{this.id}}" class="btn btn-sm btn-outline-info" title="Entregar">
-                  <i class="fas fa-hand-holding"></i>
-                </a>
-                {{/if}}
+                {{!-- ELIMINADO POR SEGREGACIÓN: Admin NO puede entregar documentos --}}
+                {{!-- Los documentos listos solo pueden ser entregados por Recepción --}}
+                {{/unless}}
                 
-                <!-- Solo administradores pueden eliminar definitivamente -->
-                {{#if (eq ../userRole "admin")}}
+                {{!-- SEGREGACIÓN: Admin mantiene capacidad de supervisión y eliminación si es necesario --}}
+                {{#if (and (eq ../userRole "admin") (not soloLectura))}}
                 {{#unless (eq this.estado "entregado")}}
                 <button type="button" class="btn btn-sm btn-outline-danger" onclick="abrirModalEliminar({
                   id: {{this.id}},
@@ -164,7 +218,7 @@
                   estado: '{{this.estado}}',
                   valorFactura: {{this.valorFactura}},
                   estadoPago: '{{this.estadoPago}}'
-                })" title="Eliminar Definitivamente">
+                })" title="Eliminar (Supervisión)">
                   <i class="fas fa-trash-alt"></i>
                 </button>
                 {{/unless}}
@@ -174,8 +228,12 @@
           </tr>
           {{else}}
           <tr>
-            <td colspan="9" class="text-center py-4">
-              <i class="fas fa-search me-2"></i> No se encontraron documentos con los filtros actuales
+            <td colspan="9" class="text-center py-5">
+              <div class="text-muted">
+                <i class="fas fa-search fa-2x mb-3"></i>
+                <h5>No se encontraron documentos</h5>
+                <p class="mb-0">Pruebe ajustando los filtros de búsqueda</p>
+              </div>
             </td>
           </tr>
           {{/each}}
@@ -185,70 +243,113 @@
     
     <!-- Paginación -->
     {{#if pagination}}
-    <nav aria-label="Paginación de documentos">
+    <nav aria-label="Paginación de documentos" class="mt-4">
       <ul class="pagination justify-content-center">
-        {{#if pagination.prev}}
+        {{#if pagination.hasPrev}}
         <li class="page-item">
-          <a class="page-link" href="{{pagination.prev}}">Anterior</a>
+          <a class="page-link" href="?page={{pagination.prevPage}}&{{buildQueryString filtros}}">
+            <i class="fas fa-chevron-left me-1"></i>Anterior
+          </a>
         </li>
         {{else}}
         <li class="page-item disabled">
-          <a class="page-link">Anterior</a>
+          <span class="page-link">
+            <i class="fas fa-chevron-left me-1"></i>Anterior
+          </span>
         </li>
         {{/if}}
         
-        {{#each pagination.pages}}
-        <li class="page-item {{#if this.active}}active{{/if}}">
-          <a class="page-link" href="{{this.url}}">{{this.num}}</a>
+        <li class="page-item active">
+          <span class="page-link">
+            Página {{pagination.currentPage}} de {{pagination.totalPages}}
+          </span>
         </li>
-        {{/each}}
         
-        {{#if pagination.next}}
+        {{#if pagination.hasNext}}
         <li class="page-item">
-          <a class="page-link" href="{{pagination.next}}">Siguiente</a>
+          <a class="page-link" href="?page={{pagination.nextPage}}&{{buildQueryString filtros}}">
+            Siguiente<i class="fas fa-chevron-right ms-1"></i>
+          </a>
         </li>
         {{else}}
         <li class="page-item disabled">
-          <a class="page-link">Siguiente</a>
+          <span class="page-link">
+            Siguiente<i class="fas fa-chevron-right ms-1"></i>
+          </span>
         </li>
         {{/if}}
       </ul>
     </nav>
     {{/if}}
-  </div>
-</div>
 
-<!-- Modal de confirmación para marcar como listo -->
-<div class="modal fade" id="marcarListoModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Marcar documento como listo</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    {{!-- INFORMACIÓN DE SEGREGACIÓN PARA EDUCACIÓN DEL USUARIO --}}
+    {{#if soloLectura}}
+    <div class="alert alert-warning mt-4">
+      <h6><i class="fas fa-shield-alt me-2"></i>Segregación de Funciones - Control de Auditoría</h6>
+      <p class="mb-2"><strong>Como Administrador, su rol es SUPERVISAR, no operar directamente.</strong></p>
+      
+      <div class="row">
+        <div class="col-md-6">
+          <h6 class="text-success"><i class="fas fa-check-circle me-1"></i> Lo que SÍ puede hacer:</h6>
+          <ul class="small">
+            <li>👀 <strong>Supervisar:</strong> Ver todos los documentos y su estado</li>
+            <li>📊 <strong>Reportes:</strong> Generar análisis y estadísticas</li>
+            <li>🔍 <strong>Auditar:</strong> Revisar registros y trazabilidad</li>
+            <li>👥 <strong>Gestionar:</strong> Usuarios y configuraciones</li>
+          </ul>
+        </div>
+        <div class="col-md-6">
+          <h6 class="text-danger"><i class="fas fa-times-circle me-1"></i> Lo que NO puede hacer:</h6>
+          <ul class="small">
+            <li>📝 <strong>Crear documentos:</strong> Solo <span class="badge bg-primary">Caja</span></li>
+            <li>⚙️ <strong>Procesar/Marcar listos:</strong> Solo <span class="badge bg-info">Matrizadores</span></li>
+            <li>🤝 <strong>Entregar documentos:</strong> Solo <span class="badge bg-success">Recepción</span></li>
+            <li>💰 <strong>Registrar pagos:</strong> Solo <span class="badge bg-primary">Caja</span></li>
+          </ul>
+        </div>
       </div>
-      <div class="modal-body">
-        <p>Al marcar este documento como listo para entrega, se generará un código de verificación de 4 dígitos que será enviado al cliente.</p>
-        <p>¿Está seguro de que el documento está listo para ser entregado?</p>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <form id="marcarListoForm" action="/admin/documentos/marcar-listo" method="POST">
-          <input type="hidden" id="documentoId" name="documentoId">
-          <button type="submit" class="btn btn-success">Confirmar</button>
-        </form>
-      </div>
+      
+      <hr class="my-2">
+      <p class="mb-0 small text-muted">
+        <i class="fas fa-info-circle me-1"></i>
+        Esta separación garantiza controles internos apropiados y facilita auditorías. 
+        Para operaciones, contacte al rol correspondiente.
+      </p>
     </div>
+    {{/if}}
   </div>
 </div>
 
-<!-- Modal de eliminación definitiva -->
-{{> admin/modal-eliminar-documento}}
-
+{{!-- ELIMINADO: Scripts de operaciones que admin no debe realizar --}}
+{{#unless soloLectura}}
 <script>
-  // Función para marcar documento como listo
-  function marcarListo(id) {
-    document.getElementById('documentoId').value = id;
-    const modal = new bootstrap.Modal(document.getElementById('marcarListoModal'));
-    modal.show();
-  }
-</script> 
+// Scripts originales mantenerlos solo si no está en modo solo lectura
+function marcarListo(documentoId) {
+  // Función original...
+}
+
+function exportarDatos() {
+  // Función para exportar datos de supervisión
+  window.location.href = '/admin/reportes/documentos?formato=excel&' + $('#filtrosForm').serialize();
+}
+</script>
+{{/unless}}
+
+{{#if soloLectura}}
+<script>
+// Solo funciones de consulta para modo supervisión
+function exportarDatos() {
+  // Función para exportar datos de supervisión
+  window.location.href = '/admin/reportes/documentos?formato=excel&' + $('#filtrosForm').serialize();
+}
+
+// Mostrar tooltips informativos
+document.addEventListener('DOMContentLoaded', function() {
+  // Inicializar tooltips de Bootstrap
+  var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+  var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl);
+  });
+});
+</script>
+{{/if}} 

@@ -20,10 +20,10 @@ const { construirListaDocumentosDetallada, construirInformacionEntregaCensurada 
  */
 function construirMensajeDocumentoEntregado(documento, datosEntrega) {
   let contextoTramite = '';
-  if (documento.detallesAdicionales && 
-      typeof documento.detallesAdicionales === 'string' && 
-      documento.detallesAdicionales.trim().length > 0) {
-    contextoTramite = ` - ${documento.detallesAdicionales.trim()}`;
+  if (documento.notas && 
+      typeof documento.notas === 'string' && 
+      documento.notas.trim().length > 0) {
+    contextoTramite = ` - ${documento.notas.trim()}`;
   }
 
   const fechaEntrega = new Date().toLocaleDateString('es-EC', {
@@ -34,29 +34,32 @@ function construirMensajeDocumentoEntregado(documento, datosEntrega) {
     hour: '2-digit', minute: '2-digit', hour12: false
   });
 
-  // Mensaje WhatsApp usando plantilla centralizada
+  // Construir información de entrega con datos censurados
+  const infoEntrega = construirInformacionEntregaCensurada(datosEntrega);
+
+  // Mensaje WhatsApp usando plantilla centralizada con identificación CENSURADA
   const mensajeWhatsApp = configNotaria.plantillas.documentoEntregado.whatsapp
     .replace('{{tipoDocumento}}', documento.tipoDocumento)
     .replace('{{contextoTramite}}', contextoTramite)
     .replace('{{codigoBarras}}', documento.codigoBarras)
     .replace('{{nombreCliente}}', documento.nombreCliente)
-    .replace('{{nombreReceptor}}', datosEntrega.nombreReceptor)
-    .replace('{{identificacionReceptor}}', datosEntrega.identificacionReceptor)
-    .replace('{{relacionReceptor}}', datosEntrega.relacionReceptor)
-    .replace('{{fechaEntrega}}', fechaEntrega)
-    .replace('{{horaEntrega}}', horaEntrega);
+    .replace('{{nombreReceptor}}', infoEntrega.nombreReceptor)
+    .replace('{{identificacionCensurada}}', infoEntrega.identificacionCensurada)
+    .replace('{{relacionReceptor}}', infoEntrega.relacionReceptor)
+    .replace('{{fechaEntrega}}', infoEntrega.fechaEntrega)
+    .replace('{{horaEntrega}}', infoEntrega.horaEntrega);
 
-  // Datos para email de confirmación
+  // Datos para email de confirmación (mantenido para compatibilidad con recepción)
   const datosEmail = {
     nombreCliente: documento.nombreCliente,
     tipoDocumento: documento.tipoDocumento,
     codigoDocumento: documento.codigoBarras,
     detallesAdicionales: documento.detallesAdicionales?.trim() || null,
-    nombreReceptor: datosEntrega.nombreReceptor,
-    identificacionReceptor: datosEntrega.identificacionReceptor,
-    relacionReceptor: datosEntrega.relacionReceptor,
-    fechaEntrega: fechaEntrega,
-    horaEntrega: horaEntrega,
+    nombreReceptor: infoEntrega.nombreReceptor,
+    identificacionReceptor: infoEntrega.identificacionCompleta, // Para uso interno del email si es necesario
+    relacionReceptor: infoEntrega.relacionReceptor,
+    fechaEntrega: infoEntrega.fechaEntrega,
+    horaEntrega: infoEntrega.horaEntrega,
     usuarioEntrega: datosEntrega.usuarioEntrega || 'Personal de Recepción',
     fechaGeneracion: new Date().toLocaleString('es-EC')
   };
@@ -153,7 +156,7 @@ async function enviarNotificacionEntrega(documento, datosEntrega, usuarioEntrega
       idMatrizador: documento.idMatrizador || usuarioEntrega.id,
       accion: 'verificacion_codigo',
       resultado: 'exitoso',
-      detalles: `Entrega confirmada - Receptor: ${datosEntrega.nombreReceptor} (${datosEntrega.identificacionReceptor}) - Método: ${metodoNotificacion} - Usuario: ${usuarioEntrega.nombre}`
+      detalles: `Entrega confirmada - Receptor: ${datosEntrega.nombreReceptor} (${construirInformacionEntregaCensurada(datosEntrega).identificacionCensurada}) - Método: ${metodoNotificacion} - Usuario: ${usuarioEntrega.nombre}`
     });
 
     console.log(`✅ [RECEPCION] Notificación de entrega individual procesada correctamente`);

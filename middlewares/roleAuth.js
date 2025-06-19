@@ -1,5 +1,6 @@
 /**
  * Middleware de control de acceso basado en roles
+ * ACTUALIZADO: Validaciones reforzadas para segregación de funciones
  * Verifica si el usuario tiene el rol adecuado para acceder a una ruta
  */
 
@@ -9,6 +10,64 @@ module.exports = function roleAuth(rolesPermitidos) {
     if (!req.matrizador || !req.matrizador.rol) {
       return res.redirect('/login?error=no_autorizado');
     }
+    
+    // ============== VALIDACIONES CRÍTICAS DE SEGREGACIÓN ===============
+    
+    // VALIDACIÓN CRÍTICA 1: Admin NO puede crear, registrar o entregar documentos
+    if (req.matrizador.rol === 'admin') {
+      const rutasProhibidasAdmin = [
+        '/admin/documentos/registrar',
+        '/admin/documentos/registro', 
+        '/admin/documentos/entrega',
+        '/admin/documentos/completar-entrega',
+        '/admin/documentos/entrega-grupal',
+        '/admin/documentos/crear'
+      ];
+      
+      const rutaActual = req.path.toLowerCase();
+      const operacionProhibida = rutasProhibidasAdmin.some(ruta => 
+        rutaActual.includes(ruta.toLowerCase())
+      );
+      
+      if (operacionProhibida || 
+          (req.method === 'POST' && rutaActual.includes('/documentos/') && 
+           (rutaActual.includes('registrar') || rutaActual.includes('entrega')))) {
+        console.log(`🚫 [SEGREGACIÓN] Admin ${req.matrizador.nombre} intentó operación prohibida: ${req.path}`);
+        return res.status(403).json({
+          error: 'Operación no autorizada por segregación de funciones',
+          mensaje: 'Admin no puede crear, registrar o entregar documentos',
+          principio: 'Separación entre supervisión y operación',
+          contacto: 'Solicite a Caja, Matrizador o Recepción realizar esta operación'
+        });
+      }
+    }
+    
+    // VALIDACIÓN CRÍTICA 2: Matrizador NO puede crear documentos desde cero
+    if (req.matrizador.rol === 'matrizador') {
+      const rutasProhibidasMatrizador = [
+        '/matrizador/documentos/registro',
+        '/matrizador/documentos/crear',
+        '/matrizador/documentos/nuevo'
+      ];
+      
+      const rutaActual = req.path.toLowerCase();
+      const creacionProhibida = rutasProhibidasMatrizador.some(ruta => 
+        rutaActual.includes(ruta.toLowerCase())
+      );
+      
+      if (creacionProhibida || 
+          (req.method === 'POST' && rutaActual === '/matrizador/documentos/registro')) {
+        console.log(`🚫 [SEGREGACIÓN] Matrizador ${req.matrizador.nombre} intentó crear documento: ${req.path}`);
+        return res.status(403).json({
+          error: 'Operación no autorizada por segregación de funciones',
+          mensaje: 'Matrizador no puede crear documentos desde cero',
+          principio: 'Solo puede procesar documentos asignados por Caja',
+          contacto: 'Solicite a Caja registrar el documento primero'
+        });
+      }
+    }
+    
+    // ============== VALIDACIONES TRADICIONALES ===============
     
     // Si el rol está permitido, continuar
     if (rolesPermitidos.includes(req.matrizador.rol)) {
@@ -105,6 +164,50 @@ const esArchivo = (req, res, next) => {
   });
 };
 
+/**
+ * NUEVO: Middleware para validar operaciones de segregación específicas
+ */
+const validarSegregacion = (operacion) => {
+  return (req, res, next) => {
+    const rol = req.matrizador?.rol;
+    
+    switch (operacion) {
+      case 'crear_documento':
+        if (rol === 'admin' || rol === 'matrizador') {
+          return res.status(403).json({
+            error: 'Segregación de funciones violada',
+            mensaje: `${rol} no puede crear documentos`,
+            operacionPermitida: 'Solo Caja puede crear documentos'
+          });
+        }
+        break;
+        
+      case 'entregar_documento':
+        if (rol === 'admin') {
+          return res.status(403).json({
+            error: 'Segregación de funciones violada', 
+            mensaje: 'Admin no puede entregar documentos',
+            operacionPermitida: 'Solo Recepción o Matrizador (casos excepcionales)'
+          });
+        }
+        break;
+        
+      case 'registrar_pago':
+        if (rol === 'admin' || rol === 'matrizador' || rol === 'recepcion') {
+          return res.status(403).json({
+            error: 'Segregación de funciones violada',
+            mensaje: `${rol} no puede registrar pagos`,
+            operacionPermitida: 'Solo Caja puede registrar pagos'
+          });
+        }
+        break;
+    }
+    
+    next();
+  };
+};
+
 // Exportar tanto la función principal como los middlewares específicos
 module.exports.esCajaArchivo = esCajaArchivo;
-module.exports.esArchivo = esArchivo; 
+module.exports.esArchivo = esArchivo;
+module.exports.validarSegregacion = validarSegregacion; 

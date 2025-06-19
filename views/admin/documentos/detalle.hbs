@@ -1,15 +1,24 @@
-{{! Detalle de Documento - Admin - VISTA LIMPIA BASADA EN MATRIZADORES }}
+{{!-- VISTA DE SUPERVISIÓN - DETALLE SOLO LECTURA PARA ADMIN --}}
+{{!-- SEGREGACIÓN DE FUNCIONES: Admin solo puede VER detalles, no editar/procesar/entregar --}}
+
 {{#if documento}}
 <div class="card">
   <div class="card-header d-flex justify-content-between align-items-center">
     <div>
-      <i class="fas fa-file-alt me-2"></i> Detalle de Documento
+      <i class="fas fa-binoculars me-2"></i> 
+      {{#if soloLectura}}
+      Supervisión de Documento - Solo Lectura
+      {{else}}
+      Detalle de Documento
+      {{/if}}
     </div>
     <div>
       <a href="/admin/documentos/listado" class="btn btn-sm btn-outline-secondary">
-        <i class="fas fa-arrow-left me-1"></i> Volver
+        <i class="fas fa-arrow-left me-1"></i> Volver al Listado
       </a>
       
+      {{!-- SEGREGACIÓN: Admin NO puede editar documentos --}}
+      {{#unless soloLectura}}
       <a href="/admin/documentos/editar/{{documento.id}}" class="btn btn-sm btn-primary ms-1">
         <i class="fas fa-edit me-1"></i> Editar
       </a>
@@ -25,8 +34,37 @@
         <i class="fas fa-hand-holding me-1"></i> Entrega
       </a>
       {{/if}}
+      {{/unless}}
+      
+      {{#if soloLectura}}
+      <div class="btn-group ms-2">
+        <button type="button" class="btn btn-sm btn-outline-info" onclick="exportarDocumento()">
+          <i class="fas fa-download me-1"></i> Exportar
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-success" onclick="verHistorialCompleto()">
+          <i class="fas fa-history me-1"></i> Historial Completo
+        </button>
+      </div>
+      {{/if}}
     </div>
   </div>
+  
+  {{!-- ALERTA DE MODO SUPERVISIÓN --}}
+  {{#if soloLectura}}
+  <div class="alert alert-info mb-0 border-0 rounded-0">
+    <div class="row">
+      <div class="col-md-8">
+        <i class="fas fa-info-circle me-2"></i>
+        <strong>Modo Supervisión Activo:</strong> Esta vista es de solo lectura. Admin no puede modificar, procesar o entregar documentos.
+      </div>
+      <div class="col-md-4 text-end">
+        <small class="text-muted">
+          <i class="fas fa-shield-alt me-1"></i>Segregación de funciones activa
+        </small>
+      </div>
+    </div>
+  </div>
+  {{/if}}
   <div class="card-body">
     <!-- Información general -->
     <div class="row mb-4">

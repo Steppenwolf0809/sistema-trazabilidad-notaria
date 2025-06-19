@@ -453,6 +453,21 @@ const hbs = engine({
       moment.locale('es'); // Configurar en español
       return moment(date).format(format || 'DD/MM/YYYY HH:mm:ss');
     },
+    // Helper para construir query strings para paginación
+    buildQueryString: function(params) {
+      if (!params || typeof params !== 'object') return '';
+      
+      const query = new URLSearchParams();
+      
+      Object.keys(params).forEach(key => {
+        if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
+          query.append(key, params[key]);
+        }
+      });
+      
+      const queryString = query.toString();
+      return queryString ? '?' + queryString : '';
+    },
   }
 });
 

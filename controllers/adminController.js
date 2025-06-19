@@ -3735,7 +3735,8 @@ _Guarde este mensaje como comprobante de entrega._`;
  * @param {Object} datosEntrega - Datos de la entrega
  * @returns {Object} Mensajes para WhatsApp y Email
  */
-function construirMensajeEntregaGrupalAdmin(documentos, datosEntrega) {
+// ❌ ELIMINADO: function construirMensajeEntregaGrupalAdmin - Función de entrega no autorizada para admin
+function construirMensajeEntregaGrupalAdmin_ELIMINADO() {
   // Construir lista detallada de documentos usando función utilitaria
   const listaDocumentos = construirListaDocumentosDetallada(documentos);
   
@@ -3783,853 +3784,208 @@ function construirMensajeEntregaGrupalAdmin(documentos, datosEntrega) {
   };
 }
 
-/**
- * Guarda notificación grupal en el historial de la base de datos
- * @param {Array} documentos - Array de documentos entregados
- * @param {Object} datosEntrega - Datos de la entrega
- * @param {Object} usuarioEntrega - Usuario que realizó la entrega
- * @param {string} metodoNotificacion - Método de notificación usado
- * @param {string} mensajeEnviado - Mensaje que se envió
- * @returns {Object} Notificación guardada
- */
-async function guardarNotificacionGrupalEnHistorialAdmin(documentos, datosEntrega, usuarioEntrega, metodoNotificacion, mensajeEnviado) {
-  try {
-    const documentoPrincipal = documentos[0];
-    
-    // Detectar documentos con pago pendiente
-    const documentosPendientes = documentos.filter(doc => 
-      !['pagado_completo', 'pagado_con_retencion'].includes(doc.estadoPago)
-    );
-    
-    const notificacion = await NotificacionEnviada.create({
-      // Para entrega grupal, documento_id es null y usamos documentos_ids
-      documentoId: null,
-      documentosIds: documentos.map(doc => doc.id),
-      tipoEvento: 'entrega_grupal',
-      tipoEntrega: 'grupal',
-      canal: metodoNotificacion === 'ambos' ? 'whatsapp' : metodoNotificacion,
-      destinatario: metodoNotificacion.includes('email') ? 
-        documentoPrincipal.emailCliente : documentoPrincipal.telefonoCliente,
-      estado: 'enviado',
-      mensajeEnviado: mensajeEnviado,
-      respuestaApi: null,
-      intentos: 1,
-      metadatos: {
-        // Información básica de la entrega
-        totalDocumentos: documentos.length,
-        nombreCliente: documentoPrincipal.nombreCliente,
-        identificacionCliente: documentoPrincipal.identificacionCliente,
-        // Información del receptor
-        nombreReceptor: datosEntrega.nombreReceptor,
-        identificacionReceptor: datosEntrega.identificacionReceptor,
-        relacionReceptor: datosEntrega.relacionReceptor,
-        // Información del usuario que procesó
-        entregadoPor: usuarioEntrega.nombre,
-        rolEntregador: usuarioEntrega.rol,
-        idUsuarioEntregador: usuarioEntrega.id,
-        // Lista de documentos incluidos
-        documentosIncluidos: documentos.map(doc => ({
-          id: doc.id,
-          codigo: doc.codigoBarras,
-          tipo: doc.tipoDocumento,
-          valor: doc.valorFactura,
-          estadoPago: doc.estadoPago,
-          matrizador: doc.matrizador?.nombre || 'Sin asignar'
-        })),
-        // Información especial de validaciones
-        documentosPendientes: documentosPendientes.length,
-        requirioAutorizacion: false, // Admin no requiere autorización
-        entregaConPendientes: documentosPendientes.length > 0,
-        // Códigos de los documentos
-        codigosDocumentos: documentos.map(doc => doc.codigoBarras),
-        tiposDocumentos: documentos.map(doc => doc.tipoDocumento),
-        // Metadatos de auditoría
-        fechaEntrega: new Date().toISOString(),
-        tipoEntregaGrupal: 'admin_completa',
-        metodoVerificacion: datosEntrega.tipoVerificacion || 'codigo',
-        observaciones: datosEntrega.observaciones
-      }
-    });
+// ❌ ELIMINADO: guardarNotificacionGrupalEnHistorialAdmin - Función de entrega no autorizada para admin
+// Esta función fue eliminada como parte de la segregación de funciones
 
-    console.log(`📝 [HISTORIAL ADMIN] Notificación grupal guardada en historial: ID ${notificacion.id}`);
-    
-    return notificacion;
-  } catch (error) {
-    console.error('❌ Error guardando notificación grupal en historial admin:', error);
-    throw error;
-  }
-}
+// ❌ ELIMINADO: enviarNotificacionEntregaGrupalAdmin - Función de entrega no autorizada para admin
+// Esta función fue eliminada como parte de la segregación de funciones
+
+// ❌ ELIMINADO: detectarDocumentosGrupalesAdmin - Función de entrega no autorizada para admin
+// Esta función fue eliminada como parte de la segregación de funciones
+
+// ❌ ELIMINADO: procesarEntregaGrupalAdmin - Función de entrega no autorizada para admin
+// Esta función fue eliminada como parte de la segregación de funciones
+
+// ❌ ELIMINADO: exports.mostrarEntregaAdmin - Función de entrega no autorizada para admin
+
+// ❌ ELIMINADO: exports.completarEntregaAdmin - Función de entrega no autorizada para admin
+
+// =============== ❌ FUNCIONES ELIMINADAS POR SEGREGACIÓN DE RESPONSABILIDADES ===============
+//
+// Las siguientes funciones han sido ELIMINADAS del adminController para cumplir con
+// principios de auditoría y segregación de funciones:
+//
+// ❌ ELIMINADO: exports.mostrarEntregaAdmin
+// ❌ ELIMINADO: exports.completarEntregaAdmin  
+// ❌ ELIMINADO: exports.detectarDocumentosGrupalesAdmin
+// ❌ ELIMINADO: exports.procesarEntregaGrupalAdmin
+// ❌ ELIMINADO: // ❌ ELIMINADO: procesarEntregaGrupalAdmin - Función de entrega no autorizada para admin
+// function procesarEntregaGrupalAdmin_ELIMINADO()
+// ❌ ELIMINADO: // ❌ ELIMINADO: detectarDocumentosGrupalesAdmin - Función de entrega no autorizada para admin
+// function detectarDocumentosGrupalesAdmin_ELIMINADO()
+// ❌ ELIMINADO: // ❌ ELIMINADO: enviarNotificacionEntregaGrupalAdmin - Función de entrega no autorizada para admin
+// function enviarNotificacionEntregaGrupalAdmin_ELIMINADO()
+// ❌ ELIMINADO: // ❌ ELIMINADO: construirMensajeEntregaGrupalAdmin - Función de entrega no autorizada para admin
+// function construirMensajeEntregaGrupalAdmin_ELIMINADO()
+// ❌ ELIMINADO: // ❌ ELIMINADO: guardarNotificacionGrupalEnHistorialAdmin - Función de entrega no autorizada para admin
+// function guardarNotificacionGrupalEnHistorialAdmin_ELIMINADO()
+//
+// JUSTIFICACIÓN:
+// - Admin no debe estar en la cadena de custodia de documentos
+// - Separación clara entre supervisión (admin) y operación (caja/matrizador/recepción)
+// - Mejores prácticas de control interno y auditoría
+// - Reducción de riesgo de fraude interno
+// - Trazabilidad clara de responsabilidades
+
+// =============== ✅ FUNCIONES AUTORIZADAS PARA ADMIN - SOLO SUPERVISIÓN ===============
 
 /**
- * Envía notificación de entrega grupal (UNA SOLA NOTIFICACIÓN PARA TODOS LOS DOCUMENTOS)
- * @param {Array} documentos - Array de documentos entregados
- * @param {Object} datosEntrega - Datos de la entrega
- * @param {Object} usuarioEntrega - Usuario que realizó la entrega
+ * FUNCIÓN DE SUPERVISIÓN: Listar documentos (solo lectura)
+ * Admin puede VER documentos para análisis y reportes, pero NO modificarlos
  */
-async function enviarNotificacionEntregaGrupalAdmin(documentos, datosEntrega, usuarioEntrega) {
+exports.listarDocumentosAdmin = async (req, res) => {
   try {
-    if (!documentos || documentos.length === 0) {
-      console.log('⚠️ No hay documentos para notificar en entrega grupal');
-      return;
-    }
-
-    console.log(`📧 [ENTREGA GRUPAL ADMIN] Enviando notificación única para ${documentos.length} documentos`);
-
-    const mensajes = construirMensajeEntregaGrupalAdmin(documentos, {
-      ...datosEntrega,
-      usuarioEntrega: usuarioEntrega.nombre
-    });
-
-    // Usar la configuración de notificación del primer documento (todos del mismo cliente)
-    const documentoPrincipal = documentos[0];
-    const metodoNotificacion = documentoPrincipal.metodoNotificacion || 'email';
+    console.log('📋 Admin consultando listado de documentos (solo lectura)');
     
-    // Enviar según configuración
-    if (metodoNotificacion === 'whatsapp' || metodoNotificacion === 'ambos') {
-      if (documentoPrincipal.telefonoCliente) {
-        // Aquí se integraría con el servicio de WhatsApp
-        console.log(`📱 Confirmación entrega grupal enviada por WhatsApp a ${documentoPrincipal.telefonoCliente}`);
-        console.log(`Mensaje: ${mensajes.whatsapp}`);
-      }
-    }
-
-    if (metodoNotificacion === 'email' || metodoNotificacion === 'ambos') {
-      if (documentoPrincipal.emailCliente) {
-        // Aquí se integraría con el servicio de Email
-        console.log(`📧 Confirmación entrega grupal enviada por email a ${documentoPrincipal.emailCliente}`);
-        console.log(`Asunto: ${mensajes.email.subject}`);
-      }
-    }
-
-    // ============== NUEVO: GUARDAR EN HISTORIAL DE NOTIFICACIONES ==============
-    try {
-      await guardarNotificacionGrupalEnHistorialAdmin(
-        documentos, 
-        datosEntrega, 
-        usuarioEntrega, 
-        metodoNotificacion, 
-        mensajes.whatsapp
-      );
-    } catch (historialError) {
-      console.error('❌ Error guardando en historial admin (continuando):', historialError);
-      // No detener el flujo si falla el historial
-    }
-
-    // Registrar evento de notificación grupal para cada documento
-    for (const documento of documentos) {
-      try {
-        await EventoDocumento.create({
-          documentoId: documento.id,
-          tipo: 'notificacion_grupal',
-          categoria: 'notificacion',
-          titulo: 'Notificación Entrega Grupal - Admin',
-          descripcion: `Notificación de entrega grupal enviada para ${documentos.length} documentos`,
-          detalles: {
-            tipoNotificacion: 'entrega_grupal',
-            totalDocumentos: documentos.length,
-            metodoNotificacion: metodoNotificacion,
-            receptor: datosEntrega.nombreReceptor,
-            documentosIncluidos: documentos.map(d => ({
-              id: d.id,
-              codigo: d.codigoBarras,
-              tipo: d.tipoDocumento
-            }))
-          },
-          usuario: usuarioEntrega.nombre,
-          metadatos: {
-            canal: metodoNotificacion,
-            estado: 'enviada',
-            tipo: 'notificacion_grupal',
-            idUsuario: usuarioEntrega.id,
-            rolUsuario: usuarioEntrega.rol,
-            timestamp: new Date().toISOString()
-          }
-        });
-      } catch (eventError) {
-        console.error(`Error registrando evento de notificación para documento ${documento.id}:`, eventError);
-      }
-    }
-
-    console.log(`✅ [ENTREGA GRUPAL ADMIN] Notificación única enviada exitosamente para ${documentos.length} documentos`);
-
-  } catch (error) {
-    console.error('Error enviando notificación de entrega grupal admin:', error);
-  }
-}
-
-// ============== FUNCIONES PARA ENTREGA GRUPAL - ADMIN ==============
-
-/**
- * NUEVA FUNCIONALIDAD: Detectar documentos grupales del mismo cliente para ADMIN
- * @param {string} identificacionCliente - Identificación del cliente
- * @param {number} documentoActualId - ID del documento actual para excluir
- * @returns {Object} Información sobre documentos adicionales
- */
-async function detectarDocumentosGrupalesAdmin(identificacionCliente, documentoActualId) {
-  try {
-    console.log(`🔍 [ADMIN] Detectando documentos grupales para cliente: ${identificacionCliente}`);
+    // Parámetros de paginación y filtros
+    const page = parseInt(req.query.page) || 1;
+    const limit = 20;
+    const offset = (page - 1) * limit;
     
-    // ADMIN: Detectar TODOS los documentos listos, sin restricciones
-    const documentosListos = await Documento.findAll({
-      where: {
-        identificacionCliente: identificacionCliente,
-        estado: 'listo_para_entrega',
-        fechaEntrega: null,
-        id: { [Op.ne]: documentoActualId },
-        motivoEliminacion: null
-      },
-      order: [['created_at', 'ASC']]
-    });
+    // Filtros de consulta
+    const estado = req.query.estado || '';
+    const estadoPago = req.query.estadoPago || '';
+    const matrizadorId = req.query.matrizadorId || '';
+    const busqueda = req.query.busqueda || '';
+    const fechaDesde = req.query.fechaDesde || '';
+    const fechaHasta = req.query.fechaHasta || '';
     
-    console.log(`📄 [ADMIN] Encontrados ${documentosListos.length} documentos adicionales`);
+    // Construir condiciones WHERE
+    const where = {};
     
-    // ============== NUEVA FUNCIONALIDAD: ESTRUCTURACIÓN JERÁRQUICA CORREGIDA ==============
-    // CORRECCIÓN CRÍTICA: Incluir el documento actual en la estructuración
-    // para que se puedan formar grupos correctamente
+    if (estado) where.estado = estado;
+    if (estadoPago) where.estado_pago = estadoPago;
+    if (matrizadorId) where.id_matrizador = matrizadorId;
     
-    // Obtener el documento actual para incluirlo en la estructuración
-    const documentoActual = await Documento.findByPk(documentoActualId);
-    
-    // Crear lista completa incluyendo el documento actual
-    const todosLosDocumentos = documentoActual ? [documentoActual, ...documentosListos] : documentosListos;
-    
-    console.log(`🔧 [ADMIN] Estructurando ${todosLosDocumentos.length} documentos (incluyendo actual)`);
-    todosLosDocumentos.forEach(doc => {
-      console.log(`   - ${doc.codigoBarras} (ID: ${doc.id}, Principal: ${doc.esDocumentoPrincipal}, PrincipalID: ${doc.documentoPrincipalId || 'null'})`);
-    });
-    
-    // Importar la función de estructuración desde recepcionController
-    const { estructurarDocumentosJerarquicamente } = require('./recepcionController');
-    const documentosEstructurados = estructurarDocumentosJerarquicamente(todosLosDocumentos);
-    
-    return {
-      tieneDocumentosAdicionales: documentosListos.length > 0,
-      cantidad: documentosListos.length,
-      documentos: documentosListos, // Mantener para compatibilidad
-      tipoDeteccion: 'admin_completa',
-      permisoTotal: true, // Admin puede entregar todos
-      // ============== NUEVA ESTRUCTURA JERÁRQUICA ==============
-      gruposRelacionados: documentosEstructurados.gruposRelacionados,
-      documentosIndependientes: documentosEstructurados.documentosIndependientes,
-      tieneGruposRelacionados: documentosEstructurados.gruposRelacionados.length > 0,
-      tieneDocumentosIndependientes: documentosEstructurados.documentosIndependientes.length > 0
-    };
-  } catch (error) {
-    console.error('❌ Error detectando documentos grupales para admin:', error);
-    return { 
-      tieneDocumentosAdicionales: false, 
-      cantidad: 0, 
-      documentos: [],
-      tipoDeteccion: 'admin_completa',
-      permisoTotal: true,
-      gruposRelacionados: [],
-      documentosIndependientes: [],
-      tieneGruposRelacionados: false,
-      tieneDocumentosIndependientes: false
-    };
-  }
-}
-
-/**
- * NUEVA FUNCIONALIDAD: Procesar entrega grupal para ADMIN (sin restricciones)
- * @param {Array} documentosIds - IDs de documentos a entregar
- * @param {Object} datosEntrega - Datos del receptor
- * @param {Object} usuario - Usuario que procesa la entrega
- * @param {Object} transaction - Transacción de base de datos
- * @returns {Object} Resultado del procesamiento
- */
-async function procesarEntregaGrupalAdmin(documentosIds, datosEntrega, usuario, transaction) {
-  try {
-    console.log(`🏛️ [ADMIN] Procesando entrega grupal de ${documentosIds.length} documentos`);
-    
-    const documentosActualizados = [];
-    const erroresValidacion = [];
-    
-    for (const docId of documentosIds) {
-      try {
-        const documento = await Documento.findByPk(docId, { transaction });
-        
-        if (!documento) {
-          erroresValidacion.push(`Documento ${docId} no encontrado`);
-          continue;
-        }
-        
-        // VALIDACIONES DE SEGURIDAD BÁSICAS (ADMIN: SIN RESTRICCIONES)
-        if (documento.estado !== 'listo_para_entrega') {
-          erroresValidacion.push(`Documento ${documento.codigoBarras} no está listo para entrega`);
-          continue;
-        }
-        
-        if (documento.fechaEntrega !== null) {
-          erroresValidacion.push(`Documento ${documento.codigoBarras} ya fue entregado`);
-          continue;
-        }
-        
-        if (documento.identificacionCliente !== datosEntrega.identificacionCliente) {
-          erroresValidacion.push(`Documento ${documento.codigoBarras} no pertenece al cliente`);
-          continue;
-        }
-        
-        // ACTUALIZAR DOCUMENTO
-        await documento.update({
-          estado: 'entregado',
-          fechaEntrega: new Date(),
-          nombreReceptor: datosEntrega.nombreReceptor,
-          identificacionReceptor: datosEntrega.identificacionReceptor,
-          relacionReceptor: datosEntrega.relacionReceptor
-        }, { transaction });
-        
-        // REGISTRAR EVENTO DE ENTREGA GRUPAL ADMIN
-        await EventoDocumento.create({
-          documentoId: documento.id,
-          tipo: 'entrega_grupal',
-          categoria: 'entrega',
-          titulo: 'Entrega Grupal - Admin',
-          descripcion: `Documento entregado en entrega grupal por administrador a ${datosEntrega.nombreReceptor}`,
-          detalles: {
-            entregaGrupal: true,
-            totalDocumentosGrupo: documentosIds.length,
-            tipoEntregaGrupal: 'admin_completa',
-            rolProcesador: 'admin',
-            nombreReceptor: datosEntrega.nombreReceptor,
-            identificacionReceptor: datosEntrega.identificacionReceptor,
-            relacionReceptor: datosEntrega.relacionReceptor,
-            estadoPagoAlEntrega: documento.estadoPago,
-            validacionesAplicadas: [
-              'estado_verificado',
-              'no_entregado_previamente',
-              'pertenencia_cliente_confirmada',
-              'acceso_admin_total'
-            ],
-            metodoVerificacion: datosEntrega.tipoVerificacion,
-            observaciones: datosEntrega.observaciones
-          },
-          usuario: usuario.nombre,
-          metadatos: {
-            canal: 'sistema',
-            estado: 'procesada',
-            tipo: 'entrega_grupal',
-            idUsuario: usuario.id,
-            rolUsuario: usuario.rol,
-            timestamp: new Date().toISOString()
-          }
-        }, { transaction });
-        
-        documentosActualizados.push(documento);
-        console.log(`✅ [ADMIN] Documento ${documento.codigoBarras} entregado grupalmente`);
-        
-      } catch (docError) {
-        console.error(`❌ Error procesando documento ${docId}:`, docError);
-        erroresValidacion.push(`Error en documento ${docId}: ${docError.message}`);
-      }
+    if (busqueda) {
+      where[Op.or] = [
+        { codigoBarras: { [Op.iLike]: `%${busqueda}%` } },
+        { nombreCliente: { [Op.iLike]: `%${busqueda}%` } },
+        { numero_factura: { [Op.iLike]: `%${busqueda}%` } }
+      ];
     }
     
-    if (erroresValidacion.length > 0) {
-      throw new Error(`Errores de validación: ${erroresValidacion.join('; ')}`);
-    }
-    
-    return {
-      exito: true,
-      documentosActualizados: documentosActualizados.length,
-      documentos: documentosActualizados
-    };
-    
-  } catch (error) {
-    console.error('❌ Error en procesamiento grupal admin:', error);
-    throw error;
-  }
-}
-
-/**
- * NUEVA FUNCIÓN: Mostrar entrega de documentos para admin con detección grupal
- */
-exports.mostrarEntregaAdmin = async (req, res) => {
-  try {
-    const documentoId = req.params.id;
-    const codigo = req.query.codigo;
-    
-    // Si hay un ID, mostrar formulario de entrega para ese documento
-    if (documentoId) {
-      const documento = await Documento.findOne({
-        where: {
-          id: documentoId,
-          estado: 'listo_para_entrega'
-        },
-        include: [
-          {
-            model: Matrizador,
-            as: 'matrizador',
-            attributes: ['id', 'nombre']
-          }
+    if (fechaDesde && fechaHasta) {
+      where.created_at = {
+        [Op.between]: [
+          moment(fechaDesde).startOf('day').toDate(),
+          moment(fechaHasta).endOf('day').toDate()
         ]
-      });
-      
-      if (!documento) {
-        req.flash('error', 'El documento no existe o no está listo para entrega');
-        return res.redirect('/admin/documentos/entrega');
-      }
-      
-      // ============== NUEVA FUNCIONALIDAD: DETECTAR DOCUMENTOS GRUPALES ADMIN ==============
-      let documentosGrupales = null;
-      if (documento.estado === 'listo_para_entrega' && 
-          documento.fechaEntrega === null &&
-          documento.identificacionCliente) {
-        
-        console.log(`🔍 [ADMIN] Verificando documentos grupales para cliente: ${documento.identificacionCliente}`);
-        documentosGrupales = await detectarDocumentosGrupalesAdmin(
-          documento.identificacionCliente, 
-          documento.id
-        );
-      }
-      
-      return res.render('admin/documentos/entrega', {
-        layout: 'admin',
-        title: 'Entrega de Documento',
-        activeEntrega: true,
-        documento,
-        documentosGrupales,
-        tipoEntrega: 'admin_completa',
-        userRole: req.matrizador?.rol,
-        userName: req.matrizador?.nombre,
-        usuario: {
-          id: req.matrizador?.id,
-          rol: req.matrizador?.rol,
-          nombre: req.matrizador?.nombre
-        }
-      });
+      };
     }
     
-    // Si hay un código, buscar por código
-    if (codigo) {
-      const documento = await Documento.findOne({
-        where: {
-          codigoBarras: codigo,
-          estado: 'listo_para_entrega'
-        }
-      });
-      
-      if (documento) {
-        return res.redirect(`/admin/documentos/entrega/${documento.id}`);
-      }
-      
-      req.flash('error', 'No se encontró un documento listo para entrega con ese código');
-    }
-    
-    // Obtener documentos listos para entrega
-    const documentosListos = await Documento.findAll({
-      where: {
-        estado: 'listo_para_entrega'
-      },
-      include: [
-        {
-          model: Matrizador,
-          as: 'matrizador',
-          attributes: ['id', 'nombre']
-        }
-      ],
+    // Consulta con paginación
+    const { count, rows: documentos } = await Documento.findAndCountAll({
+      where,
+      include: [{
+        model: Matrizador,
+        as: 'matrizador',
+        attributes: ['id', 'nombre', 'email']
+      }],
       order: [['created_at', 'DESC']],
-      limit: 50
+      limit,
+      offset
     });
     
-    console.log(`Documentos listos para entrega encontrados: ${documentosListos.length}`);
+    // Obtener matrizadores para filtros
+    const matrizadores = await Matrizador.findAll({
+      where: { activo: true },
+      attributes: ['id', 'nombre'],
+      order: [['nombre', 'ASC']]
+    });
     
-    return res.render('admin/documentos/entrega', {
+    // Calcular paginación
+    const totalPages = Math.ceil(count / limit);
+    
+    res.render('admin/documentos/listado', {
       layout: 'admin',
-      title: 'Entrega de Documentos',
-      activeEntrega: true,
-      documentosListos,
-      userRole: req.matrizador?.rol,
-      userName: req.matrizador?.nombre,
-      usuario: {
-        id: req.matrizador?.id,
-        rol: req.matrizador?.rol,
-        nombre: req.matrizador?.nombre
+      title: 'Supervisión de Documentos - Solo Lectura',
+      documentos,
+      matrizadores,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1
       },
       filtros: {
-        codigo
-      }
+        estado, estadoPago, matrizadorId, busqueda, fechaDesde, fechaHasta
+      },
+      userRole: req.matrizador?.rol,
+      userName: req.matrizador?.nombre,
+      soloLectura: true // Indicador para la vista
     });
+    
   } catch (error) {
-    console.error('Error al mostrar la página de entrega:', error);
-    res.status(500).render('error', {
-      layout: 'admin',
-      title: 'Error',
-      message: 'Ha ocurrido un error al cargar la página de entrega de documentos',
-      error
-    });
+    console.error('❌ Error en listar documentos admin:', error);
+    req.flash('error', 'Error al cargar el listado de documentos');
+    res.redirect('/admin');
   }
 };
 
 /**
- * NUEVA FUNCIÓN: Completar entrega de documentos para admin con soporte grupal
+ * FUNCIÓN DE SUPERVISIÓN: Ver detalle de documento (solo lectura)
+ * Admin puede revisar detalles para análisis, pero NO modificar
  */
-exports.completarEntregaAdmin = async (req, res) => {
-  const transaction = await sequelize.transaction();
-  
+exports.verDetalleDocumentoAdmin = async (req, res) => {
   try {
     const { id } = req.params;
-    const { 
-      codigoVerificacion, 
-      nombreReceptor, 
-      identificacionReceptor, 
-      relacionReceptor, 
-      tipoVerificacion, 
-      observaciones,
-      // ============== NUEVOS CAMPOS PARA ENTREGA GRUPAL ==============
-      entregaGrupal,
-      documentosAdicionales,
-      tipoEntregaGrupal
-    } = req.body;
+    console.log(`📄 Admin consultando detalle documento ${id} (solo lectura)`);
     
-    if (!id) {
-      await transaction.rollback();
-      req.flash('error', 'ID de documento no proporcionado');
-      return res.redirect('/admin/documentos/entrega');
-    }
-    
-    // Buscar el documento principal
-    const documento = await Documento.findOne({
-      where: {
-        id,
-        estado: 'listo_para_entrega'
-      },
-      include: [
-        {
-          model: Matrizador,
-          as: 'matrizador',
-          attributes: ['id', 'nombre']
-        }
-      ],
-      transaction
+    // Obtener documento con relaciones
+    const documento = await Documento.findByPk(id, {
+      include: [{
+        model: Matrizador,
+        as: 'matrizador',
+        attributes: ['id', 'nombre', 'email']
+      }]
     });
     
     if (!documento) {
-      await transaction.rollback();
-      req.flash('error', 'El documento no existe o no está listo para entrega');
-      return res.redirect('/admin/documentos/entrega');
+      req.flash('error', 'Documento no encontrado');
+      return res.redirect('/admin/documentos/listado');
     }
     
-    // ============== DEFINIR VARIABLE PARA VALIDACIÓN ==============
-    const tieneCodigoVerificacion = documento.codigoVerificacion && documento.codigoVerificacion !== 'sin_codigo';
-    
-    // ============== VALIDACIÓN DE CÓDIGO CORREGIDA ==============
-    
-    // Obtener documentos adicionales seleccionados si los hay
-    let documentosSeleccionados = [];
-    if (entregaGrupal === 'true' && documentosAdicionales) {
-      const documentosIds = documentosAdicionales.split(',')
-        .map(id => parseInt(id.trim()))
-        .filter(id => !isNaN(id) && id > 0);
-      
-      if (documentosIds.length > 0) {
-        documentosSeleccionados = await Documento.findAll({
-          where: {
-            id: { [Op.in]: documentosIds },
-            estado: 'listo_para_entrega'
-          },
-          transaction
-        });
-      }
-    }
-    
-    // VALIDACIÓN CORREGIDA: Códigos válidos del documento principal + seleccionados
-    const codigosValidos = [];
-    
-    // Agregar código del documento principal
-    if (documento.codigoVerificacion && documento.codigoVerificacion !== 'sin_codigo') {
-      codigosValidos.push(documento.codigoVerificacion);
-    }
-    
-    // Agregar códigos de documentos seleccionados
-    documentosSeleccionados.forEach(doc => {
-      if (doc.codigoVerificacion && doc.codigoVerificacion !== 'sin_codigo') {
-        codigosValidos.push(doc.codigoVerificacion);
-      }
+    // Obtener historial de eventos
+    const eventos = await EventoDocumento.findAll({
+      where: { documentoId: id },
+      include: [{
+        model: Matrizador,
+        as: 'matrizador',
+        attributes: ['nombre', 'rol'],
+        required: false
+      }],
+      order: [['created_at', 'DESC']]
     });
     
-    // Validar código si se proporciona
-    if (tipoVerificacion !== 'llamada') {
-      if (codigosValidos.length > 0) {
-        // Hay códigos disponibles - validar
-        if (!codigoVerificacion || !codigosValidos.includes(codigoVerificacion)) {
-          await transaction.rollback();
-          req.flash('error', `Código de verificación inválido. Códigos válidos: ${codigosValidos.join(', ')}`);
-          return res.redirect(`/admin/documentos/entrega/${id}`);
-        }
-      } else {
-        // No hay códigos - requerir verificación por llamada
-        await transaction.rollback();
-        req.flash('error', 'Los documentos seleccionados no tienen código de verificación. Use verificación por llamada.');
-        return res.redirect(`/admin/documentos/entrega/${id}`);
-      }
-    } else {
-      // Verificación por llamada - validar observaciones
-      if (!observaciones || observaciones.trim().length < 15) {
-        await transaction.rollback();
-        req.flash('error', 'Debe proporcionar detalles específicos de la verificación por llamada (mínimo 15 caracteres)');
-        return res.redirect(`/admin/documentos/entrega/${id}`);
-      }
-    }
+    // Obtener registros de auditoría relacionados
+    const registrosAuditoria = await RegistroAuditoria.findAll({
+      where: {
+        [Op.or]: [
+          { tabla_afectada: 'documentos' },
+          { detalles: { [Op.iLike]: `%${documento.codigoBarras}%` } }
+        ]
+      },
+      order: [['timestamp', 'DESC']],
+      limit: 10
+    });
     
-    // ============== VALIDACIÓN DE PERMISOS (ADMIN: SIN RESTRICCIONES) ==============
-    console.log(`🏛️ [ADMIN] Procesando entrega - permisos totales confirmados`);
+    res.render('admin/documentos/detalle', {
+      layout: 'admin', 
+      title: `Supervisión Documento: ${documento.codigoBarras}`,
+      documento,
+      eventos,
+      registrosAuditoria,
+      userRole: req.matrizador?.rol,
+      userName: req.matrizador?.nombre,
+      soloLectura: true, // CRÍTICO: Indicar que es solo lectura
+      soloSupervision: true // Indicador adicional para la vista
+    });
     
-    // Actualizar el documento principal
-    documento.estado = 'entregado';
-    documento.fechaEntrega = new Date();
-    documento.nombreReceptor = nombreReceptor;
-    documento.identificacionReceptor = identificacionReceptor;
-    documento.relacionReceptor = relacionReceptor;
-    
-    await documento.save({ transaction });
-    
-    // Registrar evento de entrega principal
-    let detalles = '';
-    if (tieneCodigoVerificacion) {
-      if (tipoVerificacion === 'codigo') {
-        detalles = `Entregado a ${nombreReceptor} con código de verificación ${documento.codigoVerificacion}`;
-      } else if (tipoVerificacion === 'llamada') {
-        detalles = `Entregado a ${nombreReceptor} con verificación por llamada: ${observaciones}`;
-      }
-    } else {
-      if (tipoVerificacion === 'identidad') {
-        detalles = `Entregado a ${nombreReceptor} con verificación por cédula: ${observaciones}`;
-      } else if (tipoVerificacion === 'factura') {
-        detalles = `Entregado a ${nombreReceptor} con verificación por factura: ${observaciones}`;
-      } else if (tipoVerificacion === 'llamada') {
-        detalles = `Entregado a ${nombreReceptor} con verificación por llamada: ${observaciones}`;
-      }
-    }
-    
-    await EventoDocumento.create({
-      documentoId: documento.id,
-      tipo: 'entrega',
-      categoria: 'entrega',
-      titulo: 'Entrega Individual - Admin',
-      descripcion: detalles,
-      usuario: req.matrizador.nombre,
-      metadatos: {
-        canal: 'sistema',
-        estado: 'procesada',
-        tipo: 'entrega',
-        idUsuario: req.matrizador.id,
-        rolUsuario: req.matrizador.rol,
-        timestamp: new Date().toISOString()
-      }
-    }, { transaction });
-    
-    // ============== NUEVA FUNCIONALIDAD: PROCESAMIENTO DE ENTREGA GRUPAL ==============
-    let documentosGrupalesActualizados = 0;
-    
-    if (entregaGrupal === 'true' && documentosAdicionales && tipoEntregaGrupal === 'admin_completa') {
-      console.log(`🏛️ [ADMIN] Iniciando entrega grupal para ${documentosAdicionales}`);
-      
-      try {
-        const documentosIds = documentosAdicionales.split(',')
-          .map(id => parseInt(id.trim()))
-          .filter(id => !isNaN(id) && id > 0);
-        
-        if (documentosIds.length > 0) {
-          const datosEntrega = {
-            nombreReceptor,
-            identificacionReceptor,
-            relacionReceptor,
-            tipoVerificacion,
-            observaciones,
-            identificacionCliente: documento.identificacionCliente
-          };
-          
-          const resultadoGrupal = await procesarEntregaGrupalAdmin(
-            documentosIds, 
-            datosEntrega, 
-            req.matrizador, 
-            transaction
-          );
-          
-          documentosGrupalesActualizados = resultadoGrupal.documentosActualizados;
-          console.log(`✅ [ADMIN] Entrega grupal completada: ${documentosGrupalesActualizados} documentos adicionales`);
-        }
-      } catch (grupalError) {
-        console.error('❌ Error en entrega grupal admin:', grupalError);
-        await transaction.rollback();
-        req.flash('error', `Error en entrega grupal: ${grupalError.message}`);
-        return res.redirect(`/admin/documentos/entrega/${id}`);
-      }
-    }
-    
-    await transaction.commit();
-    
-    // ============== NUEVA LÓGICA: NOTIFICACIÓN GRUPAL O INDIVIDUAL ==============
-    try {
-      if (entregaGrupal === 'true' && documentosGrupalesActualizados > 0) {
-        // ENTREGA GRUPAL: Enviar UNA SOLA notificación para todos los documentos
-        console.log(`📧 [ENTREGA GRUPAL ADMIN] Preparando notificación única para ${documentosGrupalesActualizados + 1} documentos`);
-        
-        // Obtener todos los documentos entregados (principal + adicionales)
-        const todosLosDocumentosEntregados = [documento];
-        
-        // Obtener documentos adicionales entregados
-        if (documentosAdicionales) {
-          const documentosIds = documentosAdicionales.split(',')
-            .map(id => parseInt(id.trim()))
-            .filter(id => !isNaN(id) && id > 0);
-          
-          const documentosAdicionalesEntregados = await Documento.findAll({
-            where: {
-              id: { [Op.in]: documentosIds },
-              estado: 'entregado',
-              fechaEntrega: { [Op.not]: null }
-            }
-          });
-          
-          todosLosDocumentosEntregados.push(...documentosAdicionalesEntregados);
-        }
-        
-        // Enviar notificación grupal única
-        await enviarNotificacionEntregaGrupalAdmin(todosLosDocumentosEntregados, {
-          nombreReceptor,
-          identificacionReceptor, 
-          relacionReceptor
-        }, req.matrizador);
-        
-      } else {
-        // ENTREGA INDIVIDUAL: Enviar notificación tradicional (si existe la función)
-        // await enviarNotificacionEntrega(documento, {
-        //   nombreReceptor,
-        //   identificacionReceptor, 
-        //   relacionReceptor
-        // }, req.matrizador);
-        console.log(`📧 [ADMIN] Entrega individual completada para documento ${documento.codigoBarras}`);
-      }
-    } catch (notificationError) {
-      console.error('Error al enviar confirmación de entrega:', notificationError);
-      // No afectar el flujo principal si falla la notificación
-    }
-    
-    // Mensaje de éxito personalizado
-    let mensajeExito = `El documento ha sido entregado exitosamente a ${nombreReceptor}.`;
-    
-    if (documentosGrupalesActualizados > 0) {
-      mensajeExito += ` Adicionalmente se procesaron ${documentosGrupalesActualizados} documento(s) más del mismo cliente en entrega grupal.`;
-    }
-    
-    req.flash('success', mensajeExito);
+  } catch (error) {
+    console.error('❌ Error al ver detalle documento admin:', error);
+    req.flash('error', 'Error al cargar el detalle del documento');
     res.redirect('/admin/documentos/listado');
-  } catch (error) {
-    await transaction.rollback();
-    console.error('Error al completar la entrega del documento admin:', error);
-    req.flash('error', `Error al completar la entrega: ${error.message}`);
-    res.redirect('/admin/documentos/entrega');
-  }
-};
-
-/**
- * NUEVA API: Detectar documentos grupales para admin
- */
-exports.detectarDocumentosGrupalesAdmin = async (req, res) => {
-  try {
-    const { identificacion, documentoId } = req.params;
-    
-    if (!identificacion || !documentoId) {
-      return res.status(400).json({
-        exito: false,
-        mensaje: 'Parámetros requeridos: identificación y documentoId'
-      });
-    }
-    
-    const documentosGrupales = await detectarDocumentosGrupalesAdmin(
-      identificacion, 
-      parseInt(documentoId)
-    );
-    
-    return res.status(200).json({
-      exito: true,
-      datos: documentosGrupales,
-      mensaje: `Detectados ${documentosGrupales.cantidad} documentos adicionales`
-    });
-    
-  } catch (error) {
-    console.error('Error en API detectar documentos grupales admin:', error);
-    return res.status(500).json({
-      exito: false,
-      mensaje: 'Error al detectar documentos grupales',
-      error: error.message
-    });
-  }
-};
-
-/**
- * NUEVA API: Procesar entrega grupal para admin
- */
-exports.procesarEntregaGrupalAdmin = async (req, res) => {
-  const transaction = await sequelize.transaction();
-  
-  try {
-    const { id } = req.params;
-    const { 
-      documentosIds, 
-      nombreReceptor, 
-      identificacionReceptor, 
-      relacionReceptor,
-      tipoVerificacion,
-      observaciones
-    } = req.body;
-    
-    if (!id || !documentosIds || !Array.isArray(documentosIds)) {
-      await transaction.rollback();
-      return res.status(400).json({
-        exito: false,
-        mensaje: 'Parámetros requeridos: id del documento principal y array de documentosIds'
-      });
-    }
-    
-    // Obtener documento principal
-    const documentoPrincipal = await Documento.findByPk(id, { transaction });
-    if (!documentoPrincipal) {
-      await transaction.rollback();
-      return res.status(404).json({
-        exito: false,
-        mensaje: 'Documento principal no encontrado'
-      });
-    }
-    
-    // Preparar datos de entrega
-    const datosEntrega = {
-      nombreReceptor,
-      identificacionReceptor,
-      relacionReceptor,
-      tipoVerificacion,
-      observaciones,
-      identificacionCliente: documentoPrincipal.identificacionCliente
-    };
-    
-    // Procesar entrega grupal
-    const resultado = await procesarEntregaGrupalAdmin(
-      documentosIds, 
-      datosEntrega, 
-      req.matrizador, 
-      transaction
-    );
-    
-    await transaction.commit();
-    
-    return res.status(200).json({
-      exito: true,
-      mensaje: `Entrega grupal procesada exitosamente: ${resultado.documentosActualizados} documentos`,
-      datos: {
-        documentosActualizados: resultado.documentosActualizados,
-        tipoEntrega: 'admin_completa'
-      }
-    });
-    
-  } catch (error) {
-    await transaction.rollback();
-    console.error('Error en procesamiento entrega grupal admin:', error);
-    return res.status(500).json({
-      exito: false,
-      mensaje: 'Error al procesar entrega grupal',
-      error: error.message
-    });
   }
 };
 

@@ -78,7 +78,7 @@ function construirMensajeDocumentoListo(documento, codigoVerificacion) {
  * Construye mensajes profesionales para notificación de documento entregado
  * @param {Object} documento - Datos del documento
  * @param {Object} datosEntrega - Datos de la entrega
- * @returns {Object} Mensajes para WhatsApp y Email
+ * @returns {Object} Mensajes para WhatsApp (email eliminado - solo WhatsApp)
  */
 function construirMensajeDocumentoEntregado(documento, datosEntrega) {
   let contextoTramite = '';
@@ -96,40 +96,23 @@ function construirMensajeDocumentoEntregado(documento, datosEntrega) {
     hour: '2-digit', minute: '2-digit', hour12: false
   });
 
-  // Mensaje WhatsApp usando plantilla centralizada
+  // Construir información de entrega con datos censurados
+  const infoEntrega = construirInformacionEntregaCensurada(datosEntrega);
+
+  // Mensaje WhatsApp usando plantilla centralizada con identificación CENSURADA
   const mensajeWhatsApp = configNotaria.plantillas.documentoEntregado.whatsapp
     .replace('{{tipoDocumento}}', documento.tipoDocumento)
     .replace('{{contextoTramite}}', contextoTramite)
     .replace('{{codigoBarras}}', documento.codigoBarras)
     .replace('{{nombreCliente}}', documento.nombreCliente)
-    .replace('{{nombreReceptor}}', datosEntrega.nombreReceptor)
-    .replace('{{identificacionReceptor}}', datosEntrega.identificacionReceptor)
-    .replace('{{relacionReceptor}}', datosEntrega.relacionReceptor)
-    .replace('{{fechaEntrega}}', fechaEntrega)
-    .replace('{{horaEntrega}}', horaEntrega);
-
-  // Datos para email de confirmación
-  const datosEmail = {
-    nombreCliente: documento.nombreCliente,
-    tipoDocumento: documento.tipoDocumento,
-    codigoDocumento: documento.codigoBarras,
-    detallesAdicionales: documento.notas?.trim() || null,
-    nombreReceptor: datosEntrega.nombreReceptor,
-    identificacionReceptor: datosEntrega.identificacionReceptor,
-    relacionReceptor: datosEntrega.relacionReceptor,
-    fechaEntrega: fechaEntrega,
-    horaEntrega: horaEntrega,
-    usuarioEntrega: datosEntrega.usuarioEntrega || 'Personal de Notaría',
-    fechaGeneracion: new Date().toLocaleString('es-EC')
-  };
+    .replace('{{nombreReceptor}}', infoEntrega.nombreReceptor)
+    .replace('{{identificacionCensurada}}', infoEntrega.identificacionCensurada)
+    .replace('{{relacionReceptor}}', infoEntrega.relacionReceptor)
+    .replace('{{fechaEntrega}}', infoEntrega.fechaEntrega)
+    .replace('{{horaEntrega}}', infoEntrega.horaEntrega);
 
   return {
     whatsapp: mensajeWhatsApp,
-    email: {
-      subject: configNotaria.plantillas.documentoEntregado.email.subject.replace('{{codigoBarras}}', documento.codigoBarras),
-      template: configNotaria.plantillas.documentoEntregado.email.template,
-      data: datosEmail
-    },
     tipo: 'documento_entregado'
   };
 }
@@ -138,7 +121,7 @@ function construirMensajeDocumentoEntregado(documento, datosEntrega) {
  * Construye mensaje de entrega grupal para notificación
  * @param {Array} documentos - Array de documentos entregados
  * @param {Object} datosEntrega - Datos de la entrega
- * @returns {Object} Mensajes para WhatsApp y Email
+ * @returns {Object} Mensajes para WhatsApp (email eliminado - solo WhatsApp)
  */
 function construirMensajeEntregaGrupalMatrizador(documentos, datosEntrega) {
   // Construir lista detallada de documentos usando función utilitaria
@@ -158,32 +141,8 @@ function construirMensajeEntregaGrupalMatrizador(documentos, datosEntrega) {
     .replace('{{fechaEntrega}}', infoEntrega.fechaEntrega)
     .replace('{{horaEntrega}}', infoEntrega.horaEntrega);
 
-  // Datos para email de confirmación grupal
-  const datosEmail = {
-    nombreCliente: documentos[0].nombreCliente,
-    totalDocumentos: documentos.length,
-    documentos: documentos.map(doc => ({
-      tipoDocumento: doc.tipoDocumento,
-      codigoBarras: doc.codigoBarras,
-      detallesAdicionales: doc.detallesAdicionales?.trim() || null
-    })),
-    nombreReceptor: infoEntrega.nombreReceptor,
-    identificacionCensurada: infoEntrega.identificacionCensurada,
-    identificacionReceptor: infoEntrega.identificacionCompleta, // Para uso interno del email si es necesario
-    relacionReceptor: infoEntrega.relacionReceptor,
-    fechaEntrega: infoEntrega.fechaEntrega,
-    horaEntrega: infoEntrega.horaEntrega,
-    usuarioEntrega: datosEntrega.usuarioEntrega || 'Matrizador',
-    fechaGeneracion: new Date().toLocaleString('es-EC')
-  };
-
   return {
     whatsapp: mensajeWhatsApp,
-    email: {
-      subject: configNotaria.plantillas.entregaGrupal.email.subject.replace('{{totalDocumentos}}', documentos.length),
-      template: configNotaria.plantillas.entregaGrupal.email.template,
-      data: datosEmail
-    },
     tipo: 'entrega_grupal'
   };
 }
@@ -268,7 +227,7 @@ async function guardarNotificacionGrupalEnHistorialMatrizador(documentos, datosE
 }
 
 /**
- * Envía notificación de entrega individual para matrizadores
+ * Envía notificación de entrega individual para matrizadores (SOLO WHATSAPP)
  * @param {Object} documento - Documento entregado
  * @param {Object} datosEntrega - Datos de la entrega
  * @param {Object} usuarioEntrega - Usuario que realizó la entrega
@@ -280,23 +239,12 @@ async function enviarNotificacionEntrega(documento, datosEntrega, usuarioEntrega
       usuarioEntrega: usuarioEntrega.nombre
     });
 
-    const metodoNotificacion = documento.metodoNotificacion || 'email';
-    
-    // Enviar según configuración
-    if (metodoNotificacion === 'whatsapp' || metodoNotificacion === 'ambos') {
-      if (documento.telefonoCliente) {
-        // Aquí se integraría con el servicio de WhatsApp
-        console.log(`📱 [MATRIZADOR] Confirmación entrega enviada por WhatsApp a ${documento.telefonoCliente}`);
-        console.log(`Mensaje: ${mensajes.whatsapp}`);
-      }
-    }
-
-    if (metodoNotificacion === 'email' || metodoNotificacion === 'ambos') {
-      if (documento.emailCliente) {
-        // Aquí se integraría con el servicio de Email
-        console.log(`📧 [MATRIZADOR] Confirmación entrega enviada por email a ${documento.emailCliente}`);
-        console.log(`Asunto: ${mensajes.email.subject}`);
-      }
+    // Solo WhatsApp - email eliminado del sistema
+    if (documento.telefonoCliente) {
+      console.log(`📱 [MATRIZADOR] Confirmación entrega enviada por WhatsApp a ${documento.telefonoCliente}`);
+      console.log(`Mensaje: ${mensajes.whatsapp}`);
+    } else {
+      console.log(`⚠️ [MATRIZADOR] No se pudo enviar confirmación: falta número de teléfono`);
     }
 
     // ============== GUARDAR EN HISTORIAL DE NOTIFICACIONES ==============
@@ -306,11 +254,10 @@ async function enviarNotificacionEntrega(documento, datosEntrega, usuarioEntrega
         documentosIds: null, // Solo para entregas grupales
         tipoEvento: 'entrega_confirmada',
         tipoEntrega: 'individual',
-        canal: metodoNotificacion === 'ambos' ? 'whatsapp' : metodoNotificacion,
-        destinatario: metodoNotificacion.includes('email') ? 
-          documento.emailCliente : documento.telefonoCliente,
+        canal: 'whatsapp', // Solo WhatsApp
+        destinatario: documento.telefonoCliente || 'telefono-no-disponible',
         estado: 'enviado',
-        mensajeEnviado: mensajes.whatsapp || mensajes.email?.subject || 'Notificación de entrega',
+        mensajeEnviado: mensajes.whatsapp || 'Notificación de entrega',
         respuestaApi: null,
         intentos: 1,
         metadatos: {
@@ -321,9 +268,9 @@ async function enviarNotificacionEntrega(documento, datosEntrega, usuarioEntrega
           identificacionCliente: documento.identificacionCliente,
           valorFactura: documento.valorFactura,
           estadoPago: documento.estadoPago,
-          // Información del receptor
+          // Información del receptor (censurada)
           nombreReceptor: datosEntrega.nombreReceptor,
-          identificacionReceptor: datosEntrega.identificacionReceptor,
+          identificacionReceptorCensurada: construirInformacionEntregaCensurada(datosEntrega).identificacionCensurada,
           relacionReceptor: datosEntrega.relacionReceptor,
           // Información del matrizador
           entregadoPor: usuarioEntrega.nombre,
@@ -348,10 +295,10 @@ async function enviarNotificacionEntrega(documento, datosEntrega, usuarioEntrega
       idMatrizador: usuarioEntrega.id,
       accion: 'verificacion_codigo',
       resultado: 'exitoso',
-      detalles: `Entrega confirmada - Receptor: ${datosEntrega.nombreReceptor} (${datosEntrega.identificacionReceptor}) - Método: ${metodoNotificacion} - Matrizador: ${usuarioEntrega.nombre}`
+      detalles: `Entrega confirmada - Receptor: ${datosEntrega.nombreReceptor} (${construirInformacionEntregaCensurada(datosEntrega).identificacionCensurada}) - Solo WhatsApp - Matrizador: ${usuarioEntrega.nombre}`
     });
 
-    console.log(`✅ [MATRIZADOR] Notificación de entrega individual procesada correctamente`);
+    console.log(`✅ [MATRIZADOR] Notificación de entrega individual procesada correctamente (solo WhatsApp)`);
 
   } catch (error) {
     console.error('❌ [MATRIZADOR] Error enviando notificación de entrega:', error);
@@ -359,7 +306,7 @@ async function enviarNotificacionEntrega(documento, datosEntrega, usuarioEntrega
 }
 
 /**
- * Envía notificación de entrega grupal (UNA SOLA NOTIFICACIÓN PARA TODOS LOS DOCUMENTOS)
+ * Envía notificación de entrega grupal (UNA SOLA NOTIFICACIÓN PARA TODOS LOS DOCUMENTOS - SOLO WHATSAPP)
  * @param {Array} documentos - Array de documentos entregados
  * @param {Object} datosEntrega - Datos de la entrega
  * @param {Object} usuarioEntrega - Usuario que realizó la entrega
@@ -378,25 +325,15 @@ async function enviarNotificacionEntregaGrupalMatrizador(documentos, datosEntreg
       usuarioEntrega: usuarioEntrega.nombre
     });
 
-    // Usar la configuración de notificación del primer documento (todos del mismo cliente)
+    // Usar el teléfono del primer documento (todos del mismo cliente)
     const documentoPrincipal = documentos[0];
-    const metodoNotificacion = documentoPrincipal.metodoNotificacion || 'email';
     
-    // Enviar según configuración
-    if (metodoNotificacion === 'whatsapp' || metodoNotificacion === 'ambos') {
-      if (documentoPrincipal.telefonoCliente) {
-        // Aquí se integraría con el servicio de WhatsApp
-        console.log(`📱 Confirmación entrega grupal enviada por WhatsApp a ${documentoPrincipal.telefonoCliente}`);
-        console.log(`Mensaje: ${mensajes.whatsapp}`);
-      }
-    }
-
-    if (metodoNotificacion === 'email' || metodoNotificacion === 'ambos') {
-      if (documentoPrincipal.emailCliente) {
-        // Aquí se integraría con el servicio de Email
-        console.log(`📧 Confirmación entrega grupal enviada por email a ${documentoPrincipal.emailCliente}`);
-        console.log(`Asunto: ${mensajes.email.subject}`);
-      }
+    // Solo WhatsApp - email eliminado del sistema
+    if (documentoPrincipal.telefonoCliente) {
+      console.log(`📱 Confirmación entrega grupal enviada por WhatsApp a ${documentoPrincipal.telefonoCliente}`);
+      console.log(`Mensaje: ${mensajes.whatsapp}`);
+    } else {
+      console.log(`⚠️ [ENTREGA GRUPAL] No se pudo enviar confirmación: falta número de teléfono`);
     }
 
     // Registrar evento de notificación grupal para cada documento
@@ -411,8 +348,9 @@ async function enviarNotificacionEntregaGrupalMatrizador(documentos, datosEntreg
           detalles: {
             tipoNotificacion: 'entrega_grupal',
             totalDocumentos: documentos.length,
-            metodoNotificacion: metodoNotificacion,
+            metodoNotificacion: 'whatsapp', // Solo WhatsApp
             receptor: datosEntrega.nombreReceptor,
+            receptorIdCensurada: construirInformacionEntregaCensurada(datosEntrega).identificacionCensurada,
             documentosIncluidos: documentos.map(d => ({
               id: d.id,
               codigo: d.codigoBarras,
@@ -421,7 +359,7 @@ async function enviarNotificacionEntregaGrupalMatrizador(documentos, datosEntreg
           },
           usuario: usuarioEntrega.nombre,
           metadatos: {
-            canal: metodoNotificacion,
+            canal: 'whatsapp', // Solo WhatsApp
             estado: 'enviada',
             tipo: 'notificacion_grupal',
             idUsuario: usuarioEntrega.id,
@@ -434,7 +372,7 @@ async function enviarNotificacionEntregaGrupalMatrizador(documentos, datosEntreg
       }
     }
 
-    console.log(`✅ [ENTREGA GRUPAL MATRIZADOR] Notificación única enviada exitosamente para ${documentos.length} documentos`);
+    console.log(`✅ [ENTREGA GRUPAL MATRIZADOR] Notificación única enviada exitosamente para ${documentos.length} documentos (solo WhatsApp)`);
 
     // ============== NUEVO: GUARDAR EN HISTORIAL DE NOTIFICACIONES ==============
     try {
@@ -442,7 +380,7 @@ async function enviarNotificacionEntregaGrupalMatrizador(documentos, datosEntreg
         documentos, 
         datosEntrega, 
         usuarioEntrega, 
-        metodoNotificacion, 
+        'whatsapp', // Solo WhatsApp
         mensajes.whatsapp
       );
     } catch (historialError) {
@@ -1965,155 +1903,16 @@ const matrizadorController = {
     });
   },
 
-  registrarDocumento: async (req, res) => {
-    console.log("Registrando documento como matrizador");
-    console.log("Usuario:", req.matrizador?.nombre, "Rol:", req.matrizador?.rol);
-    console.log("Datos recibidos:", req.body);
-    
-    const transaction = await sequelize.transaction();
-    
-    try {
-      // Extraer los datos del formulario
-      const {
-        codigoBarras,
-        tipoDocumento,
-        nombreCliente,
-        identificacionCliente,
-        emailCliente,
-        telefonoCliente,
-        idMatrizador,
-        notas,
-        // Nuevos campos de facturación y pago
-        numeroFactura,
-        valorFactura,
-        fechaFactura,
-        estadoPago,
-        metodoPago,
-        // Campos de omisión de notificaciones
-        omitirNotificacion,
-        motivoOmision,
-        detalleOmision,
-        comparecientesJSON
-      } = req.body;
-      
-      // Verificar campos obligatorios
-      if (!codigoBarras || !tipoDocumento || !nombreCliente || !identificacionCliente) {
-        await transaction.rollback();
-        req.flash('error', 'Faltan campos obligatorios');
-        return res.render('matrizadores/documentos/registro', {
-          layout: 'matrizador',
-          title: 'Registrar Documento',
-          userRole: req.matrizador?.rol,
-          userName: req.matrizador?.nombre,
-          usuario: req.matrizador,
-          formData: req.body // Mantener los datos ingresados
-        });
-      }
-      
-      // Verificar si ya existe un documento con ese código de barras
-      const documentoExistente = await Documento.findOne({
-        where: { codigoBarras },
-        transaction
-      });
-      
-      if (documentoExistente) {
-        await transaction.rollback();
-        req.flash('error', 'Ya existe un documento con ese código de barras');
-        return res.render('matrizadores/documentos/registro', {
-          layout: 'matrizador',
-          title: 'Registrar Documento',
-          userRole: req.matrizador?.rol,
-          userName: req.matrizador?.nombre,
-          usuario: req.matrizador,
-          formData: req.body
-        });
-      }
-      
-      // Procesar comparecientes
-      let comparecientesJson = [];
-      try {
-        if (comparecientesJSON) {
-          comparecientesJson = JSON.parse(comparecientesJSON);
-        }
-      } catch (e) {
-        console.error('Error al procesar comparecientes:', e);
-        comparecientesJson = [];
-      }
-      
-      // Crear el documento
-      const nuevoDocumento = await Documento.create({
-        codigoBarras,
-        tipoDocumento,
-        nombreCliente,
-        identificacionCliente,
-        emailCliente,
-        telefonoCliente,
-        idMatrizador: req.matrizador.id,
-        notas,
-        numeroFactura,
-        valorFactura: valorFactura ? parseFloat(valorFactura) : null,
-        fechaFactura,
-        estadoPago: estadoPago || 'pendiente',
-        metodoPago: metodoPago || 'pendiente',
-        omitirNotificacion: omitirNotificacion === 'true',
-        motivoOmision,
-        detalleOmision,
-        comparecientes: comparecientesJson,
-        estado: 'en_proceso',
-        idUsuarioCreador: req.matrizador.id,
-        rolUsuarioCreador: req.matrizador.rol
-      }, { transaction });
-      
-      // Registrar el evento de creación
-      try {
-        await EventoDocumento.create({
-          documentoId: nuevoDocumento.id,
-          tipo: 'registro',
-          descripcion: 'Documento registrado por matrizador',
-          usuario: req.matrizador.nombre
-        }, { transaction });
-      } catch (eventError) {
-        console.error('Error al registrar evento de documento:', eventError);
-        // Continuar con la transacción aunque el registro de eventos falle
-      }
-      
-      await transaction.commit();
-      
-      req.flash('success', 'Documento registrado exitosamente');
-      res.redirect('/matrizador/documentos');
-    } catch (error) {
-      await transaction.rollback();
-      console.error('Error al registrar documento:', error);
-
-      let errorMessage = error.message;
-      let errorCodeDuplicado = false;
-
-      if (error.name === 'SequelizeUniqueConstraintError') {
-        const esErrorCodigoBarras = error.errors && error.errors.some(e => e.path === 'codigo_barras' || e.path === 'codigoBarras');
-        if (esErrorCodigoBarras) {
-          errorMessage = `El código de barras '${req.body.codigoBarras}' ya existe. Por favor, ingrese uno diferente.`;
-          errorCodeDuplicado = true;
-        } else {
-          errorMessage = 'Ya existe un registro con uno de los valores únicos ingresados.';
-        }
-      }
-
-      if (!errorCodeDuplicado) {
-        req.flash('error', errorMessage);
-      }
-
-      res.render('matrizadores/documentos/registro', {
-        layout: 'matrizador',
-        title: 'Registrar Documento',
-        userRole: req.matrizador?.rol,
-        userName: req.matrizador?.nombre,
-        usuario: req.matrizador,
-        formData: req.body,
-        error: errorCodeDuplicado ? null : errorMessage,
-        errorCodeDuplicado: errorCodeDuplicado,
-        modalErrorMessage: errorCodeDuplicado ? errorMessage : null
-      });
-    }
+  // ❌ ELIMINADO: registrarDocumento - Función de creación no autorizada para matrizador
+  // JUSTIFICACIÓN: Solo Caja debe crear documentos desde cero
+  // Matrizador debe procesar únicamente documentos asignados por Caja
+  registrarDocumento_ELIMINADO: async (req, res) => {
+    // Función eliminada por segregación de responsabilidades
+    return res.status(403).json({
+      error: 'Operación no autorizada',
+      mensaje: 'Los matrizadores no pueden crear documentos desde cero',
+      instrucciones: 'Solo puede procesar documentos asignados por Caja'
+    });
   },
 
   /**

@@ -1,6 +1,8 @@
 /**
  * Rutas para la gestión de matrizadores
- * Configura los endpoints para el acceso a las funciones del controlador
+ * SEGREGACIÓN DE FUNCIONES - Solo procesamiento de documentos asignados
+ * ❌ ELIMINADO: Creación de documentos desde cero
+ * ✅ MANTIENE: Procesamiento de documentos asignados por Caja
  */
 
 const express = require('express');
@@ -17,60 +19,79 @@ router.get('/verificar/:codigo', matrizadorController.verificarQR);
 // Middleware global para validar token 
 router.use(verificarToken);
 
+// =============== FUNCIONES AUTORIZADAS PARA MATRIZADOR ===============
+
 // Dashboard del matrizador - Permitir matrizadores y caja_archivo
 router.get('/', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.dashboard);
 
-// Rutas de matrizador - Permitir matrizadores y caja_archivo
-// Listado de documentos
+// =============== PROCESAMIENTO DE DOCUMENTOS ASIGNADOS ===============
+// NOTA: Matrizador solo puede procesar documentos que le hayan sido asignados por Caja
+// NO puede crear documentos desde cero
+
+// Listado de documentos asignados
 router.get('/documentos', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.listarDocumentos);
 router.get('/documentos/buscar', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.mostrarBuscarDocumentos);
 
-// Detalle de documento
+// Detalle de documento asignado
 router.get('/documentos/detalle/:id', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.detalleDocumento);
 
-// Registro de documento
-router.get('/documentos/registro', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.mostrarFormularioRegistro);
-router.post('/documentos/registro', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.registrarDocumento);
-
-// Rutas para edición de documentos - Permitir matrizadores y caja_archivo
+// =============== EDICIÓN DE DOCUMENTOS ASIGNADOS ===============
+// Solo puede editar documentos que le han sido asignados
 router.get('/documentos/editar/:id', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), documentoController.mostrarFormularioEdicionMatrizador);
 router.post('/documentos/editar/:id', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), documentoController.actualizarDocumento);
 
-// Entrega de documento
-router.get('/documentos/entrega', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.mostrarEntrega);
-router.get('/documentos/entrega/:id', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.mostrarEntrega);
-router.post('/documentos/completar-entrega/:id', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.completarEntrega);
-
-// Marcar documento como listo para entrega
+// =============== MARCADO COMO LISTO Y PROCESAMIENTO ===============
+// Función principal del matrizador: procesar y marcar como listo
 router.post('/documentos/marcar-listo', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.marcarDocumentoListo);
 
 // Marcar documento como visto
 router.post('/documentos/marcar-visto/:id', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.marcarDocumentoVisto);
 
+// =============== ENTREGA EXCEPCIONAL (SOLO DOCUMENTOS PROPIOS) ===============
+// NOTA: Solo en casos excepcionales, el matrizador puede entregar sus propios documentos
+router.get('/documentos/entrega', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.mostrarEntrega);
+router.get('/documentos/entrega/:id', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.mostrarEntrega);
+router.post('/documentos/completar-entrega/:id', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.completarEntrega);
+
+// API para detectar documentos grupales - LIMITADO: solo sus propios documentos
+router.get('/api/documentos/grupales/:identificacion/:documentoId', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.detectarDocumentosGrupales);
+
+// Endpoint para procesar entrega grupal - LIMITADO: solo sus propios documentos
+router.post('/documentos/entrega-grupal/:id', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.procesarEntregaGrupal);
+
+// =============== FUNCIONES DE BÚSQUEDA Y CONSULTA ===============
 // Buscar documentos principales para vincular como habilitantes
 router.get('/documentos/buscar-principales', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.buscarDocumentosPrincipales);
 
 // API para obtener documentos principales (para selección de documento habilitante)
 router.get('/api/documentos/principales', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), documentoController.obtenerDocumentosPrincipales);
 
-// Rutas de notificaciones - usar función del matrizadorController
+// =============== NOTIFICACIONES Y HISTORIAL ===============
 router.get('/notificaciones/historial', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.historialNotificaciones);
 
 // API para obtener detalles de notificación
 router.get('/api/notificaciones/:id', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.obtenerDetalleNotificacion);
 
-// ============== NUEVAS RUTAS: ENTREGA GRUPAL ==============
-
-// API para detectar documentos grupales - LIMITADO: solo matrizadores
-router.get('/api/documentos/grupales/:identificacion/:documentoId', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.detectarDocumentosGrupales);
-
-// Endpoint para procesar entrega grupal - LIMITADO: solo matrizadores
-router.post('/documentos/entrega-grupal/:id', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.procesarEntregaGrupal);
-
-// Rutas de logout - Disponible para todos los usuarios
+// =============== LOGOUT ===============
 router.get('/logout', matrizadorController.logout);
 
-// Rutas API - Solo para administradores (deben definirse al final para no interferir con las rutas anteriores)
+// =============== ❌ FUNCIONES ELIMINADAS POR SEGREGACIÓN ===============
+//
+// Las siguientes rutas han sido ELIMINADAS para cumplir con segregación de funciones:
+//
+// ❌ ELIMINADO: router.get('/documentos/registro', matrizadorController.mostrarFormularioRegistro);
+// ❌ ELIMINADO: router.post('/documentos/registro', matrizadorController.registrarDocumento);
+//
+// JUSTIFICACIÓN:
+// - Matrizador NO debe crear documentos desde cero
+// - Solo Caja debe controlar el ingreso inicial de documentos
+// - Matrizador debe procesar únicamente documentos que le asigne Caja
+// - Separación clara entre ingreso (Caja) y procesamiento (Matrizador)
+// - Mejor control de la cadena de custodia
+// - Cumplimiento de principios de segregación de funciones
+
+// =============== RUTAS ADMINISTRATIVAS (SOLO ADMIN) ===============
+// Estas rutas solo están disponibles para administradores
 router.get('/api', roleAuth(['admin']), matrizadorController.obtenerTodos);
 router.get('/api/:id', roleAuth(['admin']), matrizadorController.obtenerPorId);
 router.post('/api', roleAuth(['admin']), matrizadorController.crear);
@@ -78,7 +99,7 @@ router.put('/api/:id', roleAuth(['admin']), matrizadorController.actualizar);
 router.delete('/api/:id', roleAuth(['admin']), matrizadorController.eliminar);
 router.get('/api/:id/qr', roleAuth(['admin']), matrizadorController.generarQR);
 
-// Rutas de administración - Solo para administradores
+// Rutas de administración de matrizadores
 router.get('/admin', roleAuth(['admin']), matrizadorController.adminMatrizadores);
 
 module.exports = router; 
