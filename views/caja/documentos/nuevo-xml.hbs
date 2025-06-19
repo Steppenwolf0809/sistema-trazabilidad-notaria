@@ -729,7 +729,149 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Información financiera
     document.getElementById('numeroFactura').value = datos.numeroFactura || '';
-    document.getElementById('valorFactura').value = datos.valorFactura || '';
+    
+    // CORREGIDO: Mostrar valor de factura correctamente (incluso si es 0)
+    const valorFactura = datos.valorFactura !== undefined && datos.valorFactura !== null ? 
+                        parseFloat(datos.valorFactura).toFixed(2) : '';
+    document.getElementById('valorFactura').value = valorFactura;
+    
+    console.log('💰 Valor de factura asignado al campo:', valorFactura);
+    
+    // ============== VALIDACIÓN CRÍTICA: VALOR DE FACTURA ==============
+    // Verificar que el valor de factura no sea $0
+    const valorFacturaInput = document.getElementById('valorFactura');
+    const valorFacturaNum = parseFloat(valorFactura || 0);
+    
+    console.log('🔍 Analizando valor de factura:', {
+      valorOriginal: datos.valorFactura,
+      valorFormateado: valorFactura,
+      valorNumerico: valorFacturaNum,
+      esFacturaExenta: datos.esFacturaExenta,
+      requiereValidacion: datos.requiereValidacion
+    });
+    
+    if (valorFacturaNum <= 0) {
+      console.log('🔍 Valor $0 detectado - Verificando si es factura exenta...');
+      
+      // Verificar si es una factura exenta válida
+      if (datos.esFacturaExenta) {
+        console.log('✅ Factura exenta válida detectada');
+        
+        // Mostrar alerta informativa (no de error)
+        const alertaExenta = document.createElement('div');
+        alertaExenta.className = 'alert alert-info mt-3';
+        alertaExenta.innerHTML = `
+          <h6><i class="fas fa-info-circle text-info"></i> Factura Exenta Detectada</h6>
+          <p class="mb-1">${datos.notaExencion}</p>
+          <div class="small text-info">
+            <strong>✅ Esta es una factura válida con valor $0.00 por exención tributaria.</strong><br>
+            Puede continuar con el registro normalmente.
+          </div>
+        `;
+        
+        // Insertar alerta después del campo valor factura
+        valorFacturaInput.parentNode.appendChild(alertaExenta);
+        
+        // Marcar campo como informativo (no error)
+        valorFacturaInput.classList.add('is-valid');
+        valorFacturaInput.style.borderColor = '#17a2b8'; // Color azul info
+        valorFacturaInput.style.backgroundColor = '#e7f3ff';
+        
+        // Asegurar que el botón esté habilitado
+        const btnConfirmar = document.getElementById('btnConfirmarRegistro');
+        btnConfirmar.disabled = false;
+        btnConfirmar.innerHTML = '<i class="fas fa-check me-1"></i> Confirmar y Registrar Documento Exento';
+        btnConfirmar.className = 'btn btn-info'; // Color azul para factura exenta
+        
+      } else if (datos.requiereValidacion) {
+        console.log('⚠️ Factura $0 requiere validación manual');
+        
+        // Mostrar alerta de advertencia para validación manual
+        const alertaValidacion = document.createElement('div');
+        alertaValidacion.className = 'alert alert-warning mt-3';
+        alertaValidacion.innerHTML = `
+          <h6><i class="fas fa-exclamation-triangle text-warning"></i> Validación Manual Requerida</h6>
+          <p class="mb-1">${datos.notaValidacion}</p>
+          <div class="small">
+            <strong>⚠️ Por favor, verifique los siguientes puntos:</strong><br>
+            • ¿Es realmente una factura con valor $0.00?<br>
+            • ¿Los productos/servicios están exentos de impuestos?<br>
+            • ¿El XML contiene toda la información correcta?<br>
+          </div>
+          <div class="mt-2">
+            <button type="button" class="btn btn-sm btn-warning" onclick="editarValorFactura()">
+              <i class="fas fa-edit me-1"></i> Editar Valor
+            </button>
+            <button type="button" class="btn btn-sm btn-success ms-2" onclick="confirmarValorCero()">
+              <i class="fas fa-check me-1"></i> Confirmar $0.00
+            </button>
+          </div>
+        `;
+        
+        // Insertar alerta después del campo valor factura
+        valorFacturaInput.parentNode.appendChild(alertaValidacion);
+        
+        // Marcar campo como advertencia
+        valorFacturaInput.classList.add('border-warning');
+        valorFacturaInput.style.borderColor = '#ffc107';
+        valorFacturaInput.style.backgroundColor = '#fff8e1';
+        
+        // Permitir edición del campo
+        valorFacturaInput.removeAttribute('readonly');
+        
+        // Deshabilitar botón hasta confirmación
+        const btnConfirmar = document.getElementById('btnConfirmarRegistro');
+        btnConfirmar.disabled = true;
+        btnConfirmar.innerHTML = '<i class="fas fa-pause me-1"></i> Confirme el Valor Antes de Continuar';
+        btnConfirmar.className = 'btn btn-warning';
+        
+        return; // Salir hasta que se confirme
+        
+      } else {
+        console.error('🚨 ERROR CRÍTICO: Valor de factura es $0 y no es factura exenta');
+        
+        // Mostrar alerta de error para valor $0 problemático
+        const alertaValor = document.createElement('div');
+        alertaValor.className = 'alert alert-danger mt-3';
+        alertaValor.innerHTML = `
+          <h6><i class="fas fa-exclamation-triangle text-danger"></i> Error: Valor de Factura $0</h6>
+          <p class="mb-2">El XML procesado no contiene un valor de factura válido.</p>
+          <div class="small">
+            <strong>Posibles causas:</strong><br>
+            • El XML no es una factura electrónica válida<br>
+            • Falta el campo "importeTotal" en la estructura XML<br>
+            • El archivo XML está incompleto o corrupto<br>
+          </div>
+          <div class="mt-2">
+            <strong>Solución:</strong> Verifique que el archivo XML sea una factura electrónica válida emitida por el SRI.
+          </div>
+        `;
+        
+        // Insertar alerta después del campo valor factura
+        valorFacturaInput.parentNode.appendChild(alertaValor);
+        
+        // Marcar campo como error
+        valorFacturaInput.classList.add('is-invalid');
+        valorFacturaInput.style.borderColor = '#dc3545';
+        
+        // Enfocar en el campo para que el usuario lo note
+        valorFacturaInput.focus();
+        
+        // Deshabilitar botón de confirmar registro hasta que se corrija
+        const btnConfirmar = document.getElementById('btnConfirmarRegistro');
+        btnConfirmar.disabled = true;
+        btnConfirmar.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> Valor de Factura Requerido';
+        btnConfirmar.className = 'btn btn-danger';
+        
+        return; // Salir de la función sin continuar
+      }
+    } else {
+      console.log('✅ Valor de factura válido:', valorFacturaNum);
+      // Asegurar que el campo esté marcado como válido
+      valorFacturaInput.classList.remove('is-invalid');
+      valorFacturaInput.classList.add('is-valid');
+      valorFacturaInput.style.borderColor = '#198754';
+    }
     
     // Actualizar valor de factura en sección de pago si está activa
     if (pagoInmediatoActivo) {
@@ -775,6 +917,10 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('razonSocialEmisor').textContent = datos.razonSocialEmisor || 'N/A';
     document.getElementById('rucEmisor').textContent = datos.rucEmisor || 'N/A';
     document.getElementById('archivoOriginal').textContent = data.archivoOriginal || 'N/A';
+    
+    // CRÍTICO: Actualizar valor de factura en la sección de pago
+    actualizarValorFacturaPago();
+    console.log('✅ Valor de factura actualizado en sección de pago');
   }
   
   // ==================== PASO 2: CONFIRMAR REGISTRO ====================
@@ -943,6 +1089,117 @@ document.addEventListener('DOMContentLoaded', function() {
   
   window.limpiarTodo = function() {
     volverACarga();
+  };
+  
+  // ==================== FUNCIONES PARA VALIDACIÓN MANUAL ====================
+  
+  window.confirmarValorCero = function() {
+    console.log('✅ Usuario confirmó valor $0.00 como válido');
+    const btnConfirmar = document.getElementById('btnConfirmarRegistro');
+    
+    // Habilitar botón de confirmar
+    btnConfirmar.disabled = false;
+    btnConfirmar.innerHTML = '<i class="fas fa-check me-1"></i> Confirmar Documento con Valor $0.00';
+    btnConfirmar.className = 'btn btn-warning';
+    
+    // Limpiar alertas de validación
+    const alertaValidacion = document.querySelector('.alert-warning');
+    if (alertaValidacion) {
+      alertaValidacion.style.display = 'none';
+    }
+    
+    // Agregar nota confirmada
+    const notaConfirmada = document.createElement('div');
+    notaConfirmada.className = 'alert alert-success mt-2';
+    notaConfirmada.innerHTML = `
+      <h6><i class="fas fa-check text-success"></i> Valor $0.00 Confirmado</h6>
+      <p class="mb-0">Valor confirmado por el usuario. Proceda con el registro.</p>
+    `;
+    
+    const valorFacturaInput = document.getElementById('valorFactura');
+    valorFacturaInput.parentNode.appendChild(notaConfirmada);
+    
+    // Marcar campo como confirmado
+    valorFacturaInput.classList.remove('border-warning');
+    valorFacturaInput.classList.add('border-success');
+    valorFacturaInput.style.borderColor = '#28a745';
+    valorFacturaInput.style.backgroundColor = '#e8f5e8';
+  };
+  
+  window.editarValorFactura = function() {
+    console.log('✏️ Usuario va a editar el valor de factura');
+    const valorFacturaInput = document.getElementById('valorFactura');
+    
+    // Limpiar estilos de advertencia
+    valorFacturaInput.classList.remove('border-warning');
+    valorFacturaInput.style.borderColor = '';
+    valorFacturaInput.style.backgroundColor = '';
+    
+    // Enfocar en el campo para edición
+    valorFacturaInput.focus();
+    valorFacturaInput.select();
+    
+    // Mostrar mensaje de ayuda
+    const mensajeAyuda = document.createElement('div');
+    mensajeAyuda.className = 'alert alert-info mt-2';
+    mensajeAyuda.id = 'mensaje-ayuda-edicion';
+    mensajeAyuda.innerHTML = `
+      <h6><i class="fas fa-edit text-info"></i> Editando Valor de Factura</h6>
+      <p class="mb-1">Ingrese el valor correcto de la factura y presione Enter para confirmar.</p>
+      <small class="text-info">💡 Si realmente es $0.00, ingrese 0 y confirme.</small>
+    `;
+    
+    valorFacturaInput.parentNode.appendChild(mensajeAyuda);
+    
+    // Añadir listener para validar en tiempo real
+    valorFacturaInput.addEventListener('input', function() {
+      const valor = parseFloat(this.value || 0);
+      const btnConfirmar = document.getElementById('btnConfirmarRegistro');
+      
+      if (valor >= 0) {
+        btnConfirmar.disabled = false;
+        btnConfirmar.innerHTML = '<i class="fas fa-check me-1"></i> Confirmar y Registrar Documento';
+        btnConfirmar.className = valor > 0 ? 'btn btn-success' : 'btn btn-info';
+        
+        // Actualizar valor en sección de pago si está activa
+        if (pagoInmediatoActivo) {
+          actualizarValorFacturaPago();
+        }
+      }
+    });
+  };
+  
+  window.confirmarValorCero = function() {
+    console.log('✅ Usuario confirma que el valor $0.00 es correcto');
+    const valorFacturaInput = document.getElementById('valorFactura');
+    const btnConfirmar = document.getElementById('btnConfirmarRegistro');
+    
+    // Limpiar estilos de advertencia
+    valorFacturaInput.classList.remove('border-warning');
+    valorFacturaInput.classList.add('is-valid', 'border-info');
+    valorFacturaInput.style.borderColor = '#17a2b8';
+    valorFacturaInput.style.backgroundColor = '#e7f3ff';
+    
+    // Habilitar botón de confirmación
+    btnConfirmar.disabled = false;
+    btnConfirmar.innerHTML = '<i class="fas fa-check me-1"></i> Confirmar y Registrar Documento ($0.00)';
+    btnConfirmar.className = 'btn btn-info';
+    
+    // Mostrar mensaje de confirmación
+    const mensajeConfirmacion = document.createElement('div');
+    mensajeConfirmacion.className = 'alert alert-success mt-2';
+    mensajeConfirmacion.innerHTML = `
+      <h6><i class="fas fa-check-circle text-success"></i> Valor Confirmado</h6>
+      <p class="mb-0">Ha confirmado que el valor $0.00 es correcto. Puede proceder con el registro.</p>
+    `;
+    
+    // Remover mensaje de ayuda si existe
+    const mensajeAyuda = document.getElementById('mensaje-ayuda-edicion');
+    if (mensajeAyuda) {
+      mensajeAyuda.remove();
+    }
+    
+    valorFacturaInput.parentNode.appendChild(mensajeConfirmacion);
   };
 });
 </script>

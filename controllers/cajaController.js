@@ -2060,6 +2060,70 @@ const cajaController = {
 
       console.log('📊 Datos extraídos:', datosExtraidos);
 
+      // ============== VALIDACIÓN MEJORADA: FACTURAS EXENTAS VS ERRORES XML ==============
+      // Verificar si es un error de extracción vs una factura exenta válida
+      let analisisExencion = null;
+      
+      if (!datosExtraidos.valorTotal || datosExtraidos.valorTotal <= 0) {
+        console.log('🔍 Valor $0 detectado - Analizando causa...');
+        
+        // Usar función especializada para analizar facturas exentas
+        analisisExencion = analizarFacturaExenta(result, datosExtraidos);
+        
+        // Solo mostrar error si es un problema real de extracción
+        if (!analisisExencion.tieneEstructuraValida) {
+          console.error('🚨 ERROR CRÍTICO: XML mal formado o incompleto');
+          console.error('📋 Datos extraídos:', datosExtraidos);
+          
+          // Limpiar archivo temporal
+          fs.unlinkSync(req.file.path);
+          
+          return res.status(400).json({
+            success: false,
+            message: 'Error: El XML no contiene información básica de factura. Verifique que el archivo XML esté completo y sea una factura electrónica válida.',
+            detalles: {
+              valorEncontrado: datosExtraidos.valorTotal,
+              estructuraXML: 'El XML debe contener al menos: número de factura, nombre del cliente e identificación',
+              solucion: 'Verifique que el XML es una factura electrónica válida emitida por el SRI'
+            }
+          });
+        }
+        
+        // Si requiere validación manual, agregar nota de advertencia
+        if (analisisExencion.requiereValidacionManual) {
+          console.log('⚠️ Factura $0 requiere validación manual');
+          datosExtraidos.requiereValidacion = true;
+          datosExtraidos.notaValidacion = 'Esta factura tiene valor $0. Verifique que sea correcta antes de continuar.';
+        }
+        
+        // Si es factura exenta, agregar información
+        if (analisisExencion.esFacturaExenta) {
+          console.log('✅ Factura exenta detectada - Valor $0 es válido');
+          datosExtraidos.esFacturaExenta = true;
+          datosExtraidos.notaExencion = analisisExencion.razonExencion;
+        }
+      }
+      
+      // VALIDACIÓN ADICIONAL: VERIFICAR CAMPOS MÍNIMOS REQUERIDOS
+      const camposRequeridos = ['nombreCliente', 'identificacionCliente'];
+      const camposFaltantes = camposRequeridos.filter(campo => !datosExtraidos[campo]);
+      
+      if (camposFaltantes.length > 0) {
+        console.error('🚨 ERROR: Faltan campos requeridos en XML:', camposFaltantes);
+        
+        // Limpiar archivo temporal
+        fs.unlinkSync(req.file.path);
+        
+        return res.status(400).json({
+          success: false,
+          message: `Error: El XML no contiene campos requeridos: ${camposFaltantes.join(', ')}`,
+          detalles: {
+            camposFaltantes,
+            datosEncontrados: Object.keys(datosExtraidos).filter(key => datosExtraidos[key])
+          }
+        });
+      }
+
       // Usar el código de libro si está disponible, sino generar uno temporal
       let codigoDocumento;
       if (datosExtraidos.codigoLibro) {
@@ -2160,6 +2224,14 @@ const cajaController = {
           valorFactura: parseFloat(datosExtraidos.valorTotal || 0),
           fechaFactura: datosExtraidos.fechaEmision || '',
           
+          // NUEVO: Información sobre facturas exentas
+          esFacturaExenta: datosExtraidos.esFacturaExenta || false,
+          notaExencion: datosExtraidos.notaExencion || null,
+          
+          // NUEVO: Información sobre validación manual
+          requiereValidacion: datosExtraidos.requiereValidacion || false,
+          notaValidacion: datosExtraidos.notaValidacion || null,
+          
           // Información del XML
           razonSocialEmisor: datosExtraidos.razonSocial || '',
           rucEmisor: datosExtraidos.ruc || '',
@@ -2251,6 +2323,22 @@ const cajaController = {
       if (pagoInmediato && datosPago) {
         console.log('💰 Pago inmediato activado, validando datos:', datosPago);
         
+        // NUEVO: Validación especial para facturas exentas
+        const valorFacturaNum = parseFloat(valorFactura || 0);
+        if (valorFacturaNum <= 0) {
+          console.log('⚠️ Pago inmediato solicitado en factura $0 - Verificando validez...');
+          
+          // Para facturas exentas, no tiene sentido un pago inmediato
+          return res.status(400).json({
+            success: false,
+            message: 'No se puede registrar un pago en una factura con valor $0. Desactive la opción de "Pago Inmediato" para facturas exentas.',
+            detalles: {
+              valorFactura: valorFacturaNum,
+              sugerencia: 'Las facturas exentas no requieren pago, solo registro'
+            }
+          });
+        }
+        
         // Validaciones específicas de pago
         if (!datosPago.monto || datosPago.monto <= 0) {
           return res.status(400).json({
@@ -2266,7 +2354,6 @@ const cajaController = {
           });
         }
         
-        const valorFacturaNum = parseFloat(valorFactura || 0);
         if (datosPago.monto > valorFacturaNum) {
           return res.status(400).json({
             success: false,
@@ -2499,13 +2586,74 @@ function extraerDatosFactura(factura) {
   console.log('🔍 Extrayendo datos de factura...');
   console.log('Estructura completa de factura:', JSON.stringify(factura, null, 2));
   
+  // ============== EXTRACCIÓN ROBUSTA DEL VALOR DE FACTURA ==============
+  // Buscar el valor en múltiples campos posibles del XML
+  let valorTotal = 0;
+  
+  // Método 1: infoFactura.importeTotal (más común)
+  if (factura.infoFactura?.importeTotal) {
+    valorTotal = parseFloat(factura.infoFactura.importeTotal);
+    console.log('✅ Valor encontrado en infoFactura.importeTotal:', valorTotal);
+  }
+  // Método 2: Buscar en totalConImpuestos (formato alternativo)
+  else if (factura.infoFactura?.totalConImpuestos) {
+    valorTotal = parseFloat(factura.infoFactura.totalConImpuestos);
+    console.log('✅ Valor encontrado en infoFactura.totalConImpuestos:', valorTotal);
+  }
+  // Método 3: Buscar directamente en campos de totales
+  else if (factura.importeTotal) {
+    valorTotal = parseFloat(factura.importeTotal);
+    console.log('✅ Valor encontrado en importeTotal directo:', valorTotal);
+  }
+  // Método 4: Buscar en detalles y sumar (último recurso)
+  else if (factura.detalles && factura.detalles.detalle) {
+    const detalles = Array.isArray(factura.detalles.detalle) ? 
+      factura.detalles.detalle : [factura.detalles.detalle];
+    
+    valorTotal = detalles.reduce((suma, detalle) => {
+      const precioTotal = parseFloat(detalle.precioTotalSinImpuesto || detalle.precioUnitario || 0);
+      const cantidad = parseFloat(detalle.cantidad || 1);
+      return suma + (precioTotal * cantidad);
+    }, 0);
+    
+    console.log('✅ Valor calculado desde detalles:', valorTotal);
+  }
+  
+  // CORREGIDO: Validar que el valor sea válido pero no aplicar "último recurso" problemático
+  if (isNaN(valorTotal)) {
+    console.error('❌ VALOR DE FACTURA NO NUMÉRICO:', {
+      valorExtraido: valorTotal,
+      infoFacturaImporteTotal: factura.infoFactura?.importeTotal,
+      infoFacturaTotalConImpuestos: factura.infoFactura?.totalConImpuestos,
+      importeTotalDirecto: factura.importeTotal
+    });
+    
+    // Si realmente no es numérico, usar 0
+    valorTotal = 0;
+  }
+  
+  // NUEVO: Logging para facturas con valor 0 (pueden ser exentas legítimas)
+  if (valorTotal <= 0) {
+    console.log('🔍 FACTURA CON VALOR $0 DETECTADA:', {
+      valorExtraido: valorTotal,
+      cliente: factura.infoFactura?.razonSocialComprador,
+      numeroFactura: factura.infoTributaria?.estab + '-' + factura.infoTributaria?.ptoEmi + '-' + factura.infoTributaria?.secuencial,
+      esGobierno: factura.infoFactura?.razonSocialComprador?.toLowerCase().includes('fiscal') || 
+                  factura.infoFactura?.razonSocialComprador?.toLowerCase().includes('juzgado') ||
+                  factura.infoFactura?.razonSocialComprador?.toLowerCase().includes('gobierno'),
+      detalleServicio: factura.detalles?.detalle?.descripcion
+    });
+    
+    console.log('✅ Manteniendo valor $0 - será validado por sistema de exenciones');
+  }
+  
   const datos = {
     tipoDocumento: 'factura',
     numeroFactura: factura.infoTributaria?.estab + '-' + factura.infoTributaria?.ptoEmi + '-' + factura.infoTributaria?.secuencial,
     nombreCliente: factura.infoFactura?.razonSocialComprador || 'Cliente no especificado',
     identificacionCliente: factura.infoFactura?.identificacionComprador,
     fechaEmision: factura.infoFactura?.fechaEmision,
-    valorTotal: parseFloat(factura.infoFactura?.importeTotal || 0),
+    valorTotal: valorTotal, // CORREGIDO: Usar el valor validado
     razonSocial: factura.infoTributaria?.razonSocial,
     ruc: factura.infoTributaria?.ruc
   };
@@ -2561,6 +2709,31 @@ function extraerDatosFactura(factura) {
   }
   
   console.log('📊 Datos finales extraídos:', datos);
+  
+  // VALIDACIÓN FINAL MEJORADA: Distinguir entre facturas exentas y errores
+  if (datos.valorTotal <= 0) {
+    const esFacturaExenta = datos.nombreCliente?.toLowerCase().includes('fiscal') || 
+                           datos.nombreCliente?.toLowerCase().includes('juzgado') ||
+                           (factura.detalles?.detalle?.descripcion && 
+                            factura.detalles.detalle.descripcion.toLowerCase().includes('testimonio'));
+                            
+    if (esFacturaExenta) {
+      console.log('✅ Factura exenta $0.00 detectada correctamente:', {
+        cliente: datos.nombreCliente,
+        servicio: factura.detalles?.detalle?.descripcion,
+        valorTotal: datos.valorTotal
+      });
+    } else {
+      console.log('⚠️ Factura con valor $0 - requiere validación:', {
+        cliente: datos.nombreCliente,
+        valorTotal: datos.valorTotal,
+        numeroFactura: datos.numeroFactura
+      });
+    }
+  } else {
+    console.log('✅ Valor de factura válido extraído:', datos.valorTotal);
+  }
+  
   return datos;
 }
 
@@ -2925,6 +3098,369 @@ async function calcularMetricasPeriodoCaja(fechaInicio, fechaFin) {
     periodoTexto: `${fechaInicio.format('DD/MM/YYYY')} - ${fechaFin.format('DD/MM/YYYY')}`
   };
 }
+
+// ============== FUNCIÓN AUXILIAR PARA DETECTAR FACTURAS EXENTAS ==============
+
+/**
+ * Determina si una factura con valor $0 es una factura exenta válida
+ * @param {Object} xmlResult - Resultado parseado del XML
+ * @param {Object} datosExtraidos - Datos extraídos de la factura
+ * @returns {Object} Información sobre si es factura exenta
+ */
+function analizarFacturaExenta(xmlResult, datosExtraidos) {
+  console.log('🔍 Analizando si factura $0 es exenta o error...');
+  
+  const xmlString = JSON.stringify(xmlResult).toLowerCase();
+  
+  // Términos que indican exención tributaria
+  const terminosExencion = [
+    'exento', 'exenta', 'exonerado', 'exonerada',
+    'tarifa 0', 'tarifa0', 'iva 0%', 'iva0%', 'iva 0.00',
+    'no gravado', 'nogravado', 'no objeto', 'noobjeto',
+    'libre', 'gratuito', 'sin costo', 'valor cero'
+  ];
+  
+  // NUEVO: Términos específicos de servicios notariales exentos
+  const serviciosExentos = [
+    // Servicios gubernamentales/judiciales
+    'fiscalia', 'fiscalía', 'juzgado', 'juzgados', 'tribunal',
+    'testimonios', 'testimonio', 'certificacion gratuita',
+    'servicio social', 'beneficencia', 'exento por ley',
+    'gobierno', 'ministerio', 'entidad publica',
+    
+    // NUEVO: Servicios notariales específicos exentos
+    'marginacion', 'marginación', 'revocatoria', 'revocación',
+    'revocatoria de poder', 'revocatoria de poderes',
+    'marginacion de revocatoria', 'marginación de revocatoria',
+    'misma notaria', 'misma notaría', 'notaria origen',
+    
+    // NUEVO: Servicios para grupos vulnerables
+    'discapacidad', 'persona con discapacidad', 'discapacitado',
+    'tercera edad', 'adulto mayor', 'pension', 'pensión',
+    'jubilado', 'jubilada', 'beneficiario', 'beneficiaria',
+    'exonerado', 'exonerada', 'gratuito por ley',
+    
+    // NUEVO: Otros servicios notariales sin costo
+    'correccion', 'corrección', 'error notarial', 'subsanacion',
+    'subsanación', 'aclaracion', 'aclaración', 'fe de erratas',
+    'rectificacion', 'rectificación', 'sin costo adicional',
+    'servicio complementario', 'tramite gratuito', 'trámite gratuito'
+  ];
+
+  // NUEVO: Códigos específicos de exención fiscal
+  const codigosExencion = [
+    'tarifa 0%', 'tarifa0%', 'iva 0%', 'iva0%', 'iva 0.00',
+    'codigo 0', 'codigo0', 'codigoportcentaje 0', 'codigoportcentaje0',
+    'baseimponible 0', 'baseimponible0', 'valor 0', 'valor0',
+    'no objeto', 'noobjeto', 'exento', 'exenta'
+  ];
+  
+  // NUEVO: Entidades que típicamente reciben servicios exentos
+  const entidadesExentas = [
+    // Entidades gubernamentales
+    'fiscalia general', 'fiscalía general', 'ministerio',
+    'juzgado', 'tribunal', 'corte', 'procuraduria',
+    'defensoria', 'defensoría', 'gobierno', 'municipio',
+    'consejo provincial', 'asamblea nacional',
+    
+    // NUEVO: Organizaciones sociales y benéficas
+    'fundacion', 'fundación', 'ong', 'asociacion',
+    'asociación', 'cruz roja', 'caritas', 'cáritas',
+    'hogar de ancianos', 'casa de reposo', 'orfanato',
+    'centro de rehabilitacion', 'centro de rehabilitación',
+    
+    // NUEVO: Instituciones educativas y de salud públicas
+    'ministerio de salud', 'iess', 'hospital publico',
+    'hospital público', 'centro de salud', 'dispensario',
+    'colegio fiscal', 'escuela fiscal', 'universidad publica',
+    'universidad pública'
+  ];
+  
+  // NUEVO: Términos que indican servicios regulares de la misma notaría
+  const serviciosMismaNotaria = [
+    'misma notaria', 'misma notaría', 'notaria origen',
+    'notaría origen', 'protocolo anterior', 'expediente anterior',
+    'tramite relacionado', 'trámite relacionado', 'mismo expediente',
+    'continuacion', 'continuación', 'seguimiento'
+  ];
+  
+  // Verificar términos de exención
+  const tieneTerminosExencion = terminosExencion.some(termino => 
+    xmlString.includes(termino)
+  );
+  
+  // NUEVO: Verificar servicios específicos exentos
+  const tieneServiciosExentos = serviciosExentos.some(servicio => 
+    xmlString.includes(servicio)
+  );
+  
+  // NUEVO: Verificar entidades que reciben servicios exentos
+  const tieneEntidadesExentas = entidadesExentas.some(entidad => 
+    xmlString.includes(entidad)
+  );
+  
+  // NUEVO: Verificar servicios de la misma notaría
+  const esServicioMismaNotaria = serviciosMismaNotaria.some(termino => 
+    xmlString.includes(termino)
+  );
+  
+  // Verificar códigos de exención
+  const tieneCodigosExencion = codigosExencion.some(codigo => 
+    xmlString.includes(codigo)
+  );
+  
+  // NUEVO: Verificar patrón específico de totales en 0
+  const tienePatronCeros = xmlString.includes('"totalsinsimpuestos":"0.00"') &&
+                          xmlString.includes('"importetotal":"0.00"');
+  
+  // NUEVO: Análisis específico por tipo de servicio notarial
+  const tipoServicioNotarial = analizarTipoServicioNotarial(xmlString, datosExtraidos);
+  
+  // Verificar estructura válida de factura
+  const tieneEstructuraValida = !!(
+    datosExtraidos.numeroFactura && 
+    datosExtraidos.nombreCliente && 
+    datosExtraidos.identificacionCliente &&
+    datosExtraidos.razonSocial &&
+    datosExtraidos.ruc
+  );
+  
+  // Verificar si hay detalles de productos/servicios
+  const tieneDetalles = xmlString.includes('detalle') && 
+                       (xmlString.includes('descripcion') || xmlString.includes('producto'));
+  
+  // MEJORADO: Lógica más robusta para determinar si es exenta
+  const esFacturaExenta = tieneEstructuraValida && (
+    tieneTerminosExencion || 
+    tieneCodigosExencion || 
+    tieneServiciosExentos || 
+    tieneEntidadesExentas ||
+    esServicioMismaNotaria ||
+    tipoServicioNotarial.esExento ||
+    (tieneDetalles && tienePatronCeros) // Factura estructurada con patrón de ceros
+  );
+  
+  console.log('📋 Análisis completo de factura exenta:', {
+    esFacturaExenta,
+    tieneEstructuraValida,
+    tieneTerminosExencion,
+    tieneCodigosExencion,
+    tieneServiciosExentos,
+    tieneEntidadesExentas,
+    esServicioMismaNotaria,
+    tipoServicioNotarial,
+    tienePatronCeros,
+    tieneDetalles,
+    numeroFactura: datosExtraidos.numeroFactura,
+    nombreCliente: datosExtraidos.nombreCliente
+  });
+  
+  let razonExencion = '';
+  if (esFacturaExenta) {
+    if (tipoServicioNotarial.esExento) {
+      razonExencion = tipoServicioNotarial.razon;
+    } else if (esServicioMismaNotaria) {
+      razonExencion = 'Servicio complementario o marginación en la misma notaría (sin costo adicional)';
+    } else if (tieneServiciosExentos) {
+      // MEJORADO: Determinar razón específica basada en términos encontrados
+      const terminosEncontrados = serviciosExentos.filter(s => xmlString.includes(s));
+      if (terminosEncontrados.some(t => t.includes('discapacidad'))) {
+        razonExencion = 'Servicio gratuito para persona con discapacidad (exoneración legal)';
+      } else if (terminosEncontrados.some(t => t.includes('revocatoria') || t.includes('marginacion'))) {
+        razonExencion = 'Marginación de revocatoria de poderes (servicio notarial sin costo)';
+      } else if (terminosEncontrados.some(t => t.includes('fiscalia') || t.includes('juzgado'))) {
+        razonExencion = 'Servicio notarial para entidad judicial o fiscal (exoneración legal)';
+      } else if (terminosEncontrados.some(t => t.includes('tercera edad') || t.includes('pension'))) {
+        razonExencion = 'Servicio con tarifa social para adulto mayor o pensionado';
+      } else if (terminosEncontrados.some(t => t.includes('correccion') || t.includes('rectificacion'))) {
+        razonExencion = 'Corrección o subsanación de error notarial (sin costo adicional)';
+      } else {
+        razonExencion = 'Servicio notarial exento o con tarifa social';
+      }
+    } else if (tieneEntidadesExentas) {
+      razonExencion = 'Factura para entidad pública, ONG o institución benéfica (exenta de impuestos)';
+    } else if (tieneTerminosExencion) {
+      razonExencion = 'Factura con productos/servicios exentos de impuestos';
+    } else if (tieneCodigosExencion) {
+      razonExencion = 'Factura con tarifa 0% de IVA según códigos SRI';
+    } else if (tieneDetalles && tienePatronCeros) {
+      razonExencion = 'Factura válida con servicios sin costo (patrón estructurado)';
+    }
+  }
+  
+  return {
+    esFacturaExenta,
+    razonExencion,
+    requiereValidacionManual: !esFacturaExenta && tieneEstructuraValida,
+    tieneEstructuraValida,
+    // NUEVO: Información adicional para debugging
+    detallesAnalisis: {
+      tieneServiciosExentos,
+      tieneEntidadesExentas,
+      esServicioMismaNotaria,
+      tienePatronCeros,
+      terminosEncontrados: serviciosExentos.filter(s => xmlString.includes(s)),
+      entidadesEncontradas: entidadesExentas.filter(e => xmlString.includes(e)),
+      serviciosMismaNotariaEncontrados: serviciosMismaNotaria.filter(s => xmlString.includes(s)),
+      categoriaServicio: tipoServicioNotarial.categoria,
+      tipoEspecificoDetectado: tipoServicioNotarial.tipoServicio
+    }
+  };
+}
+
+// Funciones auxiliares para extraer datos del XML
+
+// ============== FUNCIÓN AUXILIAR PARA ANALIZAR SERVICIOS NOTARIALES ESPECÍFICOS ==============
+
+/**
+ * Analiza el tipo específico de servicio notarial para determinar si es exento
+ * @param {string} xmlString - Contenido del XML como string en minúsculas
+ * @param {Object} datosExtraidos - Datos extraídos del XML
+ * @returns {Object} Información sobre el tipo de servicio y si es exento
+ */
+function analizarTipoServicioNotarial(xmlString, datosExtraidos) {
+  console.log('🔍 Analizando tipo específico de servicio notarial...');
+  
+  const analisis = {
+    esExento: false,
+    tipoServicio: 'general',
+    razon: '',
+    categoria: 'servicios_regulares'
+  };
+  
+  // ANÁLISIS 1: Marginaciones y revocatorias en la misma notaría
+  if (xmlString.includes('marginacion') || xmlString.includes('marginación') || 
+      xmlString.includes('revocatoria') || xmlString.includes('revocación')) {
+    
+    // Verificar si es en la misma notaría (típicamente exento)
+    if (xmlString.includes('misma notaria') || xmlString.includes('misma notaría') ||
+        xmlString.includes('notaria origen') || xmlString.includes('notaría origen') ||
+        xmlString.includes('protocolo anterior')) {
+      
+      analisis.esExento = true;
+      analisis.tipoServicio = 'marginacion_misma_notaria';
+      analisis.categoria = 'servicios_administrativos';
+      analisis.razon = 'Marginación o revocatoria en la misma notaría (servicio administrativo sin costo adicional)';
+      
+      console.log('✅ Detectado: Marginación en misma notaría - EXENTO');
+      return analisis;
+    }
+  }
+  
+  // ANÁLISIS 2: Servicios para personas con discapacidad
+  if (xmlString.includes('discapacidad') || xmlString.includes('discapacitado') ||
+      xmlString.includes('persona con discapacidad') || xmlString.includes('conadis')) {
+    
+    analisis.esExento = true;
+    analisis.tipoServicio = 'servicio_discapacidad';
+    analisis.categoria = 'servicios_sociales';
+    analisis.razon = 'Servicio notarial gratuito para persona con discapacidad (Ley Orgánica de Discapacidades)';
+    
+    console.log('✅ Detectado: Servicio para discapacidad - EXENTO por ley');
+    return analisis;
+  }
+  
+  // ANÁLISIS 3: Servicios judiciales o fiscales específicos
+  if ((xmlString.includes('testimonio') || xmlString.includes('testimonios')) &&
+      (xmlString.includes('fiscalia') || xmlString.includes('fiscalía') || 
+       xmlString.includes('juzgado') || xmlString.includes('tribunal'))) {
+    
+    analisis.esExento = true;
+    analisis.tipoServicio = 'testimonio_judicial';
+    analisis.categoria = 'servicios_judiciales';
+    analisis.razon = 'Testimonios solicitados por Fiscalía o Juzgados (exención legal)';
+    
+    console.log('✅ Detectado: Testimonio judicial - EXENTO por ley');
+    return analisis;
+  }
+  
+  // ANÁLISIS 4: Servicios para adultos mayores o pensionados
+  if (xmlString.includes('tercera edad') || xmlString.includes('adulto mayor') ||
+      xmlString.includes('pension') || xmlString.includes('pensión') ||
+      xmlString.includes('jubilado') || xmlString.includes('jubilada') ||
+      xmlString.includes('iess')) {
+    
+    analisis.esExento = true;
+    analisis.tipoServicio = 'tarifa_social';
+    analisis.categoria = 'servicios_sociales';
+    analisis.razon = 'Servicio con tarifa social para adulto mayor o pensionado';
+    
+    console.log('✅ Detectado: Tarifa social adulto mayor - EXENTO');
+    return analisis;
+  }
+  
+  // ANÁLISIS 5: Correcciones o subsanaciones
+  if ((xmlString.includes('correccion') || xmlString.includes('corrección') ||
+       xmlString.includes('rectificacion') || xmlString.includes('rectificación') ||
+       xmlString.includes('subsanacion') || xmlString.includes('subsanación') ||
+       xmlString.includes('aclaracion') || xmlString.includes('aclaración')) &&
+      (xmlString.includes('error') || xmlString.includes('fe de erratas'))) {
+    
+    analisis.esExento = true;
+    analisis.tipoServicio = 'correccion_error';
+    analisis.categoria = 'servicios_administrativos';
+    analisis.razon = 'Corrección o subsanación de error notarial (sin costo adicional por responsabilidad notarial)';
+    
+    console.log('✅ Detectado: Corrección de error - EXENTO');
+    return analisis;
+  }
+  
+  // ANÁLISIS 6: Servicios para ONGs o instituciones benéficas
+  if (xmlString.includes('fundacion') || xmlString.includes('fundación') ||
+      xmlString.includes('ong') || xmlString.includes('asociacion') ||
+      xmlString.includes('asociación') || xmlString.includes('beneficencia') ||
+      xmlString.includes('cruz roja') || xmlString.includes('caritas')) {
+    
+    analisis.esExento = true;
+    analisis.tipoServicio = 'servicio_ong';
+    analisis.categoria = 'servicios_sociales';
+    analisis.razon = 'Servicio para ONG, fundación o institución benéfica (tarifa social)';
+    
+    console.log('✅ Detectado: Servicio para ONG - EXENTO');
+    return analisis;
+  }
+  
+  // ANÁLISIS 7: Verificar por descripción de servicio específico
+  if (datosExtraidos.descripcionServicio) {
+    const descripcion = datosExtraidos.descripcionServicio.toLowerCase();
+    
+    // Buscar patrones específicos en la descripción
+    if (descripcion.includes('sin costo') || descripcion.includes('gratuito') ||
+        descripcion.includes('exento') || descripcion.includes('tarifa 0')) {
+      
+      analisis.esExento = true;
+      analisis.tipoServicio = 'servicio_declarado_gratuito';
+      analisis.categoria = 'servicios_especiales';
+      analisis.razon = 'Servicio declarado explícitamente como gratuito en la descripción';
+      
+      console.log('✅ Detectado: Servicio declarado gratuito - EXENTO');
+      return analisis;
+    }
+  }
+  
+  // ANÁLISIS 8: Por tipo de cliente (entidades públicas específicas)
+  if (datosExtraidos.nombreCliente) {
+    const cliente = datosExtraidos.nombreCliente.toLowerCase();
+    
+    if (cliente.includes('ministerio') || cliente.includes('gobierno') ||
+        cliente.includes('municipio') || cliente.includes('prefectura') ||
+        cliente.includes('consejo provincial') || cliente.includes('asamblea')) {
+      
+      analisis.esExento = true;
+      analisis.tipoServicio = 'servicio_entidad_publica';
+      analisis.categoria = 'servicios_gubernamentales';
+      analisis.razon = 'Servicio para entidad pública (exención por normativa estatal)';
+      
+      console.log('✅ Detectado: Servicio entidad pública - EXENTO');
+      return analisis;
+    }
+  }
+  
+  console.log('📋 Análisis completado:', analisis);
+  return analisis;
+}
+
+// Funciones auxiliares para extraer datos del XML
 
 
 
