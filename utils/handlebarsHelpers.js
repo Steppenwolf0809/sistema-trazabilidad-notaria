@@ -28,6 +28,66 @@ module.exports = {
   },
   
   /**
+   * Formatear fecha específicamente para Ecuador
+   */
+  formatDateEcuador: (date) => {
+    if (!date) return 'Sin fecha';
+    
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return 'Fecha inválida';
+      
+      return d.toLocaleDateString('es-EC', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    } catch (error) {
+      return 'Error en fecha';
+    }
+  },
+  
+  /**
+   * Formatear fecha para documentos (formato compacto)
+   */
+  formatDateDocument: (date) => {
+    if (!date) return 'Sin fecha';
+    
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return 'Fecha inválida';
+      
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      
+      return `${day}/${month}/${year}`;
+    } catch (error) {
+      return 'Error en fecha';
+    }
+  },
+  
+  /**
+   * ✨ NUEVO: Formatear fecha corta para tabla optimizada (DD/MM/YY)
+   */
+  formatFechaCorta: (date) => {
+    if (!date) return '';
+    
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return '';
+      
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = String(d.getFullYear()).substr(-2);
+      
+      return `${day}/${month}/${year}`;
+    } catch (error) {
+      return '';
+    }
+  },
+  
+  /**
    * Formatear solo hora
    */
   formatTime: (date) => {
@@ -62,57 +122,52 @@ module.exports = {
   // ============== HELPERS DE FORMATO MONETARIO ==============
   
   /**
-   * Formatear valores monetarios
+   * Formatear dinero
    */
-  formatMoney: (value) => {
-    if (value == null || isNaN(value)) return '0.00';
-    return parseFloat(value).toFixed(2);
+  formatMoney: (amount) => {
+    if (!amount) return '0.00';
+    return parseFloat(amount).toFixed(2);
   },
   
   /**
-   * Formatear valores monetarios con símbolo $
+   * Formatear número
    */
-  formatCurrency: (value) => {
-    if (value == null || isNaN(value)) return '$0.00';
-    return '$' + parseFloat(value).toFixed(2);
+  formatNumber: (number) => {
+    if (!number) return '0';
+    return parseFloat(number).toLocaleString();
   },
   
   // ============== HELPERS DE COMPARACIÓN ==============
   
   /**
-   * Comparar dos valores para igualdad
+   * Comparar igualdad
    */
-  eq: (a, b) => {
-    return a === b;
-  },
+  eq: (a, b) => a === b,
   
   /**
-   * Comparar si un valor es mayor que otro
+   * Comparar desigualdad
    */
-  gt: (a, b) => {
-    return a > b;
-  },
+  ne: (a, b) => a !== b,
   
   /**
-   * Comparar si un valor es menor que otro
+   * Mayor que
    */
-  lt: (a, b) => {
-    return a < b;
-  },
+  gt: (a, b) => a > b,
   
   /**
-   * Comparar si un valor es mayor o igual que otro
+   * Mayor o igual que
    */
-  gte: (a, b) => {
-    return a >= b;
-  },
+  gte: (a, b) => a >= b,
   
   /**
-   * Comparar si un valor es menor o igual que otro
+   * Menor que
    */
-  lte: (a, b) => {
-    return a <= b;
-  },
+  lt: (a, b) => a < b,
+  
+  /**
+   * Menor o igual que
+   */
+  lte: (a, b) => a <= b,
   
   /**
    * Operador lógico AND
@@ -234,11 +289,14 @@ module.exports = {
   },
   
   /**
-   * Suma de dos números
+   * Sumar dos números
    */
-  add: (a, b) => {
-    return (parseInt(a) || 0) + (parseInt(b) || 0);
-  },
+  add: (a, b) => (parseInt(a) || 0) + (parseInt(b) || 0),
+  
+  /**
+   * Restar dos números
+   */
+  subtract: (a, b) => (parseInt(a) || 0) - (parseInt(b) || 0),
   
   // ============== HELPERS DE UTILIDADES ==============
   
@@ -344,14 +402,6 @@ module.exports = {
   },
   
   /**
-   * Sumar array de números
-   */
-  sum: (arr) => {
-    if (!Array.isArray(arr)) return 0;
-    return arr.reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
-  },
-  
-  /**
    * Obtener promedio de array
    */
   average: (arr) => {
@@ -399,693 +449,315 @@ module.exports = {
   /**
    * Obtener icono de dirección según valor
    */
-  getDirectionIcon: (value) => {
-    if (value > 0) return 'fas fa-arrow-up';
-    if (value < 0) return 'fas fa-arrow-down';
-    return 'fas fa-minus';
-  },
-  
-  /**
-   * Obtener color según dirección del cambio
-   */
-  getChangeColor: (value) => {
-    if (value > 0) return 'success';
-    if (value < 0) return 'danger';
-    return 'secondary';
-  },
-  
-  /**
-   * Formatear valor según tipo
-   */
-  formatByType: (value, type) => {
-    if (value == null) return '0';
-    
-    switch (type) {
-      case 'moneda':
-        return `$${parseFloat(value).toFixed(2)}`;
-      case 'porcentaje':
-        return `${parseFloat(value).toFixed(1)}%`;
-      case 'numero':
-        return String(Math.round(parseFloat(value)));
-      default:
-        return String(value);
-    }
-  },
-  
-  /**
-   * Verificar si un cambio es significativo (>= 10%)
-   */
-  isSignificantChange: (percentage) => {
-    return Math.abs(parseFloat(percentage)) >= 10;
-  },
-  
-  /**
-   * Operador NOT lógico
-   */
-  not: (a) => {
-    return !a;
-  },
-  
-  // ============== HELPERS DE FORMATO ESPECÍFICOS ==============
-  
-  /**
-   * Formatear código de barras para mostrar
-   */
-  formatCodigoBarras: (codigo) => {
-    if (!codigo) return 'Sin código';
-    // Insertar guiones cada 4 caracteres para legibilidad
-    return codigo.replace(/(.{4})/g, '$1-').slice(0, -1);
-  },
-  
-  /**
-   * Formatear teléfono
-   */
-  formatTelefono: (telefono) => {
-    if (!telefono) return 'No registrado';
-    // Formato: (099) 123-4567
-    const cleaned = telefono.replace(/\D/g, '');
-    if (cleaned.length === 10) {
-      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
-    }
-    return telefono;
-  },
-  
-  /**
-   * Formatear cédula
-   */
-  formatCedula: (cedula) => {
-    if (!cedula) return 'No registrada';
-    const cleaned = cedula.replace(/\D/g, '');
-    if (cleaned.length === 10) {
-      return `${cleaned.slice(0, 2)}-${cleaned.slice(2, 9)}-${cleaned.slice(9)}`;
-    }
-    return cedula;
-  },
-  
-  // ============== HELPERS DE ICONOS ==============
-  
-  /**
-   * Obtener icono FontAwesome según tipo de documento
-   */
-  getTipoDocumentoIcon: (tipo) => {
-    const iconos = {
-      'escritura': 'fas fa-file-contract',
-      'poder': 'fas fa-handshake',
-      'testamento': 'fas fa-scroll',
-      'compraventa': 'fas fa-exchange-alt',
-      'hipoteca': 'fas fa-home',
-      'protesto': 'fas fa-exclamation-triangle'
-    };
-    return iconos[tipo?.toLowerCase()] || 'fas fa-file-alt';
-  },
-  
-  /**
-   * Obtener icono para estado de pago
-   */
-  getEstadoPagoIcon: (estado) => {
-    const iconos = {
-      'pagado': 'fas fa-check-circle text-success',
-      'pendiente': 'fas fa-clock text-warning'
-    };
-    return iconos[estado] || 'fas fa-question-circle text-muted';
-  },
-  
-  // Helper para formatear fechas
-  formatDate: function(date) {
-    if (!date) return 'N/A';
-    return moment(date).format('DD/MM/YYYY HH:mm');
-  },
-  
-  // Helper para formatear fechas sin hora
-  formatDateOnly: function(date) {
-    if (!date) return 'N/A';
-    return moment(date).format('DD/MM/YYYY');
-  },
-  
-  // Helper para formatear tiempo relativo
-  formatTimeAgo: function(date) {
-    if (!date) return 'N/A';
-    return moment(date).fromNow();
-  },
-  
-  // Helper para calcular días desde una fecha
-  daysSince: function(date) {
-    if (!date) return 0;
-    return moment().diff(moment(date), 'days');
-  },
-  
-  // Helper para truncar texto
-  truncate: function(str, length) {
-    if (!str || typeof str !== 'string') return '';
-    if (str.length <= length) return str;
-    return str.substring(0, length) + '...';
-  },
-  
-  // Helper para substring
-  substring: function(str, start, end) {
-    if (!str || typeof str !== 'string') return '';
-    return str.substring(start, end || str.length);
-  },
-  
-  // Helper para formatear números como moneda
-  currency: function(amount) {
-    if (!amount) return '$0.00';
-    return '$' + parseFloat(amount).toFixed(2);
-  },
-  
-  // Helper para pluralizar
-  pluralize: function(count, singular, plural) {
-    return count === 1 ? singular : plural;
-  },
-  
-  // Helper para obtener el primer elemento de un array
-  first: function(array) {
-    return Array.isArray(array) && array.length > 0 ? array[0] : null;
-  },
-  
-  // Helper para obtener el último elemento de un array
-  last: function(array) {
-    return Array.isArray(array) && array.length > 0 ? array[array.length - 1] : null;
-  },
-  
-  // Helper para verificar si es el primer elemento en un loop
-  isFirst: function(index) {
-    return index === 0;
-  },
-  
-  // Helper para verificar si es el último elemento en un loop
-  isLast: function(index, array) {
-    return index === array.length - 1;
-  },
-  
-  // Helper para formatear porcentajes
-  percentage: function(value, total) {
-    if (!total || total === 0) return '0%';
-    return Math.round((value / total) * 100) + '%';
-  },
-  
-  // Helper para capitalizar primera letra
-  capitalize: function(str) {
-    if (!str || typeof str !== 'string') return '';
-    return str.charAt(0).toUpperCase() + str.slice(1);
-  },
-  
-  // Helper para convertir a mayúsculas
-  uppercase: function(str) {
-    if (!str || typeof str !== 'string') return '';
-    return str.toUpperCase();
-  },
-  
-  // Helper para convertir a minúsculas
-  lowercase: function(str) {
-    if (!str || typeof str !== 'string') return '';
-    return str.toLowerCase();
-  },
-  
-  // ============== HELPERS ESPECÍFICOS DASHBOARD EJECUTIVO ==============
-  
-  /**
-   * Formatear fecha con timezone Ecuador (crítico para auditoría)
-   */
-  formatDateEcuador: function(date) {
-    if (!date) return 'N/A';
-    return moment(date).utcOffset(-5).format('DD/MM/YYYY HH:mm:ss');
-  },
-  
-  /**
-   * Formatear solo fecha con timezone Ecuador
-   */
-  formatDateOnlyEcuador: function(date) {
-    if (!date) return 'N/A';
-    return moment(date).utcOffset(-5).format('DD/MM/YYYY');
-  },
-  
-  /**
-   * Obtener clase CSS para métricas según valor
-   */
-  getMetricClass: function(value, type) {
-    if (type === 'money') {
-      if (value > 10000) return 'text-success';
-      if (value > 5000) return 'text-info';
-      if (value > 1000) return 'text-warning';
-      return 'text-danger';
-    }
-    if (type === 'count') {
-      if (value > 50) return 'text-success';
-      if (value > 20) return 'text-info';
-      if (value > 10) return 'text-warning';
-      return 'text-danger';
-    }
-    return 'text-primary';
-  },
-  
-  /**
-   * Formatear números grandes con K, M
-   */
-  formatLargeNumber: function(num) {
-    if (!num || isNaN(num)) return '0';
-    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-    return num.toString();
-  },
-  
-  /**
-   * Obtener icono para tendencia
-   */
-  getTrendIcon: function(current, previous) {
-    if (!previous || previous === 0) return 'fas fa-minus text-muted';
-    if (current > previous) return 'fas fa-arrow-up text-success';
-    if (current < previous) return 'fas fa-arrow-down text-danger';
+  getTrendIcon: (value) => {
+    if (value > 0) return 'fas fa-arrow-up text-success';
+    if (value < 0) return 'fas fa-arrow-down text-danger';
     return 'fas fa-minus text-muted';
   },
   
   /**
-   * Calcular porcentaje de cambio
+   * Formatear métrica con unidad
    */
-  calculateChange: function(current, previous) {
-    if (!previous || previous === 0) return '0';
-    const change = ((current - previous) / previous) * 100;
-    return Math.abs(change).toFixed(1);
+  formatMetric: (value, unit = '') => {
+    if (value == null || isNaN(value)) return '0';
+    
+    const num = parseFloat(value);
+    
+    if (unit === 'dinero') {
+      return new Intl.NumberFormat('es-EC', {
+        style: 'currency',
+        currency: 'USD'
+      }).format(num);
+    } else if (unit === 'porcentaje') {
+      return `${num.toFixed(1)}%`;
+    } else {
+      return num.toLocaleString('es-EC');
+    }
   },
+  
+  /**
+   * Obtener clase CSS para diferencia
+   */
+  getDifferenceClass: (value) => {
+    if (value > 0) return 'text-success';
+    if (value < 0) return 'text-danger';
+    return 'text-muted';
+  },
+  
+  // ============== HELPERS DE PAGINACIÓN MODERNA ==============
+  
+  /**
+   * Generar números de páginas visibles para paginación
+   */
+  generatePageNumbers: (currentPage, totalPages) => {
+    const pages = [];
+    const maxVisible = 5; // Máximo de páginas visibles
+    const sidePages = Math.floor(maxVisible / 2);
+    
+    // Calcular inicio y fin
+    let start = Math.max(1, currentPage - sidePages);
+    let end = Math.min(totalPages, currentPage + sidePages);
+    
+    // Ajustar si estamos cerca del inicio
+    if (currentPage <= sidePages) {
+      end = Math.min(totalPages, maxVisible);
+    }
+    
+    // Ajustar si estamos cerca del final
+    if (currentPage > totalPages - sidePages) {
+      start = Math.max(1, totalPages - maxVisible + 1);
+    }
+    
+    // Generar array de páginas
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+    
+    return pages;
+  },
+  
+  /**
+   * Construir query string para mantener filtros en paginación
+   */
+  buildQueryString: (filtros) => {
+    if (!filtros || typeof filtros !== 'object') return '';
+    
+    const params = new URLSearchParams();
+    
+    Object.keys(filtros).forEach(key => {
+      if (filtros[key] && filtros[key] !== '' && filtros[key] !== null && filtros[key] !== undefined) {
+        params.append(key, filtros[key]);
+      }
+    });
+    
+    const queryString = params.toString();
+    return queryString ? `&${queryString}` : '';
+  },
+  
+  // ============== HELPERS DE DOCUMENTOS ==============
+  
+  /**
+   * Verificar si usuario puede editar documento
+   */
+  puedeEditarDocumento: (usuario, documento) => {
+    if (!usuario || !documento) return false;
+    
+    // Admin puede editar si no está en modo solo lectura
+    if (usuario.rol === 'admin' && !usuario.soloLectura) return true;
+    
+    // Matrizador puede editar sus propios documentos
+    if (usuario.rol === 'matrizador' && documento.idMatrizador === usuario.id) return true;
+    
+    // Caja puede editar documentos en proceso
+    if (usuario.rol === 'caja' && documento.estado === 'en_proceso') return true;
+    
+    return false;
+  },
+  
+  /**
+   * Verificar si se puede marcar como listo desde recepción
+   */
+  puedeMarcarComoListoRecepcion: (usuario, documento) => {
+    if (!usuario || !documento) return false;
+    
+    // Solo recepción puede marcar como listo
+    if (usuario.rol !== 'recepcion') return false;
+    
+    // Solo documentos en proceso
+    if (documento.estado !== 'en_proceso') return false;
+    
+    return true;
+  },
+  
+  // ============== ✨ NUEVOS HELPERS PARA TABLA OPTIMIZADA ==============
+  
+  /**
+   * Obtener letra del tipo de documento del código de barras
+   */
+  getTipoLetra: (codigoBarras) => {
+    if (!codigoBarras) return '';
+    const matches = codigoBarras.match(/([A-Z])(\d+)$/);
+    return matches ? matches[1] : '';
+  },
+
+  /**
+   * Generar iniciales del nombre completo
+   */
+  getIniciales: (nombreCompleto) => {
+    if (!nombreCompleto) return 'NN';
+    return nombreCompleto
+      .split(' ')
+      .map(palabra => palabra.charAt(0))
+      .join('')
+      .substring(0, 3)
+      .toUpperCase();
+  },
+
+  /**
+   * Obtener icono para estado de documento
+   */
+  getEstadoIcono: (estado) => {
+    const iconos = {
+      'en_proceso': '⏳',
+      'listo_para_entrega': '✅',
+      'entregado': '📦',
+      'nota_credito': '📋',
+      'cancelado': '❌'
+    };
+    return iconos[estado] || '❓';
+  },
+
+  /**
+   * Obtener icono para estado de pago
+   */
+  getPagoIcono: (estadoPago) => {
+    const iconos = {
+      'pendiente': '❌',
+      'pagado_completo': '💚',
+      'pagado_con_retencion': '💙',
+      'pago_parcial': '🟡'
+    };
+    return iconos[estadoPago] || '❓';
+  },
+
+  /**
+   * Convertir primera letra a mayúscula
+   */
+  ucfirst: (str) => {
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  },
+
+  // ============== HELPERS DE TEXTO ==============
+  
+  /**
+   * Capitalizar texto
+   */
+  capitalize: (str) => {
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+  },
+  
+  /**
+   * Condición compleja
+   */
+  ifCond: (v1, operator, v2, options) => {
+    switch (operator) {
+      case '==':
+        return (v1 == v2) ? options.fn(this) : options.inverse(this);
+      case '===':
+        return (v1 === v2) ? options.fn(this) : options.inverse(this);
+      case '!=':
+        return (v1 != v2) ? options.fn(this) : options.inverse(this);
+      case '!==':
+        return (v1 !== v2) ? options.fn(this) : options.inverse(this);
+      case '<':
+        return (v1 < v2) ? options.fn(this) : options.inverse(this);
+      case '<=':
+        return (v1 <= v2) ? options.fn(this) : options.inverse(this);
+      case '>':
+        return (v1 > v2) ? options.fn(this) : options.inverse(this);
+      case '>=':
+        return (v1 >= v2) ? options.fn(this) : options.inverse(this);
+      case '&&':
+        return (v1 && v2) ? options.fn(this) : options.inverse(this);
+      case '||':
+        return (v1 || v2) ? options.fn(this) : options.inverse(this);
+      default:
+        return options.inverse(this);
+    }
+  },
+
+  // ============== HELPERS DE PRIORIDAD ==============
   
   /**
    * Obtener clase CSS para prioridad
    */
-  getPriorityClass: function(priority) {
+  getPriorityClass: (priority) => {
     const classes = {
       'alta': 'text-danger',
       'media': 'text-warning',
-      'baja': 'text-success',
-      'critica': 'text-danger fw-bold'
+      'baja': 'text-success'
     };
-    return classes[priority?.toLowerCase()] || 'text-muted';
+    return classes[priority] || 'text-muted';
   },
   
   /**
-   * Obtener badge para estado de documento
+   * Obtener texto de prioridad
    */
-  getDocumentStatusBadge: function(estado) {
-    const badges = {
-      'en_proceso': 'badge bg-warning',
-      'listo_para_entrega': 'badge bg-success',
-      'entregado': 'badge bg-info',
-      'cancelado': 'badge bg-secondary',
-      'eliminado': 'badge bg-danger',
-      'pendiente': 'badge bg-warning',
-      'pagado': 'badge bg-success'
+  getPriorityText: (priority) => {
+    const texts = {
+      'alta': 'Alta',
+      'media': 'Media',
+      'baja': 'Baja'
     };
-    return badges[estado] || 'badge bg-secondary';
+    return texts[priority] || 'Normal';
   },
   
   /**
-   * Formatear tiempo de actividad reciente
+   * Obtener icono de prioridad
    */
-  formatActivityTime: function(date) {
-    if (!date) return 'Nunca';
-    const now = moment();
-    const activityDate = moment(date);
-    const diffMinutes = now.diff(activityDate, 'minutes');
-    
-    if (diffMinutes < 1) return 'Ahora mismo';
-    if (diffMinutes < 60) return `Hace ${diffMinutes} min`;
-    if (diffMinutes < 1440) return `Hace ${Math.floor(diffMinutes / 60)} h`;
-    return activityDate.format('DD/MM HH:mm');
-  },
-  
-  /**
-   * Obtener iniciales para avatar
-   */
-  getInitials: function(name) {
-    if (!name) return '??';
-    const words = name.split(' ');
-    if (words.length >= 2) {
-      return (words[0][0] + words[1][0]).toUpperCase();
-    }
-    return name.substring(0, 2).toUpperCase();
-  },
-  
-  /**
-   * Obtener color de avatar basado en nombre
-   */
-  getAvatarColor: function(name) {
-    if (!name) return 'bg-secondary';
-    const colors = ['bg-primary', 'bg-success', 'bg-info', 'bg-warning', 'bg-danger'];
-    const index = name.length % colors.length;
-    return colors[index];
-  },
-  
-  /**
-   * Formatear duración en días/horas/minutos
-   */
-  formatDuration: function(minutes) {
-    if (!minutes || minutes < 1) return '0 min';
-    if (minutes < 60) return `${Math.round(minutes)} min`;
-    if (minutes < 1440) return `${Math.round(minutes / 60)} h`;
-    return `${Math.round(minutes / 1440)} días`;
-  },
-  
-  /**
-   * Verificar si una fecha es hoy
-   */
-  isToday: function(date) {
-    if (!date) return false;
-    return moment(date).isSame(moment(), 'day');
-  },
-  
-  /**
-   * Verificar si una fecha es esta semana
-   */
-  isThisWeek: function(date) {
-    if (!date) return false;
-    return moment(date).isSame(moment(), 'week');
-  },
-  
-  /**
-   * Obtener clase CSS para urgencia de documento
-   */
-  getUrgencyClass: function(fechaCreacion, estado) {
-    if (estado === 'entregado' || estado === 'cancelado') return 'text-muted';
-    
-    const dias = moment().diff(moment(fechaCreacion), 'days');
-    if (dias > 30) return 'text-danger fw-bold';
-    if (dias > 15) return 'text-warning';
-    if (dias > 7) return 'text-info';
-    return 'text-success';
-  },
-  
-  /**
-   * Formatear período de tiempo
-   */
-  formatPeriod: function(fechaInicio, fechaFin) {
-    if (!fechaInicio || !fechaFin) return 'Período no definido';
-    const inicio = moment(fechaInicio).format('DD/MM/YYYY');
-    const fin = moment(fechaFin).format('DD/MM/YYYY');
-    return `${inicio} - ${fin}`;
-  },
-  
-  // ============== NUEVOS HELPERS PARA ESTADO DE PAGO ==============
-  
-  /**
-   * Obtener clase CSS para badge de estado de pago (CRÍTICO PARA CORRECCIÓN)
-   */
-  estadoPagoClass: (estadoPago) => {
-    switch (estadoPago) {
-      case 'pendiente':
-      case 'sin_pagar':
-        return 'bg-danger text-white';
-      case 'pago_parcial':
-        return 'bg-warning text-dark';
-      case 'pagado_completo':
-      case 'pagado_con_retencion':
-        return 'bg-success text-white';
-      default:
-        return 'bg-secondary text-white';
-    }
-  },
-
-  /**
-   * Obtener texto legible para estado de pago (CRÍTICO PARA CORRECCIÓN)
-   */
-  estadoPagoTexto: (estadoPago) => {
-    switch (estadoPago) {
-      case 'pendiente':
-      case 'sin_pagar':
-        return 'Pendiente';
-      case 'pago_parcial':
-        return 'Pago Parcial';
-      case 'pagado_completo':
-        return 'Pagado Completo';
-      case 'pagado_con_retencion':
-        return 'Pagado con Retención';
-      default:
-        return 'Desconocido';
-    }
-  },
-
-  /**
-   * Verificar si un documento está pagado completamente
-   */
-  estaPagadoCompleto: (estadoPago) => {
-    return ['pagado_completo', 'pagado_con_retencion'].includes(estadoPago);
-  },
-
-  /**
-   * Verificar si un documento tiene pago pendiente
-   */
-  tienePagoPendiente: (estadoPago) => {
-    return ['pendiente', 'sin_pagar', 'pago_parcial'].includes(estadoPago);
-  },
-
-  // ============== NUEVOS HELPERS PARA FUNCIONALIDAD JERÁRQUICA ==============
-
-  /**
-   * Helper para unir arrays con separador
-   */
-  join: function(array, separator) {
-    if (!Array.isArray(array)) return '';
-    return array.join(separator || ', ');
-  },
-
-  /**
-   * Helper para verificar si hay elementos en un array
-   */
-  hasElements: function(array) {
-    return Array.isArray(array) && array.length > 0;
-  },
-
-  /**
-   * Helper para verificar si un valor está en un array
-   */
-  includes: function(array, value) {
-    if (!Array.isArray(array)) return false;
-    return array.includes(value);
-  },
-
-  /**
-   * Helper para obtener la longitud de un array
-   */
-  length: function(array) {
-    if (!Array.isArray(array)) return 0;
-    return array.length;
-  },
-
-  /**
-   * Helper para formatear números con separadores de miles
-   */
-  formatNumber: function(number) {
-    if (typeof number !== 'number') return '0';
-    return number.toLocaleString('es-EC');
-  },
-
-  /**
-   * Helper para verificar si un documento es principal
-   */
-  esDocumentoPrincipal: function(documento) {
-    return documento && documento.esDocumentoPrincipal === true;
-  },
-
-  /**
-   * Helper para verificar si un documento es habilitante
-   */
-  esDocumentoHabilitante: function(documento) {
-    return documento && documento.esDocumentoPrincipal === false && documento.documentoPrincipalId;
-  },
-
-  /**
-   * Helper para obtener el tipo de documento con formato
-   */
-  tipoDocumentoFormateado: function(tipo) {
-    const tipos = {
-      'Protocolo': '📜 Protocolo',
-      'Diligencias': '📋 Diligencias', 
-      'Certificaciones': '🏆 Certificaciones',
-      'Arrendamientos': '🏠 Arrendamientos',
-      'Otros': '📄 Otros'
+  getPriorityIcon: (priority) => {
+    const icons = {
+      'alta': 'fas fa-exclamation-triangle',
+      'media': 'fas fa-exclamation-circle',
+      'baja': 'fas fa-info-circle'
     };
-    return tipos[tipo] || `📄 ${tipo}`;
+    return icons[priority] || 'fas fa-circle';
   },
 
+  // ============== HELPER DE DEBUG ==============
+  
   /**
-   * Helper para formatear estado de pago con emoji
+   * Debug para desarrollo
    */
-  estadoPagoConEmoji: function(estado) {
-    const estados = {
-      'pendiente': '⏳ Pendiente',
-      'pago_parcial': '🔄 Parcial',
-      'pagado_completo': '✅ Pagado',
-      'pagado_con_retencion': '✅ Pagado (Ret.)'
-    };
-    return estados[estado] || `❓ ${estado}`;
-  },
-
-  /**
-   * Helper para verificar si un array está vacío
-   */
-  isEmpty: function(array) {
-    return !Array.isArray(array) || array.length === 0;
-  },
-
-  /**
-   * Helper para verificar si un array no está vacío
-   */
-  isNotEmpty: function(array) {
-    return Array.isArray(array) && array.length > 0;
-  },
-
-  /**
-   * Helper para obtener el primer elemento de un array
-   */
-  first: function(array) {
-    if (!Array.isArray(array) || array.length === 0) return null;
-    return array[0];
-  },
-
-  /**
-   * Helper para obtener el último elemento de un array
-   */
-  last: function(array) {
-    if (!Array.isArray(array) || array.length === 0) return null;
-    return array[array.length - 1];
-  },
-
-  /**
-   * Helper para sumar valores de un array
-   */
-  sum: function(array, property) {
-    if (!Array.isArray(array)) return 0;
-    
-    if (property) {
-      return array.reduce((total, item) => {
-        const value = parseFloat(item[property]) || 0;
-        return total + value;
-      }, 0);
-    } else {
-      return array.reduce((total, item) => {
-        const value = parseFloat(item) || 0;
-        return total + value;
-      }, 0);
-    }
-  },
-
-  /**
-   * Helper para contar elementos que cumplen una condición
-   */
-  count: function(array, property, value) {
-    if (!Array.isArray(array)) return 0;
-    
-    if (property && value !== undefined) {
-      return array.filter(item => item[property] === value).length;
-    } else {
-      return array.length;
-    }
-  },
-
-  /**
-   * Helper para filtrar array por propiedad
-   */
-  filter: function(array, property, value) {
-    if (!Array.isArray(array)) return [];
-    
-    if (property && value !== undefined) {
-      return array.filter(item => item[property] === value);
-    } else {
-      return array;
-    }
-  },
-
-  /**
-   * Helper para mapear array a una propiedad específica
-   */
-  map: function(array, property) {
-    if (!Array.isArray(array)) return [];
-    
-    if (property) {
-      return array.map(item => item[property]);
-    } else {
-      return array;
-    }
-  },
-
-  /**
-   * Helper para verificar si un número es mayor que otro
-   */
-  gt: function(a, b) {
-    return parseFloat(a) > parseFloat(b);
-  },
-
-  /**
-   * Helper para verificar si un número es menor que otro
-   */
-  lt: function(a, b) {
-    return parseFloat(a) < parseFloat(b);
-  },
-
-  /**
-   * Helper para verificar si un número es mayor o igual que otro
-   */
-  gte: function(a, b) {
-    return parseFloat(a) >= parseFloat(b);
-  },
-
-  /**
-   * Helper para verificar si un número es menor o igual que otro
-   */
-  lte: function(a, b) {
-    return parseFloat(a) <= parseFloat(b);
-  },
-
-  /**
-   * Helper para verificar igualdad estricta
-   */
-  eq: function(a, b) {
-    return a === b;
-  },
-
-  /**
-   * Helper para verificar desigualdad
-   */
-  ne: function(a, b) {
-    return a !== b;
-  },
-
-  /**
-   * Helper para operador NOT lógico
-   */
-  not: function(value) {
-    return !value;
-  },
-
-  /**
-   * Helper para convertir a JSON string
-   */
-  json: function(obj) {
-    return JSON.stringify(obj);
-  },
-
-  /**
-   * Helper para formatear fecha relativa (hace X tiempo)
-   */
-  timeAgo: function(date) {
-    if (!date) return '';
-    
-    const now = new Date();
-    const past = new Date(date);
-    const diffMs = now - past;
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-    
-    if (diffMins < 1) return 'Hace menos de un minuto';
-    if (diffMins < 60) return `Hace ${diffMins} minuto${diffMins > 1 ? 's' : ''}`;
-    if (diffHours < 24) return `Hace ${diffHours} hora${diffHours > 1 ? 's' : ''}`;
-    if (diffDays < 30) return `Hace ${diffDays} día${diffDays > 1 ? 's' : ''}`;
-    
-    return moment(date).format('DD/MM/YYYY');
-  },
-
+  debug: (value) => {
+    console.log('🐛 Handlebars Debug:', value);
+    return JSON.stringify(value, null, 2);
+  }
 };
 
-// Helper para formatear fechas
+// ============== REGISTRAR HELPERS EN HANDLEBARS ==============
+
+// Helper para formatear fechas con formato específico para Ecuador
+Handlebars.registerHelper('formatDateEcuador', function(date) {
+  if (!date) return 'Sin fecha';
+  
+  try {
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return 'Fecha inválida';
+    
+    return d.toLocaleDateString('es-EC', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  } catch (error) {
+    return 'Error en fecha';
+  }
+});
+
+// Helper para formatear fecha con hora
+Handlebars.registerHelper('formatDateTime', function(date) {
+  if (!date) return 'No registrada';
+  
+  try {
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return 'Fecha inválida';
+    
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    
+    return `${day}/${month}/${year} ${hours}:${minutes}`;
+  } catch (error) {
+    return 'Error en fecha';
+  }
+});
+
+// Helper para formatear fechas generales
 Handlebars.registerHelper('formatDate', function(date, format) {
   if (!date) return 'N/A';
   
@@ -1112,55 +784,193 @@ Handlebars.registerHelper('formatDate', function(date, format) {
   }
 });
 
-// Helper para comparación mayor que
+// Helpers de comparación
 Handlebars.registerHelper('gt', function(a, b) {
   return Number(a) > Number(b);
 });
 
-// Helper para comparación mayor o igual que
 Handlebars.registerHelper('gte', function(a, b) {
   return Number(a) >= Number(b);
 });
 
-// Helper para comparación menor que
 Handlebars.registerHelper('lt', function(a, b) {
   return Number(a) < Number(b);
 });
 
-// Helper para comparación menor o igual que
 Handlebars.registerHelper('lte', function(a, b) {
   return Number(a) <= Number(b);
 });
 
-// Helper para comparación de igualdad
 Handlebars.registerHelper('eq', function(a, b) {
   return a === b;
 });
 
-// Helper para comparación de no igualdad
 Handlebars.registerHelper('ne', function(a, b) {
   return a !== b;
 });
 
 // Helper para formatear números como dinero
-Handlebars.registerHelper('formatMoney', function(value) {
-  if (!value || isNaN(value)) return '$0.00';
-  
-  return new Intl.NumberFormat('es-EC', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2
-  }).format(value);
+Handlebars.registerHelper('formatMoney', function(amount) {
+  if (!amount) return '0.00';
+  return parseFloat(amount).toFixed(2);
 });
 
 // Helper para formatear números con separadores de miles
-Handlebars.registerHelper('formatNumber', function(value) {
-  if (!value || isNaN(value)) return '0';
+Handlebars.registerHelper('formatNumber', function(number) {
+  if (!number) return '0';
   
-  return new Intl.NumberFormat('es-EC').format(value);
+  return new Intl.NumberFormat('es-EC').format(number);
 });
 
-// Helper para condicional if con múltiples operadores
+// Helpers de comparación
+Handlebars.registerHelper('eq', function(a, b) {
+  return a === b;
+});
+
+Handlebars.registerHelper('ne', function(a, b) {
+  return a !== b;
+});
+
+Handlebars.registerHelper('gt', function(a, b) {
+  return a > b;
+});
+
+Handlebars.registerHelper('gte', function(a, b) {
+  return a >= b;
+});
+
+Handlebars.registerHelper('lt', function(a, b) {
+  return a < b;
+});
+
+Handlebars.registerHelper('lte', function(a, b) {
+  return a <= b;
+});
+
+// Helpers matemáticos
+Handlebars.registerHelper('add', function(a, b) {
+  return (parseInt(a) || 0) + (parseInt(b) || 0);
+});
+
+Handlebars.registerHelper('subtract', function(a, b) {
+  return (parseInt(a) || 0) - (parseInt(b) || 0);
+});
+
+// Helpers de paginación
+Handlebars.registerHelper('generatePageNumbers', function(currentPage, totalPages) {
+  const pages = [];
+  const maxPages = 5;
+  
+  let startPage = Math.max(1, currentPage - Math.floor(maxPages / 2));
+  let endPage = Math.min(totalPages, startPage + maxPages - 1);
+  
+  if (endPage - startPage + 1 < maxPages) {
+    startPage = Math.max(1, endPage - maxPages + 1);
+  }
+  
+  for (let i = startPage; i <= endPage; i++) {
+    pages.push(i);
+  }
+  
+  return pages;
+});
+
+Handlebars.registerHelper('buildQueryString', function(filtros) {
+  if (!filtros || typeof filtros !== 'object') return '';
+  
+  const params = [];
+  Object.keys(filtros).forEach(key => {
+    if (filtros[key] && filtros[key] !== '') {
+      params.push(`${key}=${encodeURIComponent(filtros[key])}`);
+    }
+  });
+  
+  return params.length > 0 ? '&' + params.join('&') : '';
+});
+
+// Helper para capitalizar
+Handlebars.registerHelper('capitalize', function(str) {
+  if (!str) return '';
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+});
+
+// Helper de debug
+Handlebars.registerHelper('debug', function(value) {
+  console.log('🐛 Handlebars Debug:', value);
+  return JSON.stringify(value, null, 2);
+});
+
+// ✨ NUEVOS HELPERS PARA TABLA OPTIMIZADA
+Handlebars.registerHelper('formatFechaCorta', function(date) {
+  if (!date) return '';
+  
+  try {
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return '';
+    
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = String(d.getFullYear()).substr(-2);
+    
+    return `${day}/${month}/${year}`;
+  } catch (error) {
+    return '';
+  }
+});
+
+Handlebars.registerHelper('getTipoLetra', function(codigoBarras) {
+  if (!codigoBarras) return '';
+  const matches = codigoBarras.match(/([A-Z])(\d+)$/);
+  return matches ? matches[1] : '';
+});
+
+Handlebars.registerHelper('getIniciales', function(nombreCompleto) {
+  if (!nombreCompleto) return 'NN';
+  const palabras = nombreCompleto.split(' ').filter(p => p.length > 0);
+  if (palabras.length === 1) {
+    // Si solo hay una palabra, tomar las primeras 3 letras
+    return palabras[0].substring(0, 3).toUpperCase();
+  }
+  // Si hay múltiples palabras, tomar primera letra de cada una (máximo 3)
+  return palabras
+    .slice(0, 3)
+    .map(palabra => palabra.charAt(0))
+    .join('')
+    .toUpperCase();
+});
+
+Handlebars.registerHelper('getEstadoIcono', function(estado) {
+  const iconos = {
+    'en_proceso': '⏳',
+    'listo_para_entrega': '✅',
+    'entregado': '📦',
+    'nota_credito': '📋',
+    'cancelado': '❌'
+  };
+  return iconos[estado] || '❓';
+});
+
+Handlebars.registerHelper('getPagoIcono', function(estadoPago) {
+  const iconos = {
+    'pendiente': '❌',
+    'pagado_completo': '💚',
+    'pagado_con_retencion': '💙',
+    'pago_parcial': '🟡'
+  };
+  return iconos[estadoPago] || '❓';
+});
+
+Handlebars.registerHelper('ucfirst', function(str) {
+  if (!str) return '';
+  return str.charAt(0).toUpperCase() + str.slice(1);
+});
+
+Handlebars.registerHelper('truncate', function(texto, limite) {
+  if (!texto) return '';
+  if (texto.length <= limite) return texto;
+  return texto.substring(0, limite) + '...';
+});
+
 Handlebars.registerHelper('ifCond', function(v1, operator, v2, options) {
   switch (operator) {
     case '==':
@@ -1188,50 +998,29 @@ Handlebars.registerHelper('ifCond', function(v1, operator, v2, options) {
   }
 });
 
-// Helper para obtener la clase CSS de prioridad
-Handlebars.registerHelper('getPriorityClass', function(dias) {
-  const d = Number(dias);
-  if (d > 30) return 'danger';
-  if (d > 20) return 'warning';
-  return 'info';
+Handlebars.registerHelper('getPriorityClass', function(priority) {
+  const classes = {
+    'alta': 'text-danger',
+    'media': 'text-warning',
+    'baja': 'text-success'
+  };
+  return classes[priority] || 'text-muted';
 });
 
-// Helper para obtener el texto de prioridad
-Handlebars.registerHelper('getPriorityText', function(dias) {
-  const d = Number(dias);
-  if (d > 30) return 'Crítica';
-  if (d > 20) return 'Alta';
-  return 'Media';
+Handlebars.registerHelper('getPriorityText', function(priority) {
+  const texts = {
+    'alta': 'Alta',
+    'media': 'Media',
+    'baja': 'Baja'
+  };
+  return texts[priority] || 'Normal';
 });
 
-// Helper para obtener icono de prioridad
-Handlebars.registerHelper('getPriorityIcon', function(dias) {
-  const d = Number(dias);
-  if (d > 30) return 'fas fa-exclamation-triangle';
-  if (d > 20) return 'fas fa-exclamation';
-  return 'fas fa-info';
+Handlebars.registerHelper('getPriorityIcon', function(priority) {
+  const icons = {
+    'alta': 'fas fa-exclamation-triangle',
+    'media': 'fas fa-exclamation-circle',
+    'baja': 'fas fa-info-circle'
+  };
+  return icons[priority] || 'fas fa-circle';
 });
-
-// Helper para capitalizar primera letra
-Handlebars.registerHelper('capitalize', function(str) {
-  if (!str || typeof str !== 'string') return '';
-  return str.charAt(0).toUpperCase() + str.slice(1);
-});
-
-// Helper para truncar texto
-Handlebars.registerHelper('truncate', function(str, length) {
-  if (!str || typeof str !== 'string') return '';
-  if (str.length <= length) return str;
-  return str.substring(0, length) + '...';
-});
-
-// Helper para pluralizar
-Handlebars.registerHelper('pluralize', function(count, singular, plural) {
-  return Number(count) === 1 ? singular : plural;
-});
-
-// Helper para debugging (solo en desarrollo)
-Handlebars.registerHelper('debug', function(value) {
-  console.log('🐛 Handlebars Debug:', value);
-  return '';
-}); 

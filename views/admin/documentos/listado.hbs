@@ -1,14 +1,9 @@
-{{!-- VISTA DE SUPERVISIÓN - SOLO LECTURA PARA ADMIN --}}
+{{!-- VISTA DE SUPERVISIÓN ADMIN - OPTIMIZADA Y RESPONSIVA --}}
 {{!-- SEGREGACIÓN DE FUNCIONES: Admin solo puede VER documentos, no crear/editar/entregar --}}
 
 <div class="card">
   <div class="card-header d-flex justify-content-between align-items-center">
     <span><i class="fas fa-binoculars me-2"></i> Supervisión de Documentos - Solo Lectura</span>
-    {{#unless soloLectura}}
-    <a href="/admin/documentos/registro" class="btn btn-sm btn-primary">
-      <i class="fas fa-plus me-1"></i> Nuevo Documento
-    </a>
-    {{/unless}}
     {{#if soloLectura}}
     <div class="alert alert-info mb-0 py-1 px-2 small">
       <i class="fas fa-info-circle me-1"></i> 
@@ -17,36 +12,36 @@
     {{/if}}
   </div>
   <div class="card-body">
-    <!-- Filtros -->
+    <!-- Filtros Compactos -->
     <div class="row mb-4">
       <div class="col-md-12">
         <div class="card bg-light">
           <div class="card-body p-3">
             <form id="filtrosForm" method="GET" action="/admin/documentos/listado">
-              <div class="row">
-                <div class="col-md-2 mb-2">
+              <div class="row g-2">
+                <div class="col-md-2">
                   <label for="filtroEstado" class="form-label small">Estado</label>
                   <select class="form-select form-select-sm" id="filtroEstado" name="estado">
                     <option value="">Todos</option>
                     <option value="en_proceso" {{#if (eq filtros.estado 'en_proceso')}}selected{{/if}}>En Proceso</option>
-                    <option value="listo_para_entrega" {{#if (eq filtros.estado 'listo_para_entrega')}}selected{{/if}}>Listos para Entrega</option>
+                    <option value="listo_para_entrega" {{#if (eq filtros.estado 'listo_para_entrega')}}selected{{/if}}>Listos</option>
                     <option value="entregado" {{#if (eq filtros.estado 'entregado')}}selected{{/if}}>Entregados</option>
-                    <option value="nota_credito" {{#if (eq filtros.estado 'nota_credito')}}selected{{/if}}>Notas de Crédito</option>
+                    <option value="nota_credito" {{#if (eq filtros.estado 'nota_credito')}}selected{{/if}}>Notas Crédito</option>
                   </select>
                 </div>
                 
-                <div class="col-md-2 mb-2">
+                <div class="col-md-2">
                   <label for="filtroEstadoPago" class="form-label small">Estado Pago</label>
                   <select class="form-select form-select-sm" id="filtroEstadoPago" name="estadoPago">
                     <option value="">Todos</option>
                     <option value="pendiente" {{#if (eq filtros.estadoPago 'pendiente')}}selected{{/if}}>Pendiente</option>
-                    <option value="pagado_completo" {{#if (eq filtros.estadoPago 'pagado_completo')}}selected{{/if}}>Pagado Completo</option>
+                    <option value="pagado_completo" {{#if (eq filtros.estadoPago 'pagado_completo')}}selected{{/if}}>Pagado</option>
                     <option value="pagado_con_retencion" {{#if (eq filtros.estadoPago 'pagado_con_retencion')}}selected{{/if}}>Con Retención</option>
-                    <option value="pago_parcial" {{#if (eq filtros.estadoPago 'pago_parcial')}}selected{{/if}}>Pago Parcial</option>
+                    <option value="pago_parcial" {{#if (eq filtros.estadoPago 'pago_parcial')}}selected{{/if}}>Parcial</option>
                   </select>
                 </div>
                 
-                <div class="col-md-2 mb-2">
+                <div class="col-md-2">
                   <label for="filtroMatrizador" class="form-label small">Matrizador</label>
                   <select class="form-select form-select-sm" id="filtroMatrizador" name="matrizadorId">
                     <option value="">Todos</option>
@@ -56,19 +51,19 @@
                   </select>
                 </div>
                 
-                <div class="col-md-2 mb-2">
+                <div class="col-md-2">
                   <label for="fechaDesde" class="form-label small">Desde</label>
                   <input type="date" class="form-control form-control-sm" id="fechaDesde" name="fechaDesde" value="{{filtros.fechaDesde}}">
                 </div>
                 
-                <div class="col-md-2 mb-2">
+                <div class="col-md-2">
                   <label for="fechaHasta" class="form-label small">Hasta</label>
                   <input type="date" class="form-control form-control-sm" id="fechaHasta" name="fechaHasta" value="{{filtros.fechaHasta}}">
                 </div>
                 
-                <div class="col-md-2 mb-2">
+                <div class="col-md-2">
                   <label for="filtroBusqueda" class="form-label small">Búsqueda</label>
-                  <input type="text" class="form-control form-control-sm" id="filtroBusqueda" name="busqueda" placeholder="Código, cliente, factura" value="{{filtros.busqueda}}">
+                  <input type="text" class="form-control form-control-sm" id="filtroBusqueda" name="busqueda" placeholder="Código, cliente..." value="{{filtros.busqueda}}">
                 </div>
                 
                 <div class="col-md-12 text-end mt-2">
@@ -94,145 +89,148 @@
     <div class="row mb-3">
       <div class="col-md-12">
         <div class="alert alert-light mb-0 py-2">
-          <i class="fas fa-chart-bar me-2"></i>
-          <strong>Resultados:</strong> {{documentos.length}} documentos encontrados
-          {{#if pagination.totalPages}}
-          (Página {{pagination.currentPage}} de {{pagination.totalPages}})
-          {{/if}}
+          <div class="row align-items-center">
+            <div class="col-md-6">
+              <i class="fas fa-chart-bar me-2"></i>
+              <strong>Resultados:</strong> {{documentos.length}} documentos encontrados
+            </div>
+            <div class="col-md-6 text-end">
+              {{#if pagination.totalPages}}
+              <small class="text-muted">Página {{pagination.currentPage}} de {{pagination.totalPages}}</small>
+              {{/if}}
+            </div>
+          </div>
         </div>
       </div>
     </div>
     {{/if}}
     
-    <!-- Tabla de documentos -->
+    <!-- 🎯 TABLA OPTIMIZADA PARA ZOOM 100% -->
     <div class="table-responsive">
-      <table class="table table-hover table-striped tabla-ordenable">
+      <table class="table table-sm table-hover tabla-supervision-limpia" id="tablaDocumentosAdmin">
         <thead class="table-dark">
           <tr>
-            <th class="ordenable" data-columna="codigo" data-tipo="texto">Código</th>
-            <th class="ordenable" data-columna="tipo" data-tipo="texto">Tipo</th>
-            <th class="ordenable" data-columna="cliente" data-tipo="texto">Cliente</th>
-            <th class="ordenable" data-columna="matrizador" data-tipo="texto">Matrizador</th>
-            <th class="ordenable" data-columna="fecha" data-tipo="fecha">Fecha Registro</th>
-            <th class="ordenable" data-columna="estado" data-tipo="estado">Estado</th>
-            <th class="ordenable" data-columna="pago" data-tipo="estado">Estado Pago</th>
-            <th class="ordenable" data-columna="valor" data-tipo="numero">Valor</th>
-            <th>Acciones</th>
+            <th class="ordenable col-codigo" data-columna="codigoBarras" data-tipo="texto">
+              <span>Código</span>
+              <i class="fas fa-sort ms-1"></i>
+            </th>
+            <th class="ordenable col-cliente" data-columna="nombreCliente" data-tipo="texto">
+              <span>Cliente</span>
+              <i class="fas fa-sort ms-1"></i>
+            </th>
+            <th class="ordenable col-matrizador" data-columna="matrizador" data-tipo="texto">
+              <span>Matrizador</span>
+              <i class="fas fa-sort ms-1"></i>
+            </th>
+            <th class="ordenable col-fecha" data-columna="fechaFactura" data-tipo="fecha">
+              <span>Fecha</span>
+              <i class="fas fa-sort ms-1"></i>
+            </th>
+            <th class="ordenable col-estado" data-columna="estado" data-tipo="estado">
+              <span>Estado</span>
+              <i class="fas fa-sort ms-1"></i>
+            </th>
+            <th class="ordenable col-pago" data-columna="estadoPago" data-tipo="estado">
+              <span>Pago</span>
+              <i class="fas fa-sort ms-1"></i>
+            </th>
+            <th class="ordenable col-valor" data-columna="valorFactura" data-tipo="numero">
+              <span>Valor</span>
+              <i class="fas fa-sort ms-1"></i>
+            </th>
+            <th class="col-acciones">Acciones</th>
           </tr>
         </thead>
         <tbody>
           {{#each documentos}}
           <tr>
-            <td><code class="small">{{this.codigoBarras}}</code></td>
-            <td>
-              <span class="badge bg-secondary">{{this.tipoDocumento}}</span>
+            <!-- Código con tipo integrado -->
+            <td class="col-codigo">
+              <span class="codigo-principal">{{this.codigoBarras}}</span>
+              <small class="tipo-badge tipo-{{getTipoLetra this.codigoBarras}}">
+                {{getTipoLetra this.codigoBarras}}
+              </small>
             </td>
-            <td>
-              <strong>{{this.nombreCliente}}</strong>
-              <div class="small text-muted">CI: {{this.identificacionCliente}}</div>
-              {{#if this.emailCliente}}
-              <div class="small text-muted"><i class="fas fa-envelope me-1"></i>{{this.emailCliente}}</div>
-              {{/if}}
+            
+            <!-- Cliente simplificado -->
+            <td class="col-cliente">
+              <div class="cliente-compacto">
+                <strong class="nombre-corto">{{truncate this.nombreCliente 25}}</strong>
+                <small class="ci-numero">{{this.identificacionCliente}}</small>
+              </div>
             </td>
-            <td>
+            
+            <!-- Matrizador con iniciales -->
+            <td class="col-matrizador">
               {{#if this.matrizador}}
-              <span class="badge bg-info">{{this.matrizador.nombre}}</span>
+              <span class="matrizador-compacto" title="{{this.matrizador.nombre}}">
+                {{getIniciales this.matrizador.nombre}}
+              </span>
               {{else}}
-              <span class="text-muted">Sin asignar</span>
+              <span class="matrizador-compacto sin-asignar" title="Sin asignar">
+                ??
+              </span>
               {{/if}}
             </td>
-            <td>
-              <span class="small">{{formatDateDocument this.created_at}}</span>
+            
+            <!-- Fecha compacta -->
+            <td class="col-fecha">
               {{#if this.fechaFactura}}
-              <div class="small text-muted">Fact: {{formatDateDocument this.fechaFactura}}</div>
-              {{/if}}
-            </td>
-            <td>
-              {{#if (eq this.estado "en_proceso")}}
-              <span class="badge bg-warning text-dark"><i class="fas fa-cog me-1"></i>En Proceso</span>
-              {{else if (eq this.estado "listo_para_entrega")}}
-              <span class="badge bg-success"><i class="fas fa-check me-1"></i>Listo</span>
-              {{else if (eq this.estado "entregado")}}
-              <span class="badge bg-primary"><i class="fas fa-handshake me-1"></i>Entregado</span>
-              {{else if (eq this.estado "nota_credito")}}
-              <span class="badge bg-danger"><i class="fas fa-minus-circle me-1"></i>Nota Crédito</span>
+              <span class="fecha-compacta">{{formatFechaCorta this.fechaFactura}}</span>
               {{else}}
-              <span class="badge bg-secondary">{{this.estado}}</span>
+              <span class="fecha-compacta sin-fecha">--/--/--</span>
               {{/if}}
             </td>
-            <td>
+            
+            <!-- Estados con iconos -->
+            <td class="col-estado">
+              <span class="estado-icono estado-{{this.estado}}" title="{{ucfirst this.estado}}">
+                {{getEstadoIcono this.estado}}
+              </span>
+            </td>
+            
+            <td class="col-pago">
               {{#if this.numeroFactura}}
-                {{#if (eq this.estadoPago "pagado_completo")}}
-                <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Pagado</span>
-                {{else if (eq this.estadoPago "pagado_con_retencion")}}
-                <span class="badge bg-info"><i class="fas fa-receipt me-1"></i>Con Retención</span>
-                {{else if (eq this.estadoPago "pago_parcial")}}
-                <span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i>Parcial</span>
-                {{else}}
-                <span class="badge bg-danger"><i class="fas fa-exclamation-triangle me-1"></i>Pendiente</span>
-                {{/if}}
+              <span class="pago-icono pago-{{this.estadoPago}}" title="{{ucfirst this.estadoPago}}">
+                {{getPagoIcono this.estadoPago}}
+              </span>
               {{else}}
-              <span class="badge bg-secondary">Sin Factura</span>
+              <span class="pago-icono sin-factura" title="Sin factura">
+                ❓
+              </span>
               {{/if}}
             </td>
-            <td>
+            
+            <!-- Valor numérico limpio -->
+            <td class="col-valor">
               {{#if this.valorFactura}}
-              <strong class="text-success">${{formatMoney this.valorFactura}}</strong>
-              {{#if this.numero_factura}}
-              <div class="small text-muted">Fact: {{this.numero_factura}}</div>
-              {{/if}}
+              <span class="valor-numerico">${{formatMoney this.valorFactura}}</span>
               {{else}}
-              <span class="text-muted">-</span>
+              <span class="valor-numerico sin-valor">$0.00</span>
               {{/if}}
             </td>
-            <td>
-              <div class="btn-group">
-                <!-- SOLO LECTURA: Admin puede VER detalles -->
-                <a href="/admin/documentos/detalle/{{this.id}}" class="btn btn-sm btn-outline-primary" title="Ver Detalles (Solo Lectura)">
+            
+            <!-- Acciones compactas -->
+            <td class="col-acciones">
+              <div class="btn-group btn-group-sm">
+                <button class="btn btn-outline-primary btn-xs" onclick="verDetalle({{this.id}})" title="Ver Detalle">
                   <i class="fas fa-eye"></i>
-                </a>
-                
-                {{!-- ELIMINADO POR SEGREGACIÓN: Admin NO puede editar --}}
-                {{#unless soloLectura}}
-                {{#if (puedeEditarDocumento ../usuario this)}}
-                <a href="/admin/documentos/editar/{{this.id}}" class="btn btn-sm btn-primary" title="Editar Documento">
-                  <i class="fas fa-edit"></i>
-                </a>
-                {{/if}}
-                
-                {{!-- ELIMINADO POR SEGREGACIÓN: Admin NO puede marcar documentos como listos --}}
-                {{!-- Solo Matrizadores pueden marcar documentos como listos --}}
-                
-                {{!-- ELIMINADO POR SEGREGACIÓN: Admin NO puede entregar documentos --}}
-                {{!-- Los documentos listos solo pueden ser entregados por Recepción --}}
-                {{/unless}}
-                
-                {{!-- SEGREGACIÓN: Admin mantiene capacidad de supervisión y eliminación si es necesario --}}
-                {{#if (and (eq ../userRole "admin") (not soloLectura))}}
-                {{#unless (eq this.estado "entregado")}}
-                <button type="button" class="btn btn-sm btn-outline-danger" onclick="abrirModalEliminar({
-                  id: {{this.id}},
-                  codigoBarras: '{{this.codigoBarras}}',
-                  tipoDocumento: '{{this.tipoDocumento}}',
-                  nombreCliente: '{{this.nombreCliente}}',
-                  estado: '{{this.estado}}',
-                  valorFactura: {{this.valorFactura}},
-                  estadoPago: '{{this.estadoPago}}'
-                })" title="Eliminar (Supervisión)">
-                  <i class="fas fa-trash-alt"></i>
                 </button>
-                {{/unless}}
+                {{#if (eq this.estado 'entregado')}}
+                <button class="btn btn-outline-success btn-xs" title="Entregado" disabled>
+                  <i class="fas fa-check"></i>
+                </button>
                 {{/if}}
               </div>
             </td>
           </tr>
           {{else}}
           <tr>
-            <td colspan="9" class="text-center py-5">
-              <div class="text-muted">
-                <i class="fas fa-search fa-2x mb-3"></i>
-                <h5>No se encontraron documentos</h5>
-                <p class="mb-0">Pruebe ajustando los filtros de búsqueda</p>
+            <td colspan="8" class="text-center py-5">
+              <div class="sin-resultados">
+                <i class="fas fa-search fa-2x mb-3 text-muted"></i>
+                <h5 class="text-muted">No se encontraron documentos</h5>
+                <p class="mb-0 text-muted">Pruebe ajustando los filtros de búsqueda</p>
               </div>
             </td>
           </tr>
@@ -241,44 +239,77 @@
       </table>
     </div>
     
-    <!-- Paginación -->
+    <!-- Paginación MODERNA Y FUNCIONAL -->
     {{#if pagination}}
-    <nav aria-label="Paginación de documentos" class="mt-4">
-      <ul class="pagination justify-content-center">
-        {{#if pagination.hasPrev}}
-        <li class="page-item">
-          <a class="page-link" href="?page={{pagination.prevPage}}&{{buildQueryString filtros}}">
-            <i class="fas fa-chevron-left me-1"></i>Anterior
-          </a>
-        </li>
-        {{else}}
-        <li class="page-item disabled">
-          <span class="page-link">
-            <i class="fas fa-chevron-left me-1"></i>Anterior
-          </span>
-        </li>
-        {{/if}}
-        
-        <li class="page-item active">
-          <span class="page-link">
-            Página {{pagination.currentPage}} de {{pagination.totalPages}}
-          </span>
-        </li>
-        
-        {{#if pagination.hasNext}}
-        <li class="page-item">
-          <a class="page-link" href="?page={{pagination.nextPage}}&{{buildQueryString filtros}}">
-            Siguiente<i class="fas fa-chevron-right ms-1"></i>
-          </a>
-        </li>
-        {{else}}
-        <li class="page-item disabled">
-          <span class="page-link">
-            Siguiente<i class="fas fa-chevron-right ms-1"></i>
-          </span>
-        </li>
-        {{/if}}
-      </ul>
+    <nav aria-label="Navegación de documentos" class="mt-4">
+      <div class="row align-items-center">
+        <div class="col-md-6">
+          <p class="text-muted mb-0">
+            Mostrando documentos {{#if documentos.length}}1 a {{documentos.length}}{{else}}0{{/if}} 
+            {{#if pagination.totalPages}}de página {{pagination.currentPage}} de {{pagination.totalPages}}{{/if}}
+          </p>
+        </div>
+        <div class="col-md-6">
+          <ul class="pagination pagination-sm justify-content-end mb-0">
+            <!-- Primera página -->
+            {{#if (gt pagination.currentPage 1)}}
+              <li class="page-item">
+                <a class="page-link" href="?page=1{{buildQueryString filtros}}" title="Primera página">
+                  <i class="fas fa-angle-double-left"></i>
+                </a>
+              </li>
+            {{/if}}
+            
+            <!-- Página anterior -->
+            {{#if pagination.hasPrev}}
+              <li class="page-item">
+                <a class="page-link" href="?page={{subtract pagination.currentPage 1}}{{buildQueryString filtros}}" title="Página anterior">
+                  <i class="fas fa-angle-left"></i>
+                </a>
+              </li>
+            {{else}}
+              <li class="page-item disabled">
+                <span class="page-link">
+                  <i class="fas fa-angle-left"></i>
+                </span>
+              </li>
+            {{/if}}
+            
+            <!-- Páginas numeradas (mostrar máximo 5) -->
+            {{#each (generatePageNumbers pagination.currentPage pagination.totalPages)}}
+              <li class="page-item {{#if (eq this ../pagination.currentPage)}}active{{/if}}">
+                <a class="page-link" href="?page={{this}}{{buildQueryString ../filtros}}">
+                  {{this}}
+                </a>
+              </li>
+            {{/each}}
+            
+            <!-- Página siguiente -->
+            {{#if pagination.hasNext}}
+              <li class="page-item">
+                <a class="page-link" href="?page={{add pagination.currentPage 1}}{{buildQueryString filtros}}" title="Página siguiente">
+                  <i class="fas fa-angle-right"></i>
+                </a>
+              </li>
+            {{else}}
+              <li class="page-item disabled">
+                <span class="page-link">
+                  <i class="fas fa-angle-right"></i>
+                </span>
+              </li>
+            {{/if}}
+            
+            <!-- Última página -->
+            {{#if (lt pagination.currentPage pagination.totalPages)}}
+              <li class="page-item">
+                <a class="page-link" href="?page={{pagination.totalPages}}{{buildQueryString filtros}}" title="Última página">
+                  <i class="fas fa-angle-double-right"></i>
+                </a>
+              </li>
+            {{/if}}
+          </ul>
+        </div>
+      </div>
     </nav>
     {{/if}}
 
@@ -320,21 +351,6 @@
   </div>
 </div>
 
-{{!-- ELIMINADO: Scripts de operaciones que admin no debe realizar --}}
-{{#unless soloLectura}}
-<script>
-// Scripts originales mantenerlos solo si no está en modo solo lectura
-function marcarListo(documentoId) {
-  // Función original...
-}
-
-function exportarDatos() {
-  // Función para exportar datos de supervisión
-  window.location.href = '/admin/reportes/documentos?formato=excel&' + $('#filtrosForm').serialize();
-}
-</script>
-{{/unless}}
-
 {{#if soloLectura}}
 <script>
 // Solo funciones de consulta para modo supervisión
@@ -343,13 +359,321 @@ function exportarDatos() {
   window.location.href = '/admin/reportes/documentos?formato=excel&' + $('#filtrosForm').serialize();
 }
 
-// Mostrar tooltips informativos
+// Función para ver detalle de documento
+function verDetalle(documentoId) {
+  window.location.href = `/admin/documentos/detalle/${documentoId}`;
+}
+
+// Inicializar tooltips y ordenamiento cuando se carga la página
 document.addEventListener('DOMContentLoaded', function() {
+  console.log('🎯 Inicializando tabla de supervisión optimizada');
+  
+  // Inicializar ordenamiento de tablas
+  if (typeof inicializarOrdenamientoTablas === 'function') {
+    inicializarOrdenamientoTablas();
+    console.log('✅ Ordenamiento de tablas inicializado para admin');
+  } else {
+    console.warn('⚠️ Función inicializarOrdenamientoTablas no encontrada');
+  }
+  
   // Inicializar tooltips de Bootstrap
   var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
   var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
     return new bootstrap.Tooltip(tooltipTriggerEl);
   });
+  
+  console.log('✅ Tabla de supervisión optimizada cargada correctamente');
 });
 </script>
-{{/if}} 
+{{/if}}
+
+{{!-- 🎨 CSS OPTIMIZADO PARA ZOOM 100% --}}
+<style>
+/* ============================================
+   🎯 TABLA PRINCIPAL - DISEÑADA PARA 1920px AL 100% ZOOM
+   ============================================ */
+
+.tabla-supervision-limpia {
+  font-size: 0.8rem;
+  width: 100%;
+  margin-bottom: 0;
+  table-layout: fixed;
+}
+
+/* Anchos calculados para pantalla estándar */
+.col-codigo { width: 15%; }      /* 20251701018D00676 + tipo */
+.col-cliente { width: 22%; }      /* Nombre truncado + CI */
+.col-matrizador { width: 8%; }    /* Solo iniciales */
+.col-fecha { width: 8%; }         /* DD/MM/YY */
+.col-estado { width: 6%; }        /* Solo icono */
+.col-pago { width: 6%; }          /* Solo icono */
+.col-valor { width: 8%; }         /* $XXX.XX */
+.col-acciones { width: 8%; }      /* Botones pequeños */
+
+/* ============================================
+   🏷️ CÓDIGO CON TIPO INTEGRADO
+   ============================================ */
+
+.codigo-principal {
+  display: block;
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: #2c3e50;
+  margin-bottom: 2px;
+}
+
+.tipo-badge {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  text-align: center;
+  font-size: 0.6rem;
+  font-weight: bold;
+  line-height: 16px;
+  margin-top: 2px;
+}
+
+.tipo-D { background-color: #28a745; color: white; } /* Diligencias */
+.tipo-P { background-color: #007bff; color: white; } /* Protocolo */
+.tipo-C { background-color: #ffc107; color: #333; }  /* Certificaciones */
+.tipo-A { background-color: #6f42c1; color: white; } /* Arrendamientos */
+.tipo-O { background-color: #6c757d; color: white; } /* Otros */
+
+/* ============================================
+   👤 CLIENTE COMPACTO
+   ============================================ */
+
+.cliente-compacto {
+  line-height: 1.1;
+}
+
+.nombre-corto {
+  display: block;
+  font-size: 0.75rem;
+  margin-bottom: 1px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.ci-numero {
+  display: block;
+  font-size: 0.65rem;
+  color: #6c757d;
+  font-family: 'Courier New', monospace;
+}
+
+/* ============================================
+   👨‍💼 MATRIZADOR CON INICIALES
+   ============================================ */
+
+.matrizador-compacto {
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #007bff;
+  color: white;
+  text-align: center;
+  line-height: 32px;
+  font-size: 0.7rem;
+  font-weight: bold;
+  cursor: help;
+}
+
+.matrizador-compacto.sin-asignar {
+  background-color: #6c757d;
+}
+
+/* ============================================
+   📅 FECHA COMPACTA
+   ============================================ */
+
+.fecha-compacta {
+  font-size: 0.7rem;
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+  color: #27ae60;
+}
+
+.fecha-compacta.sin-fecha {
+  color: #6c757d;
+}
+
+/* ============================================
+   🎯 ESTADOS E ICONOS
+   ============================================ */
+
+.estado-icono, .pago-icono {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  text-align: center;
+  line-height: 24px;
+  font-size: 0.7rem;
+  cursor: help;
+}
+
+/* Estados específicos */
+.estado-en_proceso { background-color: #ffc107; color: #333; }
+.estado-listo_para_entrega { background-color: #17a2b8; color: white; }
+.estado-entregado { background-color: #28a745; color: white; }
+.estado-nota_credito { background-color: #dc3545; color: white; }
+.estado-cancelado { background-color: #6c757d; color: white; }
+
+/* Pagos específicos */
+.pago-pendiente { background-color: #dc3545; color: white; }
+.pago-pagado_completo { background-color: #28a745; color: white; }
+.pago-pagado_con_retencion { background-color: #20c997; color: white; }
+.pago-pago_parcial { background-color: #fd7e14; color: white; }
+.pago-icono.sin-factura { background-color: #6c757d; color: white; }
+
+/* ============================================
+   💰 VALOR NUMÉRICO
+   ============================================ */
+
+.valor-numerico {
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: #28a745;
+}
+
+.valor-numerico.sin-valor {
+  color: #6c757d;
+}
+
+/* ============================================
+   🔘 BOTONES EXTRA PEQUEÑOS
+   ============================================ */
+
+.btn-xs {
+  padding: 0.1rem 0.3rem;
+  font-size: 0.65rem;
+  line-height: 1.2;
+}
+
+/* ============================================
+   📋 HEADERS CORREGIDOS
+   ============================================ */
+
+.tabla-supervision-limpia th {
+  background-color: #343a40 !important;
+  color: white !important;
+  font-size: 0.75rem;
+  padding: 0.5rem 0.3rem;
+  border: none;
+  font-weight: 600;
+}
+
+.tabla-supervision-limpia th:hover {
+  background-color: #495057 !important;
+  color: white !important;
+}
+
+.tabla-supervision-limpia th.ordenable {
+  cursor: pointer !important;
+  user-select: none;
+  position: relative;
+  transition: background-color 0.2s ease;
+}
+
+.tabla-supervision-limpia th.ordenable:hover {
+  background-color: #495057 !important;
+  color: white !important;
+}
+
+.tabla-supervision-limpia th.ordenable i {
+  opacity: 0.6;
+  transition: all 0.2s ease;
+}
+
+.tabla-supervision-limpia th.ordenable:hover i {
+  opacity: 1;
+  color: #ffc107 !important;
+}
+
+.tabla-supervision-limpia th.ordenable[data-orden="asc"] i.fa-sort-up,
+.tabla-supervision-limpia th.ordenable[data-orden="desc"] i.fa-sort-down {
+  opacity: 1;
+  color: #ffc107 !important;
+  transform: scale(1.1);
+}
+
+/* ============================================
+   📱 RESPONSIVE PARA PANTALLAS MENORES
+   ============================================ */
+
+@media (max-width: 1600px) {
+  .tabla-supervision-limpia {
+    font-size: 0.75rem;
+  }
+  
+  .col-cliente { width: 20%; }
+  .nombre-corto { font-size: 0.7rem; }
+}
+
+@media (max-width: 1366px) {
+  .tabla-supervision-limpia {
+    font-size: 0.7rem;
+  }
+  
+  .col-codigo { width: 14%; }
+  .col-cliente { width: 18%; }
+  .matrizador-compacto { 
+    width: 28px; 
+    height: 28px; 
+    line-height: 28px; 
+    font-size: 0.65rem;
+  }
+  
+  .estado-icono, .pago-icono {
+    width: 20px;
+    height: 20px;
+    line-height: 20px;
+    font-size: 0.6rem;
+  }
+}
+
+/* ============================================
+   ✨ MEJORAS VISUALES GENERALES
+   ============================================ */
+
+.table tbody tr:hover {
+  background-color: rgba(52, 152, 219, 0.05);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: all 0.2s ease;
+}
+
+.btn-outline-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(13, 110, 253, 0.3);
+}
+
+.sin-resultados {
+  padding: 2rem 0;
+}
+
+/* ============================================
+   📄 PAGINACIÓN MODERNA
+   ============================================ */
+
+.pagination-sm .page-link {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.pagination .page-item.active .page-link {
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+}
+
+.pagination .page-link:hover {
+  color: #0d6efd;
+  background-color: #e9ecef;
+  border-color: #dee2e6;
+}
+</style> 
