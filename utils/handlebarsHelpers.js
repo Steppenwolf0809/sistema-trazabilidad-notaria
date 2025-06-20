@@ -7,12 +7,14 @@ const moment = require('moment');
 moment.locale('es'); // Configurar moment en español
 
 const Handlebars = require('handlebars');
+const { formatearFecha } = require('./fechaUtils');
 
 module.exports = {
   // ============== HELPERS DE FECHA Y TIEMPO ==============
   
   /**
    * Formatear fecha completa con hora
+   * CORREGIDO: Usa moment sin timezone para evitar conversiones incorrectas
    */
   formatDateTime: (date) => {
     if (!date) return 'No registrada';
@@ -21,70 +23,43 @@ module.exports = {
   
   /**
    * Formatear solo fecha
+   * CORREGIDO: Usa función unificada para evitar problemas de timezone
    */
   formatDate: (date) => {
-    if (!date) return 'No registrada';
-    return moment(date).format('DD/MM/YYYY');
+    return formatearFecha(date);
   },
   
   /**
    * Formatear fecha específicamente para Ecuador
+   * CORREGIDO: Usa función unificada para evitar problemas de timezone
    */
   formatDateEcuador: (date) => {
-    if (!date) return 'Sin fecha';
-    
-    try {
-      const d = new Date(date);
-      if (isNaN(d.getTime())) return 'Fecha inválida';
-      
-      return d.toLocaleDateString('es-EC', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      });
-    } catch (error) {
-      return 'Error en fecha';
-    }
+    return formatearFecha(date);
   },
   
   /**
    * Formatear fecha para documentos (formato compacto)
+   * CORREGIDO: Usa función unificada para evitar problemas de timezone
    */
   formatDateDocument: (date) => {
-    if (!date) return 'Sin fecha';
-    
-    try {
-      const d = new Date(date);
-      if (isNaN(d.getTime())) return 'Fecha inválida';
-      
-      const day = String(d.getDate()).padStart(2, '0');
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const year = d.getFullYear();
-      
-      return `${day}/${month}/${year}`;
-    } catch (error) {
-      return 'Error en fecha';
-    }
+    return formatearFecha(date);
   },
   
   /**
    * ✨ NUEVO: Formatear fecha corta para tabla optimizada (DD/MM/YY)
+   * CORREGIDO: Usa función unificada para evitar problemas de timezone
    */
   formatFechaCorta: (date) => {
-    if (!date) return '';
+    const fechaCompleta = formatearFecha(date);
+    if (!fechaCompleta || fechaCompleta === 'Sin fecha') return '';
     
-    try {
-      const d = new Date(date);
-      if (isNaN(d.getTime())) return '';
-      
-      const day = String(d.getDate()).padStart(2, '0');
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const year = String(d.getFullYear()).substr(-2);
-      
-      return `${day}/${month}/${year}`;
-    } catch (error) {
-      return '';
+    // Convertir DD/MM/YYYY a DD/MM/YY
+    const partes = fechaCompleta.split('/');
+    if (partes.length === 3) {
+      return `${partes[0]}/${partes[1]}/${partes[2].substr(-2)}`;
     }
+    
+    return fechaCompleta;
   },
   
   /**
@@ -113,10 +88,19 @@ module.exports = {
   
   /**
    * Formatear timestamp con zona horaria Ecuador
+   * CORREGIDO: Elimina utcOffset(-5) que restaba 5 horas incorrectamente
    */
   formatTimestamp: (timestamp) => {
     if (!timestamp) return 'No registrado';
-    return moment(timestamp).utcOffset(-5).format('DD/MM/YYYY HH:mm:ss');
+    return moment(timestamp).format('DD/MM/YYYY HH:mm:ss');
+  },
+  
+  /**
+   * 🔧 HELPER UNIFICADO: Formatear fecha de factura XML
+   * CRÍTICO: Usa la función unificada para evitar problemas de timezone
+   */
+  formatFechaFactura: (fecha) => {
+    return formatearFecha(fecha);
   },
   
   // ============== HELPERS DE FORMATO MONETARIO ==============
@@ -720,69 +704,14 @@ module.exports = {
 // ============== REGISTRAR HELPERS EN HANDLEBARS ==============
 
 // Helper para formatear fechas con formato específico para Ecuador
+// CORREGIDO: Usa función unificada para evitar problemas de timezone
 Handlebars.registerHelper('formatDateEcuador', function(date) {
-  if (!date) return 'Sin fecha';
-  
-  try {
-    const d = new Date(date);
-    if (isNaN(d.getTime())) return 'Fecha inválida';
-    
-    return d.toLocaleDateString('es-EC', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  } catch (error) {
-    return 'Error en fecha';
-  }
+  return formatearFecha(date);
 });
 
-// Helper para formatear fecha con hora
-Handlebars.registerHelper('formatDateTime', function(date) {
-  if (!date) return 'No registrada';
-  
-  try {
-    const d = new Date(date);
-    if (isNaN(d.getTime())) return 'Fecha inválida';
-    
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = d.getFullYear();
-    const hours = String(d.getHours()).padStart(2, '0');
-    const minutes = String(d.getMinutes()).padStart(2, '0');
-    
-    return `${day}/${month}/${year} ${hours}:${minutes}`;
-  } catch (error) {
-    return 'Error en fecha';
-  }
-});
+// formatDateTime duplicado removido - se usa el helper del module.exports
 
-// Helper para formatear fechas generales
-Handlebars.registerHelper('formatDate', function(date, format) {
-  if (!date) return 'N/A';
-  
-  const d = new Date(date);
-  
-  // Verificar si la fecha es válida
-  if (isNaN(d.getTime())) return 'Fecha inválida';
-  
-  const day = String(d.getDate()).padStart(2, '0');
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const year = d.getFullYear();
-  const hours = String(d.getHours()).padStart(2, '0');
-  const minutes = String(d.getMinutes()).padStart(2, '0');
-  
-  switch (format) {
-    case 'DD/MM/YYYY':
-      return `${day}/${month}/${year}`;
-    case 'DD/MM/YYYY HH:mm':
-      return `${day}/${month}/${year} ${hours}:${minutes}`;
-    case 'YYYY-MM-DD':
-      return `${year}-${month}-${day}`;
-    default:
-      return d.toLocaleDateString('es-EC');
-  }
-});
+// formatDate duplicado removido - se usa el helper del module.exports
 
 // Helpers de comparación
 Handlebars.registerHelper('gt', function(a, b) {
@@ -901,21 +830,18 @@ Handlebars.registerHelper('debug', function(value) {
 });
 
 // ✨ NUEVOS HELPERS PARA TABLA OPTIMIZADA
+// CORREGIDO: Usa función unificada para evitar problemas de timezone
 Handlebars.registerHelper('formatFechaCorta', function(date) {
-  if (!date) return '';
+  const fechaCompleta = formatearFecha(date);
+  if (!fechaCompleta || fechaCompleta === 'Sin fecha') return '';
   
-  try {
-    const d = new Date(date);
-    if (isNaN(d.getTime())) return '';
-    
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = String(d.getFullYear()).substr(-2);
-    
-    return `${day}/${month}/${year}`;
-  } catch (error) {
-    return '';
+  // Convertir DD/MM/YYYY a DD/MM/YY
+  const partes = fechaCompleta.split('/');
+  if (partes.length === 3) {
+    return `${partes[0]}/${partes[1]}/${partes[2].substr(-2)}`;
   }
+  
+  return fechaCompleta;
 });
 
 Handlebars.registerHelper('getTipoLetra', function(codigoBarras) {

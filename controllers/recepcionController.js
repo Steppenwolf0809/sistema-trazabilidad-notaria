@@ -2130,20 +2130,31 @@ const recepcionController = {
             todosLosDocumentosEntregados.push(...documentosAdicionalesEntregados);
           }
           
-          // Enviar notificación grupal única
-          await enviarNotificacionEntregaGrupal(todosLosDocumentosEntregados, {
-            nombreReceptor,
-            identificacionReceptor, 
-            relacionReceptor
-          }, req.matrizador);
+          // ✅ CORRECCIÓN: Enviar notificación individual para cada documento usando servicio centralizado
+          for (const docEntregado of todosLosDocumentosEntregados) {
+            try {
+              await NotificationService.enviarNotificacionEntrega(docEntregado.id, {
+                nombreReceptor,
+                identificacionReceptor, 
+                relacionReceptor,
+                fechaEntrega: new Date(),
+                entregadoPor: req.matrizador.nombre
+              });
+            } catch (docError) {
+              console.error(`Error enviando notificación para documento ${docEntregado.id}:`, docError);
+            }
+          }
           
         } else {
           // ENTREGA INDIVIDUAL: Enviar notificación tradicional
-          await enviarNotificacionEntrega(documento, {
+          // ✅ CORRECCIÓN: Usar servicio centralizado en lugar de función local
+          await NotificationService.enviarNotificacionEntrega(documento.id, {
             nombreReceptor,
             identificacionReceptor, 
-            relacionReceptor
-          }, req.matrizador);
+            relacionReceptor,
+            fechaEntrega: new Date(),
+            entregadoPor: req.matrizador.nombre
+          });
         }
       } catch (notificationError) {
         console.error('Error al enviar confirmación de entrega:', notificationError);

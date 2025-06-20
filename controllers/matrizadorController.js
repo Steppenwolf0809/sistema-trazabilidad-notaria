@@ -2878,41 +2878,44 @@ const matrizadorController = {
           // ENTREGA GRUPAL: Enviar UNA SOLA notificación para todos los documentos
           console.log(`📧 [ENTREGA GRUPAL MATRIZADOR] Preparando notificación única para ${documentosGrupalesActualizados + 1} documentos`);
           
-          // Obtener todos los documentos entregados (principal + adicionales)
-          const todosLosDocumentosEntregados = [documento];
+          // ✅ CORRECCIÓN: Para entrega grupal, enviar notificación individual por cada documento
+          // usando el servicio centralizado que SÍ funciona con Twilio
+          const todosLosDocumentosIds = [documento.id];
           
-          // Obtener documentos adicionales entregados
+          // Obtener IDs de documentos adicionales entregados
           if (documentosAdicionales) {
             const documentosIds = documentosAdicionales.split(',')
               .map(id => parseInt(id.trim()))
               .filter(id => !isNaN(id) && id > 0);
             
-            const documentosAdicionalesEntregados = await Documento.findAll({
-              where: {
-                id: { [Op.in]: documentosIds },
-                estado: 'entregado',
-                fechaEntrega: { [Op.not]: null },
-                idMatrizador: req.matrizador.id // Solo documentos del matrizador
-              }
-            });
-            
-            todosLosDocumentosEntregados.push(...documentosAdicionalesEntregados);
+            todosLosDocumentosIds.push(...documentosIds);
           }
           
-          // Enviar notificación grupal única
-          await enviarNotificacionEntregaGrupalMatrizador(todosLosDocumentosEntregados, {
-            nombreReceptor,
-            identificacionReceptor, 
-            relacionReceptor
-          }, req.matrizador);
+          // Enviar notificación individual para cada documento usando servicio centralizado
+          for (const docId of todosLosDocumentosIds) {
+            try {
+              await NotificationService.enviarNotificacionEntrega(docId, {
+                nombreReceptor,
+                identificacionReceptor, 
+                relacionReceptor,
+                fechaEntrega: new Date(),
+                entregadoPor: req.matrizador.nombre
+              });
+            } catch (docError) {
+              console.error(`Error enviando notificación para documento ${docId}:`, docError);
+            }
+          }
           
         } else {
           // ENTREGA INDIVIDUAL: Enviar notificación tradicional
-          await enviarNotificacionEntrega(documento, {
+          // ✅ CORRECCIÓN: Usar servicio centralizado en lugar de función local
+          await NotificationService.enviarNotificacionEntrega(documento.id, {
             nombreReceptor,
             identificacionReceptor, 
-            relacionReceptor
-          }, req.matrizador);
+            relacionReceptor,
+            fechaEntrega: new Date(),
+            entregadoPor: req.matrizador.nombre
+          });
         }
       } catch (notificationError) {
         console.error('Error al enviar confirmación de entrega:', notificationError);

@@ -57,14 +57,15 @@ function obtenerTimestampEcuador() {
  * Procesa fecha del XML para almacenar como fecha_factura
  * USO: Al procesar XML, convertir fecha DD/MM/YYYY a DATE
  * @param {string} fechaXML - Fecha en formato DD/MM/YYYY del XML
- * @returns {Date|null} - Fecha como DATE (solo fecha, sin hora)
+ * @returns {Date|string} - Fecha como DATE (XML) o string YYYY-MM-DD (fallback)
  */
 function procesarFechaDocumento(fechaXML) {
   logger.debug('DOCUMENTO', 'Procesando fecha de documento XML', { fechaXML });
   
   if (!fechaXML) {
-    logger.warning('DOCUMENTO', 'Fecha XML vacía o nula');
-    return null;
+    logger.warning('DOCUMENTO', 'Fecha XML vacía o nula - usando fecha actual');
+    // NUEVO: Si no hay fecha XML, usar fecha actual en formato YYYY-MM-DD
+    return new Date().toISOString().split('T')[0];
   }
   
   try {
@@ -423,6 +424,7 @@ module.exports = {
   // Funciones de fecha simplificadas
   obtenerTimestampEcuador,
   procesarFechaDocumento,
+  procesarFechaFactura: procesarFechaDocumento, // ALIAS para compatibilidad
   formatearFechaSinHora,
   formatearTimestamp,
   convertirRangoParaSQL,

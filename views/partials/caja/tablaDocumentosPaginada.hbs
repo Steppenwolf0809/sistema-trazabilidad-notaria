@@ -1,15 +1,33 @@
 <!-- Tabla de documentos -->
 <div class="table-responsive">
-  <table class="table table-hover table-striped tabla-ordenable">
+  <table class="table table-hover table-striped tabla-ordenable" id="tablaDocumentosCaja">
     <thead class="table-light">
       <tr>
-        <th class="ordenable" data-columna="codigoBarras" data-tipo="texto">Código</th>
-        <th class="ordenable" data-columna="tipoDocumento" data-tipo="texto">Tipo</th>
-        <th class="ordenable" data-columna="nombreCliente" data-tipo="texto">Cliente</th>
-        <th class="ordenable" data-columna="created_at" data-tipo="fecha">Fecha Registro Sistema</th>
-        <th class="ordenable" data-columna="estado" data-tipo="texto">Estado</th>
+        <th class="ordenable" data-columna="codigoBarras" data-tipo="texto">
+          <span>Código</span>
+          <i class="fas fa-sort ms-1"></i>
+        </th>
+        <th class="ordenable" data-columna="tipoDocumento" data-tipo="texto">
+          <span>Tipo</span>
+          <i class="fas fa-sort ms-1"></i>
+        </th>
+        <th class="ordenable" data-columna="nombreCliente" data-tipo="texto">
+          <span>Cliente</span>
+          <i class="fas fa-sort ms-1"></i>
+        </th>
+        <th class="ordenable" data-columna="created_at" data-tipo="fecha">
+          <span>Fecha Registro Sistema</span>
+          <i class="fas fa-sort ms-1"></i>
+        </th>
+        <th class="ordenable" data-columna="estado" data-tipo="estado">
+          <span>Estado</span>
+          <i class="fas fa-sort ms-1"></i>
+        </th>
         <th>Factura</th>
-        <th>Matrizador</th>
+        <th class="ordenable" data-columna="matrizador" data-tipo="texto">
+          <span>Matrizador</span>
+          <i class="fas fa-sort ms-1"></i>
+        </th>
         <th>Acciones</th>
       </tr>
     </thead>
@@ -21,31 +39,35 @@
             {{this.codigoBarras}}
           </a>
         </td>
-        <td>{{this.tipoDocumento}}</td>
+        <td>
+          <span class="badge badge-estado badge-tipo bg-info">{{this.tipoDocumento}}</span>
+        </td>
         <td>{{this.nombreCliente}}</td>
         <td data-sort-value="{{this.created_at}}">{{formatDateDocument this.created_at}}</td>
-        <td>
+        <td class="columna-estado">
           {{#if (eq this.estado "en_proceso")}}
-          <span class="badge bg-warning text-dark">En Proceso</span>
+          <span class="badge badge-estado badge-estado-medio bg-warning text-dark">En Proceso</span>
           {{else if (eq this.estado "listo_para_entrega")}}
-          <span class="badge bg-info">Listo</span>
+          <span class="badge badge-estado badge-estado-corto bg-info">Listo</span>
           {{else if (eq this.estado "entregado")}}
-          <span class="badge bg-success">Entregado</span>
+          <span class="badge badge-estado badge-estado-largo bg-success">Entregado</span>
           {{else if (eq this.estado "nota_credito")}}
-          <span class="badge bg-danger">Nota Crédito</span>
+          <span class="badge badge-estado badge-estado-largo bg-danger">Nota Crédito</span>
           {{else}}
-          <span class="badge bg-secondary">{{translateEstado this.estado}}</span>
+          <span class="badge badge-estado bg-secondary">{{translateEstado this.estado}}</span>
           {{/if}}
           
-          {{#if (eq this.estadoPago "pagado_completo")}}
-          <span class="badge bg-success ms-1">Pagado Completo</span>
-          {{else if (eq this.estadoPago "pagado_con_retencion")}}
-          <span class="badge bg-info ms-1">Pagado con Retención</span>
-          {{else if (eq this.estadoPago "pago_parcial")}}
-          <span class="badge bg-warning text-dark ms-1">Pago Parcial</span>
-          {{else}}
-          <span class="badge bg-danger ms-1">Pendiente</span>
-          {{/if}}
+          <div class="mt-1">
+            {{#if (eq this.estadoPago "pagado_completo")}}
+            <span class="badge badge-estado badge-estado-largo bg-success">Pagado Completo</span>
+            {{else if (eq this.estadoPago "pagado_con_retencion")}}
+            <span class="badge badge-estado badge-estado-largo bg-info">Pagado con Retención</span>
+            {{else if (eq this.estadoPago "pago_parcial")}}
+            <span class="badge badge-estado badge-estado-largo bg-warning text-dark">Pago Parcial</span>
+            {{else}}
+            <span class="badge badge-estado badge-estado-medio bg-danger">Pendiente</span>
+            {{/if}}
+          </div>
         </td>
         <td>
           {{#if this.numeroFactura}}

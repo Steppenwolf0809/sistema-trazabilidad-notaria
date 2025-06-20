@@ -912,4 +912,239 @@ footer {
     padding: 0.125rem 0.25rem;
     font-size: 0.75rem;
   }
+}
+
+/* 🎨 ESTILOS GLOBALES MEJORADOS PARA BADGES DE ESTADO */
+/* Aplicación universal para todos los roles y vistas */
+
+.badge-estado {
+  font-size: 0.75rem !important;
+  padding: 0.35rem 0.65rem !important;
+  font-weight: 500 !important;
+  border-radius: 0.375rem !important;
+  display: inline-block !important;
+  text-align: center !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+  vertical-align: middle !important;
+  transition: all 0.2s ease !important;
+}
+
+/* Tamaños específicos optimizados por longitud de texto */
+.badge-estado-corto {
+  min-width: 65px !important;    /* LISTO, PAGADO */
+  font-size: 0.75rem !important;
+}
+
+.badge-estado-medio {
+  min-width: 75px !important;    /* PENDIENTE, PROCESO */
+  font-size: 0.75rem !important;
+}
+
+.badge-estado-largo {
+  min-width: 80px !important;    /* ENTREGADO, CON RETENCIÓN - REDUCIDO */
+  font-size: 0.7rem !important;  /* Fuente ligeramente más pequeña */
+  padding: 0.3rem 0.5rem !important; /* Padding reducido */
+}
+
+/* Badge para tipos de documento */
+.badge-tipo {
+  min-width: 70px !important;
+  font-size: 0.7rem !important;
+  padding: 0.3rem 0.5rem !important;
+}
+
+/* Mejoras específicas para badges con iconos */
+.badge-estado i {
+  font-size: 0.65rem !important;
+  margin-right: 0.25rem !important;
+}
+
+/* Hover effects para badges clickeables */
+.badge-estado:hover {
+  transform: scale(1.05) !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Mejoras para columnas de estado en tablas */
+.columna-estado {
+  width: 110px !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
+/* Responsive adjustments para badges */
+@media (max-width: 768px) {
+  .badge-estado {
+    font-size: 0.65rem !important;
+    padding: 0.25rem 0.4rem !important;
+  }
+  
+  .badge-estado-corto,
+  .badge-estado-medio,
+  .badge-estado-largo {
+    min-width: auto !important;
+    font-size: 0.65rem !important;
+  }
+  
+  .badge-estado i {
+    font-size: 0.6rem !important;
+    margin-right: 0.2rem !important;
+  }
+}
+
+/* Estilos específicos por tipo de badge para mejor legibilidad */
+.badge-estado.bg-success {
+  background-color: #198754 !important;
+  border: 1px solid #146c43 !important;
+}
+
+.badge-estado.bg-primary {
+  background-color: #0d6efd !important;
+  border: 1px solid #0a58ca !important;
+}
+
+.badge-estado.bg-warning {
+  background-color: #ffc107 !important;
+  border: 1px solid #ffca2c !important;
+  color: #000 !important;
+}
+
+.badge-estado.bg-danger {
+  background-color: #dc3545 !important;
+  border: 1px solid #b02a37 !important;
+}
+
+.badge-estado.bg-info {
+  background-color: #0dcaf0 !important;
+  border: 1px solid #3dd5f3 !important;
+  color: #000 !important;
+}
+
+.badge-estado.bg-secondary {
+  background-color: #6c757d !important;
+  border: 1px solid #5c636a !important;
+}
+
+/* Corrección específica para el badge ENTREGADO */
+.badge-entregado-optimizado {
+  min-width: 75px !important;
+  font-size: 0.7rem !important;
+  padding: 0.3rem 0.5rem !important;
+  font-weight: 500 !important;
+}
+
+/* 🎯 CORRECCIÓN ESPECÍFICA PARA BADGES ENTREGADO - MÁXIMA PRIORIDAD */
+/* Estos estilos tienen la máxima especificidad para sobrescribir cualquier estilo local */
+
+table.tabla-ordenable .badge-estado-largo,
+.table .badge-estado-largo,
+.card .badge-estado-largo,
+span.badge.badge-estado.badge-estado-largo {
+  min-width: 80px !important;
+  font-size: 0.7rem !important;
+  padding: 0.3rem 0.5rem !important;
+  font-weight: 500 !important;
+  line-height: 1.2 !important;
+}
+
+/* Corrección específica para badges ENTREGADO con clase bg-primary */
+span.badge.badge-estado.badge-estado-largo.bg-primary,
+span.badge.badge-estado.badge-estado-largo.bg-success {
+  min-width: 80px !important;
+  max-width: 85px !important;
+  font-size: 0.7rem !important;
+  padding: 0.3rem 0.5rem !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Corrección para badges con texto "Entregado" específicamente */
+span.badge[class*="badge-estado-largo"]:contains("Entregado"),
+.badge-estado-largo:contains("Entregado") {
+  min-width: 80px !important;
+  font-size: 0.7rem !important;
+}
+
+/* Forzar estilos para cualquier badge que contenga la palabra "ENTREGADO" */
+.badge:contains("ENTREGADO"),
+.badge:contains("Entregado") {
+  min-width: 80px !important;
+  font-size: 0.7rem !important;
+  padding: 0.3rem 0.5rem !important;
+}
+
+/* Estilo universal para todos los badges largos independientemente de dónde estén */
+body .badge-estado-largo {
+  min-width: 80px !important;
+  font-size: 0.7rem !important;
+  padding: 0.3rem 0.5rem !important;
+}
+
+/* Corrección específica para tablas */
+.table tbody td .badge-estado-largo,
+.table-responsive .badge-estado-largo {
+  min-width: 80px !important;
+  font-size: 0.7rem !important;
+  padding: 0.3rem 0.5rem !important;
+}
+
+/* 🎯 CORRECCIÓN ULTRA-AGRESIVA PARA BADGES ENTREGADO */
+/* Estos estilos sobrescriben CUALQUIER otro estilo */
+
+/* Corrección por contenido de texto */
+.badge:contains("Entregado"),
+.badge:contains("ENTREGADO"),
+.badge:contains("entregado") {
+  min-width: 80px !important;
+  max-width: 85px !important;
+  font-size: 0.7rem !important;
+  padding: 0.3rem 0.5rem !important;
+  font-weight: 500 !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Corrección por combinación de clases específicas */
+span.badge.badge-estado.badge-estado-largo,
+.badge.badge-estado-largo,
+[class*="badge-estado-largo"] {
+  min-width: 80px !important;
+  max-width: 85px !important;
+  font-size: 0.7rem !important;
+  padding: 0.3rem 0.5rem !important;
+  font-weight: 500 !important;
+}
+
+/* Corrección específica para archivo mis-documentos */
+#tablaMisDocumentosArchivo .badge-estado-largo,
+#tablaMisDocumentosArchivo .badge[class*="estado-largo"],
+.tabla-ordenable .badge-estado-largo {
+  min-width: 80px !important;
+  max-width: 82px !important;
+  font-size: 0.7rem !important;
+  padding: 0.3rem 0.5rem !important;
+}
+
+/* Corrección para badges verdes específicamente */
+.badge.bg-primary.badge-estado-largo,
+.badge.bg-success.badge-estado-largo {
+  min-width: 80px !important;
+  font-size: 0.7rem !important;
+  padding: 0.3rem 0.5rem !important;
+}
+
+/* Forzar estilos con máxima especificidad */
+html body .table .badge-estado-largo,
+html body .tabla-ordenable .badge-estado-largo,
+html body .card .badge-estado-largo {
+  min-width: 80px !important;
+  max-width: 85px !important;
+  font-size: 0.7rem !important;
+  padding: 0.3rem 0.5rem !important;
+  font-weight: 500 !important;
+  line-height: 1.2 !important;
 } 

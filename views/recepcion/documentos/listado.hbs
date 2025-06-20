@@ -62,16 +62,37 @@
       
       <!-- Tabla de documentos -->
       <div class="table-responsive">
-        <table class="table table-hover table-striped">
+        <table class="table table-hover table-striped tabla-ordenable">
           <thead class="table-light">
             <tr>
-              <th>Código</th>
-              <th>Tipo</th>
-              <th>Cliente</th>
-              <th>Matrizador</th>
-              <th>Fecha Registro Sistema</th>
-              <th>Estado</th>
-              <th>Estado Pago</th>
+              <th class="ordenable" data-columna="codigo" data-tipo="texto">
+                <span>Código</span>
+                <i class="fas fa-sort ms-1"></i>
+              </th>
+              <th class="ordenable" data-columna="tipo" data-tipo="texto">
+                <span>Tipo</span>
+                <i class="fas fa-sort ms-1"></i>
+              </th>
+              <th class="ordenable" data-columna="cliente" data-tipo="texto">
+                <span>Cliente</span>
+                <i class="fas fa-sort ms-1"></i>
+              </th>
+              <th class="ordenable" data-columna="matrizador" data-tipo="texto">
+                <span>Matrizador</span>
+                <i class="fas fa-sort ms-1"></i>
+              </th>
+              <th class="ordenable" data-columna="fecha" data-tipo="fecha">
+                <span>Fecha Registro Sistema</span>
+                <i class="fas fa-sort ms-1"></i>
+              </th>
+              <th class="ordenable" data-columna="estado" data-tipo="estado">
+                <span>Estado</span>
+                <i class="fas fa-sort ms-1"></i>
+              </th>
+              <th class="ordenable" data-columna="estadoPago" data-tipo="estado">
+                <span>Estado Pago</span>
+                <i class="fas fa-sort ms-1"></i>
+              </th>
               <th>Acciones</th>
             </tr>
           </thead>
@@ -79,39 +100,41 @@
             {{#each documentos}}
             <tr>
               <td><span class="small">{{this.codigoBarras}}</span></td>
-              <td>{{this.tipoDocumento}}</td>
+              <td>
+                <span class="badge badge-estado badge-tipo bg-secondary">{{this.tipoDocumento}}</span>
+              </td>
               <td>
                 {{this.nombreCliente}}
                 <div class="small text-muted">{{this.identificacionCliente}}</div>
               </td>
               <td>
                 {{#if this.matrizador}}
-                {{this.matrizador.nombre}}
+                <span class="badge bg-info">{{this.matrizador.nombre}}</span>
                 {{else}}
                 <span class="text-muted">No asignado</span>
                 {{/if}}
               </td>
               <td>{{formatDateDocument this.created_at}}</td>
-              <td>
+              <td class="columna-estado">
                 {{#if (eq this.estado "en_proceso")}}
-                <span class="badge bg-warning">En Proceso</span>
+                <span class="badge badge-estado badge-estado-medio bg-warning text-dark">En Proceso</span>
                 {{else if (eq this.estado "listo_para_entrega")}}
-                <span class="badge bg-success">Listo</span>
+                <span class="badge badge-estado badge-estado-corto bg-success">Listo</span>
                 {{else if (eq this.estado "entregado")}}
-                <span class="badge bg-info">Entregado</span>
+                <span class="badge badge-estado badge-estado-largo bg-primary">Entregado</span>
                 {{else}}
-                <span class="badge bg-secondary">{{this.estado}}</span>
+                <span class="badge badge-estado bg-secondary">{{this.estado}}</span>
                 {{/if}}
               </td>
-              <td>
+              <td class="columna-estado">
                 {{#if (eq this.estadoPago "pagado_completo")}}
-                <span class="badge bg-success"><i class="fas fa-check"></i> Pagado Completo</span>
+                <span class="badge badge-estado badge-estado-corto bg-success"><i class="fas fa-check"></i> Pagado</span>
                 {{else if (eq this.estadoPago "pagado_con_retencion")}}
-                <span class="badge bg-info"><i class="fas fa-receipt"></i> Pagado con Retención</span>
+                <span class="badge badge-estado badge-estado-largo bg-info"><i class="fas fa-receipt"></i> Con Retención</span>
                 {{else if (eq this.estadoPago "pago_parcial")}}
-                <span class="badge bg-warning text-dark"><i class="fas fa-clock"></i> Pago Parcial</span>
+                <span class="badge badge-estado badge-estado-medio bg-warning text-dark"><i class="fas fa-clock"></i> Parcial</span>
                 {{else}}
-                <span class="badge bg-danger"><i class="fas fa-exclamation-triangle"></i> Pendiente</span>
+                <span class="badge badge-estado badge-estado-medio bg-danger"><i class="fas fa-exclamation-triangle"></i> Pendiente</span>
                 {{/if}}
               </td>
               <td>
@@ -207,7 +230,17 @@
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    // Inicializar componentes si es necesario
+    console.log('🗂️ Inicializando vista recepción con ordenamiento mejorado');
+    
+    // Inicializar ordenamiento de tablas
+    if (typeof inicializarOrdenamientoTablas === 'function') {
+      inicializarOrdenamientoTablas();
+      console.log('✅ Ordenamiento de tablas inicializado para recepción');
+    } else {
+      console.warn('⚠️ Función inicializarOrdenamientoTablas no encontrada');
+    }
+    
+    console.log('✅ Vista recepción cargada correctamente - Ordenamiento activado');
   });
 
   function mostrarModalMarcarListoRecepcion(idDocumento) {

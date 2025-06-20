@@ -730,21 +730,25 @@ document.addEventListener('DOMContentLoaded', function() {
     // Información financiera
     document.getElementById('numeroFactura').value = datos.numeroFactura || '';
     
-    // CORREGIDO: Mostrar valor de factura correctamente (incluso si es 0)
-    const valorFactura = datos.valorFactura !== undefined && datos.valorFactura !== null ? 
-                        parseFloat(datos.valorFactura).toFixed(2) : '';
-    document.getElementById('valorFactura').value = valorFactura;
+    // ✅ CORREGIDO: Usar directamente el valor numérico de datos.valorFactura
+    const valorFacturaNum = parseFloat(datos.valorFactura || 0);
+    const valorFacturaFormatted = valorFacturaNum > 0 ? valorFacturaNum.toFixed(2) : '';
     
-    console.log('💰 Valor de factura asignado al campo:', valorFactura);
+    document.getElementById('valorFactura').value = valorFacturaFormatted;
+    
+    console.log('💰 Valor de factura procesado:', {
+      original: datos.valorFactura,
+      numerico: valorFacturaNum,
+      formateado: valorFacturaFormatted
+    });
     
     // ============== VALIDACIÓN CRÍTICA: VALOR DE FACTURA ==============
     // Verificar que el valor de factura no sea $0
     const valorFacturaInput = document.getElementById('valorFactura');
-    const valorFacturaNum = parseFloat(valorFactura || 0);
     
     console.log('🔍 Analizando valor de factura:', {
       valorOriginal: datos.valorFactura,
-      valorFormateado: valorFactura,
+      valorFormateado: valorFacturaFormatted,
       valorNumerico: valorFacturaNum,
       esFacturaExenta: datos.esFacturaExenta,
       requiereValidacion: datos.requiereValidacion

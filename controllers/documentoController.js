@@ -139,6 +139,18 @@ exports.registrarDocumento = async (req, res) => {
       }
     }
     
+    // DEBUGGING: Log detallado de creación de documento
+    const fechaFacturaProcesada = procesarFechaFactura(fechaFactura);
+    console.log('🔍 [DOCUMENTO] CREANDO DOCUMENTO CON LOGS DETALLADOS:');
+    console.log('   📅 fechaFactura input:', fechaFactura);
+    console.log('   📅 fechaFactura procesada:', fechaFacturaProcesada);
+    console.log('   📅 fechaFactura tipo:', typeof fechaFacturaProcesada);
+    console.log('   📋 Datos del documento:', {
+      codigoBarras,
+      tipoDocumento,
+      nombreCliente
+    });
+
     // Crear el nuevo documento
     const nuevoDocumento = await Documento.create({
       codigoBarras,
@@ -152,12 +164,18 @@ exports.registrarDocumento = async (req, res) => {
       idMatrizador: idMatrizadorNum,
       comparecientes: comparecientes || [],
       // Campos de facturación
-      fechaFactura: procesarFechaFactura(fechaFactura),
+      fechaFactura: fechaFacturaProcesada,
       numeroFactura: numeroFactura || null,
       valorFactura: valorFactura ? parseFloat(valorFactura) : null,
       estadoPago: estadoPago || 'pendiente',
       metodoPago: metodoPago || null
     }, { transaction });
+
+    console.log('✅ [DOCUMENTO] DOCUMENTO CREADO:');
+    console.log('   🆔 ID:', nuevoDocumento.id);
+    console.log('   📋 Código:', nuevoDocumento.codigoBarras);
+    console.log('   📅 fechaFactura guardada:', nuevoDocumento.fechaFactura);
+    console.log('   📅 fechaFactura tipo:', typeof nuevoDocumento.fechaFactura);
     
     // Registrar evento de creación
     await EventoDocumento.create({

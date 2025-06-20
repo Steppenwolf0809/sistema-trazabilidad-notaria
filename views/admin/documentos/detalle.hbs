@@ -49,22 +49,7 @@
     </div>
   </div>
   
-  {{!-- ALERTA DE MODO SUPERVISIÓN --}}
-  {{#if soloLectura}}
-  <div class="alert alert-info mb-0 border-0 rounded-0">
-    <div class="row">
-      <div class="col-md-8">
-        <i class="fas fa-info-circle me-2"></i>
-        <strong>Modo Supervisión Activo:</strong> Esta vista es de solo lectura. Admin no puede modificar, procesar o entregar documentos.
-      </div>
-      <div class="col-md-4 text-end">
-        <small class="text-muted">
-          <i class="fas fa-shield-alt me-1"></i>Segregación de funciones activa
-        </small>
-      </div>
-    </div>
-  </div>
-  {{/if}}
+
   <div class="card-body">
     <!-- Información general -->
     <div class="row mb-4">
@@ -91,7 +76,7 @@
           <p><strong>📅 Fecha Registro Sistema:</strong> {{formatDate documento.created_at}}</p>
           <small class="text-muted">Cuándo se subió al sistema</small>
           {{#if documento.fechaFactura}}
-          <p><strong>📄 Fecha Documento:</strong> {{formatDateDocument documento.fechaFactura}}</p>
+<p><strong>📄 Fecha Documento:</strong> {{formatDate documento.fechaFactura}}</p>
           <small class="text-muted">Fecha original del documento (XML)</small>
           {{/if}}
           {{#if documento.fechaEntrega}}
@@ -173,7 +158,7 @@
                       </div>
                       {{#if documento.fechaFactura}}
                       <div class="col-12">
-                        <strong>📅 Fecha Factura:</strong> {{formatDateDocument documento.fechaFactura}}
+                        <strong>📅 Fecha Factura:</strong> {{formatDate documento.fechaFactura}}
                       </div>
                       {{/if}}
                     </div>

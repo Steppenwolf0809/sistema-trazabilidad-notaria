@@ -72,17 +72,41 @@
     <div class="card-body p-0">
       {{#if documentos.length}}
         <div class="table-responsive">
-          <table class="table table-hover mb-0">
+          <table class="table table-hover mb-0 tabla-ordenable" id="tablaMisDocumentosArchivo">
             <thead class="table-light">
               <tr>
-                <th style="width: 150px;">Número Documento</th>
-                <th>Tipo</th>
-                <th>Cliente</th>
-                <th>Identificación</th>
-                <th>Valor</th>
-                <th>Estado Pago</th>
-                <th>Estado</th>
-                <th>Última Actualización</th>
+                <th class="ordenable" data-columna="codigoBarras" data-tipo="texto" style="width: 150px;">
+                  <span>Número Documento</span>
+                  <i class="fas fa-sort ms-1"></i>
+                </th>
+                <th class="ordenable" data-columna="tipoDocumento" data-tipo="texto">
+                  <span>Tipo</span>
+                  <i class="fas fa-sort ms-1"></i>
+                </th>
+                <th class="ordenable" data-columna="nombreCliente" data-tipo="texto">
+                  <span>Cliente</span>
+                  <i class="fas fa-sort ms-1"></i>
+                </th>
+                <th class="ordenable" data-columna="identificacionCliente" data-tipo="texto">
+                  <span>Identificación</span>
+                  <i class="fas fa-sort ms-1"></i>
+                </th>
+                <th class="ordenable" data-columna="valorFactura" data-tipo="numero">
+                  <span>Valor</span>
+                  <i class="fas fa-sort ms-1"></i>
+                </th>
+                <th class="ordenable" data-columna="estadoPago" data-tipo="estado">
+                  <span>Estado Pago</span>
+                  <i class="fas fa-sort ms-1"></i>
+                </th>
+                <th class="ordenable" data-columna="estado" data-tipo="estado">
+                  <span>Estado</span>
+                  <i class="fas fa-sort ms-1"></i>
+                </th>
+                <th class="ordenable" data-columna="updated_at" data-tipo="fecha">
+                  <span>Última Actualización</span>
+                  <i class="fas fa-sort ms-1"></i>
+                </th>
                 <th>Acciones</th>
               </tr>
             </thead>
@@ -95,48 +119,48 @@
                     </a>
                   </td>
                   <td>
-                    <span class="badge bg-info">{{this.tipoDocumento}}</span>
+                    <span class="badge badge-estado badge-tipo bg-info">{{this.tipoDocumento}}</span>
                   </td>
                   <td>{{this.nombreCliente}}</td>
                   <td>{{this.identificacionCliente}}</td>
                   <td>${{formatMoney this.valorFactura}}</td>
-                  <td>
+                  <td class="columna-estado">
                     {{#if (eq this.estadoPago "pendiente")}}
-                      <span class="badge bg-danger">
+                      <span class="badge badge-estado badge-estado-medio bg-danger">
                         <i class="fas fa-clock me-1"></i>Pendiente
                       </span>
                     {{else if (eq this.estadoPago "pago_parcial")}}
-                      <span class="badge bg-warning">
+                      <span class="badge badge-estado badge-estado-largo bg-warning text-dark">
                         <i class="fas fa-coins me-1"></i>Pago Parcial
                       </span>
                     {{else if (eq this.estadoPago "pagado_completo")}}
-                      <span class="badge bg-success">
+                      <span class="badge badge-estado badge-estado-largo bg-success">
                         <i class="fas fa-check-circle me-1"></i>Pagado Completo
                       </span>
                     {{else if (eq this.estadoPago "pagado_con_retencion")}}
-                      <span class="badge bg-info">
+                      <span class="badge badge-estado badge-estado-largo bg-info">
                         <i class="fas fa-receipt me-1"></i>Pagado con Retención
                       </span>
                     {{else}}
-                      <span class="badge bg-secondary">
+                      <span class="badge badge-estado bg-secondary">
                         <i class="fas fa-question-circle me-1"></i>{{this.estadoPago}}
                       </span>
                     {{/if}}
                   </td>
-                  <td>
+                  <td class="columna-estado">
                     {{#if (eq this.estado "en_proceso")}}
-                      <span class="badge bg-warning">En Proceso</span>
+                      <span class="badge badge-estado badge-estado-medio bg-warning text-dark">En Proceso</span>
                     {{else if (eq this.estado "listo_para_entrega")}}
-                      <span class="badge bg-success">Listo</span>
+                      <span class="badge badge-estado badge-estado-corto bg-success">Listo</span>
                     {{else if (eq this.estado "entregado")}}
-                      <span class="badge bg-primary">Entregado</span>
+                      <span class="badge badge-estado badge-estado-largo bg-primary">Entregado</span>
                     {{else if (eq this.estado "cancelado")}}
-                      <span class="badge bg-danger">Cancelado</span>
+                      <span class="badge badge-estado badge-estado-medio bg-danger">Cancelado</span>
                     {{else}}
-                      <span class="badge bg-secondary">{{this.estado}}</span>
+                      <span class="badge badge-estado bg-secondary">{{this.estado}}</span>
                     {{/if}}
                   </td>
-                  <td>{{formatDateTime this.updated_at}}</td>
+                  <td data-sort-value="{{this.updated_at}}">{{formatDateTime this.updated_at}}</td>
                   <td class="text-center">
                     {{#if (eq ../userRole "archivo")}}
                         {{! Solo mostrar botones si es el usuario archivo }}
@@ -307,15 +331,64 @@ function entregarDocumento(documentoId) {
   window.location.href = `/archivo/documentos/entrega/${documentoId}`;
 }
 
-// Inicializar tooltips cuando se carga la página
+// Inicializar tooltips y ordenamiento cuando se carga la página
 document.addEventListener('DOMContentLoaded', function() {
+  console.log('🗂️ Inicializando vista mis documentos de archivo con ordenamiento mejorado');
+  
+  // Inicializar ordenamiento de tablas
+  if (typeof inicializarOrdenamientoTablas === 'function') {
+    inicializarOrdenamientoTablas();
+    console.log('✅ Ordenamiento de tablas inicializado para mis documentos');
+  } else {
+    console.warn('⚠️ Función inicializarOrdenamientoTablas no encontrada');
+  }
+  
+  // 🔧 CORRECCIÓN AUTOMÁTICA DE BADGES ENTREGADO
+  function corregirBadgesEntregado() {
+    const badges = document.querySelectorAll('.badge');
+    let badgesCorregidos = 0;
+    
+    badges.forEach(badge => {
+      const texto = badge.textContent.trim().toLowerCase();
+      if (texto.includes('entregado') || texto.includes('con retención') || texto.includes('pagado completo')) {
+        // Aplicar estilos optimizados
+        badge.style.minWidth = '80px';
+        badge.style.fontSize = '0.7rem';
+        badge.style.padding = '0.3rem 0.5rem';
+        badgesCorregidos++;
+        console.log('🔧 Badge corregido:', texto);
+      }
+    });
+    
+    if (badgesCorregidos > 0) {
+      console.log(`✅ Se corrigieron ${badgesCorregidos} badges en mis documentos`);
+    }
+  }
+  
+  // Ejecutar corrección inmediatamente
+  corregirBadgesEntregado();
+  
+  // Observar cambios dinámicos en la tabla
+  const observer = new MutationObserver(function(mutations) {
+    mutations.forEach(function(mutation) {
+      if (mutation.type === 'childList') {
+        corregirBadgesEntregado();
+      }
+    });
+  });
+  
+  const tabla = document.querySelector('#tablaMisDocumentosArchivo');
+  if (tabla) {
+    observer.observe(tabla, { childList: true, subtree: true });
+  }
+
   // Activar tooltips de Bootstrap
   var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
   var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
     return new bootstrap.Tooltip(tooltipTriggerEl);
   });
   
-  console.log('✅ Vista de archivo cargada correctamente - Tooltips activados');
+  console.log('✅ Vista mis documentos de archivo cargada correctamente - Tooltips, ordenamiento y badges optimizados');
 });
 </script>
 
@@ -335,6 +408,82 @@ document.addEventListener('DOMContentLoaded', function() {
   
   .text-purple {
     color: #6f42c1 !important;
+  }
+
+  /* 🎨 ESTILOS MEJORADOS PARA BADGES DE ESTADO - MIS DOCUMENTOS */
+  
+  /* Mejoras para badges de estado - tamaños balanceados */
+  .badge-estado {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    font-weight: 500;
+    border-radius: 0.375rem;
+    display: inline-block;
+    text-align: center;
+    line-height: 1.2;
+  }
+  
+  /* Tamaños específicos por longitud de texto */
+  .badge-estado-corto {
+    min-width: 70px;    /* LISTO, PAGADO */
+  }
+  
+  .badge-estado-medio {
+    min-width: 85px;    /* PENDIENTE, PROCESO */
+  }
+  
+  .badge-estado-largo {
+    min-width: 80px !important;    /* ENTREGADO, CON RETENCIÓN - OPTIMIZADO */
+    font-size: 0.7rem !important;  /* Fuente mejorada para mejor legibilidad */
+    padding: 0.3rem 0.5rem !important; /* Padding reducido */
+  }
+
+  /* 🔧 CORRECCIÓN ESPECÍFICA PARA BADGES ENTREGADO EN MIS DOCUMENTOS */
+  table.tabla-ordenable .badge-estado-largo,
+  .table .badge-estado-largo,
+  span.badge.badge-estado.badge-estado-largo {
+    min-width: 80px !important;
+    font-size: 0.7rem !important;
+    padding: 0.3rem 0.5rem !important;
+  }
+  
+  .badge-tipo {
+    min-width: 80px;
+    font-size: 0.7rem;
+  }
+  
+  /* Mejoras a la tabla para mejor balance visual */
+  .columna-estado {
+    width: 120px;
+    text-align: center;
+  }
+  
+  /* Estilos mejorados para headers ordenables */
+  .tabla-ordenable th.ordenable {
+    cursor: pointer !important;
+    user-select: none;
+    position: relative;
+    transition: background-color 0.2s ease;
+  }
+  
+  .tabla-ordenable th.ordenable:hover {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+  }
+  
+  .tabla-ordenable th.ordenable i {
+    opacity: 0.6;
+    transition: all 0.2s ease;
+  }
+  
+  .tabla-ordenable th.ordenable:hover i {
+    opacity: 1;
+  }
+  
+  .tabla-ordenable th.ordenable[data-orden="asc"] i.fa-sort-up,
+  .tabla-ordenable th.ordenable[data-orden="desc"] i.fa-sort-down {
+    opacity: 1;
+    color: #6f42c1 !important;
+    transform: scale(1.1);
   }
   
   /* Mejorar visibilidad de botones de acción */

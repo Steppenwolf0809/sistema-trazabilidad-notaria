@@ -12,6 +12,7 @@ const {
   formatearValorMonetario,
   mapearMetodoPagoInverso
 } = require('../utils/documentoUtils');
+const { procesarFechaXML } = require('../utils/fechaUtils');
 
 // Objeto que contendrá todas las funciones del controlador
 const cajaController = {
@@ -625,6 +626,12 @@ const cajaController = {
       const page = parseInt(req.query.page) || 1;
       const limit = 10;
       const offset = (page - 1) * limit;
+
+      // ✨ NUEVO: Parámetros de ordenamiento
+      const ordenarPor = req.query.ordenarPor || 'created_at';
+      const ordenDireccion = req.query.ordenDireccion || 'desc';
+
+      console.log('📊 [CAJA] Parámetros de ordenamiento:', { ordenarPor, ordenDireccion });
       
       // Parámetros de filtrado
       const estado = req.query.estado || '';
@@ -680,7 +687,35 @@ const cajaController = {
         };
       }
       
-      // Obtener documentos con paginación
+      // ✨ NUEVO: Configurar ordenamiento dinámico
+      let orderClause = [];
+      
+      // Mapear columnas de frontend a campos de base de datos
+      const mapeoColumnas = {
+        'codigoBarras': 'codigoBarras',
+        'tipoDocumento': 'tipoDocumento',
+        'nombreCliente': 'nombreCliente',
+        'created_at': 'created_at',
+        'estado': 'estado',
+        'estadoPago': 'estadoPago',
+        'valorFactura': 'valorFactura',
+        'fechaFactura': 'fechaFactura'
+      };
+      
+      // Ordenamiento especial para matrizador (requiere JOIN)
+      if (ordenarPor === 'matrizador') {
+        orderClause = [[{ model: Matrizador, as: 'matrizador' }, 'nombre', ordenDireccion.toUpperCase()]];
+      } else if (mapeoColumnas[ordenarPor]) {
+        orderClause = [[mapeoColumnas[ordenarPor], ordenDireccion.toUpperCase()]];
+      } else {
+        // Fallback a ordenamiento por defecto
+        orderClause = [['created_at', 'DESC']];
+        console.warn('⚠️ [CAJA] Columna de ordenamiento no reconocida:', ordenarPor);
+      }
+
+      console.log('📊 [CAJA] Orden SQL aplicado:', orderClause);
+
+      // Obtener documentos con paginación y ordenamiento
       const { count, rows: documentos } = await Documento.findAndCountAll({
         where,
         include: [
@@ -690,7 +725,7 @@ const cajaController = {
             attributes: ['id', 'nombre', 'email']
           }
         ],
-        order: [['created_at', 'DESC']],
+        order: orderClause,
         limit,
         offset
       });
@@ -2368,6 +2403,18 @@ const cajaController = {
       try {
         console.log('🔄 Iniciando transacción: documento + pago...');
         
+        // DEBUGGING: Log detallado de creación de documento desde XML
+        const fechaFacturaProcesada = fechaFactura ? procesarFechaXML(fechaFactura) : new Date().toISOString().split('T')[0];
+        console.log('🔍 [CAJA-XML] CREANDO DOCUMENTO CON LOGS DETALLADOS:');
+        console.log('   📅 fechaFactura input:', fechaFactura);
+        console.log('   📅 fechaFactura procesada:', fechaFacturaProcesada);
+        console.log('   📅 fechaFactura tipo:', typeof fechaFacturaProcesada);
+        console.log('   📋 Datos del documento:', {
+          codigoBarras,
+          tipoDocumento,
+          nombreCliente
+        });
+
         // 1. Crear el documento
         const nuevoDocumento = await Documento.create({
           codigoBarras: codigoBarras,
@@ -2378,12 +2425,18 @@ const cajaController = {
           telefonoCliente: telefonoCliente || null,
           numeroFactura: numeroFactura || null,
           valorFactura: parseFloat(valorFactura || 0),
-          fechaFactura: fechaFactura ? new Date(fechaFactura) : new Date(),
+          fechaFactura: fechaFacturaProcesada,
           estado: 'en_proceso',
           estadoPago: pagoInmediato ? 'pendiente' : 'pendiente', // Se actualizará si hay pago
           idMatrizador: idMatrizador,
           observaciones: observaciones || 'Documento registrado desde XML mediante vista previa'
         }, { transaction });
+
+        console.log('✅ [CAJA-XML] DOCUMENTO CREADO:');
+        console.log('   🆔 ID:', nuevoDocumento.id);
+        console.log('   📋 Código:', nuevoDocumento.codigoBarras);
+        console.log('   📅 fechaFactura guardada:', nuevoDocumento.fechaFactura);
+        console.log('   📅 fechaFactura tipo:', typeof nuevoDocumento.fechaFactura);
 
         console.log('✅ Documento creado en transacción:', nuevoDocumento.id);
 

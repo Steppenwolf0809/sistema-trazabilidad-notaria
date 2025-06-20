@@ -66,12 +66,30 @@
       <table class="table table-hover table-striped tabla-ordenable">
         <thead class="table-light">
           <tr>
-            <th class="ordenable" data-columna="codigo" data-tipo="texto">Código</th>
-            <th class="ordenable" data-columna="tipo" data-tipo="texto">Tipo</th>
-            <th class="ordenable" data-columna="cliente" data-tipo="texto">Cliente</th>
-            <th class="ordenable" data-columna="fecha" data-tipo="fecha">Fecha Registro Sistema</th>
-            <th class="ordenable" data-columna="estado" data-tipo="estado">Estado</th>
-            <th>Estado Pago</th>
+            <th class="ordenable" data-columna="codigo" data-tipo="texto">
+              <span>Código</span>
+              <i class="fas fa-sort ms-1"></i>
+            </th>
+            <th class="ordenable" data-columna="tipo" data-tipo="texto">
+              <span>Tipo</span>
+              <i class="fas fa-sort ms-1"></i>
+            </th>
+            <th class="ordenable" data-columna="cliente" data-tipo="texto">
+              <span>Cliente</span>
+              <i class="fas fa-sort ms-1"></i>
+            </th>
+            <th class="ordenable" data-columna="fecha" data-tipo="fecha">
+              <span>Fecha Registro Sistema</span>
+              <i class="fas fa-sort ms-1"></i>
+            </th>
+            <th class="ordenable" data-columna="estado" data-tipo="estado">
+              <span>Estado</span>
+              <i class="fas fa-sort ms-1"></i>
+            </th>
+            <th class="ordenable" data-columna="estadoPago" data-tipo="estado">
+              <span>Estado Pago</span>
+              <i class="fas fa-sort ms-1"></i>
+            </th>
             <th>Código Entrega</th>
             <th>Acciones</th>
           </tr>
@@ -81,7 +99,7 @@
           <tr {{#unless this.visto_por_matrizador}}class="documento-nuevo"{{/unless}} data-id="{{this.id}}">
             <td><span class="small">{{this.codigoBarras}}</span></td>
             <td>
-              {{this.tipoDocumento}}
+              <span class="badge badge-estado badge-tipo bg-secondary">{{this.tipoDocumento}}</span>
               {{#unless this.visto_por_matrizador}}
               <span class="badge bg-danger badge-nuevo ms-1">NUEVO</span>
               {{/unless}}
@@ -95,30 +113,30 @@
                 Cargando...
               </span>
             </td>
-            <td>
+            <td class="columna-estado">
               {{#if (eq this.estado "en_proceso")}}
-              <span class="badge bg-warning">En Proceso</span>
+              <span class="badge badge-estado badge-estado-medio bg-warning text-dark">En Proceso</span>
               {{else if (eq this.estado "listo_para_entrega")}}
-              <span class="badge bg-success">Listo</span>
+              <span class="badge badge-estado badge-estado-corto bg-success">Listo</span>
               {{else if (eq this.estado "entregado")}}
-              <span class="badge bg-info">Entregado</span>
+              <span class="badge badge-estado badge-estado-largo bg-primary">Entregado</span>
               {{else}}
-              <span class="badge bg-secondary">{{this.estado}}</span>
+              <span class="badge badge-estado bg-secondary">{{this.estado}}</span>
               {{/if}}
             </td>
-            <td>
+            <td class="columna-estado">
               {{#if this.numeroFactura}}
                 {{#if (eq this.estadoPago "pagado_completo")}}
-                <span class="badge bg-success"><i class="fas fa-check"></i> Pagado Completo</span>
+                <span class="badge badge-estado badge-estado-corto bg-success"><i class="fas fa-check"></i> Pagado</span>
                 {{else if (eq this.estadoPago "pagado_con_retencion")}}
-                <span class="badge bg-info"><i class="fas fa-receipt"></i> Pagado con Retención</span>
+                <span class="badge badge-estado badge-estado-largo bg-info"><i class="fas fa-receipt"></i> Con Retención</span>
                 {{else if (eq this.estadoPago "pago_parcial")}}
-                <span class="badge bg-warning text-dark"><i class="fas fa-clock"></i> Pago Parcial</span>
+                <span class="badge badge-estado badge-estado-medio bg-warning text-dark"><i class="fas fa-clock"></i> Parcial</span>
                 {{else}}
-                <span class="badge bg-danger"><i class="fas fa-exclamation-triangle"></i> Pendiente</span>
+                <span class="badge badge-estado badge-estado-medio bg-danger"><i class="fas fa-exclamation-triangle"></i> Pendiente</span>
                 {{/if}}
               {{else}}
-              <span class="badge bg-secondary">Sin Factura</span>
+              <span class="badge badge-estado bg-secondary">Sin Factura</span>
               {{/if}}
             </td>
             <td>
@@ -279,7 +297,15 @@
   }
   
   document.addEventListener('DOMContentLoaded', function() {
-    // Inicializar componentes si es necesario
+    console.log('🗂️ Inicializando vista matrizador con ordenamiento mejorado');
+    
+    // Inicializar ordenamiento de tablas
+    if (typeof inicializarOrdenamientoTablas === 'function') {
+      inicializarOrdenamientoTablas();
+      console.log('✅ Ordenamiento de tablas inicializado para matrizador');
+    } else {
+      console.warn('⚠️ Función inicializarOrdenamientoTablas no encontrada');
+    }
     
     // ============== FORMATEAR FECHAS DE DOCUMENTOS ==============
     console.log('🕒 Iniciando formateo de fechas en listado de documentos...');
@@ -346,6 +372,6 @@
       }
     });
     
-    console.log('✅ Formateo de fechas de documentos completado');
+    console.log('✅ Vista matrizador cargada correctamente - Ordenamiento y fechas activados');
   });
 </script> 

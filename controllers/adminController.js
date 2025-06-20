@@ -3,6 +3,8 @@
  * SIMPLIFICADO - Solo consultas que funcionan con campos reales
  */
 
+// CORREGIDO: Cargar asociaciones primero
+require('../models/index');
 const Documento = require('../models/Documento');
 const Matrizador = require('../models/Matrizador');
 const EventoDocumento = require('../models/EventoDocumento');
@@ -1387,7 +1389,7 @@ exports.reportes = async (req, res) => {
             ...docJson,
             // CORREGIDO: Usar nombres camelCase que realmente vienen del toJSON()
             valor_factura_formato: docJson.valorFactura ? parseFloat(docJson.valorFactura).toFixed(2) : '0.00',
-            fecha_factura_formato: docJson.fechaFactura ? moment(docJson.fechaFactura).format('DD/MM/YYYY') : 'Sin fecha',
+            fecha_factura_formato: require('../utils/fechaUtils').formatearFecha(docJson.fechaFactura),
             diasDesdeFactura,
             atrasado: diasDesdeFactura !== 'N/A' && diasDesdeFactura > 30,
             // Agregar campos en snake_case para compatibilidad con la vista
@@ -3839,8 +3841,14 @@ exports.listarDocumentosAdmin = async (req, res) => {
     
     // Parámetros de paginación y filtros
     const page = parseInt(req.query.page) || 1;
-    const limit = 20;
+    const limit = 30;                              // MEJORADO: Aumentado de 20 a 30 documentos por página
     const offset = (page - 1) * limit;
+
+    // ✨ NUEVO: Parámetros de ordenamiento
+    const ordenarPor = req.query.ordenarPor || 'created_at';
+    const ordenDireccion = req.query.ordenDireccion || 'desc';
+
+    console.log('📊 [ADMIN] Parámetros de ordenamiento:', { ordenarPor, ordenDireccion });
     
     // Filtros de consulta
     const estado = req.query.estado || '';
@@ -3854,14 +3862,14 @@ exports.listarDocumentosAdmin = async (req, res) => {
     const where = {};
     
     if (estado) where.estado = estado;
-    if (estadoPago) where.estado_pago = estadoPago;
-    if (matrizadorId) where.id_matrizador = matrizadorId;
+    if (estadoPago) where.estadoPago = estadoPago;  // CORREGIDO: Usar camelCase
+    if (matrizadorId) where.idMatrizador = matrizadorId;
     
     if (busqueda) {
       where[Op.or] = [
         { codigoBarras: { [Op.iLike]: `%${busqueda}%` } },
         { nombreCliente: { [Op.iLike]: `%${busqueda}%` } },
-        { numero_factura: { [Op.iLike]: `%${busqueda}%` } }
+        { numeroFactura: { [Op.iLike]: `%${busqueda}%` } }  // CORREGIDO: Usar camelCase
       ];
     }
     
@@ -3873,8 +3881,43 @@ exports.listarDocumentosAdmin = async (req, res) => {
         ]
       };
     }
+
+    // ✨ NUEVO: Configurar ordenamiento dinámico
+    let orderClause = [];
     
-    // Consulta con paginación
+    // MEJORADO: Mapear columnas de frontend a campos de base de datos
+    const mapeoColumnas = {
+      // Mapeos específicos para tabla admin
+      'codigoBarras': 'codigoBarras',
+      'nombreCliente': 'nombreCliente', 
+      'fechaFactura': 'fechaFactura',
+      'estado': 'estado',
+      'estadoPago': 'estadoPago',
+      'valorFactura': 'valorFactura',
+      // Mapeos alternativos
+      'codigo': 'codigoBarras',
+      'cliente': 'nombreCliente',
+      'fecha': 'fechaFactura',
+      'pago': 'estadoPago',
+      'valor': 'valorFactura',
+      'created_at': 'created_at',
+      'tipoDocumento': 'tipoDocumento'
+    };
+    
+    // Ordenamiento especial para matrizador (requiere JOIN)
+    if (ordenarPor === 'matrizador') {
+      orderClause = [[{ model: Matrizador, as: 'matrizador' }, 'nombre', ordenDireccion.toUpperCase()]];
+    } else if (mapeoColumnas[ordenarPor]) {
+      orderClause = [[mapeoColumnas[ordenarPor], ordenDireccion.toUpperCase()]];
+    } else {
+      // Fallback a ordenamiento por defecto
+      orderClause = [['created_at', 'DESC']];
+      console.warn('⚠️ [ADMIN] Columna de ordenamiento no reconocida:', ordenarPor);
+    }
+
+    console.log('📊 [ADMIN] Orden SQL aplicado:', orderClause);
+    
+    // Consulta con paginación y ordenamiento
     const { count, rows: documentos } = await Documento.findAndCountAll({
       where,
       include: [{
@@ -3882,7 +3925,7 @@ exports.listarDocumentosAdmin = async (req, res) => {
         as: 'matrizador',
         attributes: ['id', 'nombre', 'email']
       }],
-      order: [['created_at', 'DESC']],
+      order: orderClause,
       limit,
       offset
     });
@@ -3962,12 +4005,18 @@ exports.verDetalleDocumentoAdmin = async (req, res) => {
     const registrosAuditoria = await RegistroAuditoria.findAll({
       where: {
         [Op.or]: [
-          { tabla_afectada: 'documentos' },
+          { idDocumento: id }, // CORREGIDO: Usar relación directa por ID de documento
           { detalles: { [Op.iLike]: `%${documento.codigoBarras}%` } }
         ]
       },
-      order: [['timestamp', 'DESC']],
-      limit: 10
+      order: [['created_at', 'DESC']], // CORREGIDO: Usar created_at en lugar de timestamp
+      limit: 10,
+      include: [{
+        model: Matrizador,
+        as: 'matrizador',
+        attributes: ['nombre', 'rol'],
+        required: false
+      }]
     });
     
     res.render('admin/documentos/detalle', {

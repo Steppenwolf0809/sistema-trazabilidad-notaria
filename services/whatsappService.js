@@ -185,6 +185,9 @@ Presente este código al retirar su documento.`;
  * @returns {string} Mensaje formateado
  */
 const generarMensajeEntregaConfirmada = (documento, datosEntrega) => {
+  // Importar función de censura
+  const { censurarIdentificacion } = require('../utils/documentoUtils');
+  
   // Contexto del trámite si existe
   let contextoTramite = '';
   if (documento.notas && typeof documento.notas === 'string' && documento.notas.trim().length > 0) {
@@ -204,6 +207,9 @@ const generarMensajeEntregaConfirmada = (documento, datosEntrega) => {
     hour12: false
   });
   
+  // ✅ CORRECCIÓN: Aplicar censura directamente aquí
+  const identificacionCensurada = censurarIdentificacion(datosEntrega.identificacionReceptor);
+  
   // Usar plantilla centralizada si existe
   if (configNotaria.plantillas?.documentoEntregado?.whatsapp) {
     return configNotaria.plantillas.documentoEntregado.whatsapp
@@ -212,7 +218,7 @@ const generarMensajeEntregaConfirmada = (documento, datosEntrega) => {
       .replace('{{codigoBarras}}', documento.codigoBarras || 'N/A')
       .replace('{{nombreCliente}}', documento.nombreCliente || 'Cliente')
       .replace('{{nombreReceptor}}', datosEntrega.nombreReceptor || 'Receptor')
-      .replace('{{identificacionReceptor}}', datosEntrega.identificacionReceptor || 'N/A')
+      .replace('{{identificacionCensurada}}', identificacionCensurada)
       .replace('{{relacionReceptor}}', datosEntrega.relacionReceptor || 'Autorizado')
       .replace('{{fechaEntrega}}', fechaEntrega)
       .replace('{{horaEntrega}}', horaEntrega);
@@ -228,7 +234,7 @@ const generarMensajeEntregaConfirmada = (documento, datosEntrega) => {
 🆔 *Código:* ${documento.codigoBarras || 'N/A'}
 
 📤 *Entregado a:* ${datosEntrega.nombreReceptor || 'Receptor'}
-🆔 *Identificación:* ${datosEntrega.identificacionReceptor || 'N/A'}
+🆔 *Identificación:* ${identificacionCensurada}
 🔗 *Relación:* ${datosEntrega.relacionReceptor || 'Autorizado'}
 
 📅 *Fecha:* ${fechaEntrega}

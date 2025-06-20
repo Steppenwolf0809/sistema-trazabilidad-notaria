@@ -109,19 +109,7 @@ const hbs = engine({
     isActiveLink: (path, currentPath) => {
       return currentPath.startsWith(path) ? 'active' : '';
     },
-    formatDate: (date) => {
-      if (!date) return '';
-      return new Date(date).toLocaleDateString('es-ES', {
-        timeZone: 'America/Guayaquil', // Zona horaria de Ecuador UTC-5
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
-      });
-    },
+    // formatDate removido - se usa el helper correcto de utils/handlebarsHelpers.js
     formatTimeAgo: (date) => {
       if (!date) return '';
       
@@ -283,20 +271,7 @@ const hbs = engine({
       // y solo si el documento está 'en_proceso'
       return usuario.rol === 'recepcion' && documento.estado === 'en_proceso';
     },
-    // Helper para formatear fecha y hora más detallado
-    formatDateTime: (date) => {
-      if (!date) return '';
-      return new Date(date).toLocaleString('es-ES', {
-        timeZone: 'America/Guayaquil', // Zona horaria de Ecuador UTC-5
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
-      });
-    },
+    // formatDateTime removido - se usa el helper correcto de utils/handlebarsHelpers.js
     // Helper para contar eventos por tipo específico
     contarEventosPorTipo: (eventos, tipo) => {
       if (!eventos || !Array.isArray(eventos)) return 0;
@@ -348,16 +323,7 @@ const hbs = engine({
         return item;
       });
     },
-    // AGREGADO: Helper para formatear solo fechas (sin hora)
-    formatDateOnly: (date) => {
-      if (!date) return '';
-      return new Date(date).toLocaleDateString('es-ES', {
-        timeZone: 'America/Guayaquil',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      });
-    },
+    // formatDateOnly removido - se usa el helper correcto de utils/handlebarsHelpers.js
     // AGREGADO: Helper para calcular días transcurridos desde una fecha
     daysSince: (date) => {
       if (!date) return 0;

@@ -56,11 +56,12 @@ const NotificacionEnviada = sequelize.define('NotificacionEnviada', {
     comment: 'Tipo de evento que generó la notificación'
   },
   
-  // Canal de comunicación utilizado
+  // Canal de comunicación utilizado - SOLO WHATSAPP
   canal: {
-    type: DataTypes.ENUM('whatsapp', 'email', 'sms'),
+    type: DataTypes.ENUM('whatsapp'),
     allowNull: false,
-    comment: 'Canal utilizado para enviar la notificación'
+    defaultValue: 'whatsapp',
+    comment: 'Canal utilizado para enviar la notificación (solo WhatsApp)'
   },
   
   // Destinatario de la notificación

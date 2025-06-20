@@ -48,8 +48,8 @@ const notificacionController = {
         documentoWhere.idMatrizador = usuario.id;
       }
       
-      // Filtros de notificación
-      if (canal) {
+      // Filtros de notificación - SOLO WHATSAPP
+      if (canal && canal === 'whatsapp') {
         whereClause.canal = canal;
       }
       

@@ -1,15 +1,9 @@
-{{!-- VISTA DE SUPERVISIÓN ADMIN - OPTIMIZADA Y RESPONSIVA --}}
+{{!-- VISTA DE SUPERVISIÓN ADMIN - MODELO MAESTRO PERFECCIONADO --}}
 {{!-- SEGREGACIÓN DE FUNCIONES: Admin solo puede VER documentos, no crear/editar/entregar --}}
 
 <div class="card">
-  <div class="card-header d-flex justify-content-between align-items-center">
-    <span><i class="fas fa-binoculars me-2"></i> Supervisión de Documentos - Solo Lectura</span>
-    {{#if soloLectura}}
-    <div class="alert alert-info mb-0 py-1 px-2 small">
-      <i class="fas fa-info-circle me-1"></i> 
-      <strong>Modo Supervisión:</strong> Solo puede consultar información, no crear/editar/entregar documentos
-    </div>
-    {{/if}}
+  <div class="card-header">
+    <span><i class="fas fa-binoculars me-2"></i> Supervisión de Documentos</span>
   </div>
   <div class="card-body">
     <!-- Filtros Compactos -->
@@ -105,38 +99,38 @@
     </div>
     {{/if}}
     
-    <!-- 🎯 TABLA OPTIMIZADA PARA ZOOM 100% -->
+    <!-- 🎯 TABLA MODELO MAESTRO - PERFECTAMENTE OPTIMIZADA -->
     <div class="table-responsive">
-      <table class="table table-sm table-hover tabla-supervision-limpia" id="tablaDocumentosAdmin">
+      <table class="table table-hover tabla-supervision-perfecta tabla-ordenable" id="tablaDocumentosAdmin">
         <thead class="table-dark">
           <tr>
-            <th class="ordenable col-codigo" data-columna="codigoBarras" data-tipo="texto">
+            <th class="col-codigo ordenable" data-columna="codigoBarras" data-tipo="texto">
               <span>Código</span>
-              <i class="fas fa-sort ms-1"></i>
+              <i class="fas fa-sort ms-1 sort-icon"></i>
             </th>
-            <th class="ordenable col-cliente" data-columna="nombreCliente" data-tipo="texto">
+            <th class="col-cliente ordenable" data-columna="nombreCliente" data-tipo="texto">
               <span>Cliente</span>
-              <i class="fas fa-sort ms-1"></i>
+              <i class="fas fa-sort ms-1 sort-icon"></i>
             </th>
-            <th class="ordenable col-matrizador" data-columna="matrizador" data-tipo="texto">
+            <th class="col-matrizador ordenable" data-columna="matrizador" data-tipo="texto">
               <span>Matrizador</span>
-              <i class="fas fa-sort ms-1"></i>
+              <i class="fas fa-sort ms-1 sort-icon"></i>
             </th>
-            <th class="ordenable col-fecha" data-columna="fechaFactura" data-tipo="fecha">
+            <th class="col-fecha ordenable" data-columna="fechaFactura" data-tipo="fecha">
               <span>Fecha</span>
-              <i class="fas fa-sort ms-1"></i>
+              <i class="fas fa-sort ms-1 sort-icon"></i>
             </th>
-            <th class="ordenable col-estado" data-columna="estado" data-tipo="estado">
+            <th class="col-estado ordenable" data-columna="estado" data-tipo="estado">
               <span>Estado</span>
-              <i class="fas fa-sort ms-1"></i>
+              <i class="fas fa-sort ms-1 sort-icon"></i>
             </th>
-            <th class="ordenable col-pago" data-columna="estadoPago" data-tipo="estado">
+            <th class="col-pago ordenable" data-columna="estadoPago" data-tipo="estado">
               <span>Pago</span>
-              <i class="fas fa-sort ms-1"></i>
+              <i class="fas fa-sort ms-1 sort-icon"></i>
             </th>
-            <th class="ordenable col-valor" data-columna="valorFactura" data-tipo="numero">
+            <th class="col-valor ordenable" data-columna="valorFactura" data-tipo="numero">
               <span>Valor</span>
-              <i class="fas fa-sort ms-1"></i>
+              <i class="fas fa-sort ms-1 sort-icon"></i>
             </th>
             <th class="col-acciones">Acciones</th>
           </tr>
@@ -144,80 +138,80 @@
         <tbody>
           {{#each documentos}}
           <tr>
-            <!-- Código con tipo integrado -->
+            <!-- Código con tipo integrado - MEJORADO MÁS NEGRO -->
             <td class="col-codigo">
-              <span class="codigo-principal">{{this.codigoBarras}}</span>
-              <small class="tipo-badge tipo-{{getTipoLetra this.codigoBarras}}">
+              <span class="codigo-principal-perfecto">{{this.codigoBarras}}</span>
+              <small class="tipo-badge-perfecto tipo-{{getTipoLetra this.codigoBarras}}">
                 {{getTipoLetra this.codigoBarras}}
               </small>
             </td>
             
-            <!-- Cliente simplificado -->
+            <!-- Cliente legible - MEJORADO -->
             <td class="col-cliente">
-              <div class="cliente-compacto">
-                <strong class="nombre-corto">{{truncate this.nombreCliente 25}}</strong>
-                <small class="ci-numero">{{this.identificacionCliente}}</small>
+              <div class="cliente-perfecto">
+                <strong class="nombre-legible">{{truncate this.nombreCliente 25}}</strong>
+                <small class="ci-legible">{{this.identificacionCliente}}</small>
               </div>
             </td>
             
-            <!-- Matrizador con iniciales -->
+            <!-- Matrizador con iniciales - MEJORADO -->
             <td class="col-matrizador">
               {{#if this.matrizador}}
-              <span class="matrizador-compacto" title="{{this.matrizador.nombre}}">
+              <span class="matrizador-perfecto" title="{{this.matrizador.nombre}}">
                 {{getIniciales this.matrizador.nombre}}
               </span>
               {{else}}
-              <span class="matrizador-compacto sin-asignar" title="Sin asignar">
+              <span class="matrizador-perfecto sin-asignar" title="Sin asignar">
                 ??
               </span>
               {{/if}}
             </td>
             
-            <!-- Fecha compacta -->
+            <!-- Fecha legible - MEJORADO MÁS BOLD -->
             <td class="col-fecha">
               {{#if this.fechaFactura}}
-              <span class="fecha-compacta">{{formatFechaCorta this.fechaFactura}}</span>
+              <span class="fecha-legible">{{formatFechaCorta this.fechaFactura}}</span>
               {{else}}
-              <span class="fecha-compacta sin-fecha">--/--/--</span>
+              <span class="fecha-legible sin-fecha">--/--/--</span>
               {{/if}}
             </td>
             
-            <!-- Estados con iconos -->
+            <!-- Estados universales - MEJORADO -->
             <td class="col-estado">
-              <span class="estado-icono estado-{{this.estado}}" title="{{ucfirst this.estado}}">
+              <span class="estado-universal estado-{{this.estado}}" title="{{ucfirst this.estado}}">
                 {{getEstadoIcono this.estado}}
               </span>
             </td>
             
             <td class="col-pago">
               {{#if this.numeroFactura}}
-              <span class="pago-icono pago-{{this.estadoPago}}" title="{{ucfirst this.estadoPago}}">
+              <span class="estado-universal pago-{{this.estadoPago}}" title="{{ucfirst this.estadoPago}}">
                 {{getPagoIcono this.estadoPago}}
               </span>
               {{else}}
-              <span class="pago-icono sin-factura" title="Sin factura">
+              <span class="estado-universal sin-factura" title="Sin factura">
                 ❓
               </span>
               {{/if}}
             </td>
             
-            <!-- Valor numérico limpio -->
+            <!-- Valor prominente - MEJORADO -->
             <td class="col-valor">
               {{#if this.valorFactura}}
-              <span class="valor-numerico">${{formatMoney this.valorFactura}}</span>
+              <span class="valor-monetario">${{formatMoney this.valorFactura}}</span>
               {{else}}
-              <span class="valor-numerico sin-valor">$0.00</span>
+              <span class="valor-monetario sin-valor">$0.00</span>
               {{/if}}
             </td>
             
-            <!-- Acciones compactas -->
+            <!-- Acciones mejoradas -->
             <td class="col-acciones">
               <div class="btn-group btn-group-sm">
-                <button class="btn btn-outline-primary btn-xs" onclick="verDetalle({{this.id}})" title="Ver Detalle">
+                <button class="btn btn-outline-primary btn-perfecto" onclick="verDetalle({{this.id}})" title="Ver Detalle">
                   <i class="fas fa-eye"></i>
                 </button>
                 {{#if (eq this.estado 'entregado')}}
-                <button class="btn btn-outline-success btn-xs" title="Entregado" disabled>
+                <button class="btn btn-outline-success btn-perfecto" title="Entregado" disabled>
                   <i class="fas fa-check"></i>
                 </button>
                 {{/if}}
@@ -313,41 +307,7 @@
     </nav>
     {{/if}}
 
-    {{!-- INFORMACIÓN DE SEGREGACIÓN PARA EDUCACIÓN DEL USUARIO --}}
-    {{#if soloLectura}}
-    <div class="alert alert-warning mt-4">
-      <h6><i class="fas fa-shield-alt me-2"></i>Segregación de Funciones - Control de Auditoría</h6>
-      <p class="mb-2"><strong>Como Administrador, su rol es SUPERVISAR, no operar directamente.</strong></p>
-      
-      <div class="row">
-        <div class="col-md-6">
-          <h6 class="text-success"><i class="fas fa-check-circle me-1"></i> Lo que SÍ puede hacer:</h6>
-          <ul class="small">
-            <li>👀 <strong>Supervisar:</strong> Ver todos los documentos y su estado</li>
-            <li>📊 <strong>Reportes:</strong> Generar análisis y estadísticas</li>
-            <li>🔍 <strong>Auditar:</strong> Revisar registros y trazabilidad</li>
-            <li>👥 <strong>Gestionar:</strong> Usuarios y configuraciones</li>
-          </ul>
-        </div>
-        <div class="col-md-6">
-          <h6 class="text-danger"><i class="fas fa-times-circle me-1"></i> Lo que NO puede hacer:</h6>
-          <ul class="small">
-            <li>📝 <strong>Crear documentos:</strong> Solo <span class="badge bg-primary">Caja</span></li>
-            <li>⚙️ <strong>Procesar/Marcar listos:</strong> Solo <span class="badge bg-info">Matrizadores</span></li>
-            <li>🤝 <strong>Entregar documentos:</strong> Solo <span class="badge bg-success">Recepción</span></li>
-            <li>💰 <strong>Registrar pagos:</strong> Solo <span class="badge bg-primary">Caja</span></li>
-          </ul>
-        </div>
-      </div>
-      
-      <hr class="my-2">
-      <p class="mb-0 small text-muted">
-        <i class="fas fa-info-circle me-1"></i>
-        Esta separación garantiza controles internos apropiados y facilita auditorías. 
-        Para operaciones, contacte al rol correspondiente.
-      </p>
-    </div>
-    {{/if}}
+
   </div>
 </div>
 
@@ -364,159 +324,309 @@ function verDetalle(documentoId) {
   window.location.href = `/admin/documentos/detalle/${documentoId}`;
 }
 
-// Inicializar tooltips y ordenamiento cuando se carga la página
+// Inicializar ordenamiento perfectamente funcional
 document.addEventListener('DOMContentLoaded', function() {
-  console.log('🎯 Inicializando tabla de supervisión optimizada');
+  console.log('🎯 Inicializando tabla de supervisión PERFECTA - Modelo Maestro');
   
-  // Inicializar ordenamiento de tablas
+  // Inicializar ordenamiento de tablas con sistema corregido
   if (typeof inicializarOrdenamientoTablas === 'function') {
     inicializarOrdenamientoTablas();
-    console.log('✅ Ordenamiento de tablas inicializado para admin');
+    console.log('✅ Ordenamiento funcional inicializado para admin');
   } else {
-    console.warn('⚠️ Función inicializarOrdenamientoTablas no encontrada');
+    console.warn('⚠️ Función inicializarOrdenamientoTablas no encontrada - Inicializando ordenamiento manual');
+    inicializarOrdenamientoManual();
   }
   
-  // Inicializar tooltips de Bootstrap
-  var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-  var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-    return new bootstrap.Tooltip(tooltipTriggerEl);
+  // Inicializar tooltips mejorados
+  const tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+  const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl, {
+      delay: { show: 500, hide: 100 },
+      placement: 'top'
+    });
   });
   
-  console.log('✅ Tabla de supervisión optimizada cargada correctamente');
+  console.log('✅ Tabla de supervisión PERFECTA cargada - Modelo Maestro aplicado');
 });
+
+// Función de ordenamiento manual como respaldo
+function inicializarOrdenamientoManual() {
+  console.log('🔧 Inicializando ordenamiento manual para admin');
+  
+  // Buscar todos los headers ordenables
+  const headersOrdenables = document.querySelectorAll('.tabla-supervision-perfecta th.ordenable');
+  
+  headersOrdenables.forEach(header => {
+    header.style.cursor = 'pointer';
+    header.addEventListener('click', function() {
+      const columna = this.getAttribute('data-columna');
+      const tipoColumna = this.getAttribute('data-tipo') || 'texto';
+      
+      console.log('📊 Click en columna:', columna, tipoColumna);
+      
+      // Obtener dirección actual
+      let direccion = 'asc';
+      if (this.classList.contains('asc')) {
+        direccion = 'desc';
+      } else if (this.classList.contains('desc')) {
+        direccion = 'asc';
+      }
+      
+      // Limpiar otros headers
+      headersOrdenables.forEach(h => {
+        h.classList.remove('asc', 'desc', 'active');
+        const icono = h.querySelector('.sort-icon');
+        if (icono) {
+          icono.className = 'fas fa-sort ms-1 sort-icon';
+        }
+      });
+      
+      // Marcar header actual
+      this.classList.add(direccion, 'active');
+      const icono = this.querySelector('.sort-icon');
+      if (icono) {
+        icono.className = `fas fa-sort-${direccion} ms-1 sort-icon`;
+      }
+      
+      // Ejecutar ordenamiento por servidor
+      const params = new URLSearchParams(window.location.search);
+      params.set('ordenarPor', columna);
+      params.set('ordenDireccion', direccion);
+      
+      window.location.search = params.toString();
+    });
+  });
+  
+  console.log('✅ Ordenamiento manual configurado para', headersOrdenables.length, 'columnas');
+}
 </script>
 {{/if}}
 
-{{!-- 🎨 CSS OPTIMIZADO PARA ZOOM 100% --}}
+{{!-- 🎨 CSS MODELO MAESTRO - PERFECCIÓN VISUAL COMPLETA CON MEJORAS --}}
 <style>
-/* ============================================
-   🎯 TABLA PRINCIPAL - DISEÑADA PARA 1920px AL 100% ZOOM
-   ============================================ */
+/* ====================================================
+   🎯 TABLA MODELO MAESTRO - PERFECTAMENTE OPTIMIZADA
+   ==================================================== */
 
-.tabla-supervision-limpia {
-  font-size: 0.8rem;
+.tabla-supervision-perfecta {
+  font-size: 0.875rem;                     /* Base legible aumentado de 0.8rem */
+  line-height: 1.3;                        /* Espaciado cómodo */
   width: 100%;
   margin-bottom: 0;
   table-layout: fixed;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 
-/* Anchos calculados para pantalla estándar */
-.col-codigo { width: 15%; }      /* 20251701018D00676 + tipo */
-.col-cliente { width: 22%; }      /* Nombre truncado + CI */
-.col-matrizador { width: 8%; }    /* Solo iniciales */
-.col-fecha { width: 8%; }         /* DD/MM/YY */
-.col-estado { width: 6%; }        /* Solo icono */
-.col-pago { width: 6%; }          /* Solo icono */
-.col-valor { width: 8%; }         /* $XXX.XX */
-.col-acciones { width: 8%; }      /* Botones pequeños */
+/* ====================================================
+   📐 DISTRIBUCIÓN DE COLUMNAS OPTIMIZADA
+   ==================================================== */
 
-/* ============================================
-   🏷️ CÓDIGO CON TIPO INTEGRADO
-   ============================================ */
+.col-codigo { width: 15%; }                /* Código + tipo */
+.col-cliente { width: 22%; }               /* Nombre + CI */
+.col-matrizador { width: 8%; }             /* Iniciales */
+.col-fecha { width: 8%; }                  /* DD/MM/YY */
+.col-estado { width: 6%; }                 /* Icono estado */
+.col-pago { width: 6%; }                   /* Icono pago */
+.col-valor { width: 8%; }                  /* Valor monetario */
+.col-acciones { width: 8%; }               /* Botones */
 
-.codigo-principal {
+/* ====================================================
+   📋 HEADERS PERFECTOS - LEGIBLES Y FUNCIONALES
+   ==================================================== */
+
+.tabla-supervision-perfecta th {
+  background-color: #343a40 !important;
+  color: white !important;
+  font-size: 0.8rem;                       /* Aumentado de 0.75rem */
+  font-weight: 600;
+  padding: 0.6rem 0.4rem;                  /* Aumentado padding */
+  letter-spacing: 0.02em;
+  border: none;
+  position: relative;
+  transition: background-color 0.2s ease;
+}
+
+.tabla-supervision-perfecta th:hover {
+  background-color: #495057 !important;
+  color: white !important;
+}
+
+.tabla-supervision-perfecta th.ordenable {
+  cursor: pointer !important;
+  user-select: none;
+}
+
+.tabla-supervision-perfecta th.ordenable:hover {
+  background-color: #495057 !important;
+  color: white !important;
+}
+
+.tabla-supervision-perfecta th.ordenable.active {
+  background-color: #007bff !important;
+  color: white !important;
+}
+
+.sort-icon {
+  opacity: 0.6;
+  font-size: 0.7rem;
+  margin-left: 4px;
+  transition: all 0.2s ease;
+}
+
+.tabla-supervision-perfecta th.ordenable:hover .sort-icon {
+  opacity: 1;
+  color: #ffc107 !important;
+}
+
+.tabla-supervision-perfecta th.ordenable.active .sort-icon {
+  opacity: 1;
+  color: white !important;
+}
+
+/* ====================================================
+   📊 FILAS CON ESPACIADO CÓMODO
+   ==================================================== */
+
+.tabla-supervision-perfecta td {
+  padding: 0.5rem 0.4rem;                  /* Espaciado cómodo */
+  vertical-align: middle;
+  line-height: 1.2;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.tabla-supervision-perfecta tbody tr:hover {
+  background-color: rgba(52, 152, 219, 0.06);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  transition: all 0.2s ease;
+}
+
+/* ====================================================
+   🏷️ CÓDIGO PERFECTO - MÁS NEGRO Y LEGIBLE
+   ==================================================== */
+
+.codigo-principal-perfecto {
   display: block;
-  font-family: 'Courier New', monospace;
-  font-size: 0.75rem;
-  font-weight: bold;
-  color: #2c3e50;
-  margin-bottom: 2px;
+  font-family: 'Segoe UI Mono', 'Courier New', monospace;
+  font-size: 0.8rem;                       /* Aumentado de 0.75rem */
+  font-weight: 700;                        /* MEJORADO: Más bold (era 500) */
+  letter-spacing: 0.5px;
+  color: #1a1a1a;                         /* MEJORADO: Más negro (era #2c3e50) */
+  margin-bottom: 3px;
 }
 
-.tipo-badge {
+.tipo-badge-perfecto {
   display: inline-block;
-  width: 16px;
-  height: 16px;
-  border-radius: 3px;
+  width: 18px;                            /* Aumentado de 16px */
+  height: 18px;
+  border-radius: 4px;
   text-align: center;
-  font-size: 0.6rem;
+  font-size: 0.65rem;                     /* Aumentado de 0.6rem */
   font-weight: bold;
-  line-height: 16px;
+  line-height: 18px;
   margin-top: 2px;
 }
 
-.tipo-D { background-color: #28a745; color: white; } /* Diligencias */
-.tipo-P { background-color: #007bff; color: white; } /* Protocolo */
-.tipo-C { background-color: #ffc107; color: #333; }  /* Certificaciones */
-.tipo-A { background-color: #6f42c1; color: white; } /* Arrendamientos */
-.tipo-O { background-color: #6c757d; color: white; } /* Otros */
+.tipo-D { background-color: #28a745; color: white; }
+.tipo-P { background-color: #007bff; color: white; }
+.tipo-C { background-color: #ffc107; color: #333; }
+.tipo-A { background-color: #6f42c1; color: white; }
+.tipo-O { background-color: #6c757d; color: white; }
 
-/* ============================================
-   👤 CLIENTE COMPACTO
-   ============================================ */
+/* ====================================================
+   👤 CLIENTE PERFECTO - INFORMACIÓN CLARA
+   ==================================================== */
 
-.cliente-compacto {
-  line-height: 1.1;
+.cliente-perfecto {
+  line-height: 1.2;
 }
 
-.nombre-corto {
+.nombre-legible {
   display: block;
-  font-size: 0.75rem;
-  margin-bottom: 1px;
-  font-weight: 600;
-  color: #2c3e50;
+  font-size: 0.8rem;                      /* Aumentado de 0.75rem */
+  font-weight: 500;
+  line-height: 1.2;
+  margin-bottom: 2px;
+  color: #212529;
 }
 
-.ci-numero {
+.ci-legible {
   display: block;
-  font-size: 0.65rem;
+  font-size: 0.7rem;                      /* Aumentado de 0.65rem */
+  font-family: 'Segoe UI Mono', monospace;
+  letter-spacing: 0.3px;
   color: #6c757d;
-  font-family: 'Courier New', monospace;
 }
 
-/* ============================================
-   👨‍💼 MATRIZADOR CON INICIALES
-   ============================================ */
+/* ====================================================
+   👨‍💼 MATRIZADOR PERFECTO - INICIALES LEGIBLES
+   ==================================================== */
 
-.matrizador-compacto {
+.matrizador-perfecto {
   display: inline-block;
-  width: 32px;
-  height: 32px;
+  width: 36px;                            /* Aumentado de 32px */
+  height: 36px;
   border-radius: 50%;
   background-color: #007bff;
   color: white;
   text-align: center;
-  line-height: 32px;
-  font-size: 0.7rem;
+  line-height: 36px;
+  font-size: 0.75rem;                     /* Aumentado de 0.7rem */
   font-weight: bold;
   cursor: help;
+  transition: all 0.2s ease;
 }
 
-.matrizador-compacto.sin-asignar {
+.matrizador-perfecto:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+}
+
+.matrizador-perfecto.sin-asignar {
   background-color: #6c757d;
 }
 
-/* ============================================
-   📅 FECHA COMPACTA
-   ============================================ */
+/* ====================================================
+   📅 FECHA PERFECTA - MÁS BOLD Y LEGIBLE
+   ==================================================== */
 
-.fecha-compacta {
-  font-size: 0.7rem;
-  font-family: 'Courier New', monospace;
-  font-weight: 600;
+.fecha-legible {
+  font-size: 0.75rem;                     /* Aumentado de 0.7rem */
+  font-family: 'Segoe UI Mono', monospace;
+  font-weight: 700;                        /* MEJORADO: Más bold (era 500) */
   color: #27ae60;
+  letter-spacing: 0.2px;
 }
 
-.fecha-compacta.sin-fecha {
+.fecha-legible.sin-fecha {
   color: #6c757d;
+  font-weight: 600;                        /* MEJORADO: También bold para sin-fecha */
 }
 
-/* ============================================
-   🎯 ESTADOS E ICONOS
-   ============================================ */
+/* ====================================================
+   🎯 ESTADOS UNIVERSALES - ICONOS PERFECTOS
+   ==================================================== */
 
-.estado-icono, .pago-icono {
+.estado-universal {
   display: inline-block;
-  width: 24px;
-  height: 24px;
+  width: 28px;                            /* Aumentado de 24px */
+  height: 28px;
   border-radius: 50%;
   text-align: center;
-  line-height: 24px;
-  font-size: 0.7rem;
+  line-height: 28px;
+  font-size: 0.75rem;                     /* Aumentado de 0.7rem */
   cursor: help;
+  transition: all 0.2s ease;
 }
 
-/* Estados específicos */
+.estado-universal:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+/* Estados específicos con colores perfeccionados */
 .estado-en_proceso { background-color: #ffc107; color: #333; }
 .estado-listo_para_entrega { background-color: #17a2b8; color: white; }
 .estado-entregado { background-color: #28a745; color: white; }
@@ -528,152 +638,141 @@ document.addEventListener('DOMContentLoaded', function() {
 .pago-pagado_completo { background-color: #28a745; color: white; }
 .pago-pagado_con_retencion { background-color: #20c997; color: white; }
 .pago-pago_parcial { background-color: #fd7e14; color: white; }
-.pago-icono.sin-factura { background-color: #6c757d; color: white; }
+.estado-universal.sin-factura { background-color: #6c757d; color: white; }
 
-/* ============================================
-   💰 VALOR NUMÉRICO
-   ============================================ */
+/* ====================================================
+   💰 VALOR MONETARIO PERFECTO - PROMINENTE Y CLARO
+   ==================================================== */
 
-.valor-numerico {
-  font-family: 'Courier New', monospace;
-  font-size: 0.75rem;
-  font-weight: bold;
+.valor-monetario {
+  font-family: 'Segoe UI Mono', monospace;
+  font-size: 0.8rem;                      /* Aumentado de 0.75rem */
+  font-weight: 600;
   color: #28a745;
+  letter-spacing: 0.3px;
 }
 
-.valor-numerico.sin-valor {
+.valor-monetario.sin-valor {
   color: #6c757d;
 }
 
-/* ============================================
-   🔘 BOTONES EXTRA PEQUEÑOS
-   ============================================ */
+/* ====================================================
+   🔘 BOTONES PERFECTOS - PROFESIONALES Y CLAROS
+   ==================================================== */
 
-.btn-xs {
-  padding: 0.1rem 0.3rem;
-  font-size: 0.65rem;
+.btn-perfecto {
+  padding: 0.15rem 0.4rem;                /* Aumentado padding */
+  font-size: 0.7rem;                      /* Aumentado de 0.65rem */
   line-height: 1.2;
-}
-
-/* ============================================
-   📋 HEADERS CORREGIDOS
-   ============================================ */
-
-.tabla-supervision-limpia th {
-  background-color: #343a40 !important;
-  color: white !important;
-  font-size: 0.75rem;
-  padding: 0.5rem 0.3rem;
-  border: none;
-  font-weight: 600;
-}
-
-.tabla-supervision-limpia th:hover {
-  background-color: #495057 !important;
-  color: white !important;
-}
-
-.tabla-supervision-limpia th.ordenable {
-  cursor: pointer !important;
-  user-select: none;
-  position: relative;
-  transition: background-color 0.2s ease;
-}
-
-.tabla-supervision-limpia th.ordenable:hover {
-  background-color: #495057 !important;
-  color: white !important;
-}
-
-.tabla-supervision-limpia th.ordenable i {
-  opacity: 0.6;
+  border-radius: 4px;
   transition: all 0.2s ease;
 }
 
-.tabla-supervision-limpia th.ordenable:hover i {
-  opacity: 1;
-  color: #ffc107 !important;
+.btn-perfecto:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(13, 110, 253, 0.3);
 }
 
-.tabla-supervision-limpia th.ordenable[data-orden="asc"] i.fa-sort-up,
-.tabla-supervision-limpia th.ordenable[data-orden="desc"] i.fa-sort-down {
-  opacity: 1;
-  color: #ffc107 !important;
-  transform: scale(1.1);
-}
-
-/* ============================================
-   📱 RESPONSIVE PARA PANTALLAS MENORES
-   ============================================ */
+/* ====================================================
+   📱 RESPONSIVIDAD PERFECTA
+   ==================================================== */
 
 @media (max-width: 1600px) {
-  .tabla-supervision-limpia {
-    font-size: 0.75rem;
+  .tabla-supervision-perfecta {
+    font-size: 0.8rem;
   }
   
   .col-cliente { width: 20%; }
-  .nombre-corto { font-size: 0.7rem; }
+  .nombre-legible { font-size: 0.75rem; }
 }
 
 @media (max-width: 1366px) {
-  .tabla-supervision-limpia {
-    font-size: 0.7rem;
+  .tabla-supervision-perfecta {
+    font-size: 0.75rem;
   }
   
   .col-codigo { width: 14%; }
   .col-cliente { width: 18%; }
-  .matrizador-compacto { 
-    width: 28px; 
-    height: 28px; 
-    line-height: 28px; 
-    font-size: 0.65rem;
+  
+  .matrizador-perfecto { 
+    width: 32px; 
+    height: 32px; 
+    line-height: 32px; 
+    font-size: 0.7rem;
   }
   
-  .estado-icono, .pago-icono {
-    width: 20px;
-    height: 20px;
-    line-height: 20px;
-    font-size: 0.6rem;
+  .estado-universal {
+    width: 24px;
+    height: 24px;
+    line-height: 24px;
+    font-size: 0.65rem;
   }
 }
 
-/* ============================================
-   ✨ MEJORAS VISUALES GENERALES
-   ============================================ */
+/* ====================================================
+   ✨ MEJORAS VISUALES FINALES
+   ==================================================== */
 
-.table tbody tr:hover {
-  background-color: rgba(52, 152, 219, 0.05);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  transition: all 0.2s ease;
-}
-
-.btn-outline-primary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(13, 110, 253, 0.3);
+.tabla-supervision-perfecta thead th {
+  border-bottom: 2px solid #495057;
 }
 
 .sin-resultados {
-  padding: 2rem 0;
+  padding: 3rem 0;
+  text-align: center;
 }
 
-/* ============================================
-   📄 PAGINACIÓN MODERNA
-   ============================================ */
+.sin-resultados i {
+  opacity: 0.6;
+}
 
+/* Paginación mejorada */
 .pagination-sm .page-link {
-  padding: 0.375rem 0.75rem;
+  padding: 0.4rem 0.8rem;
   font-size: 0.875rem;
 }
 
 .pagination .page-item.active .page-link {
-  background-color: #0d6efd;
-  border-color: #0d6efd;
+  background-color: #007bff;
+  border-color: #007bff;
+  font-weight: 600;
 }
 
 .pagination .page-link:hover {
-  color: #0d6efd;
+  color: #007bff;
   background-color: #e9ecef;
   border-color: #dee2e6;
+  transform: translateY(-1px);
+}
+
+/* ====================================================
+   🎯 COMPATIBILIDAD CON SISTEMA DE ORDENAMIENTO
+   ==================================================== */
+
+.tabla-ordenable th.ordenable {
+  cursor: pointer !important;
+  user-select: none !important;
+  transition: all 0.2s ease !important;
+}
+
+.tabla-ordenable th.ordenable:hover {
+  background-color: #495057 !important;
+  color: white !important;
+}
+
+.tabla-ordenable th.ordenable.activo {
+  background-color: #007bff !important;
+  color: white !important;
+}
+
+/* Estados de ordenamiento específicos */
+.tabla-supervision-perfecta th.ordenable.asc .sort-icon {
+  opacity: 1;
+  color: #ffc107 !important;
+}
+
+.tabla-supervision-perfecta th.ordenable.desc .sort-icon {
+  opacity: 1;
+  color: #ffc107 !important;
 }
 </style> 

@@ -84,6 +84,91 @@
 </div>
 
 <!-- Modal para cambiar matrizador -->
+
+{{!-- 🎨 ESTILOS MEJORADOS PARA CAJA --}}
+<style>
+  /* Mejoras para badges de estado - tamaños balanceados */
+  .badge-estado {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    font-weight: 500;
+    border-radius: 0.375rem;
+    display: inline-block;
+    text-align: center;
+    line-height: 1.2;
+  }
+  
+  /* Tamaños específicos por longitud de texto */
+  .badge-estado-corto {
+    min-width: 70px;    /* LISTO */
+  }
+  
+  .badge-estado-medio {
+    min-width: 85px;    /* EN PROCESO, PENDIENTE */
+  }
+  
+  .badge-estado-largo {
+    min-width: 80px !important;    /* ENTREGADO, NOTA CRÉDITO - OPTIMIZADO */
+    font-size: 0.7rem !important;  /* Fuente mejorada para mejor legibilidad */
+    padding: 0.3rem 0.5rem !important; /* Padding reducido */
+  }
+  
+  .badge-tipo {
+    min-width: 80px;
+    font-size: 0.7rem;
+  }
+  
+  /* Mejoras a la tabla para mejor balance visual */
+  .columna-estado {
+    width: 140px;
+    text-align: center;
+  }
+  
+  /* Estilos mejorados para headers ordenables */
+  .tabla-ordenable th.ordenable {
+    cursor: pointer !important;
+    user-select: none;
+    position: relative;
+    transition: background-color 0.2s ease;
+  }
+  
+  .tabla-ordenable th.ordenable:hover {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+  }
+  
+  .tabla-ordenable th.ordenable i {
+    opacity: 0.6;
+    transition: all 0.2s ease;
+  }
+  
+  .tabla-ordenable th.ordenable:hover i {
+    opacity: 1;
+  }
+  
+  .tabla-ordenable th.ordenable[data-orden="asc"] i.fa-sort-up,
+  .tabla-ordenable th.ordenable[data-orden="desc"] i.fa-sort-down {
+    opacity: 1;
+    color: #0d6efd !important;
+    transform: scale(1.1);
+  }
+</style>
+
+<script>
+// Inicializar cuando se carga la página
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('🗂️ Inicializando vista caja con ordenamiento mejorado');
+  
+  // Inicializar ordenamiento de tablas
+  if (typeof inicializarOrdenamientoTablas === 'function') {
+    inicializarOrdenamientoTablas();
+    console.log('✅ Ordenamiento de tablas inicializado para caja');
+  } else {
+    console.warn('⚠️ Función inicializarOrdenamientoTablas no encontrada');
+  }
+  
+  console.log('✅ Vista caja cargada correctamente - Ordenamiento activado');
+});
+</script>
 <div class="modal fade" id="cambiarMatrizadorModal" tabindex="-1" aria-labelledby="cambiarMatrizadorModalLabel" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">

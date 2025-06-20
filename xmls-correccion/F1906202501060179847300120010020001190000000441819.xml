@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<factura id="comprobante" version="1.0.0">
+  <infoTributaria>
+    <ambiente>2</ambiente>
+    <tipoEmision>1</tipoEmision>
+    <razonSocial>GLENDA ELIZABETH ZAPATA SILVA</razonSocial>
+    <nombreComercial>NOTARIA DECIMA OCTAVA - PICHINCHA - QUITO</nombreComercial>
+    <ruc>0601798473001</ruc>
+    <claveAcceso>1906202501060179847300120010020001190000000441819</claveAcceso>
+    <codDoc>01</codDoc>
+    <estab>001</estab>
+    <ptoEmi>002</ptoEmi>
+    <secuencial>000119000</secuencial>
+    <dirMatriz>AZUAY E2-231 ENTRE AMAZONAS Y REPÚBLICA.DIAGONAL AL EDIFICIO ASEGURADORA CONFIANZA</dirMatriz>
+    <agenteRetencion>1</agenteRetencion>
+  </infoTributaria>
+  <infoFactura>
+    <fechaEmision>19/06/2025</fechaEmision>
+    <obligadoContabilidad>SI</obligadoContabilidad>
+    <tipoIdentificacionComprador>04</tipoIdentificacionComprador>
+    <razonSocialComprador>FIDEICOMISO MERCANTIL VIVIENDA DE INTERES PUBLICO BANCO PICHINCHA 3</razonSocialComprador>
+    <identificacionComprador>1792884004001</identificacionComprador>
+    <direccionComprador>EDIFICIO SANTA FE PISO 3 QUITO, ECUADOR</direccionComprador>
+    <totalSinImpuestos>49.77</totalSinImpuestos>
+    <totalDescuento>0</totalDescuento>
+    <totalConImpuestos>
+      <totalImpuesto>
+        <codigo>2</codigo>
+        <codigoPorcentaje>4</codigoPorcentaje>
+        <descuentoAdicional>0</descuentoAdicional>
+        <baseImponible>49.77</baseImponible>
+        <valor>7.47</valor>
+      </totalImpuesto>
+      <totalImpuesto>
+        <codigo>2</codigo>
+        <codigoPorcentaje>0</codigoPorcentaje>
+        <descuentoAdicional>0</descuentoAdicional>
+        <baseImponible>0.00</baseImponible>
+        <valor>0</valor>
+      </totalImpuesto>
+    </totalConImpuestos>
+    <propina>0</propina>
+    <importeTotal>57.24</importeTotal>
+    <moneda>DOLAR</moneda>
+    <pagos>
+      <pago>
+        <formaPago>01</formaPago>
+        <total>57.24</total>
+      </pago>
+    </pagos>
+  </infoFactura>
+  <detalles>
+    <detalle>
+      <codigoPrincipal>521</codigoPrincipal>
+      <codigoAuxiliar>622</codigoAuxiliar>
+      <descripcion>(1) RAZONES EN TESTIMONIOS O COPIAS CERTIFICADAS DE ESCRITURAS</descripcion>
+      <cantidad>1</cantidad>
+      <precioUnitario>23.50</precioUnitario>
+      <descuento>0</descuento>
+      <precioTotalSinImpuesto>23.50</precioTotalSinImpuesto>
+      <impuestos>
+        <impuesto>
+          <codigo>2</codigo>
+          <codigoPorcentaje>4</codigoPorcentaje>
+          <tarifa>15.00</tarifa>
+          <baseImponible>23.50</baseImponible>
+          <valor>3.53</valor>
+        </impuesto>
+      </impuestos>
+    </detalle>
+    <detalle>
+      <codigoPrincipal>521</codigoPrincipal>
+      <codigoAuxiliar>594</codigoAuxiliar>
+      <descripcion>(11) OTORGAMIENTO COPIAS DE ARCHIVO</descripcion>
+      <cantidad>1</cantidad>
+      <precioUnitario>19.69</precioUnitario>
+      <descuento>0</descuento>
+      <precioTotalSinImpuesto>19.69</precioTotalSinImpuesto>
+      <impuestos>
+        <impuesto>
+          <codigo>2</codigo>
+          <codigoPorcentaje>4</codigoPorcentaje>
+          <tarifa>15.00</tarifa>
+          <baseImponible>19.69</baseImponible>
+          <valor>2.95</valor>
+        </impuesto>
+      </impuestos>
+    </detalle>
+    <detalle>
+      <codigoPrincipal>521</codigoPrincipal>
+      <codigoAuxiliar>519</codigoAuxiliar>
+      <descripcion>(1) CONCUERDO O RAZÓN DE COPIAS DE ARCHIVO</descripcion>
+      <cantidad>1</cantidad>
+      <precioUnitario>6.58</precioUnitario>
+      <descuento>0</descuento>
+      <precioTotalSinImpuesto>6.58</precioTotalSinImpuesto>
+      <impuestos>
+        <impuesto>
+          <codigo>2</codigo>
+          <codigoPorcentaje>4</codigoPorcentaje>
+          <tarifa>15.00</tarifa>
+          <baseImponible>6.58</baseImponible>
+          <valor>0.99</valor>
+        </impuesto>
+      </impuestos>
+    </detalle>
+  </detalles>
+  <infoAdicional>
+    <campoAdicional nombre="Matrizador">MARIA LUCINDA DIAZ PILATASIG</campoAdicional>
+    <campoAdicional nombre="NÚMERO DE LIBRO">20251701018O00838</campoAdicional>
+    <campoAdicional nombre="Email Cliente">seromero@pichincha.com</campoAdicional>
+    <campoAdicional nombre="TELÉFONO">0988011464</campoAdicional>
+    <campoAdicional nombre="CELULAR">0988011464</campoAdicional>
+  </infoAdicional>
+</factura>

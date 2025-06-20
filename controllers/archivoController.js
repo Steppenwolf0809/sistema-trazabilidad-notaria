@@ -131,6 +131,12 @@ const archivoController = {
       const limit = parseInt(req.query.limit) || 25;
       const offset = (page - 1) * limit;
 
+      // ✨ NUEVO: Parámetros de ordenamiento
+      const ordenarPor = req.query.ordenarPor || 'updated_at';
+      const ordenDireccion = req.query.ordenDireccion || 'desc';
+
+      console.log('📊 [ARCHIVO] Parámetros de ordenamiento:', { ordenarPor, ordenDireccion });
+
       // Construir filtros con mapeo correcto de valores
       const whereConditions = {};
       
@@ -166,7 +172,36 @@ const archivoController = {
         ];
       }
 
-      // Obtener documentos con paginación
+      // ✨ NUEVO: Configurar ordenamiento dinámico
+      let orderClause = [];
+      
+      // Mapear columnas de frontend a campos de base de datos
+      const mapeoColumnas = {
+        'codigoBarras': 'codigoBarras',
+        'nombreCliente': 'nombreCliente', 
+        'tipoDocumento': 'tipoDocumento',
+        'valorFactura': 'valorFactura',
+        'estado': 'estado',
+        'estadoPago': 'estadoPago',
+        'updated_at': 'updated_at',
+        'created_at': 'created_at',
+        'fechaFactura': 'fechaFactura'
+      };
+      
+      // Ordenamiento especial para matrizador (requiere JOIN)
+      if (ordenarPor === 'matrizador') {
+        orderClause = [[{ model: Matrizador, as: 'matrizador' }, 'nombre', ordenDireccion.toUpperCase()]];
+      } else if (mapeoColumnas[ordenarPor]) {
+        orderClause = [[mapeoColumnas[ordenarPor], ordenDireccion.toUpperCase()]];
+      } else {
+        // Fallback a ordenamiento por defecto
+        orderClause = [['updated_at', 'DESC']];
+        console.warn('⚠️ [ARCHIVO] Columna de ordenamiento no reconocida:', ordenarPor);
+      }
+
+      console.log('📊 [ARCHIVO] Orden SQL aplicado:', orderClause);
+
+      // Obtener documentos con paginación y ordenamiento
       const { count, rows: documentos } = await Documento.findAndCountAll({
         where: whereConditions,
         include: [
@@ -176,7 +211,7 @@ const archivoController = {
             attributes: ['id', 'nombre']
           }
         ],
-        order: [['updated_at', 'DESC']],
+        order: orderClause,
         limit,
         offset
       });
@@ -233,6 +268,12 @@ const archivoController = {
       const limit = parseInt(req.query.limit) || 25;
       const offset = (page - 1) * limit;
 
+      // ✨ NUEVO: Parámetros de ordenamiento
+      const ordenarPor = req.query.ordenarPor || 'updated_at';
+      const ordenDireccion = req.query.ordenDireccion || 'desc';
+
+      console.log('📊 [ARCHIVO-MIS] Parámetros de ordenamiento:', { ordenarPor, ordenDireccion });
+
       // Solo documentos asignados al usuario archivo actual
       const whereConditions = {
         idMatrizador: req.matrizador.id
@@ -266,6 +307,32 @@ const archivoController = {
         ];
       }
 
+      // ✨ NUEVO: Configurar ordenamiento dinámico (mismo mapeo que listarTodosDocumentos)
+      let orderClause = [];
+      
+      const mapeoColumnas = {
+        'codigoBarras': 'codigoBarras',
+        'nombreCliente': 'nombreCliente', 
+        'tipoDocumento': 'tipoDocumento',
+        'valorFactura': 'valorFactura',
+        'estado': 'estado',
+        'estadoPago': 'estadoPago',
+        'updated_at': 'updated_at',
+        'created_at': 'created_at',
+        'fechaFactura': 'fechaFactura'
+      };
+      
+      if (ordenarPor === 'matrizador') {
+        orderClause = [[{ model: Matrizador, as: 'matrizador' }, 'nombre', ordenDireccion.toUpperCase()]];
+      } else if (mapeoColumnas[ordenarPor]) {
+        orderClause = [[mapeoColumnas[ordenarPor], ordenDireccion.toUpperCase()]];
+      } else {
+        orderClause = [['updated_at', 'DESC']];
+        console.warn('⚠️ [ARCHIVO-MIS] Columna de ordenamiento no reconocida:', ordenarPor);
+      }
+
+      console.log('📊 [ARCHIVO-MIS] Orden SQL aplicado:', orderClause);
+
       const { count, rows: documentos } = await Documento.findAndCountAll({
         where: whereConditions,
         include: [
@@ -275,7 +342,7 @@ const archivoController = {
             attributes: ['id', 'nombre']
           }
         ],
-        order: [['updated_at', 'DESC']],
+        order: orderClause,
         limit,
         offset
       });
@@ -439,6 +506,17 @@ const archivoController = {
         observaciones
       } = req.body;
 
+      // DEBUGGING: Log detallado de creación de documento
+      const fechaFacturaGenerada = new Date().toISOString().split('T')[0];
+      console.log('🔍 [ARCHIVO] CREANDO DOCUMENTO CON LOGS DETALLADOS:');
+      console.log('   📅 fechaFactura generada:', fechaFacturaGenerada);
+      console.log('   👤 Usuario:', req.matrizador.nombre);
+      console.log('   📋 Datos del documento:', {
+        tipoDocumento,
+        clienteNombre,
+        valorFactura: parseFloat(valorFactura) || 0
+      });
+
       // Crear el documento asignado al usuario archivo actual
       const nuevoDocumento = await Documento.create({
         tipoDocumento,
@@ -448,6 +526,7 @@ const archivoController = {
         emailCliente: clienteEmail,
         valorFactura: parseFloat(valorFactura) || 0,
         valorPendiente: parseFloat(valorFactura) || 0,
+        fechaFactura: fechaFacturaGenerada, // CORREGIDO: Usar variable con log
         notas: observaciones,
         estado: 'en_proceso',
         estadoPago: 'pendiente',
@@ -456,6 +535,12 @@ const archivoController = {
         rolUsuarioCreador: 'archivo',
         codigoBarras: `ARC-${Date.now()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`
       }, { transaction });
+
+      console.log('✅ [ARCHIVO] DOCUMENTO CREADO:');
+      console.log('   🆔 ID:', nuevoDocumento.id);
+      console.log('   📋 Código:', nuevoDocumento.codigoBarras);
+      console.log('   📅 fechaFactura guardada:', nuevoDocumento.fechaFactura);
+      console.log('   📅 fechaFactura tipo:', typeof nuevoDocumento.fechaFactura);
 
       // Registrar evento de creación
       await EventoDocumento.create({
@@ -969,7 +1054,8 @@ const archivoController = {
 
       // Enviar notificación de entrega (fuera de la transacción)
       try {
-        await notificationService.enviarNotificacionEntregaConfirmada(documento, {
+        // ✅ CORRECCIÓN: Usar función correcta del servicio centralizado
+        await notificationService.enviarNotificacionEntrega(documento.id, {
           nombreReceptor,
           identificacionReceptor,
           relacionReceptor,
