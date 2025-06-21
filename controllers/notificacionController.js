@@ -3,10 +3,26 @@
  * Maneja la visualización, filtrado y detalles de notificaciones enviadas
  */
 
-const { NotificacionEnviada, Documento } = require('../models');
+const { NotificacionEnviada, Documento, Matrizador } = require('../models');
 const { sequelize } = require('../config/database');
 const { Op } = require('sequelize');
 const moment = require('moment');
+
+// =============================================
+// HELPERS
+// =============================================
+
+function getRoleFromPath(path) {
+    const parts = path.split('/');
+    if (parts.length > 1) {
+        return parts[1]; // e.g., 'admin' from '/admin/notificaciones/historial'
+    }
+    return 'unknown';
+}
+
+// =============================================
+// UNIVERSAL CONTROLLER LOGIC
+// =============================================
 
 const notificacionController = {
   /**
@@ -16,160 +32,196 @@ const notificacionController = {
    */
   mostrarHistorial: async (req, res) => {
     try {
-      const usuario = req.matrizador || req.usuario;
+      // Configurar usuario desde req.matrizador (principal) o req.user (fallback)
+      const user = req.matrizador || req.user;
       
-      if (!usuario) {
+      // También configurar req.user para compatibilidad si no existe
+      if (!req.user && req.matrizador) {
+        req.user = req.matrizador;
+      }
+      
+      const userRole = user?.rol || getRoleFromPath(req.path); // 'admin', 'recepcion', 'archivo', 'matrizador'
+
+      console.log('🔍 DEBUG notificacionController.mostrarHistorial:', {
+        path: req.path,
+        userRole,
+        userExists: !!user,
+        userName: user?.nombre,
+        userId: user?.id,
+        method: req.method,
+        headers: req.headers['user-agent'] ? 'browser' : 'other'
+      });
+      
+      console.log('=== ANÁLISIS DETALLADO ===');
+      console.log('URL Original:', req.originalUrl);
+      console.log('Parámetros URL:', req.params);
+      console.log('Query params:', req.query);
+      console.log('req.matrizador:', !!req.matrizador);
+      console.log('req.user:', !!req.user);
+
+      if (!user) {
+        console.log('❌ Usuario no autenticado en notificacionController.mostrarHistorial');
         req.flash('error', 'Usuario no autenticado');
         return res.redirect('/login');
       }
-      
-      // Parámetros de paginación
-      const page = parseInt(req.query.page) || 1;
-      const limit = 20;
-      const offset = (page - 1) * limit;
-      
+
       // Parámetros de filtrado
       const {
-        codigoBarras,
-        cliente,
+        fechaDesde,
+        fechaHasta,
+        tipo,
         canal,
         estado,
-        tipoEvento,
-        fechaDesde,
-        fechaHasta
+        matrizadorId,
+        busqueda
       } = req.query;
-      
+
       // Construir condiciones de filtrado
       const whereClause = {};
-      const documentoWhere = {};
-      
-      // Filtro por matrizador (solo sus documentos)
-      if (usuario.rol === 'matrizador') {
-        documentoWhere.idMatrizador = usuario.id;
+      const documentoWhereClause = {};
+
+      // === Filtros de Permisos por Rol ===
+      if (userRole === 'matrizador' || userRole === 'archivo' || userRole === 'caja_archivo') {
+        // Matrizador, archivo y caja_archivo solo ven notificaciones de sus propios documentos
+        documentoWhereClause.id_matrizador = user.id; 
       }
       
-      // Filtros de notificación - SOLO WHATSAPP
-      if (canal && canal === 'whatsapp') {
-        whereClause.canal = canal;
+      if ((userRole === 'admin' || userRole === 'recepcion') && matrizadorId) {
+        documentoWhereClause.id_matrizador = parseInt(matrizadorId, 10);
       }
-      
-      if (estado) {
-        whereClause.estado = estado;
+
+      // === Filtros de la Interfaz de Usuario ===
+      if (tipo && tipo !== 'todos') whereClause.tipoEvento = tipo;
+      if (canal && canal !== 'todos') whereClause.canal = canal;
+      if (estado && estado !== 'todos') whereClause.estado = estado;
+
+      // CORREGIDO: Manejo más robusto de filtros de fecha
+      if (fechaDesde && fechaHasta) {
+        whereClause.created_at = {
+          [Op.between]: [
+            moment(fechaDesde).startOf('day').toDate(),
+            moment(fechaHasta).endOf('day').toDate()
+          ]
+        };
+      } else if (fechaDesde) {
+        whereClause.created_at = { [Op.gte]: moment(fechaDesde).startOf('day').toDate() };
+      } else if (fechaHasta) {
+        whereClause.created_at = { [Op.lte]: moment(fechaHasta).endOf('day').toDate() };
       }
-      
-      if (tipoEvento) {
-        whereClause.tipoEvento = tipoEvento;
-      }
-      
-      // Filtros de fecha
-      if (fechaDesde || fechaHasta) {
-        whereClause.created_at = {};
-        
-        if (fechaDesde) {
-          whereClause.created_at[Op.gte] = moment(fechaDesde).startOf('day').toDate();
-        }
-        
-        if (fechaHasta) {
-          whereClause.created_at[Op.lte] = moment(fechaHasta).endOf('day').toDate();
-        }
-      }
-      
-      // Filtros de documento
-      if (codigoBarras) {
-        documentoWhere.codigoBarras = { [Op.iLike]: `%${codigoBarras}%` };
-      }
-      
-      if (cliente) {
-        documentoWhere[Op.or] = [
-          { nombreCliente: { [Op.iLike]: `%${cliente}%` } },
-          { identificacionCliente: { [Op.iLike]: `%${cliente}%` } }
+
+      if (busqueda && busqueda.trim().length > 0) {
+        // CORREGIDO: Usar nombres de campos correctos y validar entrada
+        const busquedaLimpia = busqueda.trim();
+        documentoWhereClause[Op.or] = [
+          { codigo_barras: { [Op.iLike]: `%${busquedaLimpia}%` } },
+          { nombre_cliente: { [Op.iLike]: `%${busquedaLimpia}%` } },
+          { numero_factura: { [Op.iLike]: `%${busquedaLimpia}%` } },
+          { identificacion_cliente: { [Op.iLike]: `%${busquedaLimpia}%` } }
         ];
       }
       
-      // Obtener notificaciones con paginación
-      const { count, rows: notificaciones } = await NotificacionEnviada.findAndCountAll({
-        where: whereClause,
-        include: [
-          {
+      // CORREGIDO: Construcción más robusta de la consulta
+      const findOptions = {
+        where: Object.keys(whereClause).length > 0 ? whereClause : {},
+        include: [{
             model: Documento,
             as: 'documento',
-            where: documentoWhere,
-            attributes: ['id', 'tipoDocumento', 'codigoBarras', 'nombreCliente', 'identificacionCliente']
-          }
-        ],
+            where: Object.keys(documentoWhereClause).length > 0 ? documentoWhereClause : undefined,
+            required: Object.keys(documentoWhereClause).length > 0, // INNER JOIN solo si hay filtros de documento
+            include: [{ 
+              model: Matrizador, 
+              as: 'matrizador',
+              required: false,
+              attributes: ['id', 'nombre', 'email']
+            }]
+        }],
         order: [['created_at', 'DESC']],
-        limit,
-        offset
+        limit: 100,
+        distinct: true // Evitar duplicados
+      };
+
+      console.log('📊 Filtros aplicados:', {
+        whereClause: Object.keys(whereClause),
+        documentoWhereClause: Object.keys(documentoWhereClause),
+        userRole,
+        busqueda: !!busqueda
       });
       
-      // Obtener estadísticas
-      const stats = await notificacionController.obtenerEstadisticas(usuario);
+      console.log('📊 Ejecutando query con opciones:', JSON.stringify(findOptions, null, 2));
       
-      // Preparar datos para la paginación
-      const totalPages = Math.ceil(count / limit);
-      const pagination = {
-        pages: []
+      const notificaciones = await NotificacionEnviada.findAll(findOptions);
+      
+      console.log('📋 Notificaciones encontradas:', notificaciones.length);
+      
+      // Obtener estadísticas basadas en los mismos filtros
+      const stats = await notificacionController.obtenerEstadisticas(whereClause, documentoWhereClause);
+      
+      console.log('📈 Estadísticas calculadas:', stats);
+      
+      // Matrizadores para el filtro (solo para admin/recepcion)
+      let matrizadores = [];
+      if (userRole === 'admin' || userRole === 'recepcion') {
+          matrizadores = await Matrizador.findAll({ order: [['nombre', 'ASC']] });
+      }
+
+      // Helpers para la vista con clases Bootstrap estándar
+      const badgeClasses = {
+          estado: { enviado: 'bg-success', error: 'bg-danger', pendiente: 'bg-warning', simulado: 'bg-info' },
+          tipo: { documento_listo: 'bg-primary', entrega_confirmada: 'bg-success', entrega_grupal: 'bg-info' },
+          canal: { whatsapp: 'bg-success', email: 'bg-primary', ambos: 'bg-secondary' }
       };
+      const iconClasses = {
+          canal: { whatsapp: 'fab fa-whatsapp', email: 'fas fa-envelope' }
+      };
+
+      // Mapear roles para vistas y layouts
+      const vistaRole = userRole === 'caja_archivo' ? 'archivo' : 
+                       userRole === 'matrizador' ? 'matrizadores' : userRole;
+      const layoutRole = userRole === 'caja_archivo' ? 'caja' : 
+                        userRole === 'matrizador' ? 'matrizador' : userRole;
       
-      // Generar URLs para la paginación
-      const baseUrl = '/matrizador/notificaciones/historial?';
-      const queryParams = new URLSearchParams();
+      console.log('✅ Renderizando vista:', `${vistaRole}/notificaciones/historial`, 'con layout:', layoutRole);
       
-      if (codigoBarras) queryParams.append('codigoBarras', codigoBarras);
-      if (cliente) queryParams.append('cliente', cliente);
-      if (canal) queryParams.append('canal', canal);
-      if (estado) queryParams.append('estado', estado);
-      if (tipoEvento) queryParams.append('tipoEvento', tipoEvento);
-      if (fechaDesde) queryParams.append('fechaDesde', fechaDesde);
-      if (fechaHasta) queryParams.append('fechaHasta', fechaHasta);
-      
-      // Generar enlaces de paginación
-      for (let i = 1; i <= totalPages; i++) {
-        const params = new URLSearchParams(queryParams);
-        params.set('page', i);
-        
-        pagination.pages.push({
-          num: i,
-          url: baseUrl + params.toString(),
-          active: i === page
-        });
-      }
-      
-      // Enlaces de anterior y siguiente
-      if (page > 1) {
-        const params = new URLSearchParams(queryParams);
-        params.set('page', page - 1);
-        pagination.prev = baseUrl + params.toString();
-      }
-      
-      if (page < totalPages) {
-        const params = new URLSearchParams(queryParams);
-        params.set('page', page + 1);
-        pagination.next = baseUrl + params.toString();
-      }
-      
-      res.render('matrizadores/notificaciones/historial', {
-        layout: 'matrizador',
+      res.render(`${vistaRole}/notificaciones/historial`, {
+        layout: layoutRole,
         title: 'Historial de Notificaciones',
         notificaciones,
         stats,
-        pagination,
-        filtros: {
-          codigoBarras,
-          cliente,
-          canal,
-          estado,
-          tipoEvento,
-          fechaDesde,
-          fechaHasta
-        },
-        userRole: usuario.rol,
-        userName: usuario.nombre
+        filtros: req.query,
+        matrizadores,
+        userRole: userRole, // Usar el rol real del usuario para los enlaces
+        userName: user.nombre,
+        badgeClasses,
+        iconClasses,
+        // No más paginación por ahora para simplificar
       });
+
     } catch (error) {
-      console.error('Error al mostrar historial de notificaciones:', error);
-      req.flash('error', 'Error al cargar el historial de notificaciones');
-      res.redirect('/matrizador');
+      const user = req.matrizador || req.user;
+      const userRole = user?.rol || getRoleFromPath(req.path);
+      
+      console.error(`❌ Error en historial de notificaciones para rol ${userRole}:`, error.message);
+      console.error('📊 Parámetros que causaron el error:', req.query);
+      console.error('🔍 Stack trace:', error.stack);
+      
+      // Mensaje de error más específico
+      let errorMessage = 'Error al cargar el historial de notificaciones.';
+      if (error.message.includes('column') || error.message.includes('relation')) {
+        errorMessage = 'Error en los filtros de búsqueda. Por favor, revise los criterios seleccionados.';
+      }
+      
+      req.flash('error', errorMessage);
+      
+      // Mapear roles para redirección
+      const redirectRole = userRole === 'caja_archivo' ? 'caja' : userRole;
+      
+      // Si no podemos determinar el rol, redirigir al login
+      if (!redirectRole || redirectRole === 'unknown') {
+        return res.redirect('/login');
+      }
+      
+      // Redirigir al dashboard principal (/) de cada rol
+      res.redirect(`/${redirectRole}`);
     }
   },
   
@@ -180,50 +232,158 @@ const notificacionController = {
    */
   obtenerDetalleNotificacion: async (req, res) => {
     try {
+      console.log('🚀 === INICIO DETALLE NOTIFICACIÓN ===');
+      console.log('📋 Parámetros recibidos:', req.params);
+      console.log('🌐 Headers:', req.headers.accept);
+      console.log('🔗 URL completa:', req.originalUrl);
+      
       const { id } = req.params;
-      const usuario = req.matrizador || req.usuario;
+      const usuario = req.matrizador || req.user;
+      
+      console.log('👤 Usuario encontrado:', {
+        existe: !!usuario,
+        id: usuario?.id,
+        rol: usuario?.rol,
+        nombre: usuario?.nombre
+      });
       
       if (!usuario) {
+        console.log('❌ Usuario no autenticado');
         return res.status(401).json({
           exito: false,
           mensaje: 'Usuario no autenticado'
         });
       }
       
-      // Construir condiciones según el rol
-      const whereClause = { id };
-      const includeClause = [
-        {
-          model: Documento,
-          as: 'documento',
-          attributes: ['id', 'tipoDocumento', 'codigoBarras', 'nombreCliente', 'identificacionCliente']
-        }
-      ];
+      console.log('🔍 DEBUG: Buscando notificación ID:', id);
+      console.log('🔍 DEBUG: Usuario rol:', usuario.rol);
       
-      // Si es matrizador, solo puede ver notificaciones de sus documentos
-      if (usuario.rol === 'matrizador') {
-        includeClause[0].where = { idMatrizador: usuario.id };
-      }
-      
-      const notificacion = await NotificacionEnviada.findOne({
-        where: whereClause,
-        include: includeClause
-      });
+      // Buscar la notificación primero
+      const notificacion = await NotificacionEnviada.findByPk(id);
       
       if (!notificacion) {
+        console.log('❌ DEBUG: Notificación no encontrada');
         return res.status(404).json({
           exito: false,
-          mensaje: 'Notificación no encontrada o sin permisos para verla'
+          mensaje: 'Notificación no encontrada'
         });
       }
       
+      console.log('✅ DEBUG: Notificación encontrada:', {
+        id: notificacion.id,
+        documentoId: notificacion.documentoId,
+        tipoEvento: notificacion.tipoEvento
+      });
+      
+      // Buscar el documento relacionado si existe
+      let documento = null;
+      if (notificacion.documentoId) {
+        documento = await Documento.findByPk(notificacion.documentoId, {
+          include: [
+            {
+              model: Matrizador,
+              as: 'matrizador',
+              attributes: ['id', 'nombre', 'email'],
+              required: false
+            }
+          ]
+        });
+        
+        console.log('📄 DEBUG: Documento encontrado:', !!documento);
+        
+        // CORREGIDO: Los matrizadores pueden ver todas las notificaciones para supervisión
+        // Solo restricción para archivo y caja_archivo (deben ser el matrizador asignado)
+        if (documento && (usuario.rol === 'archivo' || usuario.rol === 'caja_archivo')) {
+          if (documento.id_matrizador !== usuario.id) {
+            console.log('🚫 DEBUG: Sin permisos para ver este documento');
+            return res.status(403).json({
+              exito: false,
+              mensaje: 'Sin permisos para ver esta notificación'
+            });
+          }
+        }
+      }
+      
+      console.log('📋 DEBUG: Formateando datos para el modal');
+      
+      // Formatear datos para el modal con manejo defensivo
+      const datosFormateados = {
+        id: notificacion.id,
+        fechaEnvio: notificacion.created_at,
+        estado: notificacion.estado || 'desconocido',
+        tipoEvento: notificacion.tipoEvento,
+        destinatario: notificacion.destinatario || 'No especificado',
+        mensajeEnviado: notificacion.mensajeEnviado || 'Mensaje no disponible',
+        metadatos: notificacion.metadatos || {},
+        respuestaApi: notificacion.respuestaApi || null,
+        ultimoError: notificacion.ultimoError || null,
+        intentos: notificacion.intentos || 1,
+        documento: documento ? {
+          id: documento.id,
+          codigo: documento.codigoBarras || 'Sin código',
+          tipo: documento.tipoDocumento || 'Sin tipo',
+          cliente: {
+            nombre: documento.nombreCliente || 'Sin nombre',
+            identificacion: documento.identificacionCliente || 'Sin identificación'
+          },
+          numeroFactura: documento.numeroFactura || null,
+          estado: documento.estado || 'Sin estado',
+          fechaListo: documento.fechaListo || null,
+          matrizador: documento.matrizador ? {
+            nombre: documento.matrizador.nombre || 'Sin nombre',
+            email: documento.matrizador.email || 'Sin email'
+          } : {
+            nombre: 'Sin asignar',
+            email: 'Sin email'
+          }
+        } : {
+          id: null,
+          codigo: 'Entrega grupal',
+          tipo: 'Múltiples documentos',
+          cliente: {
+            nombre: notificacion.metadatos?.nombreCliente || 'Cliente grupal',
+            identificacion: 'Múltiples'
+          },
+          numeroFactura: null,
+          estado: 'Entrega grupal',
+          fechaListo: null,
+          matrizador: {
+            nombre: 'Múltiples',
+            email: 'N/A'
+          }
+        },
+        puedeReenviar: (notificacion.estado === 'fallido' || notificacion.estado === 'error') && 
+                      (notificacion.tipoEvento === 'documento_listo' || notificacion.tipoEvento === 'entrega_confirmada')
+      };
+      
+      console.log('✅ DEBUG: Datos formateados correctamente');
+      
+      // Si es una petición AJAX, devolver HTML del modal
+      if (req.headers.accept && req.headers.accept.includes('text/html')) {
+        return res.render('partials/modal-detalle-notificacion', {
+          layout: false,
+          notificacion: datosFormateados
+        });
+      }
+      
+      // Si es API, devolver JSON
       return res.status(200).json({
         exito: true,
-        datos: notificacion,
+        datos: datosFormateados,
         mensaje: 'Detalles de notificación obtenidos correctamente'
       });
     } catch (error) {
       console.error('Error al obtener detalles de notificación:', error);
+      
+      if (req.headers.accept && req.headers.accept.includes('text/html')) {
+        return res.status(500).send(`
+          <div class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            Error al cargar los detalles de la notificación.
+          </div>
+        `);
+      }
+      
       return res.status(500).json({
         exito: false,
         mensaje: 'Error al obtener los detalles de la notificación',
@@ -234,32 +394,26 @@ const notificacionController = {
   
   /**
    * Obtiene estadísticas de notificaciones para un usuario
-   * @param {Object} usuario - Usuario autenticado
+   * @param {Object} whereClause - Filtros para NotificacionEnviada
+   * @param {Object} documentoWhereClause - Filtros para Documento
    * @returns {Promise<Object>} Estadísticas de notificaciones
    */
-  obtenerEstadisticas: async (usuario) => {
+  obtenerEstadisticas: async (whereClause, documentoWhereClause) => {
     try {
-      // Construir condiciones según el rol
-      const includeClause = [
-        {
-          model: Documento,
-          as: 'documento',
-          attributes: []
-        }
-      ];
-      
-      // Si es matrizador, solo sus documentos
-      if (usuario.rol === 'matrizador') {
-        includeClause[0].where = { idMatrizador: usuario.id };
-      }
-      
-      // Obtener estadísticas por estado
+      const include = [{
+        model: Documento,
+        as: 'documento',
+        attributes: [],
+        where: Object.keys(documentoWhereClause).length > 0 ? documentoWhereClause : undefined
+      }];
+
       const estadisticas = await NotificacionEnviada.findAll({
         attributes: [
           'estado',
           [sequelize.fn('COUNT', sequelize.col('NotificacionEnviada.id')), 'total']
         ],
-        include: includeClause,
+        where: whereClause,
+        include: include,
         group: ['NotificacionEnviada.estado'],
         raw: true
       });
@@ -274,14 +428,14 @@ const notificacionController = {
       };
       
       estadisticas.forEach(stat => {
-        const total = parseInt(stat.total);
+        const total = parseInt(stat.total, 10);
         stats.total += total;
         
         switch (stat.estado) {
           case 'enviado':
             stats.enviadas = total;
             break;
-          case 'fallido':
+          case 'error': // 'fallido' en el original, unificar a 'error'
             stats.fallidas = total;
             break;
           case 'pendiente':

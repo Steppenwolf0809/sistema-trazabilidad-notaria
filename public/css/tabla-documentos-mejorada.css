@@ -1,0 +1,175 @@
+/* ===================================================================
+   MEJORAS GLOBALES DE LEGIBILIDAD PARA TABLAS DE DOCUMENTOS
+   =================================================================== */
+
+/* Mejoras generales de legibilidad */
+.table-documentos {
+    font-size: 0.95rem !important;  /* Aumentar tamaño de fuente */
+    table-layout: fixed;
+    width: 100%;
+}
+
+.table-documentos th,
+.table-documentos td {
+    padding: 12px 8px !important;  /* Más padding para respirar */
+    vertical-align: middle;
+    line-height: 1.4;  /* Mejor espaciado entre líneas */
+}
+
+/* Optimización de anchos de columna */
+.table-documentos th.col-codigo, 
+.table-documentos td.col-codigo {
+    width: 12%;
+}
+
+.table-documentos th.col-cliente, 
+.table-documentos td.col-cliente {
+    width: 28% !important;  /* Más espacio para nombres completos */
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.table-documentos th.col-fecha, 
+.table-documentos td.col-fecha {
+    width: 12%;
+    white-space: nowrap;
+}
+
+.table-documentos th.col-estado, 
+.table-documentos td.col-estado {
+    width: 15%;
+    text-align: center;
+}
+
+.table-documentos th.col-pago, 
+.table-documentos td.col-pago {
+    width: 15%;
+    text-align: center;
+}
+
+.table-documentos th.col-valor, 
+.table-documentos td.col-valor {
+    width: 10%;
+    text-align: right;
+    font-weight: 600;
+}
+
+.table-documentos th.col-acciones, 
+.table-documentos td.col-acciones {
+    width: 8%;
+    text-align: center;
+}
+
+/* ===================================================================
+   MEJORAS DE FORMATO DE CELDAS ESPECÍFICAS
+   =================================================================== */
+
+/* Mejoras para nombres de clientes */
+.cliente-nombre {
+    font-weight: 600;
+    color: #212529;
+    display: block;
+    white-space: normal !important;  /* Permitir salto de línea */
+    overflow: visible !important;
+    text-overflow: clip !important;
+}
+
+.cliente-identificacion {
+    font-size: 0.85rem;
+    color: #6c757d;
+    font-weight: normal;
+    margin-top: 2px;
+}
+
+/* Mejoras para códigos de documento */
+.codigo-documento {
+    background-color: #f8f9fa;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 0.9rem;
+    border: 1px solid #dee2e6;
+    font-weight: 600;
+}
+
+/* Mejoras para valores monetarios */
+.valor-monetario {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-weight: 700;
+    color: #28a745;
+}
+
+
+/* ===================================================================
+   NUEVOS BADGES PARA ESTADOS DE ENTREGA
+   =================================================================== */
+
+.badge-entrega {
+    font-size: 0.85rem !important;
+    font-weight: 600 !important;
+    padding: 6px 10px !important;
+    border-radius: 4px !important;
+    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-entrega.entregado {
+    background-color: #28a745 !important;
+    color: white !important;
+}
+
+.badge-entrega.listo {
+    background-color: #007bff !important;
+    color: white !important;
+}
+
+.badge-entrega.proceso {
+    background-color: #ffc107 !important;
+    color: #212529 !important;
+}
+
+.badge-entrega i {
+    margin-right: 5px;
+    font-size: 0.9rem;
+}
+
+
+/* ===================================================================
+   NUEVOS BADGES PARA ESTADOS DE PAGO
+   =================================================================== */
+
+.badge-pago {
+    font-size: 0.85rem !important;
+    font-weight: 600 !important;
+    padding: 6px 10px !important;
+    border-radius: 4px !important;
+    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-pago.pendiente {
+    background-color: #dc3545 !important;
+    color: white !important;
+}
+
+.badge-pago.parcial {
+    background-color: #fd7e14 !important;
+    color: white !important;
+}
+
+.badge-pago.completo {
+    background-color: #28a745 !important;
+    color: white !important;
+}
+
+.badge-pago.retencion {
+    background-color: #20c997 !important;
+    color: white !important;
+}
+
+.badge-pago i {
+    margin-right: 5px;
+    font-size: 0.9rem;
+} 

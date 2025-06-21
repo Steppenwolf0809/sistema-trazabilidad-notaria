@@ -118,43 +118,44 @@ function crearFechaValidada(año, mes, dia, fechaOriginal) {
  * @returns {string} - Fecha en formato DD/MM/YYYY o 'Sin fecha'
  */
 function formatearFecha(fecha) {
-  if (!fecha) return 'Sin fecha';
-  
   try {
-    // CASO 1: String en formato YYYY-MM-DD (viene de PostgreSQL)
-    if (typeof fecha === 'string') {
-      // Si es formato YYYY-MM-DD, parsear manualmente para evitar timezone
-      if (/^\d{4}-\d{2}-\d{2}$/.test(fecha.trim())) {
-        const partes = fecha.trim().split('-');
-        const año = parseInt(partes[0], 10);
-        const mes = parseInt(partes[1], 10);
-        const dia = parseInt(partes[2], 10);
-        
-        return `${dia.toString().padStart(2, '0')}/${mes.toString().padStart(2, '0')}/${año}`;
-      }
-      
-      // Si es otro formato string, convertir a Date
-      fecha = new Date(fecha);
+    if (!fecha) {
+      return 'Sin fecha';
     }
-    
-    // CASO 2: Date object
+
+    let fechaObj;
+
     if (fecha instanceof Date) {
-      if (isNaN(fecha.getTime())) {
-        return 'Fecha inválida';
-      }
-      
-      // Formatear usando métodos nativos para evitar problemas de timezone
-      const dia = fecha.getDate().toString().padStart(2, '0');
-      const mes = (fecha.getMonth() + 1).toString().padStart(2, '0');
-      const año = fecha.getFullYear();
-      
-      return `${dia}/${mes}/${año}`;
+      fechaObj = fecha;
+    } else if (typeof fecha === 'string') {
+      // Intenta parsear la fecha. Moment.js es bueno para manejar varios formatos.
+      fechaObj = moment(fecha, [
+        moment.ISO_8601,
+        'YYYY-MM-DD HH:mm:ss.SSSZ',
+        'YYYY-MM-DD HH:mm:ss',
+        'YYYY-MM-DD',
+        'DD/MM/YYYY'
+      ]).toDate();
+    } else {
+      return 'Formato no soportado';
     }
-    
-    return 'Formato de fecha no reconocido';
-    
+
+    if (isNaN(fechaObj.getTime())) {
+      return 'Fecha inválida';
+    }
+
+    // Formatear a DD/MM/YYYY
+    const dia = fechaObj.getDate().toString().padStart(2, '0');
+    const mes = (fechaObj.getMonth() + 1).toString().padStart(2, '0');
+    const anio = fechaObj.getFullYear();
+
+    return `${dia}/${mes}/${anio}`;
+
   } catch (error) {
-    console.error('❌ [FECHA-XML] Error formateando fecha:', error);
+    console.error('❌ Error formateando fecha:', {
+      valor: fecha,
+      error: error.message
+    });
     return 'Error en fecha';
   }
 }

@@ -1,0 +1,1405 @@
+/* ===== SISTEMA UNIVERSAL DE TABLAS ===== */
+/* 🎯 Sistema Universal de Tablas v3.0 - CSS MEJORADO */
+/* Autor: Sistema Notarial Unificado */
+/* Objetivo: Estilos consistentes, legibles y profesionales en todos los roles */
+/* Última actualización: Mejoras de tipografía, colores y UX */
+
+/* ====================================================
+   🎯 TABLA UNIVERSAL - BASE OPTIMIZADA
+   ==================================================== */
+
+/* ====================================================
+   ✨ MEJORAS DE TIPOGRAFÍA Y LEGIBILIDAD v3.0
+   ==================================================== */
+
+/* Títulos principales */
+.page-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 1.5rem;
+}
+
+/* Headers de tabla */
+.table-header {
+  font-size: 16px;
+  font-weight: 600;
+  color: white;
+}
+
+/* Contenido de tabla */
+.table-content {
+  font-size: 14px;
+  font-weight: 400;
+  color: #374151;
+}
+
+/* Nombres de clientes */
+.client-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1f2937;
+}
+
+/* Identificaciones de clientes */
+.client-id {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.tabla-notaria,
+.tabla-ordenable {
+  font-size: 14px; /* Aumentado de 0.875rem (14px) para mejor legibilidad */
+  line-height: 1.4; /* Aumentado para mejor espaciado */
+  width: 100%;
+  margin-bottom: 0;
+  table-layout: fixed;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+/* ====================================================
+   📐 DISTRIBUCIÓN DE COLUMNAS OPTIMIZADA
+   ==================================================== */
+
+.col-codigo { width: 15%; }
+.col-cliente { width: 25%; }
+.col-tipo { width: 5%; }
+.col-matrizador { width: 10%; }
+.col-fecha { width: 8%; }
+.col-estado { width: 6%; }
+.col-pago { width: 8%; }
+.col-valor { width: 8%; }
+.col-acciones { width: 10%; }
+
+/* ====================================================
+   📋 HEADERS UNIVERSALES - FUNCIONALES Y ELEGANTES
+   ==================================================== */
+
+/* ⚠️ CORRECCIÓN ESPECÍFICA PARA BOOTSTRAP HOVER */
+.table-hover tbody tr:hover > th,
+.table-hover tbody tr:hover > td {
+  background-color: rgba(0, 0, 0, 0.075);
+}
+
+/* Sobrescribir estilos de Bootstrap para headers */
+.table > thead > tr > th:hover,
+.table-hover > thead > tr > th:hover {
+  background-color: #495057 !important;
+  color: #e9ecef !important;
+}
+
+.tabla-notaria th,
+.tabla-ordenable th {
+  background-color: #343a40 !important;
+  color: white !important;
+  font-size: 16px; /* Aumentado de 0.8rem a 16px para mejor legibilidad */
+  font-weight: 600;
+  padding: 0.75rem 0.5rem; /* Aumentado padding para mejor espaciado */
+  letter-spacing: 0.02em;
+  border: none;
+  position: relative;
+  transition: background-color 0.2s ease;
+  height: 56px; /* ✨ ALTURA FIJA PARA TODOS LOS HEADERS */
+  vertical-align: middle; /* ✨ ALINEACIÓN VERTICAL CENTRADA */
+  white-space: nowrap; /* ✨ EVITAR SALTO DE LÍNEA EN TÍTULOS */
+  line-height: 1.2; /* ✨ ALTURA DE LÍNEA CONSISTENTE */
+}
+
+/* ✨ ALINEACIÓN ESPECÍFICA PARA CONTENIDO DE HEADERS */
+.tabla-notaria th span,
+.tabla-ordenable th span {
+  display: inline-block;
+  vertical-align: middle;
+  line-height: 1.2;
+}
+
+/* ✨ ICONOS DE ORDENAMIENTO ALINEADOS */
+.tabla-notaria th .sort-icon,
+.tabla-ordenable th .sort-icon {
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 4px;
+  width: 12px; /* ANCHO FIJO PARA ICONOS */
+  text-align: center;
+}
+
+/* ✨ CORRECCIÓN ADICIONAL PARA ALINEACIÓN PERFECTA */
+.tabla-notaria thead tr,
+.tabla-ordenable thead tr {
+  height: 56px; /* ALTURA FIJA PARA LA FILA DE HEADERS */
+}
+
+/* ✨ CONTENIDO DE HEADERS CENTRADO VERTICALMENTE */
+.tabla-notaria th,
+.tabla-ordenable th {
+  display: table-cell;
+  vertical-align: middle !important;
+}
+
+/* ✨ FLEX PARA DISTRIBUCIÓN PERFECTA DEL CONTENIDO */
+.tabla-notaria th > *,
+.tabla-ordenable th > * {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  height: 100%;
+}
+
+.tabla-notaria th:hover,
+.tabla-ordenable th:hover,
+.table-hover .tabla-notaria th:hover,
+.table-hover .tabla-ordenable th:hover,
+.table .tabla-notaria th:hover,
+.table .tabla-ordenable th:hover {
+  background-color: #e9ecef !important;
+  color: #212529 !important;
+}
+
+.tabla-notaria th.ordenable,
+.tabla-ordenable th.ordenable,
+.tabla-notaria th.sortable,
+.tabla-ordenable th.sortable {
+  cursor: pointer !important;
+  user-select: none;
+}
+
+.tabla-notaria th.ordenable:hover,
+.tabla-ordenable th.ordenable:hover,
+.tabla-notaria th.sortable:hover,
+.tabla-ordenable th.sortable:hover,
+.table .tabla-notaria th.ordenable:hover,
+.table .tabla-ordenable th.ordenable:hover,
+.table .tabla-notaria th.sortable:hover,
+.table .tabla-ordenable th.sortable:hover,
+.table-hover .tabla-notaria th.ordenable:hover,
+.table-hover .tabla-ordenable th.ordenable:hover,
+.table-hover .tabla-notaria th.sortable:hover,
+.table-hover .tabla-ordenable th.sortable:hover {
+  background-color: #e9ecef !important;
+  color: #212529 !important;
+}
+
+.tabla-notaria th.ordenable.active,
+.tabla-ordenable th.ordenable.active,
+.tabla-notaria th.sortable.active,
+.tabla-ordenable th.sortable.active {
+  background-color: #007bff !important;
+  color: white !important;
+}
+
+.sort-icon,
+.sort-icon-universal {
+  opacity: 0.6;
+  font-size: 0.7rem;
+  margin-left: 4px;
+  transition: all 0.2s ease;
+}
+
+.tabla-notaria th.ordenable:hover .sort-icon,
+.tabla-ordenable th.ordenable:hover .sort-icon,
+.tabla-notaria th.sortable:hover .sort-icon-universal,
+.tabla-ordenable th.sortable:hover .sort-icon-universal {
+  opacity: 1;
+  color: #6c757d !important;
+}
+
+/* Estilos específicos para texto dentro de headers */
+.tabla-notaria th:hover span,
+.tabla-ordenable th:hover span,
+.table .tabla-notaria th:hover span,
+.table .tabla-ordenable th:hover span,
+.table-hover .tabla-notaria th:hover span,
+.table-hover .tabla-ordenable th:hover span {
+  color: #212529 !important;
+}
+
+.tabla-notaria th.ordenable:hover span,
+.tabla-ordenable th.ordenable:hover span,
+.tabla-notaria th.sortable:hover span,
+.tabla-ordenable th.sortable:hover span,
+.table .tabla-notaria th.ordenable:hover span,
+.table .tabla-ordenable th.ordenable:hover span,
+.table .tabla-notaria th.sortable:hover span,
+.table .tabla-ordenable th.sortable:hover span {
+  color: #212529 !important;
+}
+
+.tabla-notaria th.ordenable.active .sort-icon,
+.tabla-ordenable th.ordenable.active .sort-icon,
+.tabla-notaria th.sortable.active .sort-icon-universal,
+.tabla-ordenable th.sortable.active .sort-icon-universal {
+  opacity: 1;
+  color: white !important;
+}
+
+/* ====================================================
+   📊 FILAS CON ESPACIADO CÓMODO
+   ==================================================== */
+
+/* ====================================================
+   📊 FILAS CON ESPACIADO MEJORADO Y ZEBRA STRIPING
+   ==================================================== */
+
+.tabla-notaria td,
+.tabla-ordenable td {
+  padding: 16px 12px; /* Aumentado padding vertical para mejor espaciado */
+  vertical-align: middle;
+  line-height: 1.3; /* Mejorado para legibilidad */
+  border-bottom: 1px solid #e5e7eb; /* Color más sutil */
+  font-size: 14px; /* Consistente con tipografía mejorada */
+  color: #374151; /* Color de texto mejorado */
+}
+
+/* Zebra striping sutil */
+.tabla-notaria tbody tr:nth-child(even),
+.tabla-ordenable tbody tr:nth-child(even) {
+  background-color: #fdfdfd;
+}
+
+/* Hover state mejorado */
+.tabla-notaria tbody tr:hover,
+.tabla-ordenable tbody tr:hover {
+  background-color: #f9fafb !important; /* Color hover más sutil */
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1); /* Sombra más prominente */
+  transition: all 0.2s ease;
+}
+
+.tabla-notaria tbody tr:hover,
+.tabla-ordenable tbody tr:hover {
+  background-color: rgba(52, 152, 219, 0.06);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  transition: all 0.2s ease;
+}
+
+/* ====================================================
+   🏷️ CÓDIGO UNIVERSAL - LEGIBLE Y PROFESIONAL
+   ==================================================== */
+
+.codigo-universal {
+  display: block;
+  font-family: 'Segoe UI Mono', 'Courier New', monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #1a1a1a;
+  margin-bottom: 3px;
+}
+
+/* ====================================================
+   🏷️ BADGES DE TIPO DOCUMENTO MEJORADOS v3.0
+   ==================================================== */
+
+.tipo-badge,
+.document-code {
+  display: inline-block;
+  width: 24px; /* Aumentado de 18px a 24px */
+  height: 24px; /* Aumentado de 18px a 24px */
+  border-radius: 4px;
+  text-align: center;
+  font-size: 12px; /* Aumentado para mejor legibilidad */
+  font-weight: 600; /* Mejorado para mejor contraste */
+  line-height: 24px; /* Ajustado al nuevo tamaño */
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.tipo-badge:hover,
+.document-code:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* Colores mejorados para mejor contraste */
+.tipo-D, .document-D { 
+  background-color: #059669; /* Verde oscuro para Diligencias */
+  color: white; 
+}
+.tipo-P, .document-P { 
+  background-color: #3b82f6; /* Azul para Protocolos */
+  color: white; 
+}
+.tipo-C, .document-C { 
+  background-color: #d97706; /* Naranja para Certificaciones */
+  color: white; 
+}
+.tipo-A, .document-A { 
+  background-color: #7c3aed; /* Púrpura para Arrendamientos */
+  color: white; 
+}
+.tipo-O, .document-O { 
+  background-color: #6b7280; /* Gris para Otros */
+  color: white; 
+}
+
+/* ====================================================
+   👤 CLIENTE UNIVERSAL - INFORMACIÓN CLARA
+   ==================================================== */
+
+/* ====================================================
+   👥 INFORMACIÓN DE CLIENTES MEJORADA v3.0
+   ==================================================== */
+
+.nombre-persona,
+.client-name {
+  display: block;
+  font-size: 14px; /* Aumentado para mejor legibilidad */
+  font-weight: 500;
+  line-height: 1.3; /* Mejorado espaciado */
+  margin-bottom: 2px;
+  color: #1f2937; /* Color más oscuro para mejor contraste */
+}
+
+.info-secundaria,
+.client-id {
+  display: block;
+  font-size: 12px; /* Aumentado de 0.7rem */
+  font-family: 'Segoe UI Mono', monospace;
+  letter-spacing: 0.3px;
+  color: #6b7280; /* Color más moderno */
+}
+
+/* ====================================================
+   👨‍💼 MATRIZADOR UNIVERSAL - INICIALES LEGIBLES
+   ==================================================== */
+
+.matrizador-universal {
+  display: inline-block;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: #007bff;
+  color: white;
+  text-align: center;
+  line-height: 36px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  cursor: help;
+  transition: all 0.2s ease;
+}
+
+.matrizador-universal:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+}
+
+.matrizador-universal.sin-asignar {
+  background-color: #6c757d;
+}
+
+/* ====================================================
+   👤 MATRIZADOR TEXTO - PARA PÁGINAS DE ENTREGA
+   ==================================================== */
+
+.matrizador-texto {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  background-color: #f8fafc;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  max-width: 140px;
+  overflow: hidden;
+}
+
+.matrizador-texto:hover {
+  background-color: #f1f5f9;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.matrizador-texto.sin-asignar {
+  color: #64748b;
+  background-color: #f8fafc;
+  border-color: #e2e8f0;
+  font-style: italic;
+}
+
+.matrizador-texto .fas {
+  color: #3b82f6;
+  font-size: 0.75rem;
+}
+
+/* ====================================================
+   🔍 FILTROS AVANZADOS - ANIMACIÓN Y ESTILOS
+   ==================================================== */
+
+.filtros-avanzados {
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.filtros-avanzados.show {
+  display: block !important;
+}
+
+#toggleFiltros {
+  transition: all 0.2s ease;
+}
+
+#toggleFiltros:hover {
+  background-color: #f8f9fa;
+  border-color: #6c757d;
+}
+
+/* ====================================================
+   📅 FECHA UNIVERSAL - LEGIBLE Y CONSISTENTE
+   ==================================================== */
+
+.fecha-universal {
+  font-size: 14px; /* Aumentado para mejor legibilidad */
+  font-family: 'Segoe UI Mono', monospace;
+  font-weight: 500; /* Reducido para mejor legibilidad */
+  color: #374151; /* Cambiado de verde a gris oscuro para mejor legibilidad */
+  letter-spacing: 0.2px;
+}
+
+.fecha-universal.sin-fecha {
+  color: #6c757d;
+  font-weight: 600;
+}
+
+/* ====================================================
+   🎯 ESTADOS UNIVERSALES - ICONOS PERFECTOS
+   ==================================================== */
+
+/* ====================================================
+   🎯 ICONOS DE ESTADO MEJORADOS v3.0
+   ==================================================== */
+
+.estado-universal,
+.status-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  text-align: center;
+  line-height: 32px;
+  font-size: 16px; /* Aumentado para mejor visibilidad */
+  cursor: help;
+  transition: all 0.2s ease;
+}
+
+/* Iconos específicos para estados */
+.status-icon.status-delivered,
+.estado-entregado {
+  background-color: #059669; /* Verde más oscuro para entregado */
+  color: white;
+}
+
+.status-icon.status-ready,
+.estado-listo_para_entrega {
+  background-color: #10b981; /* Verde medio para listo */
+  color: white;
+}
+
+.status-icon.status-process,
+.estado-en_proceso {
+  background-color: #3b82f6; /* Azul para en proceso */
+  color: white;
+}
+
+/* Iconos de FontAwesome para estados */
+.status-delivered .icon-check-circle::before {
+  content: "\f058"; /* fa-check-circle */
+  font-family: "Font Awesome 5 Free";
+  font-weight: 900;
+}
+
+.status-ready .icon-clock::before {
+  content: "\f017"; /* fa-clock */
+  font-family: "Font Awesome 5 Free";
+  font-weight: 900;
+}
+
+.status-process .icon-progress::before {
+  content: "\f251"; /* fa-hourglass-half */
+  font-family: "Font Awesome 5 Free";
+  font-weight: 900;
+}
+
+.estado-universal:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+/* Estados específicos */
+/* ====================================================
+   🎨 SISTEMA DE COLORES MEJORADO v3.0
+   ==================================================== */
+
+/* Estados de entrega - Colores más claros y profesionales */
+.estado-en_proceso { 
+  background-color: #3b82f6; /* Azul para en proceso */
+  color: white; 
+}
+.estado-listo_para_entrega { 
+  background-color: #10b981; /* Verde medio para listo */
+  color: white; 
+}
+.estado-entregado { 
+  background-color: #059669; /* Verde más oscuro para entregado */
+  color: white; 
+}
+.estado-nota_credito { 
+  background-color: #dc2626; /* Rojo consistente */
+  color: white; 
+}
+.estado-cancelado { 
+  background-color: #6b7280; /* Gris neutro */
+  color: white; 
+}
+
+/* ====================================================
+   💰 ICONOS DE PAGO UNIVERSALES v3.0 - ICONOS FONTAWESOME
+   ==================================================== */
+
+.pago-universal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  text-align: center;
+  line-height: 32px;
+  font-size: 16px; /* Tamaño de icono aumentado */
+  cursor: help;
+  transition: all 0.2s ease;
+}
+
+.pago-universal:hover {
+  transform: scale(1.15);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+/* Estados de pago - Iconos FontAwesome con colores específicos */
+.pago-universal .status-icon { 
+  width: 32px;
+  height: 32px;
+  font-size: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pago-universal.pago-pendiente .status-icon { 
+  color: #dc2626; /* Rojo para no pagado */
+}
+.pago-universal.pago-pagado_completo .status-icon { 
+  color: #16a34a; /* Verde para pagado completo */
+}
+.pago-universal.pago-pagado_con_retencion .status-icon { 
+  color: #16a34a; /* Verde para pagado con retención */
+}
+.pago-universal.pago-pago_parcial .status-icon { 
+  color: #d97706; /* Naranja para pago parcial */
+}
+.pago-universal.sin-factura .status-icon { 
+  color: #6b7280; /* Gris neutro */
+}
+
+/* ====================================================
+   🔴 CÍRCULOS DE PAGO LEGACY - MANTENIDO PARA COMPATIBILIDAD
+   ==================================================== */
+
+.pago-circulo {
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  text-align: center;
+  line-height: 28px;
+  font-size: 0.9rem;
+  cursor: help;
+  transition: all 0.2s ease;
+}
+
+.pago-circulo:hover {
+  transform: scale(1.15);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+/* Círculos de colores específicos */
+/* Estados de pago - Colores actualizados según propuesta */
+.pago-circulo.pago-pendiente .fa-circle { 
+  color: #dc2626; /* Rojo para no pagado */
+}
+.pago-circulo.pago-pagado_completo .fa-circle { 
+  color: #16a34a; /* Verde para pagado completo */
+}
+.pago-circulo.pago-pagado_con_retencion .fa-circle { 
+  color: #16a34a; /* Verde para pagado con retención */
+}
+.pago-circulo.pago-pago_parcial .fa-circle { 
+  color: #d97706; /* Naranja para pago parcial */
+}
+.pago-circulo.sin-factura .fa-circle { 
+  color: #6b7280; /* Gris neutro */
+}
+
+/* ====================================================
+   💰 VALOR MONETARIO UNIVERSAL - CLARO Y PROMINENTE
+   ==================================================== */
+
+.valor-monetario {
+  font-family: 'Segoe UI Mono', monospace;
+  font-size: 14px; /* Aumentado para mejor legibilidad */
+  font-weight: 500; /* Peso más balanceado */
+  color: #374151; /* Gris oscuro para mejor legibilidad */
+  letter-spacing: 0.3px;
+}
+
+/* Valores positivos específicos */
+.valor-monetario.positive-value {
+  color: #059669; /* Verde solo para valores positivos específicos */
+}
+
+.valor-monetario.sin-valor {
+  color: #6c757d;
+}
+
+/* ====================================================
+   🔘 BOTONES UNIVERSALES - PROFESIONALES
+   ==================================================== */
+
+.btn-universal {
+  padding: 0.15rem 0.4rem;
+  font-size: 0.7rem;
+  line-height: 1.2;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.btn-universal:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(13, 110, 253, 0.3);
+}
+
+/* ====================================================
+   📱 RESPONSIVIDAD UNIVERSAL
+   ==================================================== */
+
+/* ====================================================
+   📱 RESPONSIVIDAD MEJORADA v3.0
+   ==================================================== */
+
+@media (max-width: 1600px) {
+  .tabla-notaria,
+  .tabla-ordenable {
+    font-size: 13px; /* Mantenemos legibilidad en pantallas medianas */
+  }
+  
+  .col-cliente { width: 20%; }
+  .nombre-persona, .client-name { 
+    font-size: 13px; /* Mantenemos tamaño legible */
+  }
+  .table-header {
+    font-size: 15px; /* Reducción mínima para headers */
+  }
+  
+  /* ✨ MANTENER ALTURA FIJA EN RESOLUCIONES MEDIANAS */
+  .tabla-notaria th,
+  .tabla-ordenable th {
+    height: 52px; /* Ligeramente menor para pantallas medianas */
+  }
+  
+  .tabla-notaria thead tr,
+  .tabla-ordenable thead tr {
+    height: 52px;
+  }
+}
+
+@media (max-width: 1366px) {
+  .tabla-notaria,
+  .tabla-ordenable {
+    font-size: 12px; /* Mantenemos legibilidad mínima en pantallas pequeñas */
+  }
+  
+  .col-codigo { width: 14%; }
+  .col-cliente { width: 18%; }
+  
+  .matrizador-universal { 
+    width: 32px; 
+    height: 32px; 
+    line-height: 32px; 
+    font-size: 11px; /* Aumentado para legibilidad */
+  }
+  
+  .estado-universal,
+  .status-icon {
+    width: 28px;
+    height: 28px;
+    line-height: 28px;
+    font-size: 14px; /* Aumentado para legibilidad */
+  }
+  
+  .pago-universal {
+    width: 28px;
+    height: 28px;
+    line-height: 28px;
+    font-size: 14px; /* Aumentado para legibilidad */
+  }
+  
+  .pago-circulo {
+    width: 24px;
+    height: 24px;
+    line-height: 24px;
+    font-size: 12px; /* Aumentado para legibilidad */
+  }
+  
+  .table-header {
+    font-size: 14px; /* Mantenemos headers legibles */
+  }
+  
+  .client-name,
+  .nombre-persona {
+    font-size: 12px; /* Tamaño mínimo legible */
+  }
+  
+  /* ✨ MANTENER ALTURA FIJA EN PANTALLAS PEQUEÑAS */
+  .tabla-notaria th,
+  .tabla-ordenable th {
+    height: 48px; /* Menor para pantallas pequeñas pero consistente */
+    padding: 0.5rem 0.4rem; /* Padding ajustado */
+  }
+  
+  .tabla-notaria thead tr,
+  .tabla-ordenable thead tr {
+    height: 48px;
+  }
+}
+
+/* ====================================================
+   ✨ MEJORAS VISUALES FINALES v3.0
+   ==================================================== */
+
+/* Clases utilitarias para texto */
+.date-text {
+  color: #374151; /* Gris oscuro en lugar de verde */
+  font-weight: 500;
+}
+
+.value-text {
+  color: #1f2937; /* Negro/gris oscuro */
+  font-weight: 500;
+}
+
+.positive-value {
+  color: #059669; /* Verde solo para valores positivos */
+  font-weight: 600;
+}
+
+/* Estados específicos de pago con clases semánticas */
+.payment-paid {
+  background-color: #16a34a; /* Verde para pagado */
+  color: white;
+}
+
+.payment-partial {
+  background-color: #d97706; /* Amarillo/naranja para parcial */
+  color: white;
+}
+
+.payment-unpaid {
+  background-color: #dc2626; /* Rojo para no pagado */
+  color: white;
+}
+
+/* Mejoras de jerarquía visual */
+.table-row {
+  transition: all 0.2s ease;
+}
+
+.table-row:hover {
+  background-color: #f9fafb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Indicadores visuales mejorados */
+.badge-status {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tabla-notaria thead th,
+.tabla-ordenable thead th {
+  border-bottom: 2px solid #495057;
+}
+
+.sin-resultados {
+  padding: 3rem 0;
+  text-align: center;
+}
+
+.sin-resultados i {
+  opacity: 0.6;
+}
+
+/* Paginación mejorada */
+.pagination-sm .page-link {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.875rem;
+}
+
+.pagination .page-item.active .page-link {
+  background-color: #007bff;
+  border-color: #007bff;
+  font-weight: 600;
+}
+
+.pagination .page-link:hover {
+  color: #007bff;
+  background-color: #e9ecef;
+  border-color: #dee2e6;
+  transform: translateY(-1px);
+}
+
+/* ====================================================
+   🎯 COMPATIBILIDAD TOTAL CON SISTEMAS EXISTENTES
+   ==================================================== */
+
+/* Compatibilidad con clases antiguas */
+.tabla-supervision-perfecta {
+  @extend .tabla-ordenable;
+}
+
+.codigo-principal-perfecto {
+  @extend .codigo-universal;
+}
+
+.matrizador-perfecto {
+  @extend .matrizador-universal;
+}
+
+.fecha-legible {
+  @extend .fecha-universal;
+}
+
+.nombre-legible {
+  @extend .nombre-persona;
+}
+
+.ci-legible {
+  @extend .info-secundaria;
+}
+
+.btn-perfecto {
+  @extend .btn-universal;
+}
+
+/* Estados de ordenamiento específicos */
+.tabla-notaria th.ordenable.asc .sort-icon,
+.tabla-ordenable th.ordenable.asc .sort-icon,
+.tabla-notaria th.sortable.asc .sort-icon-universal,
+.tabla-ordenable th.sortable.asc .sort-icon-universal {
+  opacity: 1;
+  color: #ffc107 !important;
+}
+
+.tabla-notaria th.ordenable.desc .sort-icon,
+.tabla-ordenable th.ordenable.desc .sort-icon,
+.tabla-notaria th.sortable.desc .sort-icon-universal,
+.tabla-ordenable th.sortable.desc .sort-icon-universal {
+  opacity: 1;
+  color: #ffc107 !important;
+}
+
+/* ====================================================
+   🎨 ELEMENTOS ADICIONALES PARA ROLES ESPECÍFICOS
+   ==================================================== */
+
+/* Badges especiales */
+.badge-nuevo {
+  font-size: 0.6rem;
+  padding: 0.2rem 0.4rem;
+}
+
+.documento-nuevo {
+  background-color: rgba(220, 53, 69, 0.05);
+  border-left: 3px solid #dc3545;
+}
+
+/* Links de código */
+.codigo-link {
+  text-decoration: none;
+  color: inherit;
+}
+
+.codigo-link:hover .codigo-universal {
+  color: #007bff;
+  text-decoration: underline;
+}
+
+/* Texto sin datos */
+.texto-sin-dato {
+  color: #6c757d;
+  font-style: italic;
+  font-size: 0.8rem;
+}
+
+/* ====================================================
+   🔧 CORRECCIÓN FINAL PARA HOVER - MÁXIMA ESPECIFICIDAD
+   ==================================================== */
+
+/* Usar especificidad máxima para garantizar que se aplique */
+.table.table-hover .tabla-ordenable thead tr th:hover,
+.table.table-hover .tabla-notaria thead tr th:hover,
+.card-body .table .tabla-ordenable thead tr th:hover,
+.card-body .table .tabla-notaria thead tr th:hover,
+.card .table .tabla-ordenable thead tr th:hover,
+.card .table .tabla-notaria thead tr th:hover {
+  background-color: #495057 !important;
+  color: #e9ecef !important;
+}
+
+/* Específico para el texto dentro de span */
+.table.table-hover .tabla-ordenable thead tr th:hover span,
+.table.table-hover .tabla-notaria thead tr th:hover span,
+.card-body .table .tabla-ordenable thead tr th:hover span,
+.card-body .table .tabla-notaria thead tr th:hover span,
+.card .table .tabla-ordenable thead tr th:hover span,
+.card .table .tabla-notaria thead tr th:hover span {
+  color: #e9ecef !important;
+}
+
+/* Específico para headers ordenables */
+.table.table-hover .tabla-ordenable thead tr th.ordenable:hover,
+.table.table-hover .tabla-notaria thead tr th.ordenable:hover,
+.table.table-hover .tabla-ordenable thead tr th.sortable:hover,
+.table.table-hover .tabla-notaria thead tr th.sortable:hover,
+.card-body .table .tabla-ordenable thead tr th.ordenable:hover,
+.card-body .table .tabla-notaria thead tr th.ordenable:hover,
+.card-body .table .tabla-ordenable thead tr th.sortable:hover,
+.card-body .table .tabla-notaria thead tr th.sortable:hover {
+  background-color: #495057 !important;
+  color: #e9ecef !important;
+}
+
+/* Corrección específica para texto directo en th */
+.table.table-hover .tabla-ordenable thead tr th:hover,
+.table.table-hover .tabla-notaria thead tr th:hover,
+.card-body .table .tabla-ordenable thead tr th:hover,
+.card-body .table .tabla-notaria thead tr th:hover {
+  color: #e9ecef !important;
+}
+
+/* Forzar color en todos los elementos de texto dentro del header */
+.table.table-hover .tabla-ordenable thead tr th:hover *,
+.table.table-hover .tabla-notaria thead tr th:hover *,
+.card-body .table .tabla-ordenable thead tr th:hover *,
+.card-body .table .tabla-notaria thead tr th:hover *,
+.card .table .tabla-ordenable thead tr th:hover *,
+.card .table .tabla-notaria thead tr th:hover * {
+  color: #e9ecef !important;
+} 
+
+/* ====================================================
+   🎯 ESTILOS ESPECÍFICOS PARA ENTREGA GRUPAL
+   ==================================================== */
+
+/* Secciones principales */
+.table-universal-section {
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 25px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.table-universal-section.grupos-relacionados {
+  border: 2px solid #3498db;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e3f2fd 100%);
+}
+
+.table-universal-section.documentos-independientes {
+  border: 2px solid #27ae60;
+  background: linear-gradient(135deg, #f8fff8 0%, #e8f5e8 100%);
+}
+
+.table-universal-section-title {
+  color: #2c3e50;
+  font-weight: 600;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Grupos de documentos */
+.table-universal-group {
+  border-left: 4px solid #2980b9;
+  padding-left: 20px;
+  margin-bottom: 25px;
+  position: relative;
+  background-color: rgba(255, 255, 255, 0.7);
+  border-radius: 8px;
+  padding: 15px 15px 15px 25px;
+}
+
+.table-universal-group::before {
+  content: "";
+  position: absolute;
+  left: -2px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(to bottom, #3498db, #2980b9);
+  border-radius: 2px;
+}
+
+/* Documento principal */
+.table-universal-main-item {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  border: 2px solid #2196f3;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 12px;
+  position: relative;
+  box-shadow: 0 2px 4px rgba(33, 150, 243, 0.2);
+}
+
+.table-universal-main-item::before {
+  content: "📋";
+  position: absolute;
+  top: -8px;
+  left: 15px;
+  background: #2196f3;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.8em;
+  font-weight: bold;
+}
+
+.codigo-principal {
+  font-weight: bold;
+  color: #1976d2;
+  font-size: 1.1em;
+}
+
+.tipo-principal {
+  background: #1976d2;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.85em;
+  font-weight: 500;
+}
+
+.badge-principal {
+  background: #1976d2;
+  color: white;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 20px;
+}
+
+/* Documentos habilitantes */
+.table-universal-sub-items {
+  margin-left: 25px;
+  border-left: 2px dashed #90a4ae;
+  padding-left: 15px;
+}
+
+.table-universal-sub-item {
+  background: linear-gradient(135deg, #f5f5f5 0%, #eeeeee 100%);
+  border: 1px solid #bdbdbd;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 8px;
+  position: relative;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.table-universal-sub-item::before {
+  content: "└──";
+  position: absolute;
+  left: -18px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #90a4ae;
+  font-weight: bold;
+  font-family: monospace;
+}
+
+.codigo-habilitante {
+  color: #546e7a;
+  font-weight: 500;
+  font-style: italic;
+}
+
+.tipo-habilitante {
+  background: #78909c;
+  color: white;
+  padding: 3px 6px;
+  border-radius: 3px;
+  font-size: 0.8em;
+}
+
+.relacion-info {
+  font-size: 0.85em;
+  color: #607d8b;
+  font-style: italic;
+  margin-top: 5px;
+}
+
+/* Documentos individuales */
+.table-universal-item {
+  background: linear-gradient(135deg, #f8fff8 0%, #e8f5e8 100%);
+  border: 1px solid #81c784;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 12px;
+  position: relative;
+  box-shadow: 0 2px 4px rgba(129, 199, 132, 0.2);
+}
+
+.codigo-individual {
+  font-weight: bold;
+  color: #388e3c;
+  font-size: 1.05em;
+}
+
+.tipo-individual {
+  background: #4caf50;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.85em;
+  font-weight: 500;
+}
+
+.entrega-individual-permitida {
+  background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%);
+  border: 1px solid #4caf50;
+  color: #2e7d32;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-top: 10px;
+  font-size: 0.85em;
+  font-weight: 500;
+}
+
+/* Advertencias */
+.advertencia-grupo {
+  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+  border: 2px solid #ffc107;
+  color: #856404;
+  padding: 12px 15px;
+  border-radius: 8px;
+  margin-top: 15px;
+  font-size: 0.9em;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.advertencia-grupo::before {
+  content: "⚠️";
+  font-size: 1.2em;
+  flex-shrink: 0;
+}
+
+.info-grupo {
+  background: linear-gradient(135deg, #e1f5fe 0%, #b3e5fc 100%);
+  border: 1px solid #03a9f4;
+  color: #0277bd;
+  padding: 10px 15px;
+  border-radius: 6px;
+  margin-top: 10px;
+  font-size: 0.85em;
+}
+
+/* Estados de selección */
+.grupo-seleccionado {
+  background: linear-gradient(135deg, #fff3e0 0%, #ffcc02 20%) !important;
+  border-color: #ff9800 !important;
+  box-shadow: 0 4px 8px rgba(255, 152, 0, 0.3) !important;
+}
+
+.individual-seleccionado {
+  background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%) !important;
+  border-color: #9c27b0 !important;
+  box-shadow: 0 4px 8px rgba(156, 39, 176, 0.3) !important;
+}
+
+/* Checkboxes */
+.checkbox-grupo,
+.checkbox-individual {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  z-index: 10;
+}
+
+/* ====================================================
+   🎯 ESTILOS PARA PAGO SIMPLIFICADO CON TEXTO
+   ==================================================== */
+
+.pago-texto {
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+/* Ajustes para diferentes resoluciones */
+@media (max-width: 1366px) {
+  .pago-texto {
+    display: none; /* Ocultar texto en pantallas pequeñas, solo mostrar círculo */
+  }
+}
+
+@media (min-width: 1367px) {
+  .pago-circulo {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+}
+
+/* Resumen de estructura */
+.resumen-estructura {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: 2px solid #dee2e6;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.resumen-estructura .estadisticas {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.resumen-estructura .estadistica {
+  text-align: center;
+}
+
+.resumen-estructura .numero {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #495057;
+}
+
+.resumen-estructura .etiqueta {
+  font-size: 0.9rem;
+  color: #6c757d;
+  margin-top: 5px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .table-universal-section {
+    padding: 15px;
+    margin-bottom: 20px;
+  }
+  
+  .table-universal-group {
+    padding: 10px 10px 10px 20px;
+  }
+  
+  .table-universal-sub-items {
+    margin-left: 15px;
+    padding-left: 10px;
+  }
+  
+  .table-universal-main-item,
+  .table-universal-item {
+    padding: 12px;
+  }
+  
+  .resumen-estructura .estadisticas {
+    flex-direction: column;
+    gap: 15px;
+  }
+}
+
+/*
+  Estilos Universales para la Tabla de Historial de Notificaciones
+*/
+
+.notificaciones-universal {
+    font-size: 0.9rem;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.notificaciones-universal th {
+    background-color: #343a40;
+    color: white;
+    font-weight: 600;
+    border: none;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+}
+
+.notificaciones-universal td {
+    vertical-align: middle;
+    padding: 12px 8px;
+    border-color: #e9ecef;
+}
+
+.notificaciones-universal tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.notificaciones-universal .badge {
+    font-size: 0.8rem;
+    padding: 0.4em 0.7em;
+    font-weight: 500;
+}
+
+/* Estados de notificación */
+.badge.bg-estado-enviado { background-color: #28a745 !important; }
+.badge.bg-estado-pendiente { background-color: #ffc107 !important; color: #212529 !important; }
+.badge.bg-estado-error { background-color: #dc3545 !important; }
+.badge.bg-estado-simulado { background-color: #0dcaf0 !important; }
+
+
+/* Tipos de notificación */
+.badge.bg-tipo-documento_listo { background-color: #17a2b8 !important; }
+.badge.bg-tipo-entrega_confirmada { background-color: #28a745 !important; }
+.badge.bg-tipo-entrega_grupal { background-color: #6f42c1 !important; }
+.badge.bg-tipo-recordatorio { background-color: #fd7e14 !important; }
+.badge.bg-tipo-alerta_sin_recoger { background-color: #dc3545 !important; }
+
+
+/* Canales de notificación */
+.badge.bg-canal-whatsapp { background-color: #25d366 !important; }
+.badge.bg-canal-email { background-color: #007bff !important; }
+.badge.bg-canal-ambos { background-color: #6c757d !important; }
+
+/* Iconos de canal */
+.fa-whatsapp { color: #25d366; }
+.fa-envelope { color: #007bff; }
+.fa-sms { color: #17a2b8; }
+
+/* Estilo del modal */
+#modalDetalleNotificacion .modal-header {
+    background-color: #343a40;
+    color: white;
+}
+
+#modalDetalleNotificacion .table-sm td {
+    padding: 0.5rem;
+}

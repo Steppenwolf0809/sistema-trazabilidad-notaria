@@ -76,99 +76,211 @@
       </form>
     </div>
     
-    <!-- Div para mostrar resultados de AJAX -->
-    <div id="listadoDocumentosContainer">
-      {{> caja/tablaDocumentosPaginada }}
-    </div>
-  </div>
+    <!-- 🎯 TABLA UNIVERSAL CAJA - MIGRACIÓN COMPLETA -->
+<div class="table-responsive">
+  <table class="table table-hover tabla-ordenable table-documentos" id="tablaDocumentosCaja">
+    <thead>
+      <tr>
+        <th class="col-codigo ordenable" data-columna="codigoBarras" data-tipo="texto">
+          <span>Código</span>
+          <i class="fas fa-sort ms-1 sort-icon"></i>
+        </th>
+        <th class="col-cliente ordenable" data-columna="nombreCliente" data-tipo="texto">
+          <span>Cliente</span>
+          <i class="fas fa-sort ms-1 sort-icon"></i>
+        </th>
+        <th class="col-matrizador ordenable" data-columna="matrizador" data-tipo="texto">
+          <span>Matrizador</span>
+          <i class="fas fa-sort ms-1 sort-icon"></i>
+        </th>
+        <th class="col-fecha ordenable" data-columna="fechaFactura" data-tipo="fecha">
+          <span>Fecha</span>
+          <i class="fas fa-sort ms-1 sort-icon"></i>
+        </th>
+        <th class="col-estado ordenable" data-columna="estado" data-tipo="texto">
+          <span>Estado Entrega</span>
+          <i class="fas fa-sort ms-1 sort-icon"></i>
+        </th>
+        <th class="col-pago ordenable" data-columna="estadoPago" data-tipo="texto">
+          <span>Estado Pago</span>
+          <i class="fas fa-sort ms-1 sort-icon"></i>
+        </th>
+        <th class="col-valor ordenable" data-columna="valorFactura" data-tipo="numero">
+          <span>Valor</span>
+          <i class="fas fa-sort ms-1 sort-icon"></i>
+        </th>
+        <th class="col-acciones">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each documentos}}
+      <tr>
+        <!-- Código con formato mejorado -->
+        <td class="col-codigo">
+            <span class="codigo-documento">{{this.codigoBarras}}</span>
+            <div class="tipo-documento">
+                <small class="text-muted">{{this.tipoDocumento}}</small>
+            </div>
+        </td>
+        
+        <!-- Cliente con formato mejorado (sin truncar) -->
+        <td class="col-cliente">
+          <div class="cliente-nombre">{{this.nombreCliente}}</div>
+          <div class="cliente-identificacion">{{this.identificacionCliente}}</div>
+        </td>
+        
+        <!-- Matrizador (sin cambios) -->
+        <td class="col-matrizador">
+          {{#if this.matrizador}}
+          <span class="matrizador-universal" title="{{this.matrizador.nombre}}">
+            {{getIniciales this.matrizador.nombre}}
+          </span>
+          {{else}}
+          <span class="matrizador-universal sin-asignar" title="Sin asignar">
+            ??
+          </span>
+          {{/if}}
+        </td>
+        
+        <!-- Fecha (sin cambios) -->
+        <td class="col-fecha">
+          {{#if this.fechaFactura}}
+          <span class="fecha-universal">{{formatFechaCorta this.fechaFactura}}</span>
+          {{else}}
+          <span class="fecha-universal sin-fecha">--/--/--</span>
+          {{/if}}
+        </td>
+        
+        <!-- Estado de Entrega (NUEVO BADGE) -->
+        <td class="col-estado text-center">
+          {{{badgeEstadoEntrega this.estado}}}
+        </td>
+        
+        <!-- Estado de Pago (NUEVO BADGE) -->
+        <td class="col-pago text-center">
+          {{#if this.numeroFactura}}
+            {{{badgeEstadoPago this.estadoPago}}}
+          {{else}}
+            <span class="badge bg-secondary" title="Documento sin factura asociada">
+                <i class="fas fa-file-invoice-dollar me-1"></i> S/F
+            </span>
+          {{/if}}
+        </td>
+        
+        <!-- Valor con formato mejorado -->
+        <td class="col-valor text-right">
+          {{#if this.valorFactura}}
+          <span class="valor-monetario">{{formatDineroCompleto this.valorFactura}}</span>
+          {{else}}
+          <span class="valor-monetario text-muted">$0.00</span>
+          {{/if}}
+        </td>
+        
+        <!-- Acciones (sin cambios) -->
+        <td class="col-acciones text-center">
+          <div class="btn-group btn-group-sm">
+            <a href="/caja/documentos/detalle/{{this.id}}" class="btn btn-outline-primary btn-universal" title="Ver Detalle">
+              <i class="fas fa-eye"></i>
+            </a>
+            {{#if (ne this.estado 'entregado')}}
+            <a href="/caja/documentos/editar/{{this.id}}" class="btn btn-outline-warning btn-universal" title="Editar">
+              <i class="fas fa-edit"></i>
+            </a>
+            {{/if}}
+            <button class="btn btn-outline-info btn-universal" onclick="cambiarMatrizador({{this.id}}, '{{this.matrizador.nombre}}')" title="Cambiar Matrizador">
+              <i class="fas fa-user-edit"></i>
+            </button>
+          </div>
+        </td>
+      </tr>
+      {{else}}
+      <tr>
+        <td colspan="8" class="text-center py-5">
+          <div class="sin-resultados">
+            <i class="fas fa-search fa-2x mb-3 text-muted"></i>
+            <h5 class="text-muted">No se encontraron documentos</h5>
+            <p class="mb-0 text-muted">Pruebe ajustando los filtros de búsqueda</p>
+          </div>
+        </td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
 </div>
 
-<!-- Modal para cambiar matrizador -->
+<!-- ✨ PAGINACIÓN MEJORADA PARA CAJA -->
+{{#if pagination.pages.length}}
+<div class="row mt-4">
+  <div class="col-12">
+    <nav aria-label="Navegación de páginas">
+      <div class="d-flex justify-content-between align-items-center">
+        <!-- Información de resultados -->
+        <div class="pagination-info">
+          <small class="text-muted">
+            <i class="fas fa-info-circle me-1"></i>
+            Mostrando {{documentos.length}} documentos de {{pagination.totalCount}} total
+            {{#if pagination.pages.length}}
+            (Página {{pagination.currentPage}} de {{pagination.pages.length}})
+            {{/if}}
+          </small>
+        </div>
+        
+        <!-- Controles de paginación -->
+        {{#if (gt pagination.pages.length 1)}}
+        <ul class="pagination pagination-sm mb-0">
+          <!-- Botón Anterior -->
+          {{#if pagination.prev}}
+          <li class="page-item">
+            <a class="page-link" href="{{pagination.prev}}" title="Página anterior">
+              <i class="fas fa-chevron-left"></i>
+            </a>
+          </li>
+          {{else}}
+          <li class="page-item disabled">
+            <span class="page-link">
+              <i class="fas fa-chevron-left"></i>
+            </span>
+          </li>
+          {{/if}}
+          
+          <!-- Números de página -->
+          {{#each pagination.pages}}
+          {{#if this.active}}
+          <li class="page-item active" aria-current="page">
+            <span class="page-link">
+              {{this.num}}
+              <span class="visually-hidden">(actual)</span>
+            </span>
+          </li>
+          {{else}}
+          <li class="page-item">
+            <a class="page-link" href="{{this.url}}">{{this.num}}</a>
+          </li>
+          {{/if}}
+          {{/each}}
+          
+          <!-- Botón Siguiente -->
+          {{#if pagination.next}}
+          <li class="page-item">
+            <a class="page-link" href="{{pagination.next}}" title="Página siguiente">
+              <i class="fas fa-chevron-right"></i>
+            </a>
+          </li>
+          {{else}}
+          <li class="page-item disabled">
+            <span class="page-link">
+              <i class="fas fa-chevron-right"></i>
+            </span>
+          </li>
+          {{/if}}
+        </ul>
+        {{/if}}
+      </div>
+    </nav>
+  </div>
+</div>
+{{/if}}
 
-{{!-- 🎨 ESTILOS MEJORADOS PARA CAJA --}}
-<style>
-  /* Mejoras para badges de estado - tamaños balanceados */
-  .badge-estado {
-    font-size: 0.75rem;
-    padding: 0.25rem 0.5rem;
-    font-weight: 500;
-    border-radius: 0.375rem;
-    display: inline-block;
-    text-align: center;
-    line-height: 1.2;
-  }
-  
-  /* Tamaños específicos por longitud de texto */
-  .badge-estado-corto {
-    min-width: 70px;    /* LISTO */
-  }
-  
-  .badge-estado-medio {
-    min-width: 85px;    /* EN PROCESO, PENDIENTE */
-  }
-  
-  .badge-estado-largo {
-    min-width: 80px !important;    /* ENTREGADO, NOTA CRÉDITO - OPTIMIZADO */
-    font-size: 0.7rem !important;  /* Fuente mejorada para mejor legibilidad */
-    padding: 0.3rem 0.5rem !important; /* Padding reducido */
-  }
-  
-  .badge-tipo {
-    min-width: 80px;
-    font-size: 0.7rem;
-  }
-  
-  /* Mejoras a la tabla para mejor balance visual */
-  .columna-estado {
-    width: 140px;
-    text-align: center;
-  }
-  
-  /* Estilos mejorados para headers ordenables */
-  .tabla-ordenable th.ordenable {
-    cursor: pointer !important;
-    user-select: none;
-    position: relative;
-    transition: background-color 0.2s ease;
-  }
-  
-  .tabla-ordenable th.ordenable:hover {
-    background-color: rgba(0, 0, 0, 0.05) !important;
-  }
-  
-  .tabla-ordenable th.ordenable i {
-    opacity: 0.6;
-    transition: all 0.2s ease;
-  }
-  
-  .tabla-ordenable th.ordenable:hover i {
-    opacity: 1;
-  }
-  
-  .tabla-ordenable th.ordenable[data-orden="asc"] i.fa-sort-up,
-  .tabla-ordenable th.ordenable[data-orden="desc"] i.fa-sort-down {
-    opacity: 1;
-    color: #0d6efd !important;
-    transform: scale(1.1);
-  }
-</style>
-
-<script>
-// Inicializar cuando se carga la página
-document.addEventListener('DOMContentLoaded', function() {
-  console.log('🗂️ Inicializando vista caja con ordenamiento mejorado');
-  
-  // Inicializar ordenamiento de tablas
-  if (typeof inicializarOrdenamientoTablas === 'function') {
-    inicializarOrdenamientoTablas();
-    console.log('✅ Ordenamiento de tablas inicializado para caja');
-  } else {
-    console.warn('⚠️ Función inicializarOrdenamientoTablas no encontrada');
-  }
-  
-  console.log('✅ Vista caja cargada correctamente - Ordenamiento activado');
-});
-</script>
 <div class="modal fade" id="cambiarMatrizadorModal" tabindex="-1" aria-labelledby="cambiarMatrizadorModalLabel" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -212,108 +324,71 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    console.log('Script de filtros iniciado - Listado Caja');
-    const filtrosForm = document.getElementById('filtrosFormCaja');
-    const listadoContainer = document.getElementById('listadoDocumentosContainer');
+    console.log('🎯 Inicializando tabla CAJA - Sistema Universal v1.0');
+    
+    // Inicializar ordenamiento manual corregido
+    inicializarOrdenamientoManual();
+    
+    console.log('✅ Vista CAJA migrada al sistema universal - Funcionalidad completa');
+  });
 
-    // Log para depuración
-    if (filtrosForm) {
-      console.log('Formulario de filtros encontrado:', filtrosForm.id);
-    } else {
-      console.error('Formulario de filtros NO encontrado - ID: filtrosFormCaja');
-    }
-
-    // Función para cargar contenido via AJAX
-    async function cargarListado(url, pushState = true) {
-      console.log('Cargando listado AJAX:', url);
-      try {
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'X-Requested-With': 'XMLHttpRequest' // Para que el backend sepa que es AJAX
+  // Función de ordenamiento manual específica para CAJA
+  function inicializarOrdenamientoManual() {
+    console.log('🔧 Inicializando ordenamiento manual para CAJA');
+    
+    // Buscar todos los headers ordenables
+    const headersOrdenables = document.querySelectorAll('.tabla-ordenable th.ordenable');
+    
+    headersOrdenables.forEach(header => {
+      header.style.cursor = 'pointer';
+      header.addEventListener('click', function() {
+        const columna = this.getAttribute('data-columna');
+        const tipoColumna = this.getAttribute('data-tipo') || 'texto';
+        
+        console.log('📊 Click en columna CAJA:', columna, tipoColumna);
+        
+        // Obtener dirección actual
+        let direccion = 'asc';
+        if (this.classList.contains('asc')) {
+          direccion = 'desc';
+        } else if (this.classList.contains('desc')) {
+          direccion = 'asc';
+        }
+        
+        // Limpiar otros headers
+        headersOrdenables.forEach(h => {
+          h.classList.remove('asc', 'desc', 'active');
+          const icono = h.querySelector('.sort-icon');
+          if (icono) {
+            icono.className = 'fas fa-sort ms-1 sort-icon';
           }
         });
-        if (!response.ok) {
-          throw new Error(`Error en la solicitud: ${response.statusText}`);
-        }
-        const html = await response.text();
-        listadoContainer.innerHTML = html;
         
-        if (pushState) {
-          history.pushState(null, '', url); // Actualizar URL del navegador
+        // Marcar header actual
+        this.classList.add(direccion, 'active');
+        const icono = this.querySelector('.sort-icon');
+        if (icono) {
+          icono.className = `fas fa-sort-${direccion} ms-1 sort-icon`;
         }
         
-        // Manejo seguro de inicializarOrdenamientoTablas
-        try {
-          if (typeof inicializarOrdenamientoTablas === 'function') {
-            console.log('Reinicializando ordenamiento de tablas');
-            inicializarOrdenamientoTablas();
-          } else {
-            console.warn('Función inicializarOrdenamientoTablas no encontrada');
-          }
-        } catch (error) {
-          console.error('Error al inicializar ordenamiento:', error);
-        }
-
-      } catch (error) {
-        console.error('Error al cargar listado AJAX:', error);
-        listadoContainer.innerHTML = '<div class="alert alert-danger">Error al cargar los datos. Por favor, intente de nuevo.</div>';
-      }
-    }
-
-    // Manejar submit del formulario de filtros
-    if (filtrosForm) {
-      filtrosForm.addEventListener('submit', function(event) {
-        console.log('Formulario de filtros enviado');
-        event.preventDefault();
-        const formData = new FormData(filtrosForm);
-        const params = new URLSearchParams(formData);
-        const url = `${filtrosForm.action}?${params.toString()}`;
-        console.log('URL de búsqueda:', url);
-        cargarListado(url);
+        // Ejecutar ordenamiento por servidor
+        const params = new URLSearchParams(window.location.search);
+        params.set('ordenarPor', columna);
+        params.set('ordenDireccion', direccion);
+        
+        window.location.search = params.toString();
       });
-    }
-
-    // Manejar clics en paginación (delegación de eventos)
-    if (listadoContainer) {
-      listadoContainer.addEventListener('click', function(event) {
-        const target = event.target.closest('a.page-link');
-        if (target && target.dataset.ajaxUrl) {
-          event.preventDefault();
-          cargarListado(target.dataset.ajaxUrl);
-        }
-      });
-    }
+    });
     
-    // Cargar estado inicial si la URL ya tiene filtros (para F5 o enlaces directos)
-    // Esto ya lo maneja el servidor al renderizar la página completa inicialmente.
-    // Solo necesitamos asegurarnos que el ordenamiento se aplica a la tabla inicial.
-    if (document.querySelector('table.tabla-ordenable')) {
-        inicializarOrdenamientoTablas();
-    }
+    console.log('✅ Ordenamiento manual configurado para CAJA:', headersOrdenables.length, 'columnas');
+  }
 
-    // Manejar el modal de cambio de matrizador
-    const cambiarMatrizadorModal = document.getElementById('cambiarMatrizadorModal');
-    if (cambiarMatrizadorModal) {
-      cambiarMatrizadorModal.addEventListener('show.bs.modal', function (event) {
-        // Botón que activó el modal
-        const button = event.relatedTarget;
-        // Extraer información de los atributos data-*
-        const documentoId = button.getAttribute('data-documento-id');
-        const matrizadorActualId = button.getAttribute('data-matrizador-actual-id');
-        const matrizadorActualNombre = button.getAttribute('data-matrizador-actual-nombre');
-        
-        // Actualizar los campos del modal
-        document.getElementById('documentoId').value = documentoId;
-        
-        if (matrizadorActualNombre) {
-          document.getElementById('matrizadorActual').value = matrizadorActualNombre;
-        } else {
-          document.getElementById('matrizadorActual').value = 'Sin matrizador asignado';
-        }
-      });
-    }
-  });
+  // Función para cambiar matrizador
+  function cambiarMatrizador(documentoId, matrizadorActual) {
+    document.getElementById('documentoId').value = documentoId;
+    document.getElementById('matrizadorActual').value = matrizadorActual || 'Sin asignar';
+    new bootstrap.Modal(document.getElementById('cambiarMatrizadorModal')).show();
+  }
 
   function limpiarFiltrosCaja() {
     document.getElementById('busqueda').value = '';
@@ -323,7 +398,6 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('matrizadorId').value = '';
     document.getElementById('fechaDesde').value = '';
     document.getElementById('fechaHasta').value = '';
-    // Opcional: enviar el formulario para recargar la lista sin filtros
     document.getElementById('filtrosFormCaja').submit(); 
   }
 </script> 

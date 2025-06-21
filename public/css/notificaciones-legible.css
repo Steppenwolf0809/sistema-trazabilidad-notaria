@@ -1,0 +1,574 @@
+/**
+ * CSS OPTIMIZADO PARA LEGIBILIDAD - HISTORIAL DE NOTIFICACIONES
+ * Enfoque en tipografía clara, espaciado mejorado y jerarquía visual
+ */
+
+/* ========================================
+   TABLA PRINCIPAL - LEGIBILIDAD MEJORADA
+   ======================================== */
+
+.notificaciones-historial-optimizado {
+    font-size: 0.95rem; /* Letra base más grande */
+    line-height: 1.5; /* Mejor espaciado entre líneas */
+    border-collapse: separate;
+    border-spacing: 0;
+    table-layout: fixed; /* MEJORA: Layout fijo para control de columnas */
+    width: 100%;
+}
+
+.notificaciones-historial-optimizado th {
+    font-size: 0.95rem; /* MEJORA: Tamaño más compacto */
+    font-weight: 600;
+    padding: 12px 8px; /* MEJORA: Padding más compacto */
+    background: linear-gradient(135deg, #343a40 0%, #495057 100%);
+    color: white;
+    border: none;
+    text-align: left;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.notificaciones-historial-optimizado td {
+    padding: 10px 8px; /* MEJORA: Padding más compacto */
+    vertical-align: middle;
+    border-bottom: 1px solid #e9ecef;
+    transition: all 0.2s ease;
+}
+
+/* MEJORA: Anchos específicos por columna para mejor aprovechamiento del espacio */
+.notificaciones-historial-optimizado th:nth-child(1), /* Fecha/Hora */
+.notificaciones-historial-optimizado td:nth-child(1) {
+    width: 15%;
+}
+
+.notificaciones-historial-optimizado th:nth-child(2), /* Documento */
+.notificaciones-historial-optimizado td:nth-child(2) {
+    width: 25%;
+}
+
+.notificaciones-historial-optimizado th:nth-child(3), /* Cliente */
+.notificaciones-historial-optimizado td:nth-child(3) {
+    width: 30%;
+    word-wrap: break-word;
+}
+
+.notificaciones-historial-optimizado th:nth-child(4), /* Enviado A */
+.notificaciones-historial-optimizado td:nth-child(4) {
+    width: 15%;
+}
+
+.notificaciones-historial-optimizado th:nth-child(5), /* Estado */
+.notificaciones-historial-optimizado td:nth-child(5) {
+    width: 10%;
+    text-align: center;
+}
+
+.notificaciones-historial-optimizado th:nth-child(6), /* Acciones */
+.notificaciones-historial-optimizado td:nth-child(6) {
+    width: 5%;
+    text-align: center;
+}
+
+/* ========================================
+   FILAS CON INTERACCIÓN MEJORADA
+   ======================================== */
+
+.fila-notificacion {
+    transition: all 0.3s ease;
+    background-color: white;
+}
+
+.fila-notificacion:hover {
+    background-color: #f8f9fa;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border-radius: 8px;
+}
+
+.fila-notificacion:nth-child(even) {
+    background-color: #fdfdfd;
+}
+
+.fila-notificacion:nth-child(even):hover {
+    background-color: #f8f9fa;
+}
+
+/* ========================================
+   CELDAS ESPECÍFICAS - JERARQUÍA VISUAL
+   ======================================== */
+
+/* FECHA Y HORA */
+.fecha-celda {
+    min-width: 120px;
+}
+
+.fecha-principal {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #495057;
+    margin-bottom: 4px;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.hora-secundaria {
+    font-size: 0.85rem;
+    color: #6c757d;
+    font-weight: 500;
+    font-family: 'Courier New', monospace;
+}
+
+/* DOCUMENTO */
+.documento-celda {
+    min-width: 200px;
+}
+
+.codigo-documento {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #0d6efd;
+    font-family: 'Courier New', monospace;
+    margin-bottom: 4px;
+    letter-spacing: 0.5px;
+}
+
+.tipo-documento {
+    font-size: 0.9rem;
+    color: #6c757d;
+    font-weight: 500;
+    text-transform: capitalize;
+    display: flex;
+    align-items: center;
+}
+
+.tipo-documento i {
+    margin-right: 6px;
+    color: #0d6efd;
+}
+
+/* CLIENTE */
+.cliente-celda {
+    min-width: 250px;
+}
+
+.nombre-cliente {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #212529;
+    margin-bottom: 4px;
+    line-height: 1.3;
+}
+
+.ci-cliente {
+    font-size: 0.85rem;
+    color: #6c757d;
+    font-family: 'Courier New', monospace;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+}
+
+/* TELÉFONO */
+.telefono-celda {
+    min-width: 140px;
+}
+
+.telefono-info {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #495057;
+    display: flex;
+    align-items: center;
+    font-family: 'Courier New', monospace;
+}
+
+.telefono-info i {
+    font-size: 1.1rem;
+    margin-right: 8px;
+    color: #25d366; /* Color oficial WhatsApp */
+}
+
+/* ESTADO */
+.estado-celda {
+    min-width: 100px;
+    text-align: center;
+}
+
+.estado-badge {
+    font-size: 1rem !important; /* MEJORA: Tamaño más grande para legibilidad */
+    padding: 12px 20px !important; /* MEJORA: Más padding para visibilidad */
+    font-weight: 900 !important; /* MEJORA: Peso máximo para contraste */
+    border-radius: 6px !important; /* MEJORA: Bordes menos redondeados, más profesional */
+    text-transform: uppercase;
+    letter-spacing: 1px; /* MEJORA: Más espaciado entre letras */
+    box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+    border: 2px solid transparent !important;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3); /* MEJORA: Text-shadow más fuerte */
+    min-width: 90px; /* MEJORA: Ancho mínimo mayor */
+    display: inline-block;
+    text-align: center;
+}
+
+/* Estados específicos con colores mejorados y mayor contraste */
+.estado-badge.bg-success {
+    background: #198754 !important;
+    color: #ffffff !important;
+    border-color: #146c43 !important;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+.estado-badge.bg-danger {
+    background: #dc3545 !important;
+    color: #ffffff !important;
+    border-color: #b02a37 !important;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+.estado-badge.bg-warning {
+    background: #ffc107 !important;
+    color: #000000 !important;
+    border-color: #ffca2c !important;
+    text-shadow: 0 1px 2px rgba(255,255,255,0.5);
+    font-weight: 900 !important;
+}
+
+.estado-badge.bg-info {
+    background: #0dcaf0 !important;
+    color: #000000 !important;
+    border-color: #3dd5f3 !important;
+    text-shadow: 0 1px 2px rgba(255,255,255,0.5);
+    font-weight: 900 !important;
+}
+
+/* ESTILOS ADICIONALES PARA BADGES DE ESTADO - MÁXIMA LEGIBILIDAD */
+.badge-success {
+    background-color: #198754 !important;
+    color: #ffffff !important;
+    font-weight: 800 !important;
+}
+
+.badge-danger {
+    background-color: #dc3545 !important;
+    color: #ffffff !important;
+    font-weight: 800 !important;
+}
+
+.badge-warning {
+    background-color: #ffc107 !important;
+    color: #000000 !important;
+    font-weight: 900 !important;
+}
+
+.badge-info {
+    background-color: #0dcaf0 !important;
+    color: #000000 !important;
+    font-weight: 900 !important;
+}
+
+.badge-primary {
+    background-color: #0d6efd !important;
+    color: #ffffff !important;
+    font-weight: 800 !important;
+}
+
+.badge-secondary {
+    background-color: #6c757d !important;
+    color: #ffffff !important;
+    font-weight: 800 !important;
+}
+
+/* ACCIONES */
+.acciones-celda {
+    min-width: 80px;
+    text-align: center;
+}
+
+.btn-detalle {
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    border: none;
+    background: linear-gradient(135deg, #0d6efd 0%, #0056b3 100%);
+    color: white;
+    box-shadow: 0 2px 4px rgba(13, 110, 253, 0.3);
+}
+
+.btn-detalle:hover {
+    transform: scale(1.08);
+    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.4);
+    background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+    color: white;
+}
+
+.btn-detalle:active {
+    transform: scale(1.02);
+}
+
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+
+@media (max-width: 1200px) {
+    .notificaciones-historial-optimizado {
+        font-size: 0.9rem;
+    }
+    
+    .codigo-documento {
+        font-size: 1rem;
+    }
+    
+    .nombre-cliente {
+        font-size: 1rem;
+    }
+    
+    /* MEJORA: Ajustar anchos de columna en pantallas medianas */
+    .notificaciones-historial-optimizado th:nth-child(3), 
+    .notificaciones-historial-optimizado td:nth-child(3) {
+        width: 35%; /* Más espacio para cliente */
+    }
+    
+    .notificaciones-historial-optimizado th:nth-child(4), 
+    .notificaciones-historial-optimizado td:nth-child(4) {
+        width: 10%; /* Menos espacio para teléfono */
+    }
+}
+
+@media (max-width: 768px) {
+    .notificaciones-historial-optimizado th,
+    .notificaciones-historial-optimizado td {
+        padding: 8px 6px; /* MEJORA: Padding más compacto en tablets */
+    }
+    
+    .fecha-principal {
+        font-size: 0.9rem; /* MEJORA: Tamaño más compacto */
+    }
+    
+    .codigo-documento {
+        font-size: 0.9rem; /* MEJORA: Tamaño más compacto */
+    }
+    
+    .nombre-cliente {
+        font-size: 0.9rem; /* MEJORA: Tamaño más compacto */
+    }
+    
+    .estado-badge {
+        font-size: 0.9rem !important; /* MEJORA: Tamaño responsive mejorado */
+        padding: 8px 14px !important; /* MEJORA: Padding responsive mejorado */
+    }
+    
+    /* MEJORA: Redistribuir columnas en tablets */
+    .notificaciones-historial-optimizado th:nth-child(1), 
+    .notificaciones-historial-optimizado td:nth-child(1) {
+        width: 18%; /* Más espacio para fecha */
+    }
+    
+    .notificaciones-historial-optimizado th:nth-child(3), 
+    .notificaciones-historial-optimizado td:nth-child(3) {
+        width: 32%; /* Más espacio para cliente */
+    }
+}
+
+@media (max-width: 576px) {
+    .notificaciones-historial-optimizado {
+        font-size: 0.85rem;
+    }
+    
+    /* En móvil, ocultar la columna de CI para ahorrar espacio */
+    .ci-cliente {
+        display: none;
+    }
+    
+    .hora-secundaria {
+        font-size: 0.8rem;
+    }
+    
+    .estado-badge {
+        font-size: 0.85rem !important; /* MEJORA: Tamaño móvil mejorado */
+        padding: 6px 10px !important;
+        min-width: 70px; /* MEJORA: Ancho mínimo móvil */
+    }
+}
+
+/* ========================================
+   CORRECCIÓN: ELIMINAR COLORES ROSADOS
+   ======================================== */
+
+/* Asegurar que no hay colores rosados en códigos o badges */
+.codigo-documento,
+.badge-codigo,
+.detalle-codigo,
+code,
+.bg-pink,
+.badge-pink,
+.text-pink {
+    background-color: #6c757d !important; /* Gris neutro profesional */
+    color: white !important;
+}
+
+/* Códigos específicos con estilo profesional */
+.codigo-badge,
+code {
+    background-color: #6c757d !important;
+    color: white !important;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace !important;
+    font-weight: 600 !important;
+    padding: 4px 8px !important;
+    border-radius: 4px !important;
+}
+
+/* Asegurar que badges primarios usen azul profesional */
+.badge-primary,
+.bg-primary {
+    background-color: #007bff !important;
+    color: white !important;
+}
+
+/* ========================================
+   COLORES DISTINTIVOS PARA ESTADO DE NOTIFICACIÓN
+   ======================================== */
+
+/* Estado ENVIADO/EXITOSO - Verde fuerte */
+.estado-enviado {
+    color: #28a745 !important; /* Verde fuerte Bootstrap success */
+    font-weight: 700 !important; /* Negrita para máxima visibilidad */
+    font-size: 0.95rem !important;
+    text-transform: uppercase !important; /* MAYÚSCULAS para más visibilidad */
+    letter-spacing: 0.5px !important;
+    text-shadow: 0 1px 2px rgba(40, 167, 69, 0.3) !important; /* Sombra verde sutil */
+}
+
+/* Estado FALLIDA/ERROR - Rojo fuerte */
+.estado-fallido,
+.estado-error {
+    color: #dc3545 !important; /* Rojo fuerte Bootstrap danger */
+    font-weight: 700 !important; /* Negrita para máxima visibilidad */
+    font-size: 0.95rem !important;
+    text-transform: uppercase !important; /* MAYÚSCULAS para más visibilidad */
+    letter-spacing: 0.5px !important;
+    text-shadow: 0 1px 2px rgba(220, 53, 69, 0.3) !important; /* Sombra roja sutil */
+}
+
+/* Estado PENDIENTE - Naranja fuerte */
+.estado-pendiente {
+    color: #fd7e14 !important; /* Naranja fuerte para pendientes */
+    font-weight: 700 !important; /* Negrita para máxima visibilidad */
+    font-size: 0.95rem !important;
+    text-transform: uppercase !important; /* MAYÚSCULAS para más visibilidad */
+    letter-spacing: 0.5px !important;
+    text-shadow: 0 1px 2px rgba(253, 126, 20, 0.3) !important; /* Sombra naranja sutil */
+}
+
+/* Asegurar que se vea en la tabla de notificaciones */
+.notificaciones-historial-optimizado .estado-enviado,
+.notificaciones-historial-optimizado .estado-fallido,
+.notificaciones-historial-optimizado .estado-error,
+.notificaciones-historial-optimizado .estado-pendiente {
+    font-size: 1rem !important; /* Tamaño más grande en tabla */
+    display: inline-block;
+    padding: 2px 6px !important;
+    border-radius: 3px !important;
+    background-color: rgba(255, 255, 255, 0.1) !important; /* Fondo sutil para contraste */
+}
+
+/* Hover effects para mejor UX */
+.estado-enviado:hover {
+    color: #1e7e34 !important; /* Verde más oscuro en hover */
+    transform: scale(1.05);
+    transition: all 0.2s ease;
+}
+
+.estado-fallido:hover,
+.estado-error:hover {
+    color: #bd2130 !important; /* Rojo más oscuro en hover */
+    transform: scale(1.05);
+    transition: all 0.2s ease;
+}
+
+.estado-pendiente:hover {
+    color: #e55100 !important; /* Naranja más oscuro en hover */
+    transform: scale(1.05);
+    transition: all 0.2s ease;
+}
+
+/* ========================================
+   MEJORAS DE ACCESIBILIDAD
+   ======================================== */
+
+.notificaciones-historial-optimizado th:focus,
+.btn-detalle:focus {
+    outline: 3px solid #0d6efd;
+    outline-offset: 2px;
+}
+
+/* ========================================
+   ANIMACIONES SUAVES
+   ======================================== */
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fila-notificacion {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+/* ========================================
+   ESTADOS DE CARGA
+   ======================================== */
+
+.tabla-cargando {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.tabla-cargando::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #0d6efd;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    transform: translate(-50%, -50%);
+}
+
+@keyframes spin {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* ========================================
+   PRINT STYLES
+   ======================================== */
+
+@media print {
+    .notificaciones-historial-optimizado {
+        font-size: 0.8rem;
+    }
+    
+    .fila-notificacion:hover {
+        background-color: transparent !important;
+        transform: none !important;
+        box-shadow: none !important;
+    }
+    
+    .btn-detalle {
+        display: none;
+    }
+    
+    .estado-badge {
+        border: 1px solid #333 !important;
+        color: #333 !important;
+        background: white !important;
+    }
+} 

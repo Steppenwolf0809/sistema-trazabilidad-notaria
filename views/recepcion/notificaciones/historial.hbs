@@ -1,699 +1,389 @@
+<!--
+  PÁGINA UNIVERSAL DE HISTORIAL DE NOTIFICACIONES
+  Rol: Recepcion
+-->
+
+<!--
+  Componente Universal para el Historial de Notificaciones
+  - Usado por: Admin, Recepción, Archivo, Matrizador
+  - Contiene: Filtros, Estadísticas y Tabla de Notificaciones
+-->
+
 <div class="container-fluid">
-    <div class="row">
+    <!-- Breadcrumb -->
+    <div class="row mb-3">
         <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h2>👁️ Control de Notificaciones</h2>
-                    <p class="text-muted mb-0">Busque por código de documento, nombre de cliente o número de factura</p>
-                </div>
-                <span class="badge bg-info fs-6">{{notificaciones.length}} notificaciones</span>
-            </div>
-            
-            <style>
-                .bg-purple {
-                    background-color: #6f42c1 !important;
-                    color: white;
-                }
-            </style>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="/{{@root.userRole}}/dashboard">
+                            <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item active" aria-current="page">
+                        <i class="fas fa-bell me-1"></i>Control de Notificaciones
+                    </li>
+                </ol>
+            </nav>
+        </div>
+    </div>
 
-            {{!-- Filtros avanzados para recepción --}}
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">🔍 Filtros de Control</h5>
-                </div>
-                <div class="card-body">
-                    <form method="GET" action="/recepcion/notificaciones/historial">
-                        <div class="row mb-3">
-                            <div class="col-md-2">
-                                <label class="form-label">📅 Desde:</label>
-                                <input type="date" class="form-control" name="fechaDesde" value="{{filtros.fechaDesde}}">
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label">📅 Hasta:</label>
-                                <input type="date" class="form-control" name="fechaHasta" value="{{filtros.fechaHasta}}">
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label">📱 Tipo:</label>
-                                <select class="form-control" name="tipo">
-                                    <option value="">Todos</option>
-                                    <option value="documento_listo" {{#if (eq filtros.tipo 'documento_listo')}}selected{{/if}}>📋 Listo</option>
-                                    <option value="entrega_confirmada" {{#if (eq filtros.tipo 'entrega_confirmada')}}selected{{/if}}>✅ Entregado</option>
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label">📧 Canal:</label>
-                                <select class="form-control" name="canal">
-                                    <option value="">Todos</option>
-                                    <option value="whatsapp" {{#if (eq filtros.canal 'whatsapp')}}selected{{/if}}>WhatsApp</option>
-                                    <option value="email" {{#if (eq filtros.canal 'email')}}selected{{/if}}>Email</option>
-                                    <option value="ambos" {{#if (eq filtros.canal 'ambos')}}selected{{/if}}>Ambos</option>
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label">👨‍💼 Matrizador:</label>
-                                <select class="form-control" name="matrizador">
-                                    <option value="">Todos</option>
-                                    {{#each matrizadores}}
-                                    <option value="{{this.id}}" {{#if (eq ../filtros.matrizador this.id)}}selected{{/if}}>
-                                        {{this.nombre}}
-                                    </option>
-                                    {{/each}}
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label">&nbsp;</label>
-                                <button type="submit" class="btn btn-primary w-100">🔍 Filtrar</button>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-12 mb-3">
-                                <h6 class="text-muted mb-2">🔍 Búsqueda Rápida:</h6>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-3">
-                                <label class="form-label">📄 Código Documento:</label>
-                                <input type="text" class="form-control" name="codigoDocumento" 
-                                       value="{{filtros.codigoDocumento}}" placeholder="Ej: 20251701018P01150">
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">👤 Nombre Cliente:</label>
-                                <input type="text" class="form-control" name="cliente" 
-                                       value="{{filtros.cliente}}" placeholder="Nombre completo o parcial">
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">🧾 Número Factura:</label>
-                                <input type="text" class="form-control" name="numeroFactura" 
-                                       value="{{filtros.numeroFactura}}" placeholder="Ej: 001-002-000118113">
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">&nbsp;</label>
-                                <div class="d-flex gap-2">
-                                    <button type="submit" class="btn btn-primary flex-fill">🔍 Buscar</button>
-                                    <a href="/recepcion/notificaciones/historial" class="btn btn-outline-secondary flex-fill">
-                                        🔄 Limpiar
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row mt-3">
-                            <div class="col-md-12">
-                                <div class="d-flex gap-2">
-                                    <button type="button" class="btn btn-success" onclick="exportarCSV()">
-                                        📊 Exportar CSV
-                                    </button>
-                                    <button type="button" class="btn btn-info" onclick="busquedaAvanzada()">
-                                        ⚙️ Búsqueda Avanzada
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            {{!-- Estadísticas rápidas --}}
-            {{#if stats}}
-            <div class="row mb-4">
-                <div class="col-md-3">
-                    <div class="card bg-primary text-white">
-                        <div class="card-body text-center">
-                            <h3>{{stats.total}}</h3>
-                            <p class="mb-0">📊 Total</p>
-                        </div>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>👁️ Control de Notificaciones</h2>
+            <p class="text-muted mb-0">Un historial centralizado de todas las comunicaciones enviadas.</p>
+        </div>
+        {{#if stats.total}}
+            <span class="badge bg-info fs-6">{{stats.total}} notificaciones</span>
+        {{/if}}
+    </div>
+    
+    <!-- Filtros Universales -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">🔍 Filtros de Control</h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" action="/{{@root.userRole}}/notificaciones/historial" id="filtros-notificaciones-form">
+                <div class="row mb-3">
+                    <div class="col-md-2">
+                        <label class="form-label">📅 Desde:</label>
+                        <input type="date" class="form-control" name="fechaDesde" value="{{filtros.fechaDesde}}">
                     </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card bg-success text-white">
-                        <div class="card-body text-center">
-                            <h3>{{stats.enviadas}}</h3>
-                            <p class="mb-0">✅ Enviadas</p>
-                        </div>
+                    <div class="col-md-2">
+                        <label class="form-label">📅 Hasta:</label>
+                        <input type="date" class="form-control" name="fechaHasta" value="{{filtros.fechaHasta}}">
                     </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card bg-danger text-white">
-                        <div class="card-body text-center">
-                            <h3>{{stats.fallidas}}</h3>
-                            <p class="mb-0">❌ Fallidas</p>
-                        </div>
+                    <div class="col-md-2">
+                        <label class="form-label">📱 Tipo:</label>
+                        <select class="form-select" name="tipo">
+                            <option value="">Todos</option>
+                            <option value="documento_listo" {{#if (eq filtros.tipo 'documento_listo')}}selected{{/if}}>📋 Listo para Retiro</option>
+                            <option value="entrega_confirmada" {{#if (eq filtros.tipo 'entrega_confirmada')}}selected{{/if}}>✅ Entregado</option>
+                            <option value="entrega_grupal" {{#if (eq filtros.tipo 'entrega_grupal')}}selected{{/if}}>📦 Entrega Grupal</option>
+                        </select>
                     </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card bg-warning text-white">
-                        <div class="card-body text-center">
-                            <h3>{{stats.pendientes}}</h3>
-                            <p class="mb-0">⏳ Pendientes</p>
-                        </div>
+                    <div class="col-md-2">
+                        <label class="form-label">📧 Canal:</label>
+                        <select class="form-select" name="canal">
+                            <option value="">Todos</option>
+                            <option value="whatsapp" {{#if (eq filtros.canal 'whatsapp')}}selected{{/if}}>WhatsApp</option>
+                            <option value="email" {{#if (eq filtros.canal 'email')}}selected{{/if}}>Email</option>
+                        </select>
                     </div>
-                </div>
-            </div>
-            {{/if}}
-
-            {{!-- Tabla de control de notificaciones --}}
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">📋 Historial Completo de Notificaciones</h5>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th>📅 Fecha/Hora</th>
-                                    <th>📄 Documento</th>
-                                    <th>👤 Cliente</th>
-                                    <th>👨‍💼 Matrizador</th>
-                                    <th>📱 Tipo</th>
-                                    <th>📧 Canal</th>
-                                    <th>📱 Destinatario</th>
-                                    <th>✅ Estado</th>
-                                    <th>🔍 Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {{#each notificaciones}}
-                                <tr>
-                                    <td>
-                                        <div class="d-flex flex-column">
-                                            <span class="fw-bold fecha-evento" data-fecha="{{this.created_at}}">
-                                                Cargando...
-                                            </span>
-                                            <small class="text-muted hora-evento" data-fecha="{{this.created_at}}">
-                                                -
-                                            </small>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        {{#if (or (eq this.tipo 'entrega_grupal') (eq this.tipo 'notificacion_grupal'))}}
-                                            {{!-- Para entrega grupal, mostrar resumen de documentos --}}
-                                            <div class="d-flex flex-column">
-                                                <span class="fw-bold text-success">📦 ENTREGA GRUPAL</span>
-                                                {{#if this.metadatos.totalDocumentos}}
-                                                    <small class="text-info">{{this.metadatos.totalDocumentos}} documentos entregados</small>
-                                                {{/if}}
-                                                {{#if this.metadatos.codigosDocumentos}}
-                                                    <div class="mt-1">
-                                                        {{#each this.metadatos.codigosDocumentos}}
-                                                            {{#if (lt @index 3)}}
-                                                                <small class="badge bg-light text-dark me-1">{{this}}</small>
-                                                            {{/if}}
-                                                        {{/each}}
-                                                        {{#if (gt this.metadatos.codigosDocumentos.length 3)}}
-                                                            <small class="text-muted">+{{subtract this.metadatos.codigosDocumentos.length 3}} más</small>
-                                                        {{/if}}
-                                                    </div>
-                                                {{/if}}
-                                            </div>
-                                        {{else}}
-                                            {{!-- Para notificaciones individuales --}}
-                                            <div class="d-flex flex-column">
-                                                <span class="fw-bold text-primary">{{this.documento.codigoBarras}}</span>
-                                                <small class="text-muted">{{this.documento.tipoDocumento}}</small>
-                                                {{#if this.documento.numeroFactura}}
-                                                <small class="text-info">🧾 {{this.documento.numeroFactura}}</small>
-                                                {{/if}}
-                                                <small class="badge bg-{{#if (eq this.documento.estado 'entregado')}}success{{else if (eq this.documento.estado 'listo_para_entrega')}}warning{{else}}secondary{{/if}}">
-                                                    {{this.documento.estado}}
-                                                </small>
-                                            </div>
-                                        {{/if}}
-                                    </td>
-                                    <td>
-                                        <div class="d-flex flex-column">
-                                            {{#if (or (eq this.tipo 'entrega_grupal') (eq this.tipo 'notificacion_grupal'))}}
-                                                {{!-- Para entrega grupal, mostrar información del receptor --}}
-                                                <div class="d-flex flex-column">
-                                                    {{#if this.metadatos.nombreReceptor}}
-                                                        <small class="fw-bold">👤 {{this.metadatos.nombreReceptor}}</small>
-                                                    {{/if}}
-                                                    {{#if this.metadatos.identificacionReceptor}}
-                                                        <small class="text-muted">🆔 {{this.metadatos.identificacionReceptor}}</small>
-                                                    {{/if}}
-                                                    {{#if this.metadatos.relacionReceptor}}
-                                                        <small class="text-info">🔗 {{this.metadatos.relacionReceptor}}</small>
-                                                    {{/if}}
-                                                    {{!-- Mostrar canales de contacto del cliente --}}
-                                                    {{#if this.documento.emailCliente}}
-                                                    <small class="text-muted">📧 {{substring this.documento.emailCliente 0 15}}{{#if (gt this.documento.emailCliente.length 15)}}...{{/if}}</small>
-                                                    {{/if}}
-                                                    {{#if this.documento.telefonoCliente}}
-                                                    <small class="text-muted">📱 {{this.documento.telefonoCliente}}</small>
-                                                    {{/if}}
-                                                </div>
-                                            {{else}}
-                                                {{!-- Para notificaciones individuales --}}
-                                                <span class="fw-bold">{{this.documento.nombreCliente}}</span>
-                                                {{#if this.documento.emailCliente}}
-                                                <small class="text-muted">📧 {{substring this.documento.emailCliente 0 20}}{{#if (gt this.documento.emailCliente.length 20)}}...{{/if}}</small>
-                                                {{/if}}
-                                                {{#if this.documento.telefonoCliente}}
-                                                <small class="text-muted">📱 {{this.documento.telefonoCliente}}</small>
-                                                {{/if}}
-                                            {{/if}}
-                                        </div>
-                                    </td>
-                                    <td>
-                                        {{#if (or (eq this.tipo 'entrega_grupal') (eq this.tipo 'notificacion_grupal'))}}
-                                            {{!-- Para entrega grupal, mostrar matrizadores de los documentos --}}
-                                            {{#if this.metadatos.documentosIncluidos}}
-                                                <div class="d-flex flex-column">
-                                                    {{#each this.metadatos.documentosIncluidos}}
-                                                        {{#if (lt @index 3)}}
-                                                            {{#if this.matrizador}}
-                                                                {{#if (ne this.matrizador "Sin asignar")}}
-                                                                    <small class="badge bg-info mb-1">{{this.matrizador}}</small>
-                                                                {{else}}
-                                                                    <small class="badge bg-secondary mb-1">📋 Sin Matrizador</small>
-                                                                {{/if}}
-                                                            {{else}}
-                                                                <small class="badge bg-secondary mb-1">📋 Sin Matrizador</small>
-                                                            {{/if}}
-                                                        {{/if}}
-                                                    {{/each}}
-                                                    {{#if (gt this.metadatos.documentosIncluidos.length 3)}}
-                                                        <small class="text-muted">+{{subtract this.metadatos.documentosIncluidos.length 3}} más</small>
-                                                    {{/if}}
-                                                </div>
-                                            {{else if this.metadatos.entregadoPor}}
-                                                <span class="badge bg-warning">👨‍💼 {{this.metadatos.entregadoPor}}</span>
-                                            {{else}}
-                                                <span class="text-muted">-</span>
-                                            {{/if}}
-                                        {{else}}
-                                            {{!-- Para notificaciones individuales --}}
-                                            {{#if this.documento.matrizador}}
-                                                <span class="badge bg-info">👨‍💼 {{this.documento.matrizador.nombre}}</span>
-                                            {{else}}
-                                                <span class="badge bg-secondary">📋 Sin Matrizador</span>
-                                            {{/if}}
-                                        {{/if}}
-                                    </td>
-                                    <td>
-                                        {{#if (eq this.tipo 'documento_listo')}}
-                                            <span class="badge bg-info">📋 Listo para Retiro</span>
-                                        {{else if (eq this.tipo 'entrega_confirmada')}}
-                                            <span class="badge bg-success">✅ Entregado</span>
-                                        {{else if (eq this.tipo 'entrega_grupal')}}
-                                            <div class="d-flex flex-column">
-                                                <span class="badge bg-purple mb-1">📦 Entrega Grupal</span>
-                                                {{#if this.metadatos.totalDocumentos}}
-                                                    <small class="text-muted">{{this.metadatos.totalDocumentos}} documentos</small>
-                                                {{/if}}
-                                            </div>
-                                        {{else if (eq this.tipo 'notificacion_grupal')}}
-                                            <div class="d-flex flex-column">
-                                                <span class="badge bg-purple mb-1">📦 Entrega Grupal</span>
-                                                {{#if this.metadatos.totalDocumentos}}
-                                                    <small class="text-muted">{{this.metadatos.totalDocumentos}} documentos</small>
-                                                {{/if}}
-                                            </div>
-                                        {{else}}
-                                            <span class="badge bg-secondary">{{this.tipo}}</span>
-                                        {{/if}}
-                                    </td>
-                                    <td>
-                                        {{#if this.metadatos.canal}}
-                                            {{#if (eq this.metadatos.canal 'whatsapp')}}
-                                                <span class="badge bg-success">📱 WhatsApp</span>
-                                            {{else if (eq this.metadatos.canal 'email')}}
-                                                <span class="badge bg-primary">📧 Email</span>
-                                            {{else if (eq this.metadatos.canal 'ambos')}}
-                                                <span class="badge bg-info">📱📧 Ambos</span>
-                                            {{else}}
-                                                <span class="badge bg-secondary">{{this.metadatos.canal}}</span>
-                                            {{/if}}
-                                        {{else}}
-                                            <span class="badge bg-secondary">No especificado</span>
-                                        {{/if}}
-                                    </td>
-                                    <td>
-                                        {{#if (or (eq this.tipo 'entrega_grupal') (eq this.tipo 'notificacion_grupal'))}}
-                                            {{!-- Para entrega grupal, mostrar información del receptor --}}
-                                            <div class="d-flex flex-column">
-                                                {{#if this.metadatos.nombreReceptor}}
-                                                    <small class="fw-bold">👤 {{this.metadatos.nombreReceptor}}</small>
-                                                {{/if}}
-                                                {{#if this.metadatos.identificacionReceptor}}
-                                                    <small class="text-muted">🆔 {{this.metadatos.identificacionReceptor}}</small>
-                                                {{/if}}
-                                                {{#if this.metadatos.relacionReceptor}}
-                                                    <small class="text-info">🔗 {{this.metadatos.relacionReceptor}}</small>
-                                                {{/if}}
-                                            </div>
-                                        {{else}}
-                                            {{!-- Para notificaciones individuales --}}
-                                            <div class="d-flex flex-column">
-                                                {{#if this.documento.emailCliente}}
-                                                <small>📧 {{substring this.documento.emailCliente 0 15}}{{#if (gt this.documento.emailCliente.length 15)}}...{{/if}}</small>
-                                                {{/if}}
-                                                {{#if this.documento.telefonoCliente}}
-                                                <small>📱 {{this.documento.telefonoCliente}}</small>
-                                                {{/if}}
-                                            </div>
-                                        {{/if}}
-                                    </td>
-                                    <td>
-                                        {{#if this.metadatos.estado}}
-                                            {{#if (eq this.metadatos.estado 'enviado')}}
-                                                <span class="badge bg-success">✅ Enviado</span>
-                                            {{else if (eq this.metadatos.estado 'error')}}
-                                                <span class="badge bg-danger">❌ Error</span>
-                                            {{else if (eq this.metadatos.estado 'simulado')}}
-                                                <span class="badge bg-warning">🔄 Simulado</span>
-                                            {{else}}
-                                                <span class="badge bg-secondary">{{this.metadatos.estado}}</span>
-                                            {{/if}}
-                                        {{else}}
-                                            <span class="badge bg-secondary">Sin estado</span>
-                                        {{/if}}
-                                    </td>
-                                    <td>
-                                        <div class="btn-group" role="group">
-                                            <button class="btn btn-sm btn-outline-primary" 
-                                                    onclick="verDetalleNotificacion({{this.id}})">
-                                                👁️ Detalle
-                                            </button>
-                                            <a href="/recepcion/documentos/detalle/{{this.documento.id}}" 
-                                               class="btn btn-sm btn-outline-secondary">
-                                                📄 Documento
-                                            </a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                {{else}}
-                                <tr>
-                                    <td colspan="9" class="text-center text-muted py-4">
-                                        📭 No se encontraron notificaciones con los filtros aplicados
-                                    </td>
-                                </tr>
-                                {{/each}}
-                            </tbody>
-                        </table>
+                    <div class="col-md-2">
+                        <label class="form-label">✅ Estado:</label>
+                        <select class="form-select" name="estado">
+                            <option value="">Todos</option>
+                            <option value="enviado" {{#if (eq filtros.estado 'enviado')}}selected{{/if}}>Enviado</option>
+                            <option value="error" {{#if (eq filtros.estado 'error')}}selected{{/if}}>Error</option>
+                            <option value="pendiente" {{#if (eq filtros.estado 'pendiente')}}selected{{/if}}>Pendiente</option>
+                        </select>
                     </div>
-                    
-                    {{#if notificaciones.length}}
-                    <div class="d-flex justify-content-between align-items-center mt-3">
-                        <small class="text-muted">
-                            Mostrando {{notificaciones.length}} notificaciones (máximo 100 resultados)
-                        </small>
-                        <div class="btn-group">
-                            <button class="btn btn-sm btn-outline-info" onclick="actualizarVista()">
-                                🔄 Actualizar Vista
-                            </button>
-                        </div>
+                    {{#if (or (eq @root.userRole "admin") (eq @root.userRole "recepcion"))}}
+                    <div class="col-md-2">
+                        <label class="form-label">👨‍💼 Matrizador:</label>
+                        <select class="form-select" name="matrizadorId">
+                            <option value="">Todos</option>
+                            {{#each matrizadores}}
+                            <option value="{{this.id}}" {{#if (eq ../filtros.matrizadorId (toString this.id))}}selected{{/if}}>
+                                {{this.nombre}}
+                            </option>
+                            {{/each}}
+                        </select>
                     </div>
                     {{/if}}
                 </div>
-            </div>
+                <div class="row">
+                    <div class="col-md-8">
+                        <label class="form-label">🔍 Búsqueda Rápida:</label>
+                        <input type="text" class="form-control" name="busqueda" 
+                               value="{{filtros.busqueda}}" placeholder="Código de documento, nombre de cliente, N° factura o destinatario">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary flex-fill">🔍 Buscar</button>
+                            <a href="/{{@root.userRole}}/notificaciones/historial" class="btn btn-outline-secondary flex-fill">
+                                🔄 Limpiar
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
-</div>
 
-{{!-- Modal para detalle de notificación --}}
-<div class="modal fade" id="modalDetalleNotificacion" tabindex="-1">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">📱 Detalles de Notificación</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    <!-- Estadísticas Rápidas -->
+    {{#if stats}}
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <h3>{{stats.total}}</h3>
+                    <p class="mb-0">📊 Total</p>
+                </div>
             </div>
-            <div class="modal-body" id="contenidoDetalleNotificacion">
-                <div class="text-center">
-                    <div class="spinner-border" role="status">
-                        <span class="visually-hidden">Cargando...</span>
-                    </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <h3>{{stats.enviadas}}</h3>
+                    <p class="mb-0">✅ Enviadas</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body text-center">
+                    <h3>{{stats.fallidas}}</h3>
+                    <p class="mb-0">❌ Fallidas</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body text-center">
+                    <h3>{{stats.pendientes}}</h3>
+                    <p class="mb-0">⏳ Pendientes</p>
                 </div>
             </div>
         </div>
     </div>
+    {{/if}}
+
+    <!-- Tabla Optimizada de Notificaciones -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">📋 Historial de Notificaciones</h5>
+        </div>
+        <div class="card-body p-0">
+          {{#if notificaciones.length}}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover notificaciones-optimizada">
+                    <thead class="table-dark">
+                        <tr>
+                            <th width="15%">📅 Fecha/Hora</th>
+                            <th width="25%">📄 Documento</th>
+                            <th width="30%">👤 Cliente</th>
+                            <th width="15%">📱 Enviado a</th>
+                            <th width="10%">✅ Estado</th>
+                            <th width="5%">👁️</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{#each notificaciones}}
+                        <tr>
+                            <td>
+                                <div class="d-flex flex-column">
+                                    <small class="fw-bold">{{formatFechaCorta this.created_at}}</small>
+                                    <small class="text-muted">{{formatTime this.created_at}}</small>
+                                </div>
+                            </td>
+                            <td>
+                                {{#if (esEntregaGrupal this.tipoEvento)}}
+                                    <div class="d-flex flex-column">
+                                        <strong class="text-success">📦 ENTREGA GRUPAL</strong>
+                                        <small class="text-info">{{this.metadatos.totalDocumentos}} documentos</small>
+                                    </div>
+                                {{else}}
+                                    <div class="d-flex flex-column">
+                                        <strong>
+                                            <a href="/{{../userRole}}/documentos/detalle/{{this.documento.id}}" class="text-decoration-none">
+                                                {{formatearCodigoCompacto this.documento.codigoBarras}}
+                                            </a>
+                                        </strong>
+                                        <small class="text-muted">
+                                            <i class="{{iconoTipoDocumento this.documento.tipoDocumento}} me-1"></i>
+                                            {{this.documento.tipoDocumento}}
+                                        </small>
+                                    </div>
+                                {{/if}}
+                            </td>
+                            <td>
+                                <div class="d-flex flex-column">
+                                    {{#if (esEntregaGrupal this.tipoEvento)}}
+                                        <strong>{{this.metadatos.nombreCliente}}</strong>
+                                    {{else}}
+                                        <strong>{{this.documento.nombreCliente}}</strong>
+                                        {{#if this.documento.identificacionCliente}}
+                                        <small class="text-muted">{{this.documento.identificacionCliente}}</small>
+                                        {{/if}}
+                                    {{/if}}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <i class="fab fa-whatsapp text-success me-2"></i>
+                                    <small>{{destinatarioCensurado this.destinatario}}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge {{estadoBadgeClass this.estado}}">
+                                    {{estadoTexto this.estado}}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-primary" onclick="verDetalleNotificacion({{this.id}})" title="Ver detalle">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {{/each}}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Información de resultados -->
+            <div class="d-flex justify-content-between align-items-center mt-3 p-3 bg-light">
+                <small class="text-muted">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Mostrando {{notificaciones.length}} de {{stats.total}} notificaciones
+                </small>
+                <small class="text-muted">
+                    <i class="fas fa-clock me-1"></i>
+                    Actualizado: {{formatDateTime "now"}}
+                </small>
+            </div>
+          {{else}}
+            <div class="text-center py-5">
+                <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">📭 No se encontraron notificaciones</h5>
+                <p class="text-muted">No hay notificaciones que coincidan con los filtros aplicados.</p>
+                <button class="btn btn-primary" onclick="location.reload()">
+                    <i class="fas fa-sync-alt me-1"></i>Actualizar
+                </button>
+            </div>
+          {{/if}}
+        </div>
+    </div>
 </div>
 
+<!-- Modal Elegante para Detalles de Notificación -->
+<div class="modal fade" id="detalleNotificacionModal" tabindex="-1" aria-labelledby="detalleNotificacionModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <!-- Contenido se cargará dinámicamente aquí -->
+    </div>
+  </div>
+</div>
+
+<link rel="stylesheet" href="/css/notificaciones-optimizada.css">
+<script src="/js/table-universal.js"></script>
 <script>
-function verDetalleNotificacion(id) {
-    const modal = new bootstrap.Modal(document.getElementById('modalDetalleNotificacion'));
-    const contenido = document.getElementById('contenidoDetalleNotificacion');
-    
-    // Mostrar loading
-    contenido.innerHTML = `
-        <div class="text-center">
-            <div class="spinner-border" role="status">
-                <span class="visually-hidden">Cargando...</span>
+    /**
+     * Mostrar detalle elegante de notificación
+     * @param {number} notificacionId - ID de la notificación
+     */
+    function verDetalleNotificacion(notificacionId) {
+        console.log(`🔍 Cargando detalle de notificación ID: ${notificacionId}`);
+        
+        const modal = document.getElementById('detalleNotificacionModal');
+        const modalContent = modal.querySelector('.modal-content');
+        
+        // Mostrar indicador de carga elegante
+        modalContent.innerHTML = `
+            <div class="modal-body text-center py-5">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Cargando...</span>
+                </div>
+                <h5 class="text-muted">Cargando detalles...</h5>
+                <p class="text-muted small">Obteniendo información de la notificación</p>
             </div>
-        </div>
-    `;
-    
-    modal.show();
-    
-    fetch(`/recepcion/notificaciones/detalle/${id}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.exito) {
-                contenido.innerHTML = `
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6>📄 Información del Documento</h6>
-                            <table class="table table-sm">
-                                <tr><td><strong>Código:</strong></td><td>${data.datos.documento.codigo}</td></tr>
-                                <tr><td><strong>Tipo:</strong></td><td>${data.datos.documento.tipo}</td></tr>
-                                <tr><td><strong>Cliente:</strong></td><td>${data.datos.documento.cliente}</td></tr>
-                                <tr><td><strong>Estado:</strong></td><td><span class="badge bg-info">${data.datos.documento.estado}</span></td></tr>
-                                <tr><td><strong>Matrizador:</strong></td><td>${data.datos.documento.matrizador || 'No asignado'}</td></tr>
-                                ${data.datos.documento.numeroFactura ? `<tr><td><strong>Factura:</strong></td><td>${data.datos.documento.numeroFactura}</td></tr>` : ''}
-                            </table>
-                        </div>
-                        <div class="col-md-6">
-                            <h6>📱 Información de la Notificación</h6>
-                            <table class="table table-sm">
-                                <tr><td><strong>Tipo:</strong></td><td><span class="badge bg-primary">${data.datos.tipo}</span></td></tr>
-                                <tr><td><strong>Canal:</strong></td><td><span class="badge bg-success">${data.datos.metadatos.canal || 'No especificado'}</span></td></tr>
-                                <tr><td><strong>Estado:</strong></td><td><span class="badge bg-info">${data.datos.metadatos.estado || 'Sin estado'}</span></td></tr>
-                                <tr><td><strong>Fecha:</strong></td><td>${formatearFechaModal(data.datos.fecha)}</td></tr>
-                                <tr><td><strong>Usuario:</strong></td><td>${data.datos.usuario}</td></tr>
-                            </table>
-                        </div>
-                    </div>
-                    <div class="row mt-3">
-                        <div class="col-md-6">
-                            <h6>📞 Canales de Contacto</h6>
-                            <div class="alert alert-info">
-                                ${data.datos.canales.email ? `📧 <strong>Email:</strong> ${data.datos.canales.email}<br>` : ''}
-                                ${data.datos.canales.telefono ? `📱 <strong>Teléfono:</strong> ${data.datos.canales.telefono}` : ''}
-                                ${!data.datos.canales.email && !data.datos.canales.telefono ? 'Sin datos de contacto' : ''}
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <h6>ℹ️ Detalles del Evento</h6>
-                            <div class="alert alert-secondary">
-                                ${data.datos.detalles || 'Sin detalles adicionales'}
-                            </div>
-                        </div>
-                    </div>
-                    ${data.datos.mensajeEnviado ? `
-                    <div class="mt-3">
-                        <h6>💬 Mensaje Enviado al Cliente</h6>
-                        <div class="alert alert-success" style="white-space: pre-line; font-family: monospace; background-color: #f8f9fa; border: 1px solid #dee2e6; color: #333;">
-${data.datos.mensajeEnviado}
-                        </div>
-                    </div>
-                    ` : ''}
-                `;
-            } else {
-                contenido.innerHTML = `
-                    <div class="alert alert-danger">
-                        ❌ Error al cargar detalles: ${data.mensaje}
-                    </div>
-                `;
+        `;
+        
+        // Mostrar modal inmediatamente con loading
+        const modalInstance = new bootstrap.Modal(modal);
+        modalInstance.show();
+        
+        // Cargar contenido real
+        fetch(`/{{@root.userRole}}/notificaciones/detalle/${notificacionId}`, {
+            headers: {
+                'Accept': 'text/html'
             }
         })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.text();
+        })
+        .then(html => {
+            modalContent.innerHTML = html;
+            console.log('✅ Detalle de notificación cargado exitosamente');
+        })
         .catch(error => {
-            contenido.innerHTML = `
-                <div class="alert alert-danger">
-                    ❌ Error de conexión: ${error.message}
+            console.error('❌ Error al cargar detalle:', error);
+            modalContent.innerHTML = `
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Error al cargar
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center py-5">
+                    <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+                    <h5 class="text-danger">No se pudo cargar el detalle</h5>
+                    <p class="text-muted">${error.message}</p>
+                    <button class="btn btn-primary" onclick="verDetalleNotificacion(${notificacionId})">
+                        <i class="fas fa-redo me-1"></i>Reintentar
+                    </button>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
                 </div>
             `;
         });
-}
-
-function actualizarVista() {
-    window.location.reload();
-}
-
-function exportarCSV() {
-    const params = new URLSearchParams(window.location.search);
-    params.set('formato', 'csv');
-    window.open(`/recepcion/notificaciones/historial?${params.toString()}`);
-}
-
-function busquedaAvanzada() {
-    // Mostrar/ocultar filtros avanzados (fechas, tipo, canal, matrizador)
-    const filtrosAvanzados = document.querySelector('.row:first-child');
-    if (filtrosAvanzados.style.display === 'none') {
-        filtrosAvanzados.style.display = 'flex';
-    } else {
-        filtrosAvanzados.style.display = 'none';
-    }
-}
-
-// Función para búsqueda en tiempo real
-function busquedaRapida() {
-    const codigo = document.querySelector('input[name="codigoDocumento"]').value;
-    const cliente = document.querySelector('input[name="cliente"]').value;
-    const factura = document.querySelector('input[name="numeroFactura"]').value;
-    
-    // Si tiene al menos 3 caracteres en algún campo, realizar búsqueda automática
-    if (codigo.length >= 3 || cliente.length >= 3 || factura.length >= 3) {
-        document.querySelector('form').submit();
-    }
-}
-
-// Auto-búsqueda mientras escribe
-document.addEventListener('DOMContentLoaded', function() {
-    const inputs = ['codigoDocumento', 'cliente', 'numeroFactura'];
-    inputs.forEach(inputName => {
-        const input = document.querySelector(`input[name="${inputName}"]`);
-        if (input) {
-            let timeout;
-            input.addEventListener('input', function() {
-                clearTimeout(timeout);
-                timeout = setTimeout(busquedaRapida, 1000); // Buscar después de 1 segundo sin escribir
-            });
-        }
-    });
-});
-
-// ============== FORMATEAR FECHAS AL CARGAR LA PÁGINA ==============
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🕒 Iniciando formateo de fechas en historial de notificaciones...');
-    
-    // Función para formatear fecha de manera robusta
-    function formatearFechaSegura(fechaRaw) {
-        if (!fechaRaw || fechaRaw === 'null' || fechaRaw === '' || fechaRaw === 'undefined') {
-            return 'Sin fecha';
-        }
-        
-        try {
-            // Intentar diferentes formatos de fecha
-            let fecha;
-            
-            // Si ya es un objeto Date
-            if (fechaRaw instanceof Date) {
-                fecha = fechaRaw;
-            }
-            // Si es un string ISO
-            else if (typeof fechaRaw === 'string') {
-                // Limpiar la fecha de caracteres extraños
-                const fechaLimpia = fechaRaw.trim();
-                fecha = new Date(fechaLimpia);
-            }
-            // Si es un timestamp
-            else if (typeof fechaRaw === 'number') {
-                fecha = new Date(fechaRaw);
-            }
-            else {
-                console.warn('Formato de fecha no reconocido:', fechaRaw);
-                return 'Formato inválido';
-            }
-            
-            // Verificar si la fecha es válida
-            if (isNaN(fecha.getTime())) {
-                console.warn('Fecha inválida después de conversión:', fechaRaw);
-                return 'Fecha inválida';
-            }
-            
-            return fecha;
-        } catch (error) {
-            console.error('Error procesando fecha:', error, 'Fecha original:', fechaRaw);
-            return 'Error en fecha';
-        }
     }
     
-    // Formatear fechas principales (fecha completa)
-    document.querySelectorAll('.fecha-evento').forEach(function(elemento) {
-        const fechaRaw = elemento.getAttribute('data-fecha');
-        console.log('📅 Procesando fecha principal:', fechaRaw);
-        
-        const fechaFormateada = formatearFechaSegura(fechaRaw);
-        
-        if (fechaFormateada instanceof Date) {
-            elemento.textContent = fechaFormateada.toLocaleDateString('es-EC', {
-                day: '2-digit',
-                month: '2-digit', 
-                year: 'numeric'
-            });
-            elemento.classList.add('text-success');
-        } else {
-            elemento.textContent = fechaFormateada;
-            elemento.classList.add('text-muted');
-        }
-    });
-    
-    // Formatear horas (solo hora)
-    document.querySelectorAll('.hora-evento').forEach(function(elemento) {
-        const fechaRaw = elemento.getAttribute('data-fecha');
-        console.log('🕒 Procesando hora:', fechaRaw);
-        
-        const fechaFormateada = formatearFechaSegura(fechaRaw);
-        
-        if (fechaFormateada instanceof Date) {
-            elemento.textContent = fechaFormateada.toLocaleTimeString('es-EC', {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false
-            });
-        } else {
-            elemento.textContent = '-';
-        }
-    });
-    
-    console.log('✅ Formateo de fechas completado');
-});
-
-function formatearFechaModal(fechaRaw) {
-    if (!fechaRaw || fechaRaw === 'null' || fechaRaw === '' || fechaRaw === 'undefined') {
-        return 'Sin fecha';
-    }
-    
-    try {
-        // Intentar diferentes formatos de fecha
-        let fecha;
-        
-        // Si ya es un objeto Date
-        if (fechaRaw instanceof Date) {
-            fecha = fechaRaw;
-        }
-        // Si es un string ISO
-        else if (typeof fechaRaw === 'string') {
-            // Limpiar la fecha de caracteres extraños
-            const fechaLimpia = fechaRaw.trim();
-            fecha = new Date(fechaLimpia);
-        }
-        // Si es un timestamp
-        else if (typeof fechaRaw === 'number') {
-            fecha = new Date(fechaRaw);
-        }
-        else {
-            console.warn('Formato de fecha no reconocido:', fechaRaw);
-            return 'Formato inválido';
+    /**
+     * Reenviar notificación (funcionalidad futura)
+     * @param {number} notificacionId - ID de la notificación
+     */
+    function reenviarNotificacion(notificacionId) {
+        if (!confirm('¿Está seguro de que desea reenviar esta notificación?')) {
+            return;
         }
         
-        // Verificar si la fecha es válida
-        if (isNaN(fecha.getTime())) {
-            console.warn('Fecha inválida después de conversión:', fechaRaw);
-            return 'Fecha inválida';
-        }
+        console.log(`📱 Reenviando notificación ID: ${notificacionId}`);
         
-        return fecha.toLocaleString('es-EC', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false
+        // Implementar lógica de reenvío
+        fetch(`/{{@root.userRole}}/notificaciones/${notificacionId}/reenviar`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.exito) {
+                alert('✅ Notificación reenviada exitosamente');
+                location.reload(); // Recargar para ver el estado actualizado
+            } else {
+                alert(`❌ Error al reenviar: ${data.mensaje}`);
+            }
+        })
+        .catch(error => {
+            console.error('Error al reenviar:', error);
+            alert('❌ Error al reenviar la notificación');
         });
-    } catch (error) {
-        console.error('Error procesando fecha:', error, 'Fecha original:', fechaRaw);
-        return 'Error en fecha';
     }
-}
+    
+    // Inicialización
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('📋 Tabla optimizada de notificaciones inicializada');
+        
+        // Auto-refresh cada 5 minutos
+        setInterval(() => {
+            console.log('🔄 Auto-actualizando tabla de notificaciones...');
+            location.reload();
+        }, 5 * 60 * 1000);
+        
+        // Tooltip para botones
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
 </script> 

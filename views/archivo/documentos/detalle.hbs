@@ -52,7 +52,7 @@
             <span class="badge bg-secondary">{{documento.estado}}</span>
             {{/if}}
           </p>
-          <p><strong>📅 Fecha Registro:</strong> {{formatDate documento.createdAt}}</p>
+          <p><strong>📅 Fecha Documento:</strong> {{formatDate documento.fechaFactura}}</p>
           {{#if documento.fechaEntrega}}
           <p><strong>🚀 Fecha Entrega:</strong> {{formatDate documento.fechaEntrega}}</p>
           {{/if}}
@@ -146,86 +146,8 @@
     </div>
     {{/if}}
     
-    <!-- Historial de eventos -->
-    <div class="row">
-      <div class="col-12">
-        <div class="card">
-          <div class="card-header">
-            <h5 class="mb-0"><i class="fas fa-history me-2"></i>Historial de Eventos</h5>
-          </div>
-          <div class="card-body">
-            {{#if eventos.length}}
-            <div class="timeline">
-              {{#each eventos}}
-              <div class="timeline-item">
-                <div class="timeline-marker bg-primary"></div>
-                <div class="timeline-content">
-                  <h6 class="timeline-title">
-                    {{#if (eq this.tipo "creacion")}}
-                      <i class="fas fa-plus-circle text-success"></i> Documento Creado
-                    {{else if (eq this.tipo "modificacion")}}
-                      <i class="fas fa-edit text-warning"></i> Documento Modificado
-                    {{else if (eq this.tipo "cambio_estado")}}
-                      <i class="fas fa-exchange-alt text-info"></i> Cambio de Estado
-                    {{else if (eq this.tipo "pago")}}
-                      <i class="fas fa-money-bill-wave text-success"></i> Pago Registrado
-                    {{else if (eq this.tipo "entrega")}}
-                      <i class="fas fa-hand-holding text-primary"></i> Documento Entregado
-                    {{else if (eq this.tipo "actualizacion")}}
-                      <i class="fas fa-sync text-info"></i> Actualización
-                    {{else if (eq this.tipo "estado")}}
-                      <i class="fas fa-flag text-warning"></i> Cambio de Estado
-                    {{else}}
-                      <i class="fas fa-info-circle text-secondary"></i> {{this.tipo}}
-                    {{/if}}
-                  </h6>
-                  <p class="timeline-description">{{this.descripcion}}</p>
-                  {{#if this.detalles}}
-                  <div class="timeline-details">
-                    <small class="text-muted">
-                      {{#if this.detalles.valorAnterior}}
-                        <strong>Valor anterior:</strong> {{this.detalles.valorAnterior}}<br>
-                      {{/if}}
-                      {{#if this.detalles.valorNuevo}}
-                        <strong>Valor nuevo:</strong> {{this.detalles.valorNuevo}}<br>
-                      {{/if}}
-                      {{#if this.detalles.estadoAnterior}}
-                        <strong>Estado anterior:</strong> {{this.detalles.estadoAnterior}}<br>
-                      {{/if}}
-                      {{#if this.detalles.estadoNuevo}}
-                        <strong>Estado nuevo:</strong> {{this.detalles.estadoNuevo}}<br>
-                      {{/if}}
-                      {{#if this.detalles.nombreReceptor}}
-                        <strong>Recibido por:</strong> {{this.detalles.nombreReceptor}}<br>
-                      {{/if}}
-                      {{#if this.detalles.fechaEntrega}}
-                        <strong>Fecha entrega:</strong> {{formatDateTime this.detalles.fechaEntrega}}<br>
-                      {{/if}}
-                    </small>
-                  </div>
-                  {{/if}}
-                  <div class="timeline-footer">
-                    <small class="text-muted">
-                      {{#if this.matrizador}}
-                        <i class="fas fa-user"></i> {{this.matrizador.nombre}} • 
-                      {{/if}}
-                      <i class="fas fa-clock"></i> {{formatDateTime this.created_at}}
-                    </small>
-                  </div>
-                </div>
-              </div>
-              {{/each}}
-            </div>
-            {{else}}
-            <div class="text-center py-4">
-              <i class="fas fa-history fa-3x text-muted mb-3"></i>
-              <p class="text-muted">No hay eventos registrados para este documento.</p>
-            </div>
-            {{/if}}
-          </div>
-        </div>
-      </div>
-    </div>
+    <!-- 🆕 HISTORIAL UNIVERSAL -->
+    {{> historial-universal eventos=eventos}}
   </div>
 </div>
 {{else}}
@@ -236,58 +158,7 @@
 </div>
 {{/if}}
 
-<style>
-.timeline {
-  position: relative;
-  padding-left: 30px;
-}
-
-.timeline-item {
-  position: relative;
-  margin-bottom: 20px;
-}
-
-.timeline-marker {
-  position: absolute;
-  left: -35px;
-  top: 5px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-}
-
-.timeline-item:not(:last-child)::before {
-  content: '';
-  position: absolute;
-  left: -30px;
-  top: 17px;
-  width: 2px;
-  height: calc(100% + 5px);
-  background-color: #dee2e6;
-}
-
-.timeline-content {
-  background: #f8f9fa;
-  padding: 15px;
-  border-radius: 8px;
-  border-left: 3px solid #007bff;
-}
-
-.timeline-title {
-  margin-bottom: 5px;
-  color: #495057;
-}
-
-.timeline-description {
-  margin-bottom: 10px;
-  color: #6c757d;
-}
-
-.timeline-footer {
-  border-top: 1px solid #dee2e6;
-  padding-top: 8px;
-}
-</style>
+<!-- CSS eliminado - Ahora usa el sistema universal -->
 
 <script>
 function marcarListo(documentoId) {

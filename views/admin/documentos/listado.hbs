@@ -6,7 +6,7 @@
     <span><i class="fas fa-binoculars me-2"></i> Supervisión de Documentos</span>
   </div>
   <div class="card-body">
-    <!-- Filtros Compactos -->
+    <!-- Filtros Compactos MEJORADOS con Fechas -->
     <div class="row mb-4">
       <div class="col-md-12">
         <div class="card bg-light">
@@ -67,8 +67,8 @@
                   <a href="/admin/documentos/listado" class="btn btn-sm btn-outline-secondary ms-1">
                     <i class="fas fa-times me-1"></i> Limpiar
                   </a>
-                  <button type="button" class="btn btn-sm btn-success ms-2" onclick="exportarDatos()">
-                    <i class="fas fa-download me-1"></i> Exportar
+                  <button type="button" class="btn btn-sm btn-success ms-2" onclick="exportarExcel()">
+                    <i class="fas fa-download me-1"></i> Exportar Excel
                   </button>
                 </div>
               </div>
@@ -99,10 +99,10 @@
     </div>
     {{/if}}
     
-    <!-- 🎯 TABLA MODELO MAESTRO - PERFECTAMENTE OPTIMIZADA -->
+    <!-- 🎯 TABLA UNIVERSAL - MODELO MAESTRO CORREGIDO -->
     <div class="table-responsive">
-      <table class="table table-hover tabla-supervision-perfecta tabla-ordenable" id="tablaDocumentosAdmin">
-        <thead class="table-dark">
+      <table class="table table-hover tabla-ordenable table-documentos" id="tablaDocumentosAdmin">
+        <thead>
           <tr>
             <th class="col-codigo ordenable" data-columna="codigoBarras" data-tipo="texto">
               <span>Código</span>
@@ -120,12 +120,12 @@
               <span>Fecha</span>
               <i class="fas fa-sort ms-1 sort-icon"></i>
             </th>
-            <th class="col-estado ordenable" data-columna="estado" data-tipo="estado">
-              <span>Estado</span>
+            <th class="col-estado ordenable" data-columna="estado" data-tipo="texto">
+              <span>Estado Entrega</span>
               <i class="fas fa-sort ms-1 sort-icon"></i>
             </th>
-            <th class="col-pago ordenable" data-columna="estadoPago" data-tipo="estado">
-              <span>Pago</span>
+            <th class="col-pago ordenable" data-columna="estadoPago" data-tipo="texto">
+              <span>Estado Pago</span>
               <i class="fas fa-sort ms-1 sort-icon"></i>
             </th>
             <th class="col-valor ordenable" data-columna="valorFactura" data-tipo="numero">
@@ -138,80 +138,75 @@
         <tbody>
           {{#each documentos}}
           <tr>
-            <!-- Código con tipo integrado - MEJORADO MÁS NEGRO -->
+            <!-- Código con formato mejorado -->
             <td class="col-codigo">
-              <span class="codigo-principal-perfecto">{{this.codigoBarras}}</span>
-              <small class="tipo-badge-perfecto tipo-{{getTipoLetra this.codigoBarras}}">
-                {{getTipoLetra this.codigoBarras}}
-              </small>
+                <span class="codigo-documento">{{this.codigoBarras}}</span>
+                <div class="tipo-documento">
+                    <small class="text-muted">{{this.tipoDocumento}}</small>
+                </div>
             </td>
             
-            <!-- Cliente legible - MEJORADO -->
+            <!-- Cliente con formato mejorado (sin truncar) -->
             <td class="col-cliente">
-              <div class="cliente-perfecto">
-                <strong class="nombre-legible">{{truncate this.nombreCliente 25}}</strong>
-                <small class="ci-legible">{{this.identificacionCliente}}</small>
-              </div>
+              <div class="cliente-nombre">{{this.nombreCliente}}</div>
+              <div class="cliente-identificacion">{{this.identificacionCliente}}</div>
             </td>
             
-            <!-- Matrizador con iniciales - MEJORADO -->
+            <!-- Matrizador (sin cambios) -->
             <td class="col-matrizador">
               {{#if this.matrizador}}
-              <span class="matrizador-perfecto" title="{{this.matrizador.nombre}}">
+              <span class="matrizador-universal" title="{{this.matrizador.nombre}}">
                 {{getIniciales this.matrizador.nombre}}
               </span>
               {{else}}
-              <span class="matrizador-perfecto sin-asignar" title="Sin asignar">
+              <span class="matrizador-universal sin-asignar" title="Sin asignar">
                 ??
               </span>
               {{/if}}
             </td>
             
-            <!-- Fecha legible - MEJORADO MÁS BOLD -->
+            <!-- Fecha (sin cambios) -->
             <td class="col-fecha">
               {{#if this.fechaFactura}}
-              <span class="fecha-legible">{{formatFechaCorta this.fechaFactura}}</span>
+              <span class="fecha-universal">{{formatFechaCorta this.fechaFactura}}</span>
               {{else}}
-              <span class="fecha-legible sin-fecha">--/--/--</span>
+              <span class="fecha-universal sin-fecha">--/--/--</span>
               {{/if}}
             </td>
             
-            <!-- Estados universales - MEJORADO -->
-            <td class="col-estado">
-              <span class="estado-universal estado-{{this.estado}}" title="{{ucfirst this.estado}}">
-                {{getEstadoIcono this.estado}}
-              </span>
+            <!-- Estado de Entrega (NUEVO BADGE) -->
+            <td class="col-estado text-center">
+              {{{badgeEstadoEntrega this.estado}}}
             </td>
             
-            <td class="col-pago">
+            <!-- Estado de Pago (NUEVO BADGE) -->
+            <td class="col-pago text-center">
               {{#if this.numeroFactura}}
-              <span class="estado-universal pago-{{this.estadoPago}}" title="{{ucfirst this.estadoPago}}">
-                {{getPagoIcono this.estadoPago}}
-              </span>
+                {{{badgeEstadoPago this.estadoPago}}}
               {{else}}
-              <span class="estado-universal sin-factura" title="Sin factura">
-                ❓
-              </span>
+                <span class="badge bg-secondary" title="Documento sin factura asociada">
+                    <i class="fas fa-file-invoice-dollar me-1"></i> S/F
+                </span>
               {{/if}}
             </td>
             
-            <!-- Valor prominente - MEJORADO -->
-            <td class="col-valor">
+            <!-- Valor con formato mejorado -->
+            <td class="col-valor text-right">
               {{#if this.valorFactura}}
-              <span class="valor-monetario">${{formatMoney this.valorFactura}}</span>
+              <span class="valor-monetario">{{formatDineroCompleto this.valorFactura}}</span>
               {{else}}
-              <span class="valor-monetario sin-valor">$0.00</span>
+              <span class="valor-monetario text-muted">$0.00</span>
               {{/if}}
             </td>
             
-            <!-- Acciones mejoradas -->
-            <td class="col-acciones">
+            <!-- Acciones (sin cambios) -->
+            <td class="col-acciones text-center">
               <div class="btn-group btn-group-sm">
-                <button class="btn btn-outline-primary btn-perfecto" onclick="verDetalle({{this.id}})" title="Ver Detalle">
+                <a href="/admin/documentos/detalle/{{this.id}}" class="btn btn-outline-primary btn-universal" title="Ver Detalle">
                   <i class="fas fa-eye"></i>
-                </button>
+                </a>
                 {{#if (eq this.estado 'entregado')}}
-                <button class="btn btn-outline-success btn-perfecto" title="Entregado" disabled>
+                <button class="btn btn-outline-success btn-universal" title="Entregado" disabled>
                   <i class="fas fa-check"></i>
                 </button>
                 {{/if}}
@@ -313,466 +308,112 @@
 
 {{#if soloLectura}}
 <script>
-// Solo funciones de consulta para modo supervisión
-function exportarDatos() {
-  // Función para exportar datos de supervisión
-  window.location.href = '/admin/reportes/documentos?formato=excel&' + $('#filtrosForm').serialize();
-}
-
-// Función para ver detalle de documento
-function verDetalle(documentoId) {
-  window.location.href = `/admin/documentos/detalle/${documentoId}`;
-}
-
-// Inicializar ordenamiento perfectamente funcional
-document.addEventListener('DOMContentLoaded', function() {
-  console.log('🎯 Inicializando tabla de supervisión PERFECTA - Modelo Maestro');
-  
-  // Inicializar ordenamiento de tablas con sistema corregido
-  if (typeof inicializarOrdenamientoTablas === 'function') {
-    inicializarOrdenamientoTablas();
-    console.log('✅ Ordenamiento funcional inicializado para admin');
-  } else {
-    console.warn('⚠️ Función inicializarOrdenamientoTablas no encontrada - Inicializando ordenamiento manual');
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('🎯 Inicializando tabla ADMIN - Sistema Universal v2.0');
+    
+    // Inicializar ordenamiento manual corregido
     inicializarOrdenamientoManual();
-  }
-  
-  // Inicializar tooltips mejorados
-  const tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
-  const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-    return new bootstrap.Tooltip(tooltipTriggerEl, {
-      delay: { show: 500, hide: 100 },
-      placement: 'top'
-    });
+    
+    // Inicializar filtros automáticos de fechas
+    inicializarFiltrosFechas();
+    
+    console.log('✅ Vista ADMIN migrada al sistema universal - Funcionalidad completa');
   });
-  
-  console.log('✅ Tabla de supervisión PERFECTA cargada - Modelo Maestro aplicado');
-});
 
-// Función de ordenamiento manual como respaldo
-function inicializarOrdenamientoManual() {
-  console.log('🔧 Inicializando ordenamiento manual para admin');
-  
-  // Buscar todos los headers ordenables
-  const headersOrdenables = document.querySelectorAll('.tabla-supervision-perfecta th.ordenable');
-  
-  headersOrdenables.forEach(header => {
-    header.style.cursor = 'pointer';
-    header.addEventListener('click', function() {
-      const columna = this.getAttribute('data-columna');
-      const tipoColumna = this.getAttribute('data-tipo') || 'texto';
-      
-      console.log('📊 Click en columna:', columna, tipoColumna);
-      
-      // Obtener dirección actual
-      let direccion = 'asc';
-      if (this.classList.contains('asc')) {
-        direccion = 'desc';
-      } else if (this.classList.contains('desc')) {
-        direccion = 'asc';
-      }
-      
-      // Limpiar otros headers
-      headersOrdenables.forEach(h => {
-        h.classList.remove('asc', 'desc', 'active');
-        const icono = h.querySelector('.sort-icon');
-        if (icono) {
-          icono.className = 'fas fa-sort ms-1 sort-icon';
+  // Función de ordenamiento manual específica para ADMIN
+  function inicializarOrdenamientoManual() {
+    console.log('🔧 Inicializando ordenamiento manual para ADMIN');
+    
+    // Buscar todos los headers ordenables
+    const headersOrdenables = document.querySelectorAll('.tabla-ordenable th.ordenable');
+    
+    headersOrdenables.forEach(header => {
+      header.style.cursor = 'pointer';
+      header.addEventListener('click', function() {
+        const columna = this.getAttribute('data-columna');
+        const tipoColumna = this.getAttribute('data-tipo') || 'texto';
+        
+        console.log('📊 Click en columna ADMIN:', columna, tipoColumna);
+        
+        // Obtener dirección actual
+        let direccion = 'asc';
+        if (this.classList.contains('asc')) {
+          direccion = 'desc';
+        } else if (this.classList.contains('desc')) {
+          direccion = 'asc';
         }
+        
+        // Limpiar otros headers
+        headersOrdenables.forEach(h => {
+          h.classList.remove('asc', 'desc', 'active');
+          const icono = h.querySelector('.sort-icon');
+          if (icono) {
+            icono.className = 'fas fa-sort ms-1 sort-icon';
+          }
+        });
+        
+        // Marcar header actual
+        this.classList.add(direccion, 'active');
+        const icono = this.querySelector('.sort-icon');
+        if (icono) {
+          icono.className = `fas fa-sort-${direccion} ms-1 sort-icon`;
+        }
+        
+        // Ejecutar ordenamiento por servidor
+        const params = new URLSearchParams(window.location.search);
+        params.set('ordenarPor', columna);
+        params.set('ordenDireccion', direccion);
+        
+        window.location.search = params.toString();
+      });
+    });
+    
+    console.log('✅ Ordenamiento manual configurado para ADMIN:', headersOrdenables.length, 'columnas');
+  }
+
+  // Función para inicializar filtros automáticos de fechas
+  function inicializarFiltrosFechas() {
+    console.log('📅 Inicializando filtros automáticos de fechas');
+    
+    const fechaDesde = document.getElementById('fechaDesde');
+    const fechaHasta = document.getElementById('fechaHasta');
+    
+    if (fechaDesde && fechaHasta) {
+      [fechaDesde, fechaHasta].forEach(campo => {
+        campo.addEventListener('change', function() {
+          if (fechaDesde.value && fechaHasta.value) {
+            console.log('📅 Aplicando filtro automático de fechas:', fechaDesde.value, 'a', fechaHasta.value);
+            document.getElementById('filtrosForm').submit();
+          }
+        });
       });
       
-      // Marcar header actual
-      this.classList.add(direccion, 'active');
-      const icono = this.querySelector('.sort-icon');
-      if (icono) {
-        icono.className = `fas fa-sort-${direccion} ms-1 sort-icon`;
-      }
-      
-      // Ejecutar ordenamiento por servidor
-      const params = new URLSearchParams(window.location.search);
-      params.set('ordenarPor', columna);
-      params.set('ordenDireccion', direccion);
-      
-      window.location.search = params.toString();
-    });
-  });
-  
-  console.log('✅ Ordenamiento manual configurado para', headersOrdenables.length, 'columnas');
-}
+      console.log('✅ Filtros automáticos de fechas configurados');
+    }
+  }
+
+  function limpiarFiltrosAdmin() {
+    document.getElementById('filtroBusqueda').value = '';
+    document.getElementById('filtroEstado').value = '';
+    document.getElementById('filtroEstadoPago').value = '';
+    document.getElementById('filtroMatrizador').value = '';
+    document.getElementById('fechaDesde').value = '';
+    document.getElementById('fechaHasta').value = '';
+    document.getElementById('filtrosForm').submit(); 
+  }
+
+  function exportarExcel() {
+    const params = new URLSearchParams(window.location.search);
+    params.set('formato', 'excel');
+    window.location.href = `${window.location.pathname}?${params.toString()}`;
+  }
+
+  function exportarPDF() {
+    const params = new URLSearchParams(window.location.search);
+    params.set('formato', 'pdf');
+    window.location.href = `${window.location.pathname}?${params.toString()}`;
+  }
 </script>
 {{/if}}
 
-{{!-- 🎨 CSS MODELO MAESTRO - PERFECCIÓN VISUAL COMPLETA CON MEJORAS --}}
-<style>
-/* ====================================================
-   🎯 TABLA MODELO MAESTRO - PERFECTAMENTE OPTIMIZADA
-   ==================================================== */
-
-.tabla-supervision-perfecta {
-  font-size: 0.875rem;                     /* Base legible aumentado de 0.8rem */
-  line-height: 1.3;                        /* Espaciado cómodo */
-  width: 100%;
-  margin-bottom: 0;
-  table-layout: fixed;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  border-collapse: separate;
-  border-spacing: 0;
-}
-
-/* ====================================================
-   📐 DISTRIBUCIÓN DE COLUMNAS OPTIMIZADA
-   ==================================================== */
-
-.col-codigo { width: 15%; }                /* Código + tipo */
-.col-cliente { width: 22%; }               /* Nombre + CI */
-.col-matrizador { width: 8%; }             /* Iniciales */
-.col-fecha { width: 8%; }                  /* DD/MM/YY */
-.col-estado { width: 6%; }                 /* Icono estado */
-.col-pago { width: 6%; }                   /* Icono pago */
-.col-valor { width: 8%; }                  /* Valor monetario */
-.col-acciones { width: 8%; }               /* Botones */
-
-/* ====================================================
-   📋 HEADERS PERFECTOS - LEGIBLES Y FUNCIONALES
-   ==================================================== */
-
-.tabla-supervision-perfecta th {
-  background-color: #343a40 !important;
-  color: white !important;
-  font-size: 0.8rem;                       /* Aumentado de 0.75rem */
-  font-weight: 600;
-  padding: 0.6rem 0.4rem;                  /* Aumentado padding */
-  letter-spacing: 0.02em;
-  border: none;
-  position: relative;
-  transition: background-color 0.2s ease;
-}
-
-.tabla-supervision-perfecta th:hover {
-  background-color: #495057 !important;
-  color: white !important;
-}
-
-.tabla-supervision-perfecta th.ordenable {
-  cursor: pointer !important;
-  user-select: none;
-}
-
-.tabla-supervision-perfecta th.ordenable:hover {
-  background-color: #495057 !important;
-  color: white !important;
-}
-
-.tabla-supervision-perfecta th.ordenable.active {
-  background-color: #007bff !important;
-  color: white !important;
-}
-
-.sort-icon {
-  opacity: 0.6;
-  font-size: 0.7rem;
-  margin-left: 4px;
-  transition: all 0.2s ease;
-}
-
-.tabla-supervision-perfecta th.ordenable:hover .sort-icon {
-  opacity: 1;
-  color: #ffc107 !important;
-}
-
-.tabla-supervision-perfecta th.ordenable.active .sort-icon {
-  opacity: 1;
-  color: white !important;
-}
-
-/* ====================================================
-   📊 FILAS CON ESPACIADO CÓMODO
-   ==================================================== */
-
-.tabla-supervision-perfecta td {
-  padding: 0.5rem 0.4rem;                  /* Espaciado cómodo */
-  vertical-align: middle;
-  line-height: 1.2;
-  border-bottom: 1px solid #dee2e6;
-}
-
-.tabla-supervision-perfecta tbody tr:hover {
-  background-color: rgba(52, 152, 219, 0.06);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-  transition: all 0.2s ease;
-}
-
-/* ====================================================
-   🏷️ CÓDIGO PERFECTO - MÁS NEGRO Y LEGIBLE
-   ==================================================== */
-
-.codigo-principal-perfecto {
-  display: block;
-  font-family: 'Segoe UI Mono', 'Courier New', monospace;
-  font-size: 0.8rem;                       /* Aumentado de 0.75rem */
-  font-weight: 700;                        /* MEJORADO: Más bold (era 500) */
-  letter-spacing: 0.5px;
-  color: #1a1a1a;                         /* MEJORADO: Más negro (era #2c3e50) */
-  margin-bottom: 3px;
-}
-
-.tipo-badge-perfecto {
-  display: inline-block;
-  width: 18px;                            /* Aumentado de 16px */
-  height: 18px;
-  border-radius: 4px;
-  text-align: center;
-  font-size: 0.65rem;                     /* Aumentado de 0.6rem */
-  font-weight: bold;
-  line-height: 18px;
-  margin-top: 2px;
-}
-
-.tipo-D { background-color: #28a745; color: white; }
-.tipo-P { background-color: #007bff; color: white; }
-.tipo-C { background-color: #ffc107; color: #333; }
-.tipo-A { background-color: #6f42c1; color: white; }
-.tipo-O { background-color: #6c757d; color: white; }
-
-/* ====================================================
-   👤 CLIENTE PERFECTO - INFORMACIÓN CLARA
-   ==================================================== */
-
-.cliente-perfecto {
-  line-height: 1.2;
-}
-
-.nombre-legible {
-  display: block;
-  font-size: 0.8rem;                      /* Aumentado de 0.75rem */
-  font-weight: 500;
-  line-height: 1.2;
-  margin-bottom: 2px;
-  color: #212529;
-}
-
-.ci-legible {
-  display: block;
-  font-size: 0.7rem;                      /* Aumentado de 0.65rem */
-  font-family: 'Segoe UI Mono', monospace;
-  letter-spacing: 0.3px;
-  color: #6c757d;
-}
-
-/* ====================================================
-   👨‍💼 MATRIZADOR PERFECTO - INICIALES LEGIBLES
-   ==================================================== */
-
-.matrizador-perfecto {
-  display: inline-block;
-  width: 36px;                            /* Aumentado de 32px */
-  height: 36px;
-  border-radius: 50%;
-  background-color: #007bff;
-  color: white;
-  text-align: center;
-  line-height: 36px;
-  font-size: 0.75rem;                     /* Aumentado de 0.7rem */
-  font-weight: bold;
-  cursor: help;
-  transition: all 0.2s ease;
-}
-
-.matrizador-perfecto:hover {
-  transform: scale(1.05);
-  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
-}
-
-.matrizador-perfecto.sin-asignar {
-  background-color: #6c757d;
-}
-
-/* ====================================================
-   📅 FECHA PERFECTA - MÁS BOLD Y LEGIBLE
-   ==================================================== */
-
-.fecha-legible {
-  font-size: 0.75rem;                     /* Aumentado de 0.7rem */
-  font-family: 'Segoe UI Mono', monospace;
-  font-weight: 700;                        /* MEJORADO: Más bold (era 500) */
-  color: #27ae60;
-  letter-spacing: 0.2px;
-}
-
-.fecha-legible.sin-fecha {
-  color: #6c757d;
-  font-weight: 600;                        /* MEJORADO: También bold para sin-fecha */
-}
-
-/* ====================================================
-   🎯 ESTADOS UNIVERSALES - ICONOS PERFECTOS
-   ==================================================== */
-
-.estado-universal {
-  display: inline-block;
-  width: 28px;                            /* Aumentado de 24px */
-  height: 28px;
-  border-radius: 50%;
-  text-align: center;
-  line-height: 28px;
-  font-size: 0.75rem;                     /* Aumentado de 0.7rem */
-  cursor: help;
-  transition: all 0.2s ease;
-}
-
-.estado-universal:hover {
-  transform: scale(1.1);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-}
-
-/* Estados específicos con colores perfeccionados */
-.estado-en_proceso { background-color: #ffc107; color: #333; }
-.estado-listo_para_entrega { background-color: #17a2b8; color: white; }
-.estado-entregado { background-color: #28a745; color: white; }
-.estado-nota_credito { background-color: #dc3545; color: white; }
-.estado-cancelado { background-color: #6c757d; color: white; }
-
-/* Pagos específicos */
-.pago-pendiente { background-color: #dc3545; color: white; }
-.pago-pagado_completo { background-color: #28a745; color: white; }
-.pago-pagado_con_retencion { background-color: #20c997; color: white; }
-.pago-pago_parcial { background-color: #fd7e14; color: white; }
-.estado-universal.sin-factura { background-color: #6c757d; color: white; }
-
-/* ====================================================
-   💰 VALOR MONETARIO PERFECTO - PROMINENTE Y CLARO
-   ==================================================== */
-
-.valor-monetario {
-  font-family: 'Segoe UI Mono', monospace;
-  font-size: 0.8rem;                      /* Aumentado de 0.75rem */
-  font-weight: 600;
-  color: #28a745;
-  letter-spacing: 0.3px;
-}
-
-.valor-monetario.sin-valor {
-  color: #6c757d;
-}
-
-/* ====================================================
-   🔘 BOTONES PERFECTOS - PROFESIONALES Y CLAROS
-   ==================================================== */
-
-.btn-perfecto {
-  padding: 0.15rem 0.4rem;                /* Aumentado padding */
-  font-size: 0.7rem;                      /* Aumentado de 0.65rem */
-  line-height: 1.2;
-  border-radius: 4px;
-  transition: all 0.2s ease;
-}
-
-.btn-perfecto:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(13, 110, 253, 0.3);
-}
-
-/* ====================================================
-   📱 RESPONSIVIDAD PERFECTA
-   ==================================================== */
-
-@media (max-width: 1600px) {
-  .tabla-supervision-perfecta {
-    font-size: 0.8rem;
-  }
-  
-  .col-cliente { width: 20%; }
-  .nombre-legible { font-size: 0.75rem; }
-}
-
-@media (max-width: 1366px) {
-  .tabla-supervision-perfecta {
-    font-size: 0.75rem;
-  }
-  
-  .col-codigo { width: 14%; }
-  .col-cliente { width: 18%; }
-  
-  .matrizador-perfecto { 
-    width: 32px; 
-    height: 32px; 
-    line-height: 32px; 
-    font-size: 0.7rem;
-  }
-  
-  .estado-universal {
-    width: 24px;
-    height: 24px;
-    line-height: 24px;
-    font-size: 0.65rem;
-  }
-}
-
-/* ====================================================
-   ✨ MEJORAS VISUALES FINALES
-   ==================================================== */
-
-.tabla-supervision-perfecta thead th {
-  border-bottom: 2px solid #495057;
-}
-
-.sin-resultados {
-  padding: 3rem 0;
-  text-align: center;
-}
-
-.sin-resultados i {
-  opacity: 0.6;
-}
-
-/* Paginación mejorada */
-.pagination-sm .page-link {
-  padding: 0.4rem 0.8rem;
-  font-size: 0.875rem;
-}
-
-.pagination .page-item.active .page-link {
-  background-color: #007bff;
-  border-color: #007bff;
-  font-weight: 600;
-}
-
-.pagination .page-link:hover {
-  color: #007bff;
-  background-color: #e9ecef;
-  border-color: #dee2e6;
-  transform: translateY(-1px);
-}
-
-/* ====================================================
-   🎯 COMPATIBILIDAD CON SISTEMA DE ORDENAMIENTO
-   ==================================================== */
-
-.tabla-ordenable th.ordenable {
-  cursor: pointer !important;
-  user-select: none !important;
-  transition: all 0.2s ease !important;
-}
-
-.tabla-ordenable th.ordenable:hover {
-  background-color: #495057 !important;
-  color: white !important;
-}
-
-.tabla-ordenable th.ordenable.activo {
-  background-color: #007bff !important;
-  color: white !important;
-}
-
-/* Estados de ordenamiento específicos */
-.tabla-supervision-perfecta th.ordenable.asc .sort-icon {
-  opacity: 1;
-  color: #ffc107 !important;
-}
-
-.tabla-supervision-perfecta th.ordenable.desc .sort-icon {
-  opacity: 1;
-  color: #ffc107 !important;
-}
-</style> 
+{{!-- ✅ CSS UNIVERSAL APLICADO - Usando table-universal.css --}} 

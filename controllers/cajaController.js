@@ -13,6 +13,7 @@ const {
   mapearMetodoPagoInverso
 } = require('../utils/documentoUtils');
 const { procesarFechaXML } = require('../utils/fechaUtils');
+const { obtenerHistorialUniversal } = require('../utils/historialUniversal');
 
 // Objeto que contendrá todas las funciones del controlador
 const cajaController = {
@@ -624,7 +625,7 @@ const cajaController = {
       
       // Parámetros de paginación
       const page = parseInt(req.query.page) || 1;
-      const limit = 10;
+      const limit = 30; // CORREGIDO: Aumentado de 10 a 30 documentos por página
       const offset = (page - 1) * limit;
 
       // ✨ NUEVO: Parámetros de ordenamiento
@@ -762,7 +763,12 @@ const cajaController = {
       // Preparar datos para la paginación
       const totalPages = Math.ceil(count / limit);
       const pagination = {
-        pages: []
+        pages: [],
+        totalCount: count,
+        currentPage: page,
+        totalPages: totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1
       };
       
       // Generar URLs para la paginación
@@ -867,129 +873,10 @@ const cajaController = {
         });
       }
 
-      // Obtener eventos del historial
-      const EventoDocumento = require('../models/EventoDocumento');
-      const eventos = await EventoDocumento.findAll({
-        where: { documentoId: documentoId }, // CORREGIDO: usar documentoId en lugar de documento_id
-        include: [
-          {
-            model: Matrizador,
-            as: 'matrizador', // CORREGIDO: usar 'matrizador' en lugar de 'usuario'
-            attributes: ['nombre', 'rol'],
-            required: false
-          }
-        ],
-        order: [['created_at', 'DESC']]
-      });
-
-      // Procesar eventos para mostrar en el historial
-      const eventosFormateados = eventos.map(evento => {
-        // Procesar detalles específicos por tipo de evento
-        let detallesProcessed = {};
-        try {
-          // Si detalles es string JSON, parsearlo
-          if (typeof evento.detalles === 'string' && evento.detalles.trim().length > 0) {
-            // Verificar si el string parece ser JSON válido
-            if (evento.detalles.trim().startsWith('{') || evento.detalles.trim().startsWith('[')) {
-              detallesProcessed = JSON.parse(evento.detalles);
-            } else {
-              // Si no es JSON, crear un objeto con la descripción
-              detallesProcessed = {
-                descripcionTexto: evento.detalles,
-                procesadoComoTexto: true
-              };
-            }
-          } else if (evento.detalles && typeof evento.detalles === 'object') {
-            detallesProcessed = evento.detalles;
-          }
-        } catch (e) {
-          // Manejo silencioso del error - crear objeto con información disponible
-          console.warn('⚠️ Evento con detalles no parseables:', evento.id, '- Usando fallback');
-          detallesProcessed = {
-            descripcionTexto: typeof evento.detalles === 'string' ? evento.detalles : 'Información de evento legacy',
-            errorParsing: true,
-            eventoId: evento.id
-          };
-        }
-        
-        // Construir información específica para eventos de entrega
-        if (evento.tipo === 'entrega' && documento.nombreReceptor) {
-          detallesProcessed = {
-            ...detallesProcessed,
-            receptor: documento.nombreReceptor,
-            identificacionReceptor: documento.identificacionReceptor,
-            relacion: documento.relacionReceptor || 'titular'
-          };
-        }
-        
-        // MEJORADO: Construir información específica para eventos de pago
-        if (evento.tipo === 'pago') {
-          // Primero usar los datos del evento si están disponibles
-          if (!detallesProcessed.valor && evento.metadatos) {
-            try {
-              const metadatos = typeof evento.metadatos === 'string' ? JSON.parse(evento.metadatos) : evento.metadatos;
-              if (metadatos.montoPago) {
-                detallesProcessed.valor = metadatos.montoPago;
-              }
-            } catch (e) {
-              // Fallback silencioso
-            }
-          }
-          
-          // Fallback a los datos del documento si no hay datos específicos del evento
-          if (!detallesProcessed.valor && documento.valorPagado) {
-            detallesProcessed.valor = documento.valorPagado;
-          }
-          if (!detallesProcessed.metodoPago && documento.metodoPago) {
-            detallesProcessed.metodoPago = documento.metodoPago;
-          }
-          if (!detallesProcessed.numeroFactura && documento.numeroFactura) {
-            detallesProcessed.numeroFactura = documento.numeroFactura;
-          }
-          if (!detallesProcessed.usuarioCaja) {
-            detallesProcessed.usuarioCaja = evento.matrizador ? evento.matrizador.nombre : 'Sistema';
-          }
-          
-          // Asegurar que el valor sea numérico y válido
-          if (detallesProcessed.valor) {
-            detallesProcessed.valor = parseFloat(detallesProcessed.valor) || 0;
-          }
-        }
-        
-        const eventoData = {
-          id: evento.id,
-          tipo: evento.tipo,
-          categoria: evento.categoria || 'general',
-          titulo: evento.titulo || 'Evento del Sistema',
-          descripcion: evento.descripcion || 'Sin descripción disponible',
-          fecha: evento.created_at,
-          usuario: evento.matrizador ? evento.matrizador.nombre : 'Sistema',
-          detalles: detallesProcessed,
-          color: 'secondary'
-        };
-
-        // Asignar icono y color según el tipo de evento
-        switch (evento.tipo) {
-          case 'creacion':
-            eventoData.color = 'primary';
-            break;
-          case 'pago':
-            eventoData.color = 'success';
-            break;
-          case 'entrega':
-            eventoData.color = 'info';
-            break;
-          case 'estado':
-            eventoData.color = 'warning';
-            break;
-          case 'asignacion':
-            eventoData.color = 'primary';
-            break;
-          default:
-            eventoData.color = 'secondary';
-        }
-
-        return eventoData;
+      // 🆕 NUEVO: Usar historial universal
+      const eventosFormateados = await obtenerHistorialUniversal(documentoId, 'caja', {
+        incluirInformacionFinanciera: true,
+        mostrarDetallesPago: true
       });
 
       // Obtener lista de matrizadores para el modal de cambio
@@ -1049,9 +936,9 @@ const cajaController = {
       console.log('  - Cliente:', documento.nombreCliente);
       console.log('  - Estado pago:', documento.estado_pago);
       
-      if (documento.estadoPago === 'pagado') {
-        console.log('⚠️ Documento ya está pagado, redirigiendo...');
-        req.flash('warning', 'Este documento ya está pagado');
+      if (documento.estadoPago === 'pagado_completo') {
+        console.log('⚠️ Documento ya está pagado completamente, redirigiendo...');
+        req.flash('warning', 'Este documento ya está pagado completamente');
         return res.redirect(`/caja/documentos/detalle/${documentoId}`);
       }
       

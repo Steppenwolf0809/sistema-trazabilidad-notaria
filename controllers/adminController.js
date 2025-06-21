@@ -10,6 +10,7 @@ const Matrizador = require('../models/Matrizador');
 const EventoDocumento = require('../models/EventoDocumento');
 const RegistroAuditoria = require('../models/RegistroAuditoria');
 const NotificacionEnviada = require('../models/NotificacionEnviada');
+const { obtenerHistorialUniversal } = require('../utils/historialUniversal');
 const { sequelize } = require('../config/database');
 const { Op } = require('sequelize');
 const moment = require('moment');
@@ -27,6 +28,8 @@ const {
 const { logger, logDashboard, logQuery } = require('../utils/logger');
 
 const configNotaria = require('../config/notaria');
+
+const notificacionController = require('./notificacionController');
 
 /**
  * FUNCIONES DE FORMATEO PROFESIONAL PARA DASHBOARD
@@ -3335,326 +3338,12 @@ exports.reporteDocumentosSinPago = async (req, res) => {
  * COPIADO DE RECEPCIÓN: Historial completo de notificaciones para administradores
  * Muestra el historial completo de notificaciones con filtros avanzados
  */
-exports.historialNotificaciones = async (req, res) => {
-  try {
-    const { 
-      fechaDesde, 
-      fechaHasta, 
-      tipo, 
-      canal, 
-      matrizador, 
-      codigoDocumento,
-      cliente,
-      numeroFactura,
-      busqueda
-    } = req.query;
-    
-    let whereClause = {};
-    let documentoWhere = {};
-    
-    // Filtro por fechas
-    if (fechaDesde || fechaHasta) {
-      whereClause.created_at = {};
-      if (fechaDesde) {
-        whereClause.created_at[Op.gte] = new Date(fechaDesde + 'T00:00:00');
-      }
-      if (fechaHasta) {
-        whereClause.created_at[Op.lte] = new Date(fechaHasta + 'T23:59:59');
-      }
-    }
-    
-    // Filtros de tipo y canal
-    if (tipo) whereClause.tipo = tipo;
-    if (canal && canal !== '') {
-      // Buscar en metadatos.canal
-      whereClause['metadatos.canal'] = canal;
-    }
-    
-    // ============== BÚSQUEDA POR TEXTO ==============
-    if (busqueda && busqueda.trim() !== '') {
-      const textoBusqueda = busqueda.trim();
-      documentoWhere[Op.or] = [
-        // Buscar por código de barras
-        { codigoBarras: { [Op.iLike]: `%${textoBusqueda}%` } },
-        // Buscar por nombre del cliente
-        { nombreCliente: { [Op.iLike]: `%${textoBusqueda}%` } },
-        // Buscar por número de factura
-        { numeroFactura: { [Op.iLike]: `%${textoBusqueda}%` } },
-        // Buscar por identificación del cliente
-        { identificacionCliente: { [Op.iLike]: `%${textoBusqueda}%` } }
-      ];
-    }
-    
-    // Filtros específicos de documento
-    if (codigoDocumento) {
-      documentoWhere.codigoBarras = {
-        [Op.iLike]: `%${codigoDocumento}%`
-      };
-    }
-    
-    if (cliente) {
-      documentoWhere.nombreCliente = {
-        [Op.iLike]: `%${cliente}%`
-      };
-    }
-    
-    if (numeroFactura) {
-      documentoWhere.numeroFactura = {
-        [Op.iLike]: `%${numeroFactura}%`
-      };
-    }
-    
-    // Filtro por matrizador
-    if (matrizador) {
-      documentoWhere.idMatrizador = matrizador;
-    }
-    
-    // ============== CORRECCIÓN: CONSULTAR TABLA CORRECTA ==============
-    // Cambiar de EventoDocumento a NotificacionEnviada para mostrar notificaciones reales
-    const notificaciones = await NotificacionEnviada.findAll({
-      where: {
-        // Filtrar por tipos de evento de notificación
-        tipoEvento: {
-          [Op.in]: ['documento_listo', 'entrega_confirmada', 'entrega_grupal', 'recordatorio', 'alerta_sin_recoger']
-        },
-        ...whereClause
-      },
-      include: [
-        {
-          model: Documento,
-          as: 'documento',
-          where: documentoWhere,
-          attributes: [
-            'id',
-            'codigoBarras', 
-            'tipoDocumento', 
-            'nombreCliente',
-            'emailCliente',
-            'telefonoCliente',
-            'numeroFactura',
-            'estado',
-            'identificacionCliente',
-            'notas',
-            'idMatrizador' // AÑADIDO: incluir idMatrizador
-          ],
-          include: [
-            {
-              model: Matrizador,
-              as: 'matrizador',
-              attributes: ['id', 'nombre', 'email'],
-              required: false
-            }
-          ],
-          required: false // Permitir notificaciones grupales sin documento específico
-        }
-      ],
-      order: [['created_at', 'DESC']],
-      limit: 100
-    });
-    
-    // Obtener lista de matrizadores para filtro
-    const matrizadores = await Matrizador.findAll({
-      attributes: ['id', 'nombre'],
-      where: { activo: true },
-      order: [['nombre', 'ASC']]
-    });
-    
-    // ============== PROCESAR NOTIFICACIONES PARA VISTA ==============
-    const notificacionesProcesadas = notificaciones.map(notif => {
-      const notifData = notif.toJSON ? notif.toJSON() : notif;
-      
-      // Asegurar que las fechas estén en formato ISO string
-      if (notifData.created_at) {
-        notifData.created_at = new Date(notifData.created_at).toISOString();
-      }
-      if (notifData.updated_at) {
-        notifData.updated_at = new Date(notifData.updated_at).toISOString();
-      }
-      
-      // Asegurar que metadatos existan
-      if (!notifData.metadatos) {
-        notifData.metadatos = {};
-      }
-      
-      // ============== MAPEAR CAMPOS PARA COMPATIBILIDAD CON VISTA ==============
-      // La vista espera campos de EventoDocumento, mapear desde NotificacionEnviada
-      notifData.tipo = notifData.tipoEvento; // Mapear tipoEvento -> tipo para la vista
-      notifData.detalles = notifData.mensajeEnviado || 'Notificación enviada';
-      notifData.usuario = notifData.metadatos?.entregadoPor || 'Sistema';
-      
-      // Agregar información de canal al metadatos para la vista
-      if (!notifData.metadatos.canal) {
-        notifData.metadatos.canal = notifData.canal;
-      }
-      if (!notifData.metadatos.estado) {
-        notifData.metadatos.estado = notifData.estado;
-      }
-      
-      // ============== CORREGIR INFORMACIÓN DEL MATRIZADOR PARA ADMIN ==============
-      // Si no hay documento (notificaciones grupales), usar metadatos
-      if (!notifData.documento && notifData.metadatos) {
-        // Crear documento virtual para notificaciones grupales
-        notifData.documento = {
-          codigoBarras: 'ENTREGA GRUPAL',
-          tipoDocumento: 'Múltiples tipos',
-          nombreCliente: notifData.metadatos.nombreCliente || 'Cliente no especificado',
-          emailCliente: notifData.metadatos.emailCliente || null,
-          telefonoCliente: notifData.metadatos.telefonoCliente || null,
-          numeroFactura: null,
-          identificacionCliente: notifData.metadatos.identificacionCliente || null,
-          estado: 'entregado',
-          matrizador: {
-            id: notifData.metadatos.idMatrizador || null,
-            nombre: notifData.metadatos.entregadoPor || 'Sistema',
-            email: null
-          }
-        };
-      } else if (notifData.documento && !notifData.documento.matrizador && notifData.metadatos?.entregadoPor) {
-        // Si el documento no tiene matrizador cargado, usar metadatos
-        notifData.documento.matrizador = {
-          id: notifData.metadatos.idUsuarioEntregador || null,
-          nombre: notifData.metadatos.entregadoPor || 'Sistema',
-          email: null
-        };
-      }
-      
-      console.log(`📅 [ADMIN] Notificación ID ${notifData.id}: fecha = ${notifData.created_at}, tipo = ${notifData.tipo}, matrizador = ${notifData.documento?.matrizador?.nombre || 'No disponible'}`);
-      
-      return notifData;
-    });
-    
-    // ============== CALCULAR ESTADÍSTICAS ==============
-    const stats = {
-      total: notificaciones.length,
-      enviadas: notificaciones.filter(n => n.estado === 'enviado').length || 0,
-      fallidas: notificaciones.filter(n => n.estado === 'fallido').length || 0,
-      pendientes: notificaciones.filter(n => n.estado === 'pendiente').length || 0
-    };
-    
-    res.render('admin/notificaciones/historial', {
-      layout: 'admin',
-      title: 'Control de Notificaciones',
-      activeNotificaciones: true,
-      notificaciones: notificacionesProcesadas,
-      matrizadores,
-      stats,
-      filtros: { 
-        fechaDesde, 
-        fechaHasta, 
-        tipo, 
-        canal, 
-        matrizador, 
-        codigoDocumento,
-        cliente,
-        numeroFactura,
-        busqueda
-      },
-      userRole: req.matrizador?.rol,
-      userName: req.matrizador?.nombre,
-      usuario: {
-        id: req.matrizador?.id,
-        rol: req.matrizador?.rol,
-        nombre: req.matrizador?.nombre
-      }
-    });
-    
-  } catch (error) {
-    console.error('Error en historial notificaciones admin:', error);
-    res.status(500).render('error', { 
-      layout: 'admin',
-      title: 'Error',
-      message: 'Error al cargar historial de notificaciones' 
-    });
-  }
-};
+exports.historialNotificaciones = notificacionController.mostrarHistorial;
 
 /**
- * COPIADO DE RECEPCIÓN: Obtiene los detalles de una notificación específica (API) para admin
+ * CENTRALIZADO: Obtiene los detalles de una notificación específica (API) para admin
  */
-exports.obtenerDetalleNotificacion = async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    if (!id) {
-      return res.status(400).json({
-        exito: false,
-        mensaje: 'ID de notificación no proporcionado'
-      });
-    }
-    
-    // ============== CORRECCIÓN: BUSCAR EN TABLA CORRECTA ==============
-    // Cambiar de EventoDocumento a NotificacionEnviada
-    const notificacion = await NotificacionEnviada.findOne({
-      where: {
-        id: id
-      },
-      include: [{
-        model: Documento,
-        as: 'documento',
-        attributes: ['codigoBarras', 'tipoDocumento', 'nombreCliente', 'emailCliente', 'telefonoCliente', 'notas', 'numeroFactura', 'estado'],
-        include: [{
-          model: Matrizador,
-          as: 'matrizador',
-          attributes: ['nombre'],
-          required: false
-        }],
-        required: false // Para notificaciones grupales
-      }]
-    });
-    
-    if (!notificacion) {
-      return res.status(404).json({
-        exito: false,
-        mensaje: 'Notificación no encontrada'
-      });
-    }
-    
-    // Preparar datos para la respuesta
-    const datos = {
-      tipo: notificacion.tipoEvento,
-      fecha: notificacion.created_at,
-      usuario: notificacion.metadatos?.entregadoPor || 'Sistema',
-      metadatos: notificacion.metadatos || {},
-      detalles: notificacion.mensajeEnviado || 'Notificación enviada',
-      documento: notificacion.documento ? {
-        codigo: notificacion.documento.codigoBarras,
-        tipo: notificacion.documento.tipoDocumento,
-        cliente: notificacion.documento.nombreCliente,
-        estado: notificacion.documento.estado,
-        matrizador: notificacion.documento.matrizador?.nombre || 'Sin asignar',
-        numeroFactura: notificacion.documento.numeroFactura || null
-      } : {
-        // Para notificaciones grupales sin documento específico
-        codigo: 'Entrega Grupal',
-        tipo: 'Múltiples documentos',
-        cliente: notificacion.metadatos?.nombreCliente || 'Cliente no especificado',
-        estado: 'entregado',
-        matrizador: 'Varios',
-        numeroFactura: null
-      },
-      canales: {
-        email: notificacion.documento?.emailCliente || notificacion.metadatos?.emailCliente,
-        telefono: notificacion.documento?.telefonoCliente || notificacion.metadatos?.telefonoCliente
-      },
-      canal: notificacion.canal,
-      estado: notificacion.estado,
-      destinatario: notificacion.destinatario,
-      mensajeEnviado: notificacion.mensajeEnviado || 'Mensaje no disponible'
-    };
-    
-    res.json({
-      exito: true,
-      datos
-    });
-    
-  } catch (error) {
-    console.error('Error al obtener detalle de notificación:', error);
-    res.status(500).json({
-      exito: false,
-      mensaje: 'Error interno del servidor'
-    });
-  }
-};
+exports.obtenerDetalleNotificacion = notificacionController.obtenerDetalleNotificacion;
 
 /**
  * FUNCIÓN AUXILIAR: Construir mensaje completo de notificación
@@ -3989,16 +3678,10 @@ exports.verDetalleDocumentoAdmin = async (req, res) => {
       return res.redirect('/admin/documentos/listado');
     }
     
-    // Obtener historial de eventos
-    const eventos = await EventoDocumento.findAll({
-      where: { documentoId: id },
-      include: [{
-        model: Matrizador,
-        as: 'matrizador',
-        attributes: ['nombre', 'rol'],
-        required: false
-      }],
-      order: [['created_at', 'DESC']]
+    // 🆕 NUEVO: Usar historial universal
+    const eventos = await obtenerHistorialUniversal(id, 'admin', {
+      incluirAuditoria: true,
+      mostrarInformacionTecnica: true
     });
     
     // Obtener registros de auditoría relacionados

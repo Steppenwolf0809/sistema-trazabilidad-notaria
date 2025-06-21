@@ -1,32 +1,25 @@
-{{!-- Vista de Mis Documentos para rol Archivo --}}
-<div class="container-fluid">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-      <h2>
-        <i class="fas fa-folder-open me-2 text-purple"></i> Mis Documentos de Archivo
-      </h2>
-      <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="/archivo">Dashboard</a></li>
-          <li class="breadcrumb-item active">Mis Documentos</li>
-        </ol>
-      </nav>
-    </div>
-    <!-- Botón eliminado - Los documentos se crean desde caja -->
+{{!-- 🎯 VISTA MIS DOCUMENTOS ARCHIVO - MIGRACIÓN COMPLETA AL SISTEMA UNIVERSAL --}}
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="fas fa-folder-open me-2"></i> Mis Documentos de Archivo</span>
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb mb-0">
+        <li class="breadcrumb-item"><a href="/archivo">Dashboard</a></li>
+        <li class="breadcrumb-item active">Mis Documentos</li>
+      </ol>
+    </nav>
   </div>
-
-  {{!-- Filtros --}}
-  <div class="card mb-4">
-    <div class="card-body">
-      <form method="GET" action="/archivo/documentos/mis-documentos" class="row g-3">
+  <div class="card-body">
+    <!-- Filtros -->
+    <div class="mb-4">
+      <form id="filtrosFormArchivoMis" action="/archivo/documentos/mis-documentos" method="GET" class="row g-3 align-items-end">
         <div class="col-md-3">
-          <label class="form-label">Buscar</label>
-          <input type="text" name="buscar" class="form-control" value="{{filtros.buscar}}" 
-                 placeholder="Código, cliente, identificación...">
+          <label for="buscar" class="form-label">Buscar</label>
+          <input type="text" class="form-control" id="buscar" name="buscar" value="{{filtros.buscar}}" placeholder="Código, cliente, identificación">
         </div>
         <div class="col-md-2">
-          <label class="form-label">Estado</label>
-          <select name="estado" class="form-select">
+          <label for="estado" class="form-label">Estado Doc.</label>
+          <select class="form-select" id="estado" name="estado">
             <option value="">Todos</option>
             <option value="en_proceso" {{#if (eq filtros.estado "en_proceso")}}selected{{/if}}>En Proceso</option>
             <option value="listo_para_entrega" {{#if (eq filtros.estado "listo_para_entrega")}}selected{{/if}}>Listo</option>
@@ -35,18 +28,18 @@
           </select>
         </div>
         <div class="col-md-2">
-          <label class="form-label">Estado de Pago</label>
-          <select name="estadoPago" class="form-select">
+          <label for="estadoPago" class="form-label">Estado Pago</label>
+          <select class="form-select" id="estadoPago" name="estadoPago">
             <option value="">Todos</option>
             <option value="pendiente" {{#if (eq filtros.estadoPago "pendiente")}}selected{{/if}}>Pendiente</option>
             <option value="pago_parcial" {{#if (eq filtros.estadoPago "pago_parcial")}}selected{{/if}}>Pago Parcial</option>
             <option value="pagado_completo" {{#if (eq filtros.estadoPago "pagado_completo")}}selected{{/if}}>Pagado Completo</option>
-            <option value="pagado_con_retencion" {{#if (eq filtros.estadoPago "pagado_con_retencion")}}selected{{/if}}>Pagado con Retención</option>
+            <option value="pagado_con_retencion" {{#if (eq filtros.estadoPago "pagado_con_retencion")}}selected{{/if}}>Con Retención</option>
           </select>
         </div>
         <div class="col-md-2">
-          <label class="form-label">Tipo</label>
-          <select name="tipoDocumento" class="form-select">
+          <label for="tipoDocumento" class="form-label">Tipo Doc.</label>
+          <select class="form-select" id="tipoDocumento" name="tipoDocumento">
             <option value="">Todos</option>
             <option value="Protocolo" {{#if (eq filtros.tipoDocumento "Protocolo")}}selected{{/if}}>Protocolo</option>
             <option value="Diligencias" {{#if (eq filtros.tipoDocumento "Diligencias")}}selected{{/if}}>Diligencias</option>
@@ -55,341 +48,329 @@
             <option value="Otros" {{#if (eq filtros.tipoDocumento "Otros")}}selected{{/if}}>Otros</option>
           </select>
         </div>
-        <div class="col-md-3 d-flex align-items-end">
-          <button type="submit" class="btn btn-primary me-2">
+        <div class="col-md-2">
+          <label for="fechaDesde" class="form-label">Fecha Desde</label>
+          <input type="date" class="form-control" id="fechaDesde" name="fechaDesde" value="{{filtros.fechaDesde}}">
+        </div>
+        <div class="col-md-1 d-flex align-items-end">
+          <button type="submit" class="btn btn-primary w-100">
             <i class="fas fa-search me-1"></i> Buscar
           </button>
-          <a href="/archivo/documentos/mis-documentos" class="btn btn-outline-secondary">
-            <i class="fas fa-times me-1"></i> Limpiar
-          </a>
         </div>
       </form>
     </div>
-  </div>
-
-  {{!-- Tabla de documentos --}}
-  <div class="card">
-    <div class="card-body p-0">
-      {{#if documentos.length}}
-        <div class="table-responsive">
-          <table class="table table-hover mb-0 tabla-ordenable" id="tablaMisDocumentosArchivo">
-            <thead class="table-light">
-              <tr>
-                <th class="ordenable" data-columna="codigoBarras" data-tipo="texto" style="width: 150px;">
-                  <span>Número Documento</span>
-                  <i class="fas fa-sort ms-1"></i>
-                </th>
-                <th class="ordenable" data-columna="tipoDocumento" data-tipo="texto">
-                  <span>Tipo</span>
-                  <i class="fas fa-sort ms-1"></i>
-                </th>
-                <th class="ordenable" data-columna="nombreCliente" data-tipo="texto">
-                  <span>Cliente</span>
-                  <i class="fas fa-sort ms-1"></i>
-                </th>
-                <th class="ordenable" data-columna="identificacionCliente" data-tipo="texto">
-                  <span>Identificación</span>
-                  <i class="fas fa-sort ms-1"></i>
-                </th>
-                <th class="ordenable" data-columna="valorFactura" data-tipo="numero">
-                  <span>Valor</span>
-                  <i class="fas fa-sort ms-1"></i>
-                </th>
-                <th class="ordenable" data-columna="estadoPago" data-tipo="estado">
-                  <span>Estado Pago</span>
-                  <i class="fas fa-sort ms-1"></i>
-                </th>
-                <th class="ordenable" data-columna="estado" data-tipo="estado">
-                  <span>Estado</span>
-                  <i class="fas fa-sort ms-1"></i>
-                </th>
-                <th class="ordenable" data-columna="updated_at" data-tipo="fecha">
-                  <span>Última Actualización</span>
-                  <i class="fas fa-sort ms-1"></i>
-                </th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {{#each documentos}}
-                <tr>
-                  <td>
-                    <a href="/archivo/documentos/detalle/{{this.id}}" class="fw-bold text-decoration-none" style="font-size: 1.1em;">
-                      {{this.codigoBarras}}
-                    </a>
-                  </td>
-                  <td>
-                    <span class="badge badge-estado badge-tipo bg-info">{{this.tipoDocumento}}</span>
-                  </td>
-                  <td>{{this.nombreCliente}}</td>
-                  <td>{{this.identificacionCliente}}</td>
-                  <td>${{formatMoney this.valorFactura}}</td>
-                  <td class="columna-estado">
-                    {{#if (eq this.estadoPago "pendiente")}}
-                      <span class="badge badge-estado badge-estado-medio bg-danger">
-                        <i class="fas fa-clock me-1"></i>Pendiente
-                      </span>
-                    {{else if (eq this.estadoPago "pago_parcial")}}
-                      <span class="badge badge-estado badge-estado-largo bg-warning text-dark">
-                        <i class="fas fa-coins me-1"></i>Pago Parcial
-                      </span>
-                    {{else if (eq this.estadoPago "pagado_completo")}}
-                      <span class="badge badge-estado badge-estado-largo bg-success">
-                        <i class="fas fa-check-circle me-1"></i>Pagado Completo
-                      </span>
-                    {{else if (eq this.estadoPago "pagado_con_retencion")}}
-                      <span class="badge badge-estado badge-estado-largo bg-info">
-                        <i class="fas fa-receipt me-1"></i>Pagado con Retención
-                      </span>
-                    {{else}}
-                      <span class="badge badge-estado bg-secondary">
-                        <i class="fas fa-question-circle me-1"></i>{{this.estadoPago}}
-                      </span>
-                    {{/if}}
-                  </td>
-                  <td class="columna-estado">
-                    {{#if (eq this.estado "en_proceso")}}
-                      <span class="badge badge-estado badge-estado-medio bg-warning text-dark">En Proceso</span>
-                    {{else if (eq this.estado "listo_para_entrega")}}
-                      <span class="badge badge-estado badge-estado-corto bg-success">Listo</span>
-                    {{else if (eq this.estado "entregado")}}
-                      <span class="badge badge-estado badge-estado-largo bg-primary">Entregado</span>
-                    {{else if (eq this.estado "cancelado")}}
-                      <span class="badge badge-estado badge-estado-medio bg-danger">Cancelado</span>
-                    {{else}}
-                      <span class="badge badge-estado bg-secondary">{{this.estado}}</span>
-                    {{/if}}
-                  </td>
-                  <td data-sort-value="{{this.updated_at}}">{{formatDateTime this.updated_at}}</td>
-                  <td class="text-center">
-                    {{#if (eq ../userRole "archivo")}}
-                        {{! Solo mostrar botones si es el usuario archivo }}
-                        <div class="btn-group btn-group-sm" role="group" aria-label="Acciones del documento">
-                            <!-- Botón Ver Detalle - Siempre disponible -->
-                            <a href="/archivo/documentos/detalle/{{this.id}}" 
-                               class="btn btn-outline-info btn-sm" 
-                               title="Ver detalle completo"
-                               data-bs-toggle="tooltip">
-                                <i class="fas fa-eye"></i>
-                            </a>
-                            
-                            <!-- Botón Editar - Solo para documentos en proceso -->
-                            {{#if (eq this.estado "en_proceso")}}
-                            <a href="/archivo/documentos/editar/{{this.id}}" 
-                               class="btn btn-outline-primary btn-sm" 
-                               title="Editar documento"
-                               data-bs-toggle="tooltip">
-                                <i class="fas fa-edit"></i>
-                            </a>
-                            {{/if}}
-                            
-                            <!-- Botón Marcar como Listo - Solo para documentos en proceso -->
-                            {{#if (eq this.estado "en_proceso")}}
-                            <button type="button" 
-                                    class="btn btn-outline-success btn-sm" 
-                                    onclick="marcarListo({{this.id}})" 
-                                    title="Marcar como listo para entrega"
-                                    data-bs-toggle="tooltip">
-                                <i class="fas fa-check-circle"></i>
-                            </button>
-                            {{/if}}
-                            
-                            <!-- Botón Ver Código - Solo para documentos listos -->
-                            {{#if (eq this.estado "listo_para_entrega")}}
-                            <button type="button" 
-                                    class="btn btn-outline-info btn-sm" 
-                                    onclick="mostrarCodigo('{{this.codigoVerificacion}}')" 
-                                    title="Ver código de verificación"
-                                    data-bs-toggle="tooltip">
-                                <i class="fas fa-key"></i>
-                            </button>
-                            {{/if}}
-                            
-                            <!-- Botón Entregar - Solo para documentos listos -->
-                            {{#if (eq this.estado "listo_para_entrega")}}
-                            <a href="/archivo/documentos/entrega/{{this.id}}" 
-                               class="btn btn-outline-warning btn-sm" 
-                               title="Proceder con entrega"
-                               data-bs-toggle="tooltip">
-                                <i class="fas fa-hand-holding"></i>
-                            </a>
-                            {{/if}}
-                            
-                            <!-- Para documentos entregados - Solo ver detalles -->
-                            {{#if (eq this.estado "entregado")}}
-                            <span class="badge bg-success">
-                                <i class="fas fa-check-double me-1"></i>Entregado
-                            </span>
-                            {{/if}}
-                        </div>
-                    {{else}}
-                        <span class="badge bg-secondary">Solo lectura</span>
-                    {{/if}}
-                  </td>
-                </tr>
-              {{/each}}
-            </tbody>
-          </table>
-        </div>
-
-        {{!-- Paginación --}}
-        {{#if (gt paginacion.totalPages 1)}}
-          <div class="card-footer">
-            <div class="d-flex justify-content-between align-items-center">
-              <small class="text-muted">
-                Mostrando {{paginacion.totalDocuments}} documentos
-              </small>
-              <nav>
-                <ul class="pagination pagination-sm mb-0">
-                  {{#if paginacion.hasPrevPage}}
-                    <li class="page-item">
-                      <a class="page-link" href="?page={{paginacion.prevPage}}{{#if filtros.buscar}}&buscar={{filtros.buscar}}{{/if}}{{#if filtros.estado}}&estado={{filtros.estado}}{{/if}}{{#if filtros.estadoPago}}&estadoPago={{filtros.estadoPago}}{{/if}}{{#if filtros.tipoDocumento}}&tipoDocumento={{filtros.tipoDocumento}}{{/if}}">Anterior</a>
-                    </li>
-                  {{/if}}
-                  
-                  {{#each (range 1 paginacion.totalPages)}}
-                    <li class="page-item {{#if (eq this ../paginacion.currentPage)}}active{{/if}}">
-                      <a class="page-link" href="?page={{this}}{{#if ../filtros.buscar}}&buscar={{../filtros.buscar}}{{/if}}{{#if ../filtros.estado}}&estado={{../filtros.estado}}{{/if}}{{#if ../filtros.estadoPago}}&estadoPago={{../filtros.estadoPago}}{{/if}}{{#if ../filtros.tipoDocumento}}&tipoDocumento={{../filtros.tipoDocumento}}{{/if}}">{{this}}</a>
-                    </li>
-                  {{/each}}
-                  
-                  {{#if paginacion.hasNextPage}}
-                    <li class="page-item">
-                      <a class="page-link" href="?page={{paginacion.nextPage}}{{#if filtros.buscar}}&buscar={{filtros.buscar}}{{/if}}{{#if filtros.estado}}&estado={{filtros.estado}}{{/if}}{{#if filtros.estadoPago}}&estadoPago={{filtros.estadoPago}}{{/if}}{{#if filtros.tipoDocumento}}&tipoDocumento={{filtros.tipoDocumento}}{{/if}}">Siguiente</a>
-                    </li>
-                  {{/if}}
-                </ul>
-              </nav>
-            </div>
-          </div>
-        {{/if}}
-      {{else}}
-        <div class="text-center py-5">
-          <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
-          <h5 class="text-muted">No tienes documentos de archivo asignados</h5>
-          <p class="text-muted">Los documentos se crean desde el módulo de caja y luego se asignan al archivo.</p>
-        </div>
-      {{/if}}
+    
+    <!-- 🎯 TABLA UNIVERSAL ARCHIVO MIS DOCUMENTOS - MIGRACIÓN COMPLETA -->
+    <div class="table-responsive">
+      <table class="table table-hover tabla-ordenable table-documentos" id="tablaArchivoMisDocumentos">
+        <thead>
+          <tr>
+            <th class="col-codigo ordenable" data-columna="codigoBarras" data-tipo="texto">
+              <span>Código</span>
+              <i class="fas fa-sort ms-1 sort-icon"></i>
+            </th>
+            <th class="col-cliente ordenable" data-columna="nombreCliente" data-tipo="texto">
+              <span>Cliente</span>
+              <i class="fas fa-sort ms-1 sort-icon"></i>
+            </th>
+            <th class="col-fecha ordenable" data-columna="fechaFactura" data-tipo="fecha">
+              <span>Fecha</span>
+              <i class="fas fa-sort ms-1 sort-icon"></i>
+            </th>
+            <th class="col-estado ordenable" data-columna="estado" data-tipo="texto">
+              <span>Estado Entrega</span>
+              <i class="fas fa-sort ms-1 sort-icon"></i>
+            </th>
+            <th class="col-pago ordenable" data-columna="estadoPago" data-tipo="texto">
+              <span>Estado Pago</span>
+              <i class="fas fa-sort ms-1 sort-icon"></i>
+            </th>
+            <th class="col-valor ordenable" data-columna="valorFactura" data-tipo="numero">
+              <span>Valor</span>
+              <i class="fas fa-sort ms-1 sort-icon"></i>
+            </th>
+            <th class="col-acciones">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each documentos}}
+          <tr>
+            <!-- Código con formato mejorado -->
+            <td class="col-codigo">
+                <span class="codigo-documento">{{this.codigoBarras}}</span>
+                <div class="tipo-documento">
+                    <small class="text-muted">{{this.tipoDocumento}}</small>
+                </div>
+            </td>
+            
+            <!-- Cliente con formato mejorado (sin truncar) -->
+            <td class="col-cliente">
+              <div class="cliente-nombre">{{this.nombreCliente}}</div>
+              <div class="cliente-identificacion">{{this.identificacionCliente}}</div>
+            </td>
+            
+            <!-- Fecha (sin cambios) -->
+            <td class="col-fecha">
+              {{#if this.fechaFactura}}
+              <span class="fecha-universal">{{formatFechaCorta this.fechaFactura}}</span>
+              {{else}}
+              <span class="fecha-universal sin-fecha">--/--/--</span>
+              {{/if}}
+            </td>
+            
+            <!-- Estado de Entrega (NUEVO BADGE) -->
+            <td class="col-estado text-center">
+              {{{badgeEstadoEntrega this.estado}}}
+            </td>
+            
+            <!-- Estado de Pago (NUEVO BADGE) -->
+            <td class="col-pago text-center">
+              {{#if this.numeroFactura}}
+                {{{badgeEstadoPago this.estadoPago}}}
+              {{else}}
+                <span class="badge bg-secondary" title="Documento sin factura asociada">
+                    <i class="fas fa-file-invoice-dollar me-1"></i> S/F
+                </span>
+              {{/if}}
+            </td>
+            
+            <!-- Valor con formato mejorado -->
+            <td class="col-valor text-right">
+              {{#if this.valorFactura}}
+              <span class="valor-monetario">{{formatDineroCompleto this.valorFactura}}</span>
+              {{else}}
+              <span class="valor-monetario text-muted">$0.00</span>
+              {{/if}}
+            </td>
+            
+            <!-- Acciones específicas de ARCHIVO -->
+            <td class="col-acciones text-center">
+              <div class="btn-group btn-group-sm">
+                <!-- Ver Detalle - Siempre disponible -->
+                <a href="/archivo/documentos/detalle/{{this.id}}" class="btn btn-outline-primary btn-universal" title="Ver Detalle">
+                  <i class="fas fa-eye"></i>
+                </a>
+                
+                <!-- Editar - Solo para documentos en proceso -->
+                {{#if (eq this.estado 'en_proceso')}}
+                <a href="/archivo/documentos/editar/{{this.id}}" class="btn btn-outline-warning btn-universal" title="Editar">
+                  <i class="fas fa-edit"></i>
+                </a>
+                {{/if}}
+                
+                <!-- Marcar como Listo - Solo para documentos en proceso -->
+                {{#if (eq this.estado 'en_proceso')}}
+                <button class="btn btn-outline-success btn-universal" onclick="marcarComoListo({{this.id}})" title="Marcar como Listo">
+                  <i class="fas fa-check-circle"></i>
+                </button>
+                {{/if}}
+                
+                <!-- Ver Código - Solo para documentos listos -->
+                {{#if (eq this.estado 'listo_para_entrega')}}
+                <button class="btn btn-outline-info btn-universal" onclick="mostrarCodigo('{{this.codigoVerificacion}}')" title="Ver Código">
+                  <i class="fas fa-key"></i>
+                </button>
+                {{/if}}
+                
+                <!-- Entregar - Solo para documentos listos -->
+                {{#if (eq this.estado 'listo_para_entrega')}}
+                <a href="/archivo/documentos/entrega/{{this.id}}" class="btn btn-outline-success btn-universal" title="Entregar">
+                  <i class="fas fa-hand-holding"></i>
+                </a>
+                {{/if}}
+              </div>
+            </td>
+          </tr>
+          {{else}}
+          <tr>
+            <td colspan="7" class="text-center py-5">
+              <div class="sin-resultados">
+                <i class="fas fa-folder-open fa-2x mb-3 text-muted"></i>
+                <h5 class="text-muted">No tienes documentos de archivo asignados</h5>
+                <p class="mb-0 text-muted">Los documentos se crean desde caja y se asignan al archivo</p>
+              </div>
+            </td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
     </div>
+    
+    <!-- Paginación -->
+    {{#if (gt paginacion.totalPages 1)}}
+    <nav aria-label="Paginación de documentos" class="mt-4">
+      <div class="row align-items-center">
+        <div class="col-md-6">
+          <p class="text-muted mb-0">
+            Mostrando {{paginacion.totalDocuments}} documentos
+            {{#if paginacion.totalPages}}de página {{paginacion.currentPage}} de {{paginacion.totalPages}}{{/if}}
+          </p>
+        </div>
+        <div class="col-md-6">
+          <ul class="pagination pagination-sm justify-content-end mb-0">
+            {{#if paginacion.hasPrevPage}}
+            <li class="page-item">
+              <a class="page-link" href="?page={{paginacion.prevPage}}&{{buildQueryString filtros}}" title="Página anterior">
+                <i class="fas fa-angle-left"></i>
+              </a>
+            </li>
+            {{else}}
+            <li class="page-item disabled">
+              <span class="page-link">
+                <i class="fas fa-angle-left"></i>
+              </span>
+            </li>
+            {{/if}}
+            
+            {{#each (range 1 paginacion.totalPages)}}
+            <li class="page-item {{#if (eq this ../paginacion.currentPage)}}active{{/if}}">
+              <a class="page-link" href="?page={{this}}&{{buildQueryString ../filtros}}">
+                {{this}}
+              </a>
+            </li>
+            {{/each}}
+            
+            {{#if paginacion.hasNextPage}}
+            <li class="page-item">
+              <a class="page-link" href="?page={{paginacion.nextPage}}&{{buildQueryString filtros}}" title="Página siguiente">
+                <i class="fas fa-angle-right"></i>
+              </a>
+            </li>
+            {{else}}
+            <li class="page-item disabled">
+              <span class="page-link">
+                <i class="fas fa-angle-right"></i>
+              </span>
+            </li>
+            {{/if}}
+          </ul>
+        </div>
+      </div>
+    </nav>
+    {{/if}}
   </div>
 </div>
 
 <script>
-// Función para marcar documento como listo
-function marcarListo(documentoId) {
-  if (!confirm('¿Está seguro de marcar este documento como listo para entrega?\n\nSe generará un código de verificación y se enviará una notificación automática al cliente.')) {
-    return;
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('🎯 Inicializando tabla ARCHIVO MIS DOCUMENTOS - Sistema Universal v1.0');
+    
+    // Inicializar ordenamiento manual corregido
+    inicializarOrdenamientoManual();
+    
+    console.log('✅ Vista ARCHIVO MIS DOCUMENTOS migrada al sistema universal - Funcionalidad completa');
+  });
+
+  // Función de ordenamiento manual específica para ARCHIVO MIS DOCUMENTOS
+  function inicializarOrdenamientoManual() {
+    console.log('🔧 Inicializando ordenamiento manual para ARCHIVO MIS DOCUMENTOS');
+    
+    // Buscar todos los headers ordenables
+    const headersOrdenables = document.querySelectorAll('.tabla-ordenable th.ordenable');
+    
+    headersOrdenables.forEach(header => {
+      header.style.cursor = 'pointer';
+      header.addEventListener('click', function() {
+        const columna = this.getAttribute('data-columna');
+        const tipoColumna = this.getAttribute('data-tipo') || 'texto';
+        
+        console.log('📊 Click en columna ARCHIVO MIS DOCUMENTOS:', columna, tipoColumna);
+        
+        // Obtener dirección actual
+        let direccion = 'asc';
+        if (this.classList.contains('asc')) {
+          direccion = 'desc';
+        } else if (this.classList.contains('desc')) {
+          direccion = 'asc';
+        }
+        
+        // Limpiar otros headers
+        headersOrdenables.forEach(h => {
+          h.classList.remove('asc', 'desc', 'active');
+          const icono = h.querySelector('.sort-icon');
+          if (icono) {
+            icono.className = 'fas fa-sort ms-1 sort-icon';
+          }
+        });
+        
+        // Marcar header actual
+        this.classList.add(direccion, 'active');
+        const icono = this.querySelector('.sort-icon');
+        if (icono) {
+          icono.className = `fas fa-sort-${direccion} ms-1 sort-icon`;
+        }
+        
+        // Ejecutar ordenamiento por servidor
+        const params = new URLSearchParams(window.location.search);
+        params.set('ordenarPor', columna);
+        params.set('ordenDireccion', direccion);
+        
+        window.location.search = params.toString();
+      });
+    });
+    
+    console.log('✅ Ordenamiento manual configurado para ARCHIVO MIS DOCUMENTOS:', headersOrdenables.length, 'columnas');
   }
-  
-  // Mostrar indicador de carga
-  const button = event.target.closest('button');
-  const originalHTML = button.innerHTML;
-  button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-  button.disabled = true;
-  
-  fetch(`/archivo/documentos/marcar-listo/${documentoId}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Requested-With': 'XMLHttpRequest'
+
+  // Función para marcar documento como listo
+  function marcarComoListo(documentoId) {
+    if (!confirm('¿Está seguro de marcar este documento como listo para entrega?\n\nSe generará un código de verificación y se enviará una notificación automática al cliente.')) {
+      return;
     }
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.exito) {
-      // Mostrar código generado
-      alert(`✅ Documento marcado como listo exitosamente!\n\n🔑 Código de verificación: ${data.codigoVerificacion}\n\n📱 Se ha enviado notificación automática al cliente.`);
-      location.reload();
-    } else {
-      alert('❌ Error: ' + data.mensaje);
+    
+    // Mostrar indicador de carga
+    const button = event.target.closest('button');
+    const originalHTML = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    button.disabled = true;
+    
+    fetch(`/archivo/documentos/marcar-listo/${documentoId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.exito) {
+        // Mostrar código generado
+        alert(`✅ Documento marcado como listo exitosamente!\n\n🔑 Código de verificación: ${data.codigoVerificacion}\n\n📱 Se ha enviado notificación automática al cliente.`);
+        location.reload();
+      } else {
+        alert('❌ Error: ' + data.mensaje);
+        // Restaurar botón
+        button.innerHTML = originalHTML;
+        button.disabled = false;
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('❌ Error de conexión. Intente nuevamente.');
       // Restaurar botón
       button.innerHTML = originalHTML;
       button.disabled = false;
-    }
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    alert('❌ Error de conexión. Intente nuevamente.');
-    // Restaurar botón
-    button.innerHTML = originalHTML;
-    button.disabled = false;
-  });
-}
-
-// Función para mostrar código de verificación
-function mostrarCodigo(codigo) {
-  if (!codigo) {
-    alert('⚠️ No hay código de verificación disponible para este documento.');
-    return;
-  }
-  
-  alert(`🔑 Código de verificación: ${codigo}\n\n📋 Este código debe proporcionarse al cliente para autorizar la entrega por terceros.\n\n💡 El cliente debe presentar este código junto con su identificación para retirar el documento.`);
-}
-
-// Función para entregar documento (mantenida para compatibilidad)
-function entregarDocumento(documentoId) {
-  window.location.href = `/archivo/documentos/entrega/${documentoId}`;
-}
-
-// Inicializar tooltips y ordenamiento cuando se carga la página
-document.addEventListener('DOMContentLoaded', function() {
-  console.log('🗂️ Inicializando vista mis documentos de archivo con ordenamiento mejorado');
-  
-  // Inicializar ordenamiento de tablas
-  if (typeof inicializarOrdenamientoTablas === 'function') {
-    inicializarOrdenamientoTablas();
-    console.log('✅ Ordenamiento de tablas inicializado para mis documentos');
-  } else {
-    console.warn('⚠️ Función inicializarOrdenamientoTablas no encontrada');
-  }
-  
-  // 🔧 CORRECCIÓN AUTOMÁTICA DE BADGES ENTREGADO
-  function corregirBadgesEntregado() {
-    const badges = document.querySelectorAll('.badge');
-    let badgesCorregidos = 0;
-    
-    badges.forEach(badge => {
-      const texto = badge.textContent.trim().toLowerCase();
-      if (texto.includes('entregado') || texto.includes('con retención') || texto.includes('pagado completo')) {
-        // Aplicar estilos optimizados
-        badge.style.minWidth = '80px';
-        badge.style.fontSize = '0.7rem';
-        badge.style.padding = '0.3rem 0.5rem';
-        badgesCorregidos++;
-        console.log('🔧 Badge corregido:', texto);
-      }
     });
-    
-    if (badgesCorregidos > 0) {
-      console.log(`✅ Se corrigieron ${badgesCorregidos} badges en mis documentos`);
-    }
-  }
-  
-  // Ejecutar corrección inmediatamente
-  corregirBadgesEntregado();
-  
-  // Observar cambios dinámicos en la tabla
-  const observer = new MutationObserver(function(mutations) {
-    mutations.forEach(function(mutation) {
-      if (mutation.type === 'childList') {
-        corregirBadgesEntregado();
-      }
-    });
-  });
-  
-  const tabla = document.querySelector('#tablaMisDocumentosArchivo');
-  if (tabla) {
-    observer.observe(tabla, { childList: true, subtree: true });
   }
 
-  // Activar tooltips de Bootstrap
-  var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-  var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-    return new bootstrap.Tooltip(tooltipTriggerEl);
-  });
-  
-  console.log('✅ Vista mis documentos de archivo cargada correctamente - Tooltips, ordenamiento y badges optimizados');
-});
+  // Función para mostrar código de verificación
+  function mostrarCodigo(codigo) {
+    if (!codigo) {
+      alert('⚠️ No hay código de verificación disponible para este documento.');
+      return;
+    }
+    
+    alert(`🔑 Código de verificación: ${codigo}\n\n📋 Este código debe proporcionarse al cliente para autorizar la entrega por terceros.\n\n💡 El cliente debe presentar este código junto con su identificación para retirar el documento.`);
+  }
+
+  function limpiarFiltrosArchivoMis() {
+    document.getElementById('buscar').value = '';
+    document.getElementById('estado').value = '';
+    document.getElementById('estadoPago').value = '';
+    document.getElementById('tipoDocumento').value = '';
+    document.getElementById('fechaDesde').value = '';
+    document.getElementById('filtrosFormArchivoMis').submit(); 
+  }
 </script>
 
 {{!-- Estilos específicos --}}

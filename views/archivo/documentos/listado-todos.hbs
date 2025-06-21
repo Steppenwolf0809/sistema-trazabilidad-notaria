@@ -106,139 +106,136 @@
     </div>
 </div>
 
-<!-- Tabla de Documentos -->
-{{#if documentos}}
-<div class="table-container">
-    <div class="table-responsive">
-        <table class="table table-hover table-striped tabla-ordenable" id="tablaDocumentosArchivo">
-            <thead class="table-dark">
-                <tr>
-                    <th class="ordenable" data-columna="codigoBarras" data-tipo="texto" style="width: 150px;">
-                        <span>Número Documento</span>
-                        <i class="fas fa-sort ms-1"></i>
-                    </th>
-                    <th class="ordenable" data-columna="nombreCliente" data-tipo="texto">
-                        <span>Cliente</span>
-                        <i class="fas fa-sort ms-1"></i>
-                    </th>
-                    <th class="ordenable" data-columna="tipoDocumento" data-tipo="texto">
-                        <span>Tipo</span>
-                        <i class="fas fa-sort ms-1"></i>
-                    </th>
-                    <th class="ordenable" data-columna="matrizador" data-tipo="texto">
-                        <span>Matrizador</span>
-                        <i class="fas fa-sort ms-1"></i>
-                    </th>
-                    <th class="ordenable" data-columna="estado" data-tipo="estado">
-                        <span>Estado</span>
-                        <i class="fas fa-sort ms-1"></i>
-                    </th>
-                    <th class="ordenable" data-columna="estadoPago" data-tipo="estado">
-                        <span>Estado Pago</span>
-                        <i class="fas fa-sort ms-1"></i>
-                    </th>
-                    <th class="ordenable" data-columna="valorFactura" data-tipo="numero">
-                        <span>Valor</span>
-                        <i class="fas fa-sort ms-1"></i>
-                    </th>
-                    <th class="ordenable" data-columna="updated_at" data-tipo="fecha">
-                        <span>Última Act.</span>
-                        <i class="fas fa-sort ms-1"></i>
-                    </th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                {{#each documentos}}
-                <tr>
-                    <td>
-                        <a href="/archivo/documentos/detalle/{{this.id}}" class="fw-bold text-decoration-none" style="font-size: 1.1em;">
-                            {{this.codigoBarras}}
-                        </a>
-                    </td>
-                    <td>
-                        <div>
-                            <strong>{{this.nombreCliente}}</strong>
-                            {{#if this.identificacionCliente}}
-                                <br><small class="text-muted">{{this.identificacionCliente}}</small>
-                            {{/if}}
-                        </div>
-                    </td>
-                    <td>
-                        <span class="badge badge-estado badge-tipo bg-info">{{this.tipoDocumento}}</span>
-                    </td>
-                    <td>
-                        {{#if this.matrizador}}
-                            <div class="d-flex align-items-center">
-                                {{#if (eq this.matrizador.id ../userId)}}
-                                    <i class="bi bi-person-check text-success me-1" title="Tu documento"></i>
-                                {{/if}}
-                                <small>{{this.matrizador.nombre}}</small>
-                            </div>
-                        {{else}}
-                            <span class="text-muted">Sin asignar</span>
-                        {{/if}}
-                    </td>
-                    <td class="columna-estado">
-                        {{#if (eq this.estado 'en_proceso')}}
-                            <span class="badge badge-estado badge-estado-medio bg-warning text-dark">En Proceso</span>
-                        {{else if (eq this.estado 'listo_para_entrega')}}
-                            <span class="badge badge-estado badge-estado-corto bg-success">Listo</span>
-                        {{else if (eq this.estado 'entregado')}}
-                            <span class="badge badge-estado badge-estado-largo bg-primary">Entregado</span>
-                        {{else if (eq this.estado 'cancelado')}}
-                            <span class="badge badge-estado badge-estado-medio bg-danger">Cancelado</span>
-                        {{else}}
-                            <span class="badge badge-estado bg-light text-dark">{{this.estado}}</span>
-                        {{/if}}
-                    </td>
-                    <td class="columna-estado">
-                        {{#if (eq this.estadoPago 'pendiente')}}
-                            <span class="badge badge-estado badge-estado-medio bg-danger">Pendiente</span>
-                        {{else if (eq this.estadoPago 'pago_parcial')}}
-                            <span class="badge badge-estado badge-estado-corto bg-warning text-dark">Parcial</span>
-                        {{else if (eq this.estadoPago 'pagado_completo')}}
-                            <span class="badge badge-estado badge-estado-corto bg-success">Pagado</span>
-                        {{else if (eq this.estadoPago 'pagado_con_retencion')}}
-                            <span class="badge badge-estado badge-estado-largo bg-info">Con Retención</span>
-                        {{else}}
-                            <span class="badge badge-estado bg-light text-dark">{{this.estadoPago}}</span>
-                        {{/if}}
-                    </td>
-                    <td>
-                        {{#if this.valorFactura}}
-                            <strong>${{formatMoney this.valorFactura}}</strong>
-                        {{else}}
-                            <span class="text-muted">-</span>
-                        {{/if}}
-                    </td>
-                    <td data-sort-value="{{this.updated_at}}">
-                        <small>{{formatDateTime this.updated_at}}</small>
-                    </td>
-                    <td>
-                        <div class="btn-group btn-group-sm">
-                            <a href="/archivo/documentos/detalle/{{this.id}}" 
-                               class="btn btn-outline-primary btn-sm" 
-                               data-bs-toggle="tooltip" 
-                               title="Ver detalle">
-                                <i class="bi bi-eye"></i>
-                            </a>
-                            {{#if (eq this.matrizador.id ../userId)}}
-                                <span class="btn btn-success btn-sm" data-bs-toggle="tooltip" title="Tu documento">
-                                    <i class="bi bi-check"></i>
-                                </span>
-                            {{else}}
-                                <span class="btn btn-outline-secondary btn-sm" data-bs-toggle="tooltip" title="Solo lectura">
-                                    <i class="bi bi-lock"></i>
-                                </span>
-                            {{/if}}
-                        </div>
-                    </td>
-                </tr>
-                {{/each}}
-            </tbody>
-        </table>
-    </div>
+<!-- 🎯 TABLA UNIVERSAL ARCHIVO - MIGRACIÓN COMPLETA -->
+<div class="table-responsive">
+  <table class="table table-hover tabla-ordenable table-documentos" id="tablaDocumentosArchivo">
+    <thead>
+      <tr>
+        <th class="col-codigo ordenable" data-columna="codigoBarras" data-tipo="texto">
+          <span>Código</span>
+          <i class="fas fa-sort ms-1 sort-icon"></i>
+        </th>
+        <th class="col-cliente ordenable" data-columna="nombreCliente" data-tipo="texto">
+          <span>Cliente</span>
+          <i class="fas fa-sort ms-1 sort-icon"></i>
+        </th>
+        <th class="col-matrizador ordenable" data-columna="matrizador" data-tipo="texto">
+          <span>Matrizador</span>
+          <i class="fas fa-sort ms-1 sort-icon"></i>
+        </th>
+        <th class="col-fecha ordenable" data-columna="fechaFactura" data-tipo="fecha">
+          <span>Fecha</span>
+          <i class="fas fa-sort ms-1 sort-icon"></i>
+        </th>
+        <th class="col-estado ordenable" data-columna="estado" data-tipo="texto">
+          <span>Estado Entrega</span>
+          <i class="fas fa-sort ms-1 sort-icon"></i>
+        </th>
+        <th class="col-pago ordenable" data-columna="estadoPago" data-tipo="texto">
+          <span>Estado Pago</span>
+          <i class="fas fa-sort ms-1 sort-icon"></i>
+        </th>
+        <th class="col-valor ordenable" data-columna="valorFactura" data-tipo="numero">
+          <span>Valor</span>
+          <i class="fas fa-sort ms-1 sort-icon"></i>
+        </th>
+        <th class="col-acciones">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each documentos}}
+      <tr {{#if (esDocumentoAjeno ../usuario this)}}class="documento-ajeno"{{/if}}>
+        <!-- Código con formato mejorado -->
+        <td class="col-codigo">
+            <span class="codigo-documento">{{this.codigoBarras}}</span>
+            <div class="tipo-documento">
+                <small class="text-muted">{{this.tipoDocumento}}</small>
+            </div>
+            {{#if (esDocumentoAjeno ../usuario this)}}
+            <small class="badge bg-warning text-dark ms-1">AJENO</small>
+            {{/if}}
+        </td>
+        
+        <!-- Cliente con formato mejorado (sin truncar) -->
+        <td class="col-cliente">
+          <div class="cliente-nombre">{{this.nombreCliente}}</div>
+          <div class="cliente-identificacion">{{this.identificacionCliente}}</div>
+        </td>
+        
+        <!-- Matrizador (sin cambios) -->
+        <td class="col-matrizador">
+          {{#if this.matrizador}}
+          <span class="matrizador-universal" title="{{this.matrizador.nombre}}">
+            {{getIniciales this.matrizador.nombre}}
+          </span>
+          {{else}}
+          <span class="matrizador-universal sin-asignar" title="Sin asignar">
+            ??
+          </span>
+          {{/if}}
+        </td>
+        
+        <!-- Fecha (sin cambios) -->
+        <td class="col-fecha">
+          {{#if this.fechaFactura}}
+          <span class="fecha-universal">{{formatFechaCorta this.fechaFactura}}</span>
+          {{else}}
+          <span class="fecha-universal sin-fecha">--/--/--</span>
+          {{/if}}
+        </td>
+        
+        <!-- Estado de Entrega (NUEVO BADGE) -->
+        <td class="col-estado text-center">
+          {{{badgeEstadoEntrega this.estado}}}
+        </td>
+        
+        <!-- Estado de Pago (NUEVO BADGE) -->
+        <td class="col-pago text-center">
+          {{#if this.numeroFactura}}
+            {{{badgeEstadoPago this.estadoPago}}}
+          {{else}}
+            <span class="badge bg-secondary" title="Documento sin factura asociada">
+                <i class="fas fa-file-invoice-dollar me-1"></i> S/F
+            </span>
+          {{/if}}
+        </td>
+        
+        <!-- Valor con formato mejorado -->
+        <td class="col-valor text-right">
+          {{#if this.valorFactura}}
+          <span class="valor-monetario">{{formatDineroCompleto this.valorFactura}}</span>
+          {{else}}
+          <span class="valor-monetario text-muted">$0.00</span>
+          {{/if}}
+        </td>
+        
+        <!-- Acciones (sin cambios) -->
+        <td class="col-acciones text-center">
+          <div class="btn-group btn-group-sm">
+            <a href="/archivo/documentos/detalle/{{this.id}}" class="btn btn-outline-primary btn-universal" title="Ver Detalle">
+              <i class="fas fa-eye"></i>
+            </a>
+            {{#unless (esDocumentoAjeno ../usuario this)}}
+            <a href="/archivo/documentos/editar/{{this.id}}" class="btn btn-outline-warning btn-universal" title="Editar">
+              <i class="fas fa-edit"></i>
+            </a>
+            {{/unless}}
+          </div>
+        </td>
+      </tr>
+      {{else}}
+      <tr>
+        <td colspan="8" class="text-center py-5">
+          <div class="sin-resultados">
+            <i class="fas fa-search fa-2x mb-3 text-muted"></i>
+            <h5 class="text-muted">No se encontraron documentos</h5>
+            <p class="mb-0 text-muted">Pruebe ajustando los filtros de búsqueda</p>
+          </div>
+        </td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
 </div>
 
 <!-- Paginación -->
@@ -272,19 +269,6 @@
 </nav>
 {{/if}}
 
-{{else}}
-<!-- Sin resultados -->
-<div class="text-center py-5">
-    <i class="bi bi-search display-1 text-muted"></i>
-    <h4 class="text-muted mt-3">No se encontraron documentos</h4>
-    <p class="text-muted">Intenta ajustar los filtros de búsqueda</p>
-    <a href="/archivo/documentos/todos" class="btn btn-archivo">
-        <i class="bi bi-arrow-clockwise"></i>
-        Ver todos los documentos
-    </a>
-</div>
-{{/if}}
-
 <!-- Información adicional -->
 <div class="row mt-4">
     <div class="col-md-12">
@@ -303,123 +287,75 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🗂️ Inicializando vista de archivo con ordenamiento mejorado');
+    console.log('🎯 Inicializando tabla ARCHIVO - Sistema Universal v1.0');
     
-    // Inicializar ordenamiento de tablas
-    if (typeof inicializarOrdenamientoTablas === 'function') {
-        inicializarOrdenamientoTablas();
-        console.log('✅ Ordenamiento de tablas inicializado para archivo');
-    } else {
-        console.warn('⚠️ Función inicializarOrdenamientoTablas no encontrada');
-    }
+    // Inicializar ordenamiento manual corregido
+    inicializarOrdenamientoManual();
     
-    // Inicializar tooltips
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
+    console.log('✅ Vista ARCHIVO migrada al sistema universal - Funcionalidad completa');
+});
+
+// Función de ordenamiento manual específica para ARCHIVO
+function inicializarOrdenamientoManual() {
+    console.log('🔧 Inicializando ordenamiento manual para ARCHIVO');
+    
+    // Buscar todos los headers ordenables
+    const headersOrdenables = document.querySelectorAll('.tabla-ordenable th.ordenable');
+    
+    headersOrdenables.forEach(header => {
+      header.style.cursor = 'pointer';
+      header.addEventListener('click', function() {
+        const columna = this.getAttribute('data-columna');
+        const tipoColumna = this.getAttribute('data-tipo') || 'texto';
+        
+        console.log('📊 Click en columna ARCHIVO:', columna, tipoColumna);
+        
+        // Obtener dirección actual
+        let direccion = 'asc';
+        if (this.classList.contains('asc')) {
+          direccion = 'desc';
+        } else if (this.classList.contains('desc')) {
+          direccion = 'asc';
+        }
+        
+        // Limpiar otros headers
+        headersOrdenables.forEach(h => {
+          h.classList.remove('asc', 'desc', 'active');
+          const icono = h.querySelector('.sort-icon');
+          if (icono) {
+            icono.className = 'fas fa-sort ms-1 sort-icon';
+          }
+        });
+        
+        // Marcar header actual
+        this.classList.add(direccion, 'active');
+        const icono = this.querySelector('.sort-icon');
+        if (icono) {
+          icono.className = `fas fa-sort-${direccion} ms-1 sort-icon`;
+        }
+        
+        // Ejecutar ordenamiento por servidor
+        const params = new URLSearchParams(window.location.search);
+        params.set('ordenarPor', columna);
+        params.set('ordenDireccion', direccion);
+        
+        window.location.search = params.toString();
+      });
     });
     
-    console.log('✅ Vista de archivo inicializada correctamente');
-});
+    console.log('✅ Ordenamiento manual configurado para ARCHIVO:', headersOrdenables.length, 'columnas');
+}
+
+function limpiarFiltrosArchivo() {
+    document.getElementById('busqueda').value = '';
+    document.getElementById('estado').value = '';
+    document.getElementById('estadoPago').value = '';
+    document.getElementById('tipoDocumento').value = '';
+    document.getElementById('matrizadorId').value = '';
+    document.getElementById('fechaDesde').value = '';
+    document.getElementById('fechaHasta').value = '';
+    document.getElementById('filtrosFormArchivo').submit(); 
+}
 </script>
 
-<style>
-/* 🎨 ESTILOS ESPECÍFICOS PARA ARCHIVO - MEJORAS VISUALES */
-
-/* Mejoras para badges de estado - tamaños balanceados */
-.badge-estado {
-    font-size: 0.75rem;
-    padding: 0.25rem 0.5rem;
-    font-weight: 500;
-    border-radius: 0.375rem;
-    display: inline-block;
-    text-align: center;
-    line-height: 1.2;
-}
-
-/* Tamaños específicos por longitud de texto */
-.badge-estado-corto {
-    min-width: 70px;    /* LISTO, PAGADO */
-}
-
-.badge-estado-medio {
-    min-width: 85px;    /* PENDIENTE, PROCESO */
-}
-
-  .badge-estado-largo {
-    min-width: 80px !important;    /* ENTREGADO, CON RETENCIÓN - OPTIMIZADO */
-    font-size: 0.7rem !important;  /* Fuente mejorada para mejor legibilidad */
-    padding: 0.3rem 0.5rem !important; /* Padding reducido */
-  }
-
-.badge-tipo {
-    min-width: 80px;
-    font-size: 0.7rem;
-}
-
-/* Mejoras a la tabla para mejor balance visual */
-.tabla-documentos-archivo td {
-    vertical-align: middle;
-    padding: 0.75rem 0.5rem;
-}
-
-.columna-estado {
-    width: 120px;
-    text-align: center;
-}
-
-/* Estilos mejorados para headers ordenables */
-.tabla-ordenable th.ordenable {
-    cursor: pointer !important;
-    user-select: none;
-    position: relative;
-    transition: background-color 0.2s ease;
-}
-
-  .tabla-ordenable th.ordenable:hover {
-    background-color: rgba(255, 255, 255, 0.15) !important;
-    color: #ffffff !important;
-    border-bottom: 2px solid #ffc107 !important;
-  }
-
-.tabla-ordenable th.ordenable i {
-    opacity: 0.6;
-    transition: all 0.2s ease;
-}
-
-.tabla-ordenable th.ordenable:hover i {
-    opacity: 1;
-}
-
-.tabla-ordenable th.ordenable[data-orden="asc"] i.fa-sort-up,
-.tabla-ordenable th.ordenable[data-orden="desc"] i.fa-sort-down {
-    opacity: 1;
-    color: #ffc107 !important;
-    transform: scale(1.1);
-}
-
-/* Indicador visual para documentos propios */
-.bi-person-check {
-    font-size: 1.1em;
-}
-
-/* Mejoras para botones de acción */
-.btn-group-sm .btn {
-    font-size: 0.8rem;
-    padding: 0.25rem 0.5rem;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .badge-estado {
-        font-size: 0.65rem;
-        padding: 0.2rem 0.4rem;
-    }
-    
-    .badge-estado-corto,
-    .badge-estado-medio,
-    .badge-estado-largo {
-        min-width: auto;
-    }
-}
-</style> 
+<!-- Estilos específicos eliminados - Ahora usa el sistema universal --> 

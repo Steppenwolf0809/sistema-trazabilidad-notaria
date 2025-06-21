@@ -28,6 +28,8 @@ const {
 const NotificationService = require('../services/notificationService');
 const configNotaria = require('../config/notaria');
 const NotificacionEnviada = require('../models/NotificacionEnviada');
+const { obtenerHistorialUniversal } = require('../utils/historialUniversal');
+const notificacionController = require('./notificacionController');
 
 // ============== FUNCIONES PARA CONSTRUCCIÓN DE MENSAJES PROFESIONALES ==============
 
@@ -1620,6 +1622,12 @@ const matrizadorController = {
       const estado = req.query.estado || '';
       const tipoDocumento = req.query.tipoDocumento || '';
       const busqueda = req.query.busqueda || '';
+      const fechaDesde = req.query.fechaDesde || '';
+      const fechaHasta = req.query.fechaHasta || '';
+      
+      // Parámetros de ordenamiento
+      const ordenarPor = req.query.ordenarPor || 'fechaFactura';
+      const ordenDireccion = req.query.ordenDireccion || 'desc';
       
       // Construir condiciones de filtrado
       const where = {
@@ -1642,12 +1650,37 @@ const matrizadorController = {
         ];
       }
       
+      // Filtros de fecha
+      if (fechaDesde || fechaHasta) {
+        where.created_at = {};
+        if (fechaDesde) {
+          where.created_at[Op.gte] = new Date(fechaDesde + 'T00:00:00');
+        }
+        if (fechaHasta) {
+          where.created_at[Op.lte] = new Date(fechaHasta + 'T23:59:59');
+        }
+      }
+      
       console.log("Buscando documentos con filtros:", where);
+      
+      // Mapear columnas de ordenamiento
+      const columnasOrden = {
+        'codigoBarras': 'codigo_barras',
+        'nombreCliente': 'nombre_cliente',
+        'fechaFactura': 'fecha_factura',
+        'estado': 'estado',
+        'estadoPago': 'estado_pago',
+        'valorFactura': 'valor_factura',
+        'created_at': 'created_at'
+      };
+      
+      const columnaOrden = columnasOrden[ordenarPor] || 'fecha_factura';
+      const direccionOrden = ordenDireccion.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
       
       // Obtener documentos con paginación
       const { count, rows: documentos } = await Documento.findAndCountAll({
         where,
-        order: [['created_at', 'DESC']],
+        order: [[columnaOrden, direccionOrden]],
         limit,
         offset
       });
@@ -1670,6 +1703,10 @@ const matrizadorController = {
       if (estado) queryParams.append('estado', estado);
       if (tipoDocumento) queryParams.append('tipoDocumento', tipoDocumento);
       if (busqueda) queryParams.append('busqueda', busqueda);
+      if (fechaDesde) queryParams.append('fechaDesde', fechaDesde);
+      if (fechaHasta) queryParams.append('fechaHasta', fechaHasta);
+      if (ordenarPor) queryParams.append('ordenarPor', ordenarPor);
+      if (ordenDireccion) queryParams.append('ordenDireccion', ordenDireccion);
       
       // Generar enlaces de paginación
       for (let i = 1; i <= totalPages; i++) {
@@ -1715,7 +1752,9 @@ const matrizadorController = {
             [estado]: true
           },
           tipoDocumento,
-          busqueda
+          busqueda,
+          fechaDesde,
+          fechaHasta
         },
         usuario: req.matrizador
       });
@@ -1758,104 +1797,13 @@ const matrizadorController = {
       
       console.log(`Documento encontrado: ${documento.id} ${documento.codigoBarras}`);
       
-      // Buscar eventos del documento con información mejorada - CORREGIDO: ordenar por fecha DESC
-      const eventos = await EventoDocumento.findAll({
-        where: { 
-          documentoId: id,
-          // NUEVO: Filtrar tipos de eventos que no aportan valor al historial para matrizadores
-          tipo: {
-            [Op.notIn]: ['pago', 'vista', 'revision'] // Pagos se muestran arriba, vista/revision son spam
-          }
-        },
-        order: [['created_at', 'DESC']] // Más recientes primero
+      // 🆕 NUEVO: Usar historial universal
+      const historialEventos = await obtenerHistorialUniversal(id, 'matrizador', {
+        incluirInformacionTecnica: false,
+        mostrarEventosInternos: false
       });
       
-      console.log(`Encontrados ${eventos.length} eventos para el documento`);
-      
-      // Construir historial mejorado con la nueva información
-      const historialEventos = eventos.map(evento => {
-        // Usar la información mejorada o construir información útil
-        const titulo = evento.titulo || traducirTipoEvento(evento.tipo);
-        let descripcion = evento.descripcion || evento.detalles || 'Sin descripción disponible';
-        const categoria = evento.categoria || determinarCategoriaEvento(evento.tipo);
-        
-        // Procesar detalles específicos por tipo de evento
-        let detallesProcessed = {};
-        try {
-          // Si detalles es string JSON, parsearlo
-          if (typeof evento.detalles === 'string') {
-            // Verificar si es JSON válido
-            if (evento.detalles.trim().startsWith('{') || evento.detalles.trim().startsWith('[')) {
-              detallesProcessed = JSON.parse(evento.detalles);
-            } else {
-              // Si es texto plano, crear un objeto simple
-              detallesProcessed = { descripcion: evento.detalles };
-            }
-          } else if (evento.detalles && typeof evento.detalles === 'object') {
-            detallesProcessed = evento.detalles;
-          } else {
-            // Si no hay detalles válidos, usar objeto vacío
-            detallesProcessed = {};
-          }
-        } catch (e) {
-          console.log(`⚠️ Error parsing detalles para evento ${evento.id}: ${e.message}`);
-          // En caso de error, tratar como texto plano
-          detallesProcessed = { 
-            descripcion: typeof evento.detalles === 'string' ? evento.detalles : 'Sin detalles' 
-          };
-        }
-        
-        // Mejorar información del usuario
-        let usuarioInfo = evento.usuario;
-        if (evento.matrizador) {
-          usuarioInfo = `${evento.matrizador.nombre} (${evento.matrizador.rol})`;
-        } else if (!usuarioInfo) {
-          usuarioInfo = 'Sistema';
-        }
-        
-        // Construir información específica para eventos de entrega
-        if (evento.tipo === 'entrega' && documento.nombreReceptor) {
-          detallesProcessed = {
-            ...detallesProcessed,
-            receptor: documento.nombreReceptor,
-            identificacionReceptor: documento.identificacionReceptor,
-            relacion: documento.relacionReceptor || 'titular'
-          };
-          
-          // Mejorar descripción de entrega
-          descripcion = `Documento entregado a ${documento.nombreReceptor} (${documento.identificacionReceptor}) - Relación: ${documento.relacionReceptor || 'titular'}`;
-        }
-        
-        // Construir información específica para eventos de pago
-        if (evento.tipo === 'pago') {
-          if (!detallesProcessed.valor && documento.valorPagado) {
-            detallesProcessed.valor = documento.valorPagado;
-          }
-          if (!detallesProcessed.metodoPago && documento.metodoPago) {
-            detallesProcessed.metodoPago = documento.metodoPago;
-          }
-          if (!detallesProcessed.numeroFactura && documento.numeroFactura) {
-            detallesProcessed.numeroFactura = documento.numeroFactura;
-          }
-          if (!detallesProcessed.usuarioCaja) {
-            detallesProcessed.usuarioCaja = usuarioInfo;
-          }
-        }
-        
-        return {
-          id: evento.id,
-          tipo: evento.tipo,
-          categoria: categoria,
-          titulo: titulo,
-          descripcion: descripcion,
-          detalles: detallesProcessed,
-          usuario: usuarioInfo,
-          fecha: evento.created_at,
-          // ELIMINADO: tiempoTranscurrido - ya no mostraremos "Menos de un minuto"
-          icono: obtenerIconoEvento(evento.tipo),
-          color: obtenerColorEvento(evento.tipo)
-        };
-      });
+      console.log(`Encontrados ${historialEventos.length} eventos para el documento`);
       
       // Marcar documento como visto por el matrizador (sin crear evento)
       if (documento.idMatrizador === usuarioId && !documento.visto_por_matrizador) {
@@ -1875,7 +1823,7 @@ const matrizadorController = {
       
       res.render('matrizadores/documentos/detalle', {
         documento,
-        eventos: historialEventos, // Eventos ya ordenados por fecha DESC
+        eventos: historialEventos, // 🆕 Historial universal
         matrizadores,
         usuario: req.matrizador || req.user,
         layout: 'matrizador' // CORREGIDO: quitar 'layouts/'
@@ -2041,173 +1989,7 @@ const matrizadorController = {
    * @param {Object} req - Objeto de solicitud Express
    * @param {Object} res - Objeto de respuesta Express
    */
-  historialNotificaciones: async (req, res) => {
-    try {
-      const { fechaDesde, fechaHasta, tipo, canal, busqueda } = req.query;
-      
-      let whereClause = {};
-      let documentoWhereClause = {
-        idMatrizador: req.matrizador.id
-      };
-      
-      // Filtros de fecha
-      if (fechaDesde || fechaHasta) {
-        whereClause.created_at = {};
-        if (fechaDesde) {
-          whereClause.created_at[Op.gte] = new Date(fechaDesde + 'T00:00:00');
-        }
-        if (fechaHasta) {
-          whereClause.created_at[Op.lte] = new Date(fechaHasta + 'T23:59:59');
-        }
-      }
-      
-      // Filtros de tipo y canal
-      if (tipo) whereClause.tipoEvento = tipo; // CORREGIDO: usar tipoEvento
-      if (canal && canal !== '') {
-        whereClause.canal = canal; // CORREGIDO: usar campo directo
-      }
-      
-      // ============== BÚSQUEDA POR TEXTO ==============
-      if (busqueda && busqueda.trim() !== '') {
-        const textoBusqueda = busqueda.trim();
-        documentoWhereClause[Op.or] = [
-          // Buscar por código de barras
-          { codigoBarras: { [Op.iLike]: `%${textoBusqueda}%` } },
-          // Buscar por nombre del cliente
-          { nombreCliente: { [Op.iLike]: `%${textoBusqueda}%` } },
-          // Buscar por número de factura
-          { numeroFactura: { [Op.iLike]: `%${textoBusqueda}%` } },
-          // Buscar por identificación del cliente
-          { identificacionCliente: { [Op.iLike]: `%${textoBusqueda}%` } }
-        ];
-      }
-      
-      // ============== CORRECCIÓN: CONSULTAR CON RELACIONES CORRECTAS ==============
-      const notificaciones = await NotificacionEnviada.findAll({
-        where: {
-          // Filtrar por tipos de evento de notificación
-          tipoEvento: {
-            [Op.in]: ['documento_listo', 'entrega_confirmada', 'entrega_grupal', 'recordatorio', 'alerta_sin_recoger']
-          },
-          ...whereClause
-        },
-        include: [{
-          model: Documento,
-          as: 'documento',
-          attributes: [
-            'id',
-            'codigoBarras', 
-            'tipoDocumento', 
-            'nombreCliente', 
-            'emailCliente', 
-            'telefonoCliente',
-            'numeroFactura', 
-            'identificacionCliente',
-            'idMatrizador', // AÑADIDO: incluir idMatrizador
-            'estado'
-          ],
-          include: [{
-            model: Matrizador,
-            as: 'matrizador',
-            attributes: ['id', 'nombre', 'email'],
-            required: false
-          }],
-          where: documentoWhereClause,
-          required: false // Permitir notificaciones grupales sin documento específico
-        }],
-        order: [['created_at', 'DESC']],
-        limit: 50
-      });
-      
-      // ============== PROCESAR NOTIFICACIONES PARA VISTA ==============
-      const notificacionesProcesadas = notificaciones.map(notif => {
-        const notifData = notif.toJSON ? notif.toJSON() : notif;
-        
-        // Asegurar que las fechas estén en formato ISO string
-        if (notifData.created_at) {
-          notifData.created_at = new Date(notifData.created_at).toISOString();
-        }
-        if (notifData.updated_at) {
-          notifData.updated_at = new Date(notifData.updated_at).toISOString();
-        }
-        
-        // Asegurar que metadatos existan
-        if (!notifData.metadatos) {
-          notifData.metadatos = {};
-        }
-        
-        // ============== CORREGIR MAPEO DE CAMPOS ==============
-        notifData.tipo = notifData.tipoEvento; // Mapear tipoEvento -> tipo para la vista
-        notifData.detalles = notifData.mensajeEnviado || 'Notificación enviada';
-        notifData.usuario = notifData.metadatos?.entregadoPor || req.matrizador?.nombre || 'Sistema';
-        
-        // Agregar información de canal al metadatos para la vista
-        if (!notifData.metadatos.canal) {
-          notifData.metadatos.canal = notifData.canal;
-        }
-        if (!notifData.metadatos.estado) {
-          notifData.metadatos.estado = notifData.estado;
-        }
-        
-        // ============== CORREGIR INFORMACIÓN DEL MATRIZADOR ==============
-        // Si no hay documento (notificaciones grupales), usar metadatos
-        if (!notifData.documento && notifData.metadatos) {
-          // Crear documento virtual para notificaciones grupales
-          notifData.documento = {
-            codigoBarras: 'ENTREGA GRUPAL',
-            tipoDocumento: 'Múltiples tipos',
-            nombreCliente: notifData.metadatos.nombreCliente || 'Cliente no especificado',
-            emailCliente: notifData.metadatos.emailCliente || null,
-            telefonoCliente: notifData.metadatos.telefonoCliente || null,
-            numeroFactura: null,
-            identificacionCliente: notifData.metadatos.identificacionCliente || null,
-            matrizador: {
-              id: req.matrizador.id,
-              nombre: req.matrizador.nombre,
-              email: req.matrizador.email
-            }
-          };
-        } else if (notifData.documento && !notifData.documento.matrizador) {
-          // Si el documento no tiene matrizador cargado, usar el matrizador actual
-          notifData.documento.matrizador = {
-            id: req.matrizador.id,
-            nombre: req.matrizador.nombre,
-            email: req.matrizador.email
-          };
-        }
-        
-        console.log(`📅 [MATRIZADOR] Notificación ID ${notifData.id}: fecha = ${notifData.created_at}, tipo = ${notifData.tipo}, matrizador = ${notifData.documento?.matrizador?.nombre || 'No disponible'}`);
-        
-        return notifData;
-      });
-      
-      // ============== CALCULAR ESTADÍSTICAS ==============
-      const stats = {
-        total: notificaciones.length,
-        enviadas: notificaciones.filter(n => n.estado === 'enviado').length,
-        fallidas: notificaciones.filter(n => n.estado === 'fallido').length,
-        pendientes: notificaciones.filter(n => n.estado === 'pendiente').length
-      };
-      
-      res.render('matrizadores/notificaciones/historial', {
-        layout: 'matrizador',
-        title: 'Historial de Notificaciones',
-        notificaciones: notificacionesProcesadas,
-        stats,
-        filtros: { fechaDesde, fechaHasta, tipo, canal, busqueda },
-        userRole: req.matrizador?.rol,
-        userName: req.matrizador?.nombre
-      });
-      
-    } catch (error) {
-      console.error('Error en historial notificaciones:', error);
-      res.status(500).render('error', { 
-        layout: 'matrizador',
-        title: 'Error',
-        message: 'Error al cargar historial de notificaciones' 
-      });
-    }
-  },
+  historialNotificaciones: notificacionController.mostrarHistorial,
 
   /**
    * Obtiene los detalles de una notificación específica (API)

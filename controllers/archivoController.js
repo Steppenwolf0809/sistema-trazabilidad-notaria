@@ -18,6 +18,8 @@ const NotificacionEnviada = require('../models/NotificacionEnviada');
 
 // Importar servicios de notificación
 const notificationService = require('../services/notificationService');
+const { obtenerHistorialUniversal } = require('../utils/historialUniversal');
+const notificacionController = require('./notificacionController');
 
 const archivoController = {
 
@@ -405,18 +407,10 @@ const archivoController = {
         });
       }
 
-      // Obtener eventos del documento con información completa
-      const eventos = await EventoDocumento.findAll({
-        where: { documentoId },
-        include: [
-          {
-            model: Matrizador,
-            as: 'matrizador',
-            attributes: ['id', 'nombre']
-          }
-        ],
-        order: [['created_at', 'DESC']],
-        attributes: ['id', 'tipo', 'descripcion', 'detalles', 'created_at', 'usuarioId']
+      // 🆕 NUEVO: Usar historial universal
+      const eventos = await obtenerHistorialUniversal(documentoId, 'archivo', {
+        incluirInformacionCompleta: true,
+        mostrarDetallesArchivo: true
       });
 
       // Verificar si es documento propio (puede editar) o ajeno (solo lectura)
@@ -1096,164 +1090,7 @@ const archivoController = {
   /**
    * Historial de notificaciones (solo de documentos propios)
    */
-  historialNotificaciones: async (req, res) => {
-    try {
-      const { fechaDesde, fechaHasta, tipo, canal, busqueda } = req.query;
-      
-      let whereClause = {};
-      let documentoWhereClause = {
-        idMatrizador: req.matrizador.id
-      };
-      
-      // Filtros de fecha
-      if (fechaDesde || fechaHasta) {
-        whereClause.created_at = {};
-        if (fechaDesde) {
-          whereClause.created_at[Op.gte] = new Date(fechaDesde + 'T00:00:00');
-        }
-        if (fechaHasta) {
-          whereClause.created_at[Op.lte] = new Date(fechaHasta + 'T23:59:59');
-        }
-      }
-      
-      // Filtros de tipo y canal
-      if (tipo) whereClause.tipoEvento = tipo;
-      if (canal && canal !== '') {
-        whereClause.canal = canal;
-      }
-      
-      // Búsqueda por texto
-      if (busqueda && busqueda.trim() !== '') {
-        const textoBusqueda = busqueda.trim();
-        documentoWhereClause[Op.or] = [
-          { codigoBarras: { [Op.iLike]: `%${textoBusqueda}%` } },
-          { nombreCliente: { [Op.iLike]: `%${textoBusqueda}%` } },
-          { numeroFactura: { [Op.iLike]: `%${textoBusqueda}%` } },
-          { identificacionCliente: { [Op.iLike]: `%${textoBusqueda}%` } }
-        ];
-      }
-
-      // Solo notificaciones de documentos propios
-      const notificaciones = await NotificacionEnviada.findAll({
-        where: {
-          tipoEvento: {
-            [Op.in]: ['documento_listo', 'entrega_confirmada', 'entrega_grupal', 'recordatorio', 'alerta_sin_recoger']
-          },
-          ...whereClause
-        },
-        include: [{
-          model: Documento,
-          as: 'documento',
-          where: documentoWhereClause,
-          attributes: [
-            'id', 
-            'codigoBarras', 
-            'nombreCliente', 
-            'tipoDocumento',
-            'emailCliente',
-            'telefonoCliente',
-            'numeroFactura',
-            'identificacionCliente',
-            'idMatrizador',
-            'estado'
-          ],
-          include: [{
-            model: Matrizador,
-            as: 'matrizador',
-            attributes: ['id', 'nombre', 'email'],
-            required: false
-          }],
-          required: false
-        }],
-        order: [['created_at', 'DESC']],
-        limit: 50
-      });
-
-      // Procesar notificaciones para vista
-      const notificacionesProcesadas = notificaciones.map(notif => {
-        const notifData = notif.toJSON ? notif.toJSON() : notif;
-        
-        // Asegurar fechas en formato ISO
-        if (notifData.created_at) {
-          notifData.created_at = new Date(notifData.created_at).toISOString();
-        }
-        
-        // Asegurar metadatos
-        if (!notifData.metadatos) {
-          notifData.metadatos = {};
-        }
-        
-        // Mapear campos para compatibilidad con vista
-        notifData.tipo = notifData.tipoEvento;
-        notifData.detalles = notifData.mensajeEnviado || 'Notificación enviada';
-        notifData.usuario = notifData.metadatos?.entregadoPor || req.matrizador?.nombre || 'Sistema';
-        
-        // Agregar información de canal al metadatos
-        if (!notifData.metadatos.canal) {
-          notifData.metadatos.canal = notifData.canal;
-        }
-        if (!notifData.metadatos.estado) {
-          notifData.metadatos.estado = notifData.estado;
-        }
-        
-        // Corregir información del matrizador
-        if (!notifData.documento && notifData.metadatos) {
-          // Crear documento virtual para notificaciones grupales
-          notifData.documento = {
-            codigoBarras: 'ENTREGA GRUPAL',
-            tipoDocumento: 'Múltiples tipos',
-            nombreCliente: notifData.metadatos.nombreCliente || 'Cliente no especificado',
-            emailCliente: notifData.metadatos.emailCliente || null,
-            telefonoCliente: notifData.metadatos.telefonoCliente || null,
-            numeroFactura: null,
-            identificacionCliente: notifData.metadatos.identificacionCliente || null,
-            matrizador: {
-              id: req.matrizador.id,
-              nombre: req.matrizador.nombre,
-              email: req.matrizador.email
-            }
-          };
-        } else if (notifData.documento && !notifData.documento.matrizador) {
-          // Si el documento no tiene matrizador cargado, usar el matrizador actual
-          notifData.documento.matrizador = {
-            id: req.matrizador.id,
-            nombre: req.matrizador.nombre,
-            email: req.matrizador.email
-          };
-        }
-        
-        return notifData;
-      });
-
-      // Calcular estadísticas
-      const stats = {
-        total: notificaciones.length,
-        enviadas: notificaciones.filter(n => n.estado === 'enviado').length,
-        fallidas: notificaciones.filter(n => n.estado === 'fallido').length,
-        pendientes: notificaciones.filter(n => n.estado === 'pendiente').length
-      };
-
-      res.render('archivo/notificaciones/historial', {
-        layout: 'archivo',
-        title: 'Historial de Notificaciones',
-        notificaciones: notificacionesProcesadas,
-        stats,
-        filtros: { fechaDesde, fechaHasta, tipo, canal, busqueda },
-        userRole: req.matrizador?.rol,
-        userName: req.matrizador?.nombre,
-        userId: req.matrizador?.id
-      });
-
-    } catch (error) {
-      console.error('❌ Error al obtener historial de notificaciones:', error);
-      res.status(500).render('error', {
-        layout: 'archivo',
-        title: 'Error',
-        message: 'Error al cargar el historial de notificaciones',
-        error
-      });
-    }
-  },
+  historialNotificaciones: notificacionController.mostrarHistorial,
 
   /**
    * Obtener detalle completo de una notificación

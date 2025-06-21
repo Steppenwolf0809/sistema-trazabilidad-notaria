@@ -30,12 +30,10 @@
       {{/if}}
 
       {{#if documento}}
-        {{!-- ============== INCLUIR ESTILOS JERÁRQUICOS ============== --}}
-        <link rel="stylesheet" href="/css/entrega-grupal-jerarquica.css">
 
         {{!-- ============== 1. DOCUMENTO PRINCIPAL CON INFORMACIÓN COMPLETA ============== --}}
-        <div class="card mb-3">
-          <div class="card-header bg-info text-white">
+        <div class="card mb-3 table-universal-card">
+          <div class="card-header bg-info text-white table-universal-header">
             <div class="d-flex justify-content-between align-items-center">
               <div>
                 <h5 class="mb-1">
@@ -57,7 +55,7 @@
               <span class="badge bg-light text-dark fs-6">{{documento.tipoDocumento}}</span>
             </div>
           </div>
-          <div class="card-body">
+          <div class="card-body table-universal-body">
             <div class="row">
               <div class="col-md-3">
                 <h6><i class="fas fa-user me-1"></i> Cliente</h6>
@@ -132,8 +130,8 @@
           </div>
 
           {{!-- ============== NUEVA ESTRUCTURA JERÁRQUICA DE DOCUMENTOS ============== --}}
-          <div class="card mb-4" id="seccion-entrega-grupal">
-            <div class="card-header">
+          <div class="card mb-4 table-universal-card" id="seccion-entrega-grupal">
+            <div class="card-header table-universal-header">
               <div class="d-flex justify-content-between align-items-center">
                 <h6 class="mb-0">
                   <i class="fas fa-sitemap me-2"></i>
@@ -147,7 +145,7 @@
                 </div>
               </div>
             </div>
-            <div class="card-body">
+            <div class="card-body table-universal-body">
               {{!-- Encabezado con nombre del cliente --}}
               <div class="alert alert-info border-info mb-3">
                 <div class="d-flex align-items-center">
@@ -183,13 +181,13 @@
               <div class="documentos-estructurados">
                 {{!-- ============== GRUPOS RELACIONADOS ============== --}}
                 {{#if documentosGrupales.tieneGruposRelacionados}}
-                  <div class="grupos-relacionados">
-                    <h5>DOCUMENTOS RELACIONADOS (deben entregarse juntos)</h5>
+                  <div class="table-universal-section grupos-relacionados">
+                    <h5 class="table-universal-section-title">🔗 DOCUMENTOS RELACIONADOS (deben entregarse juntos)</h5>
                     
                     {{#each documentosGrupales.gruposRelacionados}}
-                      <div class="grupo-documentos" data-grupo-id="{{@index}}">
+                      <div class="table-universal-group grupo-documentos" data-grupo-id="{{@index}}">
                         {{!-- Documento Principal --}}
-                        <div class="documento-principal">
+                        <div class="table-universal-main-item documento-principal">
                           <div class="checkbox-grupo">
                             <input 
                               class="form-check-input documento-checkbox grupo-checkbox" 
@@ -224,9 +222,9 @@
 
                         {{!-- Documentos Habilitantes --}}
                         {{#if this.habilitantes.length}}
-                          <div class="documentos-habilitantes">
+                          <div class="table-universal-sub-items documentos-habilitantes">
                             {{#each this.habilitantes}}
-                              <div class="documento-habilitante">
+                              <div class="table-universal-sub-item documento-habilitante">
                                 <div class="d-flex justify-content-between align-items-start">
                                   <div class="flex-grow-1">
                                     <div class="codigo-habilitante">{{this.codigoBarras}}</div>
@@ -266,11 +264,11 @@
 
                 {{!-- ============== DOCUMENTOS INDEPENDIENTES ============== --}}
                 {{#if documentosGrupales.tieneDocumentosIndependientes}}
-                  <div class="documentos-independientes">
-                    <h5>DOCUMENTOS INDEPENDIENTES</h5>
+                  <div class="table-universal-section documentos-independientes">
+                    <h5 class="table-universal-section-title">📄 DOCUMENTOS INDEPENDIENTES</h5>
                     
                     {{#each documentosGrupales.documentosIndependientes}}
-                      <div class="documento-individual {{#if this.esHabilitanteHuerfano}}habilitante-huerfano{{/if}}">
+                      <div class="table-universal-item documento-individual {{#if this.esHabilitanteHuerfano}}habilitante-huerfano{{/if}}">
                         <div class="checkbox-individual">
                           <input 
                             class="form-check-input documento-checkbox individual-checkbox" 
@@ -340,21 +338,21 @@
           <input type="hidden" name="tipoEntregaGrupal" value="recepcion_completa">
 
           {{!-- SECCIÓN: VALIDACIÓN DE CÓDIGO CORREGIDA --}}
-          <div class="card mb-4">
-            <div class="card-header">
+          <div class="card mb-4 table-universal-card">
+            <div class="card-header table-universal-header">
               <h6 class="mb-0">
                 <i class="fas fa-key me-2"></i>
                 Validación de Código
               </h6>
             </div>
-            <div class="card-body">
+            <div class="card-body table-universal-body">
               {{!-- Mostrar códigos válidos dinámicamente --}}
               <div class="alert alert-info" id="alert-codigos-validos">
                 <strong>Códigos válidos para esta entrega:</strong>
                 <div id="lista-codigos-validos">
                   {{#if documento.codigoVerificacion}}
                     {{#unless (eq documento.codigoVerificacion 'sin_codigo')}}
-                      <code class="bg-dark text-light px-2 py-1 rounded me-2">{{documento.codigoVerificacion}}</code>
+                      <code class="bg-dark text-light px-2 py-1 rounded me-2">${{documento.codigoVerificacion}}</code>
                       <small class="text-muted">(documento principal)</small>
                     {{/unless}}
                   {{/if}}
@@ -395,14 +393,14 @@
           </div>
 
           {{!-- SECCIÓN: INFORMACIÓN DEL RECEPTOR --}}
-          <div class="card mb-4">
-            <div class="card-header">
+          <div class="card mb-4 table-universal-card">
+            <div class="card-header table-universal-header">
               <h6 class="mb-0">
                 <i class="fas fa-user-check me-2"></i>
                 Información del Receptor
               </h6>
             </div>
-            <div class="card-body">
+            <div class="card-body table-universal-body">
               <div class="row">
                 <div class="col-md-6 mb-3">
                   <label for="nombreReceptor" class="form-label">
@@ -441,14 +439,14 @@
 
           {{!-- ============== NUEVA SECCIÓN: AUTORIZACIÓN PARA DOCUMENTOS PENDIENTES ============== --}}
           {{#if documentosGrupales.requiereAutorizacion}}
-            <div class="card mb-4 border-warning" id="seccion-autorizacion">
-              <div class="card-header bg-warning text-dark">
+            <div class="card mb-4 border-warning table-universal-card" id="seccion-autorizacion">
+              <div class="card-header bg-warning text-dark table-universal-header">
                 <h6 class="mb-0">
                   <i class="fas fa-exclamation-triangle me-2"></i>
                   Autorización Requerida
                 </h6>
               </div>
-              <div class="card-body">
+              <div class="card-body table-universal-body">
                 <div class="alert alert-warning">
                   <p class="mb-3">
                     <strong>Se detectaron documentos con pago pendiente.</strong> 
@@ -476,22 +474,91 @@
 
       {{else}}
         {{!-- ============== BÚSQUEDA Y LISTADO DE DOCUMENTOS ============== --}}
-        <div class="card">
-          <div class="card-header">
+        <div class="card table-universal-card">
+          <div class="card-header table-universal-header">
             <h5 class="mb-0">
               <i class="fas fa-search me-2"></i>
               Buscar Documento para Entrega
             </h5>
           </div>
-          <div class="card-body">
-            <form action="/recepcion/documentos/entrega" method="GET">
-              <div class="input-group mb-3">
-                <input type="text" class="form-control form-control-lg" name="codigo" 
-                       placeholder="Escanee o ingrese el código de barras del documento" 
-                       value="{{filtros.codigo}}" autofocus>
-                <button class="btn btn-primary btn-lg" type="submit">
-                  <i class="fas fa-search me-1"></i>Buscar
-                </button>
+          <div class="card-body table-universal-body">
+            <form action="/recepcion/documentos/entrega" method="GET" id="formBusqueda">
+              {{!-- Búsqueda rápida principal --}}
+              <div class="row mb-3">
+                <div class="col-md-8">
+                  <label for="busqueda" class="form-label">
+                    <strong>Búsqueda Rápida</strong>
+                    <small class="text-muted">(código, nombre, cédula, factura)</small>
+                  </label>
+                  <div class="input-group">
+                    <input type="text" class="form-control form-control-lg" id="busqueda" name="busqueda" 
+                           placeholder="Busque por código, nombre, cédula o número de factura..." 
+                           value="{{filtros.busqueda}}" autofocus>
+                    <button class="btn btn-primary btn-lg" type="submit">
+                      <i class="fas fa-search me-1"></i>Buscar
+                    </button>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">
+                    <strong>Búsqueda por código específico</strong>
+                  </label>
+                  <input type="text" class="form-control" name="codigo" 
+                         placeholder="Código exacto..." 
+                         value="{{filtros.codigo}}">
+                </div>
+              </div>
+
+              {{!-- Filtros avanzados --}}
+              <div class="border-top pt-3 mt-4">
+                <h6 class="mb-3"><i class="fas fa-filter me-2"></i>Filtros Avanzados</h6>
+                <div id="filtrosAvanzados">
+                  <div class="row">
+                    <div class="col-md-4 mb-3">
+                      <label for="tipo" class="form-label">Tipo de Documento</label>
+                      <select class="form-select" name="tipo" id="tipo">
+                        <option value="todos" {{#if (eq filtros.tipoDocumento 'todos')}}selected{{/if}}>Todos los tipos</option>
+                        <option value="Diligencias" {{#if (eq filtros.tipoDocumento 'Diligencias')}}selected{{/if}}>Diligencias</option>
+                        <option value="Certificaciones" {{#if (eq filtros.tipoDocumento 'Certificaciones')}}selected{{/if}}>Certificaciones</option>
+                        <option value="Copias" {{#if (eq filtros.tipoDocumento 'Copias')}}selected{{/if}}>Copias</option>
+                        <option value="Autenticaciones" {{#if (eq filtros.tipoDocumento 'Autenticaciones')}}selected{{/if}}>Autenticaciones</option>
+                        <option value="Otros" {{#if (eq filtros.tipoDocumento 'Otros')}}selected{{/if}}>Otros</option>
+                      </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                      <label for="estadoPago" class="form-label">Estado de Pago</label>
+                      <select class="form-select" name="estadoPago" id="estadoPago">
+                        <option value="todos" {{#if (eq filtros.estadoPago 'todos')}}selected{{/if}}>Todos los estados</option>
+                        <option value="pagado_completo" {{#if (eq filtros.estadoPago 'pagado_completo')}}selected{{/if}}>Pagado</option>
+                        <option value="pendiente" {{#if (eq filtros.estadoPago 'pendiente')}}selected{{/if}}>Pendiente</option>
+                        <option value="pagado_con_retencion" {{#if (eq filtros.estadoPago 'pagado_con_retencion')}}selected{{/if}}>Con Retención</option>
+                        <option value="pago_parcial" {{#if (eq filtros.estadoPago 'pago_parcial')}}selected{{/if}}>Pago Parcial</option>
+                      </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                      <label for="fechaDesde" class="form-label">Fecha</label>
+                      <div class="row">
+                        <div class="col-6">
+                          <input type="date" class="form-control" name="fechaDesde" id="fechaDesde" 
+                                 placeholder="Desde" value="{{filtros.fechaDesde}}">
+                        </div>
+                        <div class="col-6">
+                          <input type="date" class="form-control" name="fechaHasta" id="fechaHasta" 
+                                 placeholder="Hasta" value="{{filtros.fechaHasta}}">
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="d-flex gap-2 mt-3">
+                    <button type="submit" class="btn btn-primary">
+                      <i class="fas fa-search me-1"></i>Aplicar Filtros
+                    </button>
+                    <a href="/recepcion/documentos/entrega" class="btn btn-outline-secondary">
+                      <i class="fas fa-times me-1"></i>Limpiar
+                    </a>
+                  </div>
+                </div>
               </div>
             </form>
           </div>
@@ -499,59 +566,69 @@
 
         {{!-- LISTA DE DOCUMENTOS LISTOS CON ESTADO DE PAGO VISIBLE --}}
         {{#if documentosListos.length}}
-          <div class="card mt-4">
-            <div class="card-header">
+          <div class="card mt-4 table-universal-card">
+            <div class="card-header table-universal-header">
               <h6 class="mb-0">
                 <i class="fas fa-list me-2"></i>
                 Documentos Listos para Entrega ({{documentosListos.length}})
               </h6>
             </div>
-            <div class="card-body">
+            <div class="card-body table-universal-body">
               <div class="table-responsive">
-                <table class="table table-hover">
+                <table class="table table-hover table-universal tabla-ordenable">
                   <thead class="table-light">
                     <tr>
-                      <th>Código</th>
-                      <th>Cliente</th>
-                      <th>Tipo</th>
-                      <th>Matrizador</th>
-                      <th>Valor</th>
-                      <th>Estado Pago</th>
-                      <th>Fecha</th>
-                      <th>Acciones</th>
+                      <th class="col-codigo">Código</th>
+                      <th class="col-cliente">Cliente</th>
+                      <th class="col-tipo">Tipo</th>
+                      <th class="col-matrizador">Matrizador</th>
+                      <th class="col-valor">Valor</th>
+                      <th class="col-pago">Pago</th>
+                      <th class="col-fecha">Fecha</th>
+                      <th class="col-acciones">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
                     {{#each documentosListos}}
-                      <tr>
+                      <tr class="table-row">
                         <td>
-                          <strong>{{this.codigoBarras}}</strong>
+                          <span class="codigo-universal">{{this.codigoBarras}}</span>
+                          {{#if this.numeroFactura}}
+                            <br><small class="text-muted">F: {{this.numeroFactura}}</small>
+                          {{/if}}
                         </td>
                         <td>
-                          <div>
-                            <strong>{{this.nombreCliente}}</strong>
-                            <br><small class="text-muted">{{this.identificacionCliente}}</small>
-                          </div>
+                          <div class="nombre-persona">{{this.nombreCliente}}</div>
+                          <div class="info-secundaria">{{this.identificacionCliente}}</div>
                         </td>
                         <td>
-                          <span class="badge bg-secondary">{{this.tipoDocumento}}</span>
-                        </td>
-                        <td>
-                          <span class="badge bg-info">{{#if this.matrizador}}{{this.matrizador.nombre}}{{else}}Sin asignar{{/if}}</span>
-                        </td>
-                        <td>
-                          <strong>${{formatMoney this.valorFactura}}</strong>
-                        </td>
-                        <td>
-                          <span class="badge {{estadoPagoClass this.estadoPago}}">
-                            {{estadoPagoTexto this.estadoPago}}
+                          <span class="tipo-badge {{tipoDocumentoClass this.tipoDocumento}}">
+                            {{tipoDocumentoAbrev this.tipoDocumento}}
                           </span>
                         </td>
                         <td>
-                          <small>{{formatDate this.created_at}}</small>
+                          <span class="matrizador-texto {{#unless this.matrizador}}sin-asignar{{/unless}}" 
+                                {{#if this.matrizador}}title="{{this.matrizador.nombre}}"{{/if}}>
+                            <i class="fas fa-user-tie me-1"></i>
+                            {{formatMatrizadorNombre this.matrizador}}
+                          </span>
                         </td>
                         <td>
-                          <a href="/recepcion/documentos/entrega/{{this.id}}" class="btn btn-sm btn-primary">
+                          <span class="valor-monetario {{#if (gt this.valorFactura 0)}}positive-value{{else}}sin-valor{{/if}}">
+                            ${{formatMoney this.valorFactura}}
+                          </span>
+                        </td>
+                        <td>
+                          <span class="pago-circulo pago-{{this.estadoPago}}">
+                            <i class="fas fa-circle"></i>
+                            <span class="pago-texto">{{estadoPagoSimple this.estadoPago}}</span>
+                          </span>
+                        </td>
+                        <td>
+                          <span class="fecha-universal">{{formatDateShort this.created_at}}</span>
+                        </td>
+                        <td>
+                          <a href="/recepcion/documentos/entrega/{{this.id}}" class="btn btn-sm btn-primary btn-universal">
                             <i class="fas fa-handshake me-1"></i>Entregar
                           </a>
                         </td>
@@ -568,226 +645,187 @@
   </div>
 </div>
 
-{{!-- ============== JAVASCRIPT MEJORADO PARA ENTREGA GRUPAL JERÁRQUICA ============== --}}
+{{!-- ============== JAVASCRIPT MEJORADO PARA ENTREGA Y BÚSQUEDA ============== --}}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  // Configuración global
-  window.documentoPrincipal = {{{json documento}}};
-  window.documentosDisponibles = {{{json documentosGrupales.documentos}}};
-  window.gruposRelacionados = {{{json documentosGrupales.gruposRelacionados}}};
-  window.documentosIndependientes = {{{json documentosGrupales.documentosIndependientes}}};
-  window.usuarioActual = { rol: 'recepcion' };
   
-  // Variables del DOM
-  const selectAll = document.getElementById('selectAll');
-  const documentoCheckboxes = document.querySelectorAll('.documento-checkbox');
-  const contadorSeleccion = document.getElementById('contador-seleccion');
-  const codigoInput = document.getElementById('codigoVerificacion');
-  const btnValidar = document.getElementById('validarCodigo');
-  const listaCodigosValidos = document.getElementById('lista-codigos-validos');
-  const verificacionLlamada = document.getElementById('verificacionLlamada');
-  const divObservaciones = document.getElementById('div-observaciones');
-  const btnConfirmar = document.getElementById('btnConfirmarEntrega');
+  // ===================================================================
+  //            SCRIPT PARA BÚSQUEDA Y FILTROS AVANZADOS
+  // ===================================================================
   
-  // ============== GESTIÓN DE SELECCIÓN JERÁRQUICA ==============
-  
-  function actualizarSeleccion() {
-    const seleccionados = Array.from(documentoCheckboxes).filter(cb => cb.checked);
-    const totalSeleccionados = seleccionados.length + 1; // +1 por documento principal
-    
-    // Actualizar contador
-    if (contadorSeleccion) {
-      contadorSeleccion.textContent = `${totalSeleccionados} documento(s) seleccionado(s)`;
-    }
-    
-    // Actualizar códigos válidos
-    actualizarCodigosValidos(seleccionados);
-    
-    // Actualizar campos ocultos
-    const idsSeleccionados = seleccionados.map(cb => cb.value);
-    document.getElementById('documentos_seleccionados').value = idsSeleccionados.join(',');
-    document.getElementById('entrega_grupal').value = idsSeleccionados.length > 0 ? 'true' : 'false';
-    
-    // Aplicar estilos visuales
-    aplicarEstilosSeleccion(seleccionados);
+  // Auto-submit en búsqueda rápida
+  const busquedaInput = document.getElementById('busqueda');
+  if (busquedaInput) {
+    let timeout;
+    busquedaInput.addEventListener('input', function() {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        if (this.value.length >= 3 || this.value.length === 0) {
+          document.getElementById('formBusqueda').submit();
+        }
+      }, 1500);
+    });
   }
   
-  function actualizarCodigosValidos(seleccionados) {
-    if (!listaCodigosValidos) return;
-    
-    let codigosHTML = '';
-    
-    // Código del documento principal
-    if (window.documentoPrincipal && window.documentoPrincipal.codigoVerificacion && 
-        window.documentoPrincipal.codigoVerificacion !== 'sin_codigo') {
-      codigosHTML += `<code class="bg-dark text-light px-2 py-1 rounded me-2">${window.documentoPrincipal.codigoVerificacion}</code>`;
-      codigosHTML += `<small class="text-muted me-3">(documento principal)</small>`;
-    }
-    
-    // Códigos de documentos seleccionados
-    seleccionados.forEach(checkbox => {
-      const codigo = checkbox.dataset.codigo;
-      if (codigo && codigo !== 'sin_codigo') {
-        codigosHTML += `<code class="bg-info text-light px-2 py-1 rounded me-2">${codigo}</code>`;
-        codigosHTML += `<small class="text-muted me-3">(seleccionado)</small>`;
-      }
-    });
-    
-    if (codigosHTML === '') {
-      codigosHTML = '<span class="text-warning">⚠️ Documentos sin código - usar verificación alternativa</span>';
-    }
-    
-    listaCodigosValidos.innerHTML = codigosHTML;
-  }
+  // Validación de fechas
+  const fechaDesde = document.getElementById('fechaDesde');
+  const fechaHasta = document.getElementById('fechaHasta');
   
-  function aplicarEstilosSeleccion(seleccionados) {
-    // Remover estilos previos
-    document.querySelectorAll('.grupo-seleccionado, .individual-seleccionado').forEach(el => {
-      el.classList.remove('grupo-seleccionado', 'individual-seleccionado');
+  if (fechaDesde && fechaHasta) {
+    fechaDesde.addEventListener('change', function() {
+      if (this.value) fechaHasta.min = this.value;
     });
     
-    // Aplicar estilos a elementos seleccionados
-    seleccionados.forEach(checkbox => {
-      const esGrupo = checkbox.dataset.esGrupo === 'true';
-      const esIndividual = checkbox.dataset.esIndividual === 'true';
+    fechaHasta.addEventListener('change', function() {
+      if (this.value) fechaDesde.max = this.value;
+    });
+  }
+
+  // ===================================================================
+  //            SCRIPT PARA ENTREGA GRUPAL JERÁRQUICA
+  // ===================================================================
+
+  // Solo ejecutar si estamos en la vista de entrega de un documento específico
+  if (window.location.pathname.includes('/recepcion/documentos/entrega/')) {
+    // Configuración global
+    window.documentoPrincipal = {{{json documento}}};
+    window.documentosDisponibles = {{{json documentosGrupales.documentos}}};
+    window.gruposRelacionados = {{{json documentosGrupales.gruposRelacionados}}};
+    window.documentosIndependientes = {{{json documentosGrupales.documentosIndependientes}}};
+    window.usuarioActual = { rol: 'recepcion' };
+    
+    // Variables del DOM
+    const selectAll = document.getElementById('selectAll');
+    const documentoCheckboxes = document.querySelectorAll('.documento-checkbox');
+    const contadorSeleccion = document.getElementById('contador-seleccion');
+    const codigoInput = document.getElementById('codigoVerificacion');
+    const btnValidar = document.getElementById('validarCodigo');
+    const listaCodigosValidos = document.getElementById('lista-codigos-validos');
+    const verificacionLlamada = document.getElementById('verificacionLlamada');
+    const divObservaciones = document.getElementById('div-observaciones');
+    const btnConfirmar = document.getElementById('btnConfirmarEntrega');
+    
+    function actualizarSeleccion() {
+      const seleccionados = Array.from(documentoCheckboxes).filter(cb => cb.checked);
+      const totalSeleccionados = seleccionados.length + 1;
       
-      if (esGrupo) {
-        const grupoElement = checkbox.closest('.grupo-documentos');
-        if (grupoElement) {
-          grupoElement.classList.add('grupo-seleccionado');
-        }
-      } else if (esIndividual) {
-        const individualElement = checkbox.closest('.documento-individual');
-        if (individualElement) {
-          individualElement.classList.add('individual-seleccionado');
-        }
+      if (contadorSeleccion) {
+        contadorSeleccion.textContent = `${totalSeleccionados} documento(s) seleccionado(s)`;
       }
-    });
-  }
-  
-  // ============== EVENT LISTENERS ==============
-  
-  // Seleccionar todos
-  if (selectAll) {
-    selectAll.addEventListener('change', function() {
-      documentoCheckboxes.forEach(cb => {
-        cb.checked = this.checked;
+      
+      actualizarCodigosValidos(seleccionados);
+      
+      const idsSeleccionados = seleccionados.map(cb => cb.value);
+      document.getElementById('documentos_seleccionados').value = idsSeleccionados.join(',');
+      document.getElementById('entrega_grupal').value = idsSeleccionados.length > 0 ? 'true' : 'false';
+      
+      aplicarEstilosSeleccion(seleccionados);
+    }
+    
+    function actualizarCodigosValidos(seleccionados) {
+      if (!listaCodigosValidos) return;
+      let codigosHTML = '';
+      if (window.documentoPrincipal && window.documentoPrincipal.codigoVerificacion && window.documentoPrincipal.codigoVerificacion !== 'sin_codigo') {
+        codigosHTML += `<code class="bg-dark text-light px-2 py-1 rounded me-2">${window.documentoPrincipal.codigoVerificacion}</code><small class="text-muted me-3">(principal)</small>`;
+      }
+      seleccionados.forEach(checkbox => {
+        const codigo = checkbox.dataset.codigo;
+        if (codigo && codigo !== 'sin_codigo') {
+          codigosHTML += `<code class="bg-info text-light px-2 py-1 rounded me-2">${codigo}</code><small class="text-muted me-3">(seleccionado)</small>`;
+        }
       });
-      actualizarSeleccion();
-    });
-  }
-  
-  // Checkboxes individuales
-  documentoCheckboxes.forEach(checkbox => {
-    checkbox.addEventListener('change', function() {
-      // Si es un grupo, seleccionar todos los documentos del grupo
-      if (this.dataset.esGrupo === 'true') {
-        const grupoId = this.dataset.grupoId;
-        const grupo = window.gruposRelacionados[grupoId];
-        
-        if (grupo && this.checked) {
-          // Agregar habilitantes a la selección (simulado)
-          console.log(`Grupo ${grupoId} seleccionado: incluye ${grupo.totalDocumentos} documentos`);
-        }
+      if (codigosHTML === '') {
+        codigosHTML = '<span class="text-warning">⚠️ Documentos sin código - usar verificación alternativa</span>';
       }
-      
-      actualizarSeleccion();
-    });
-  });
-  
-  // Validación de código
-  if (btnValidar) {
-    btnValidar.addEventListener('click', function() {
-      const codigo = codigoInput.value.trim();
-      const mensajeDiv = document.getElementById('mensaje-validacion-codigo');
-      
-      if (!codigo) {
-        mostrarMensajeValidacion('Debe ingresar un código de verificación', 'error');
-        return;
-      }
-      
-      // Obtener códigos válidos
-      const codigosValidos = obtenerCodigosValidos();
-      
-      if (codigosValidos.includes(codigo)) {
-        mostrarMensajeValidacion('✅ Código válido. Puede proceder con la entrega', 'success');
-      } else {
-        mostrarMensajeValidacion('❌ Código incorrecto. Use cualquier código de los documentos seleccionados', 'error');
-      }
-    });
-  }
-  
-  function obtenerCodigosValidos() {
-    const codigos = [];
-    
-    // Código del documento principal
-    if (window.documentoPrincipal && window.documentoPrincipal.codigoVerificacion && 
-        window.documentoPrincipal.codigoVerificacion !== 'sin_codigo') {
-      codigos.push(window.documentoPrincipal.codigoVerificacion);
+      listaCodigosValidos.innerHTML = codigosHTML;
     }
     
-    // Códigos de documentos seleccionados
-    const seleccionados = Array.from(documentoCheckboxes).filter(cb => cb.checked);
-    seleccionados.forEach(checkbox => {
-      const codigo = checkbox.dataset.codigo;
-      if (codigo && codigo !== 'sin_codigo') {
-        codigos.push(codigo);
-      }
-    });
+    function aplicarEstilosSeleccion(seleccionados) {
+      document.querySelectorAll('.grupo-seleccionado, .individual-seleccionado').forEach(el => {
+        el.classList.remove('grupo-seleccionado', 'individual-seleccionado');
+      });
+      seleccionados.forEach(checkbox => {
+        const grupoElement = checkbox.closest('.grupo-documentos');
+        const individualElement = checkbox.closest('.documento-individual');
+        if (grupoElement) grupoElement.classList.add('grupo-seleccionado');
+        if (individualElement) individualElement.classList.add('individual-seleccionado');
+      });
+    }
     
-    return codigos;
-  }
-  
-  function mostrarMensajeValidacion(mensaje, tipo) {
-    const mensajeDiv = document.getElementById('mensaje-validacion-codigo');
-    if (!mensajeDiv) return;
+    if (selectAll) {
+      selectAll.addEventListener('change', function() {
+        documentoCheckboxes.forEach(cb => { cb.checked = this.checked; });
+        actualizarSeleccion();
+      });
+    }
     
-    const claseColor = tipo === 'success' ? 'text-success' : 'text-danger';
-    mensajeDiv.innerHTML = `<div class="${claseColor}">${mensaje}</div>`;
-  }
-  
-  // Verificación por llamada
-  if (verificacionLlamada) {
-    verificacionLlamada.addEventListener('change', function() {
-      if (divObservaciones) {
-        divObservaciones.classList.toggle('d-none', !this.checked);
-      }
+    documentoCheckboxes.forEach(checkbox => {
+      checkbox.addEventListener('change', function() {
+        if (this.dataset.esGrupo === 'true') {
+          console.log(`Grupo seleccionado: ${this.dataset.grupoId}`);
+        }
+        actualizarSeleccion();
+      });
     });
+
+    function mostrarMensajeValidacion(mensaje, tipo) {
+      const mensajeDiv = document.getElementById('mensaje-validacion-codigo');
+      if (!mensajeDiv) return;
+      const claseColor = tipo === 'success' ? 'text-success' : 'text-danger';
+      mensajeDiv.innerHTML = `<div class="${claseColor}">${mensaje}</div>`;
+    }
+    
+    if (btnValidar) {
+      btnValidar.addEventListener('click', function() {
+        const codigo = codigoInput.value.trim();
+        if (!codigo) {
+          mostrarMensajeValidacion('Debe ingresar un código de verificación', 'error');
+          return;
+        }
+        const codigosValidos = [];
+        if (window.documentoPrincipal && window.documentoPrincipal.codigoVerificacion !== 'sin_codigo') {
+          codigosValidos.push(window.documentoPrincipal.codigoVerificacion);
+        }
+        Array.from(documentoCheckboxes).filter(cb => cb.checked).forEach(cb => {
+          if (cb.dataset.codigo && cb.dataset.codigo !== 'sin_codigo') {
+            codigosValidos.push(cb.dataset.codigo);
+          }
+        });
+        
+        if (codigosValidos.includes(codigo)) {
+          mostrarMensajeValidacion('✅ Código válido. Puede proceder.', 'success');
+        } else {
+          mostrarMensajeValidacion('❌ Código incorrecto.', 'error');
+        }
+      });
+    }
+    
+    if (verificacionLlamada) {
+      verificacionLlamada.addEventListener('change', function() {
+        if (divObservaciones) divObservaciones.classList.toggle('d-none', !this.checked);
+      });
+    }
+    
+    if (btnConfirmar) {
+      document.getElementById('formEntrega').addEventListener('submit', function(e) {
+        const checkboxAutorizacion = document.getElementById('confirmarEntregaPendiente');
+        if (checkboxAutorizacion && !checkboxAutorizacion.checked) {
+          e.preventDefault();
+          alert('Debe confirmar la consulta con el matrizador para entregar documentos pendientes.');
+          checkboxAutorizacion.focus();
+          return false;
+        }
+        btnConfirmar.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i>Procesando...`;
+        btnConfirmar.disabled = true;
+      });
+    }
+    
+    actualizarSeleccion();
+    
+    window.ocultarEntregaGrupal = function() {
+      document.getElementById('alerta-entrega-grupal').style.display = 'none';
+      document.getElementById('seccion-entrega-grupal').style.display = 'none';
+    };
   }
-  
-  // Validación del formulario
-  if (btnConfirmar) {
-    document.getElementById('formEntrega').addEventListener('submit', function(e) {
-      // ============== NUEVA VALIDACIÓN: AUTORIZACIÓN PARA DOCUMENTOS PENDIENTES ==============
-      const checkboxAutorizacion = document.getElementById('confirmarEntregaPendiente');
-      if (checkboxAutorizacion && !checkboxAutorizacion.checked) {
-        e.preventDefault();
-        alert('Debe confirmar que ha consultado con el matrizador responsable para proceder con la entrega de documentos con pago pendiente.');
-        checkboxAutorizacion.focus();
-        return false;
-      }
-      
-      const entregaGrupal = document.getElementById('entrega_grupal').value === 'true';
-      const numDocumentos = entregaGrupal ? 
-        document.getElementById('documentos_seleccionados').value.split(',').length + 1 : 1;
-      
-      if (entregaGrupal) {
-        btnConfirmar.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i>Procesando entrega grupal (${numDocumentos} documentos)...`;
-      } else {
-        btnConfirmar.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i>Procesando entrega...`;
-      }
-      
-      btnConfirmar.disabled = true;
-    });
-  }
-  
-  // Inicializar selección
-  actualizarSeleccion();
-  
-  // Funciones específicas para recepción
-  window.ocultarEntregaGrupal = function() {
-    document.getElementById('alerta-entrega-grupal').style.display = 'none';
-    document.getElementById('seccion-entrega-grupal').style.display = 'none';
-  };
 });
 </script> 
