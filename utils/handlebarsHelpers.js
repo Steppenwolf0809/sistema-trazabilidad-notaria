@@ -154,31 +154,31 @@ const helpers = {
   },
 
   badgeEstadoEntrega: function(estadoEntrega) {
-      if (!estadoEntrega) return '<span class="badge badge-secondary"><i class="fas fa-question-circle"></i> Desconocido</span>';
+      if (!estadoEntrega) return '<span class="badge bg-secondary text-white"><i class="fas fa-question-circle me-1"></i>Desconocido</span>';
       const estado = estadoEntrega.toLowerCase();
       let clase = '';
       let icono = '';
       let texto = '';
       
       if (estado.includes('entregado')) {
-          clase = 'badge-entrega entregado';
+          clase = 'bg-success text-white';
           icono = 'fas fa-check-circle';
-          texto = 'Entregado';
+          texto = 'ENTREGADO';
       } else if (estado.includes('listo')) {
-          clase = 'badge-entrega listo';
-          icono = 'fas fa-file-alt';
-          texto = 'Listo para Entrega';
+          clase = 'bg-primary text-white';
+          icono = 'fas fa-file-check';
+          texto = 'LISTO';
       } else if (estado.includes('proceso')) {
-          clase = 'badge-entrega proceso';
-          icono = 'fas fa-user-clock';
-          texto = 'En Proceso';
+          clase = 'bg-warning text-dark';
+          icono = 'fas fa-clock';
+          texto = 'EN PROCESO';
       } else {
-          clase = 'badge-secondary';
+          clase = 'bg-secondary text-white';
           icono = 'fas fa-question-circle';
-          texto = estado;
+          texto = estado.toUpperCase();
       }
       
-      return `<span class="badge ${clase}"><i class="${icono}"></i> ${texto}</span>`;
+      return `<span class="badge ${clase} px-2 py-1"><i class="${icono} me-1"></i>${texto}</span>`;
   },
 
   // Helper para Estados de Pago
@@ -198,35 +198,35 @@ const helpers = {
   },
 
   badgeEstadoPago: function(estadoPago) {
-      if (!estadoPago) return '<span class="badge badge-secondary"><i class="fas fa-question-circle"></i> Desconocido</span>';
+      if (!estadoPago) return '<span class="badge bg-secondary text-white"><i class="fas fa-question-circle me-1"></i>Desconocido</span>';
       const estado = estadoPago.toLowerCase();
       let clase = '';
       let icono = '';
       let texto = '';
       
       if (estado.includes('pendiente') || estado.includes('no_pagado')) {
-          clase = 'badge-pago pendiente';
-          icono = 'fas fa-times';
-          texto = 'No Pagado';
+          clase = 'bg-danger text-white';
+          icono = 'fas fa-times-circle';
+          texto = 'NO PAGADO';
       } else if (estado.includes('parcial')) {
-          clase = 'badge-pago parcial';
-          icono = 'fas fa-adjust';
-          texto = 'Pago Parcial';
+          clase = 'bg-warning text-dark';
+          icono = 'fas fa-circle-half-stroke';
+          texto = 'PARCIAL';
       } else if (estado.includes('completo')) {
-          clase = 'badge-pago completo';
+          clase = 'bg-success text-white';
           icono = 'fas fa-dollar-sign';
-          texto = 'Pagado';
+          texto = 'PAGADO';
       } else if (estado.includes('retencion')) {
-          clase = 'badge-pago retencion';
+          clase = 'bg-success text-white';
           icono = 'fas fa-university';
-          texto = 'Pagado c/Retención';
+          texto = 'CON RETENCIÓN';
       } else {
-          clase = 'badge-secondary';
+          clase = 'bg-secondary text-white';
           icono = 'fas fa-question-circle';
-          texto = estado;
+          texto = estado.toUpperCase();
       }
       
-      return `<span class="badge ${clase}"><i class="${icono}"></i> ${texto}</span>`;
+      return `<span class="badge ${clase} px-2 py-1"><i class="${icono} me-1"></i>${texto}</span>`;
   },
   
   // NUEVO: Helper "getTipoLetra" para compatibilidad con vistas antiguas
@@ -534,6 +534,140 @@ const helpers = {
     }
 
     return pages;
+  },
+
+  // CRÍTICO: Helper tipoDocumentoClass que estaba faltando
+  tipoDocumentoClass: (tipo) => {
+    const clases = {
+      'Diligencias': 'tipo-D',
+      'Certificaciones': 'tipo-C',
+      'Copias': 'tipo-P',
+      'Autenticaciones': 'tipo-A',
+      'Otros': 'tipo-O'
+    };
+    return clases[tipo] || 'tipo-O';
+  },
+
+  // Helper adicional para icono de tipo de documento
+  iconoTipoDocumento: (tipo) => {
+    const iconos = {
+      'Escritura': 'fas fa-file-contract',
+      'Certificación': 'fas fa-certificate',
+      'Copia': 'fas fa-copy',
+      'Autenticación': 'fas fa-stamp',
+      'Diligencia': 'fas fa-file-alt',
+      'Diligencias': 'fas fa-file-alt',
+      'Certificaciones': 'fas fa-certificate',
+      'Copias': 'fas fa-copy',
+      'Autenticaciones': 'fas fa-stamp'
+    };
+    return iconos[tipo] || 'fas fa-file';
+  },
+
+  // Helper para abreviación de tipo de documento
+  tipoDocumentoAbrev: (tipo) => {
+    const tipos = {
+      'Diligencias': 'D',
+      'Certificaciones': 'C',
+      'Copias': 'CP',
+      'Autenticaciones': 'A',
+      'Otros': 'O'
+    };
+    return tipos[tipo] || tipo.charAt(0).toUpperCase();
+  },
+
+  // CRÍTICO: Helper formatMatrizadorNombre que estaba faltando
+  formatMatrizadorNombre: (matrizador) => {
+    if (!matrizador || !matrizador.nombre) {
+      return 'Sin asignar';
+    }
+    
+    const nombre = matrizador.nombre.trim();
+    
+    // Si el nombre es corto, mostrar completo
+    if (nombre.length <= 20) {
+      return nombre;
+    }
+    
+    // Si el nombre es largo, mostrar primer nombre + primer apellido
+    const partes = nombre.split(' ').filter(parte => parte.length > 0);
+    if (partes.length >= 2) {
+      // Mostrar primer nombre + primer apellido (no el último)
+      return `${partes[0]} ${partes[1]}`;
+    }
+    
+    // Si es una sola palabra muy larga, truncar
+    return nombre.substring(0, 18) + '...';
+  },
+
+  // CRÍTICO: Helper estadoPagoClass que estaba faltando
+  estadoPagoClass: (estado) => {
+    const clases = {
+      'pendiente': 'bg-warning text-dark',
+      'pago_parcial': 'bg-info text-white',
+      'pagado_completo': 'bg-success text-white',
+      'pagado_con_retencion': 'bg-success text-white'
+    };
+    return clases[estado] || 'bg-secondary text-white';
+  },
+
+  // CRÍTICO: Helper estadoPagoTexto que estaba faltando
+  estadoPagoTexto: (estado) => {
+    const textos = {
+      'pendiente': 'Pendiente',
+      'pago_parcial': 'Pago Parcial',
+      'pagado_completo': 'Pagado Completo',
+      'pagado_con_retencion': 'Pagado con Retención'
+    };
+    return textos[estado] || estado;
+  },
+
+  // CRÍTICO: Helper formatearCodigoCompacto que estaba faltando
+  formatearCodigoCompacto: (codigo) => {
+    if (!codigo) return 'N/A';
+    const codigoStr = codigo.toString();
+    if (codigoStr.length <= 8) return codigoStr;
+    return codigoStr.substring(0, 4) + '...' + codigoStr.substring(codigoStr.length - 4);
+  },
+
+  // CRÍTICO: Helper estadoPagoSimple que estaba faltando
+  estadoPagoSimple: (estado) => {
+    const estados = {
+      'pagado_completo': 'Pagado',
+      'pendiente': 'Pendiente',
+      'pagado_con_retencion': 'Con Ret.',
+      'pago_parcial': 'Parcial',
+      'sin_factura': 'S/F'
+    };
+    return estados[estado] || estado;
+  },
+
+  // CRÍTICO: Helper formatDateShort que estaba faltando
+  formatDateShort: (date) => {
+    const fechaCompleta = formatearFecha(date);
+    if (!fechaCompleta || fechaCompleta === 'Sin fecha') return 'Sin fecha';
+    
+    const partes = fechaCompleta.split('/');
+    if (partes.length === 3) {
+      return `${partes[0]}/${partes[1]}/${partes[2].substr(-2)}`;
+    }
+    
+    return fechaCompleta;
+  },
+
+  // ✨ NUEVO: Helper para truncar nombres con tooltip
+  truncateWithTooltip: (texto, maxLength = 25) => {
+    if (!texto || typeof texto !== 'string') return '';
+    if (texto.length <= maxLength) return texto;
+    
+    const truncated = texto.substring(0, maxLength) + '...';
+    return `<span title="${texto}" data-bs-toggle="tooltip" data-bs-placement="top">${truncated}</span>`;
+  },
+
+  // ✨ NUEVO: Helper para códigos destacados
+  highlightCode: (codigo) => {
+    if (!codigo) return 'N/A';
+    return `<span class="codigo-destacado">${codigo}</span>`;
   }
 };
 

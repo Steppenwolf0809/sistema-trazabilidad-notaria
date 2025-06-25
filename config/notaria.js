@@ -54,6 +54,12 @@ const configNotaria = {
 
 ✅ *Su trámite ha sido completado exitosamente.*
 
+⭐ *¿Quedó satisfecho con nuestro servicio?*
+Comparta su experiencia en Google:
+https://g.page/r/CYfAY05X_ylIEBM/review?utm_source=gbp&utm_medium=reviews&utm_campaign=qr
+
+Su opinión nos ayuda a mejorar cada día.
+
 _Guarde este mensaje como comprobante de entrega._`,
 
       email: {
@@ -83,6 +89,12 @@ _Guarde este mensaje como comprobante de entrega._`,
 📍 *Lugar:* Notaría Décima Octava, Quito
 
 ✅ *Todos sus trámites han sido completados exitosamente.*
+
+⭐ *¿Quedó satisfecho con nuestro servicio?*
+Comparta su experiencia en Google:
+https://g.page/r/CYfAY05X_ylIEBM/review?utm_source=gbp&utm_medium=reviews&utm_campaign=qr
+
+Su opinión nos ayuda a mejorar cada día.
 
 _Guarde este mensaje como comprobante de entrega grupal._`,
 

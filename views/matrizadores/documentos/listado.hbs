@@ -1,9 +1,6 @@
 <div class="card">
-  <div class="card-header d-flex justify-content-between align-items-center">
+  <div class="card-header">
     <span><i class="fas fa-list me-2"></i> Mis Documentos</span>
-    <a href="/matrizador/documentos/registro" class="btn btn-sm btn-primary">
-      <i class="fas fa-plus me-1"></i> Nuevo Documento
-    </a>
   </div>
   <div class="card-body">
     <!-- Filtros -->
@@ -81,12 +78,12 @@
               <span>Fecha</span>
               <i class="fas fa-sort ms-1 sort-icon"></i>
             </th>
-            <th class="col-estado ordenable" data-columna="estado" data-tipo="texto">
-              <span>Estado Entrega</span>
+            <th class="col-estado ordenable" data-columna="estado" data-tipo="texto" title="Estado de Entrega">
+              <span><i class="fas fa-truck"></i></span>
               <i class="fas fa-sort ms-1 sort-icon"></i>
             </th>
-            <th class="col-pago ordenable" data-columna="estadoPago" data-tipo="texto">
-              <span>Estado Pago</span>
+            <th class="col-pago ordenable" data-columna="estadoPago" data-tipo="texto" title="Estado de Pago">
+              <span><i class="fas fa-dollar-sign"></i></span>
               <i class="fas fa-sort ms-1 sort-icon"></i>
             </th>
             <th class="col-valor ordenable" data-columna="valorFactura" data-tipo="numero">
@@ -98,23 +95,18 @@
         </thead>
         <tbody>
           {{#each documentos}}
-          <tr {{#unless this.visto}}class="documento-nuevo"{{/unless}}>
-            <!-- Código con formato mejorado -->
+          <tr data-documento-id="{{this.id}}">
+            <!-- Código DESTACADO con fondo -->
             <td class="col-codigo">
-              <a href="/matrizador/documentos/detalle/{{this.id}}" class="codigo-link">
-                <span class="codigo-documento">{{this.codigoBarras}}</span>
-              </a>
-              <div class="tipo-documento">
-                  <small class="text-muted">{{this.tipoDocumento}}</small>
-              </div>
-              {{#unless this.visto}}
-              <span class="badge badge-danger badge-nuevo ms-1">NUEVO</span>
-              {{/unless}}
+                {{{highlightCode this.codigoBarras}}}
+                <div class="tipo-documento">
+                    <small class="text-muted">{{this.tipoDocumento}}</small>
+                </div>
             </td>
             
-            <!-- Cliente con formato mejorado (sin truncar) -->
+            <!-- Cliente OPTIMIZADO con truncado y tooltip - MÁS ESPACIO -->
             <td class="col-cliente">
-              <div class="cliente-nombre">{{this.nombreCliente}}</div>
+              <div class="cliente-nombre">{{{truncateWithTooltip this.nombreCliente 35}}}</div>
               <div class="cliente-identificacion">{{this.identificacionCliente}}</div>
             </td>
             
@@ -127,19 +119,33 @@
               {{/if}}
             </td>
             
-            <!-- Estado de Entrega (NUEVO BADGE) -->
+            <!-- Estado de Entrega (ICONOS SIMPLES) -->
             <td class="col-estado text-center">
-              {{{badgeEstadoEntrega this.estado}}}
+              {{#if (eq this.estado 'entregado')}}
+                <i class="fas fa-check-circle text-success fs-5" title="Entregado"></i>
+              {{else if (eq this.estado 'listo_para_entrega')}}
+                <i class="fas fa-clock text-primary fs-5" title="Listo para Entrega"></i>
+              {{else if (eq this.estado 'en_proceso')}}
+                <i class="fas fa-cog fa-spin text-warning fs-5" title="En Proceso"></i>
+              {{else}}
+                <i class="fas fa-question-circle text-muted fs-5" title="{{this.estado}}"></i>
+              {{/if}}
             </td>
             
-            <!-- Estado de Pago (NUEVO BADGE) -->
+            <!-- Estado de Pago (ICONOS SIMPLES) -->
             <td class="col-pago text-center">
               {{#if this.numeroFactura}}
-                {{{badgeEstadoPago this.estadoPago}}}
+                {{#if (eq this.estadoPago 'pagado_completo')}}
+                  <i class="fas fa-dollar-sign text-success fs-5" title="Pagado Completo"></i>
+                {{else if (eq this.estadoPago 'pagado_con_retencion')}}
+                  <i class="fas fa-university text-success fs-5" title="Pagado con Retención"></i>
+                {{else if (eq this.estadoPago 'pago_parcial')}}
+                  <i class="fas fa-circle-half-stroke text-warning fs-5" title="Pago Parcial"></i>
+                {{else}}
+                  <i class="fas fa-times-circle text-danger fs-5" title="No Pagado"></i>
+                {{/if}}
               {{else}}
-                <span class="badge bg-secondary" title="Documento sin factura asociada">
-                    <i class="fas fa-file-invoice-dollar me-1"></i> S/F
-                </span>
+                <i class="fas fa-file-invoice text-muted fs-5" title="Sin Factura"></i>
               {{/if}}
             </td>
             
@@ -152,22 +158,25 @@
               {{/if}}
             </td>
             
-            <!-- Acciones (sin cambios) -->
+            <!-- Acciones SIMPLIFICADAS -->
             <td class="col-acciones text-center">
               <div class="btn-group btn-group-sm">
                 <a href="/matrizador/documentos/detalle/{{this.id}}" class="btn btn-outline-primary btn-universal" title="Ver Detalle">
                   <i class="fas fa-eye"></i>
                 </a>
+                
+                <!-- ✅ BOTÓN EDITAR -->
+                {{#if (or (eq this.estado 'en_proceso') (eq this.estado 'listo_para_entrega'))}}
+                <a href="/matrizador/documentos/editar/{{this.id}}" class="btn btn-outline-warning btn-universal" title="Editar Documento">
+                  <i class="fas fa-edit"></i>
+                </a>
+                {{/if}}
+                
                 {{#if (ne this.estado 'entregado')}}
                 <button class="btn btn-outline-success btn-universal" onclick="marcarComoListo({{this.id}})" title="Marcar como Listo">
                   <i class="fas fa-check"></i>
                 </button>
                 {{/if}}
-                {{#unless this.visto}}
-                <button class="btn btn-outline-info btn-universal" onclick="marcarComoVisto({{this.id}})" title="Marcar como Visto">
-                  <i class="fas fa-eye-slash"></i>
-                </button>
-                {{/unless}}
               </div>
             </td>
           </tr>
@@ -246,12 +255,18 @@
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    console.log('🎯 Inicializando tabla MATRIZADORES - Sistema Universal v1.0');
+    console.log('🎯 Inicializando tabla MATRIZADORES - Sistema Universal v2.0 OPTIMIZADA');
     
     // Inicializar ordenamiento manual corregido
     inicializarOrdenamientoManual();
     
-    console.log('✅ Vista MATRIZADORES migrada al sistema universal - Funcionalidad completa');
+    // ✨ INICIALIZAR TOOLTIPS PARA NOMBRES TRUNCADOS
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+    
+    console.log('✅ Vista MATRIZADORES migrada al sistema universal - Funcionalidad completa + Tooltips activos');
   });
 
   // Función de ordenamiento manual específica para MATRIZADORES
@@ -305,35 +320,7 @@
     console.log('✅ Ordenamiento manual configurado para MATRIZADORES:', headersOrdenables.length, 'columnas');
   }
 
-  // Función para marcar documento como visto
-  function marcarComoVisto(documentoId) {
-    fetch(`/matrizador/documentos/${documentoId}/marcar-visto`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest'
-      }
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        // Remover badge "NUEVO" y clase documento-nuevo
-        const fila = document.querySelector(`tr[data-id="${documentoId}"]`);
-        if (fila) {
-          fila.classList.remove('documento-nuevo');
-          const badge = fila.querySelector('.badge-nuevo');
-          if (badge) badge.remove();
-          
-          const botonVisto = fila.querySelector('button[onclick*="marcarComoVisto"]');
-          if (botonVisto) botonVisto.remove();
-        }
-        console.log('✅ Documento marcado como visto:', documentoId);
-      }
-    })
-    .catch(error => {
-      console.error('❌ Error marcando como visto:', error);
-    });
-  }
+
 
   // Función para marcar documento como listo
   function marcarComoListo(documentoId) {
@@ -359,6 +346,8 @@
       });
     }
   }
+
+
 
   function limpiarFiltrosMatrizadores() {
     document.getElementById('busqueda').value = '';

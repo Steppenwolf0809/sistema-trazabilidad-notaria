@@ -138,17 +138,17 @@
         <tbody>
           {{#each documentos}}
           <tr>
-            <!-- Código con formato mejorado -->
+            <!-- Código DESTACADO con fondo -->
             <td class="col-codigo">
-                <span class="codigo-documento">{{this.codigoBarras}}</span>
+                {{{highlightCode this.codigoBarras}}}
                 <div class="tipo-documento">
                     <small class="text-muted">{{this.tipoDocumento}}</small>
                 </div>
             </td>
             
-            <!-- Cliente con formato mejorado (sin truncar) -->
+            <!-- Cliente OPTIMIZADO con truncado y tooltip -->
             <td class="col-cliente">
-              <div class="cliente-nombre">{{this.nombreCliente}}</div>
+              <div class="cliente-nombre">{{{truncateWithTooltip this.nombreCliente 25}}}</div>
               <div class="cliente-identificacion">{{this.identificacionCliente}}</div>
             </td>
             
@@ -309,7 +309,7 @@
 {{#if soloLectura}}
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    console.log('🎯 Inicializando tabla ADMIN - Sistema Universal v2.0');
+    console.log('🎯 Inicializando tabla ADMIN - Sistema Universal v3.0 OPTIMIZADA');
     
     // Inicializar ordenamiento manual corregido
     inicializarOrdenamientoManual();
@@ -317,7 +317,13 @@
     // Inicializar filtros automáticos de fechas
     inicializarFiltrosFechas();
     
-    console.log('✅ Vista ADMIN migrada al sistema universal - Funcionalidad completa');
+    // ✨ INICIALIZAR TOOLTIPS PARA NOMBRES TRUNCADOS
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+    
+    console.log('✅ Vista ADMIN migrada al sistema universal - Funcionalidad completa + Tooltips activos');
   });
 
   // Función de ordenamiento manual específica para ADMIN

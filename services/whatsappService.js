@@ -224,7 +224,7 @@ const generarMensajeEntregaConfirmada = (documento, datosEntrega) => {
       .replace('{{horaEntrega}}', horaEntrega);
   }
 
-  // Mensaje de respaldo
+  // Mensaje de respaldo con enlace de Google Reviews
   return `🏛️ *NOTARÍA DÉCIMA OCTAVA*
 
 ✅ *DOCUMENTO ENTREGADO*
@@ -240,7 +240,13 @@ const generarMensajeEntregaConfirmada = (documento, datosEntrega) => {
 📅 *Fecha:* ${fechaEntrega}
 ⏰ *Hora:* ${horaEntrega}
 
-Gracias por confiar en nuestros servicios.`;
+Gracias por confiar en nuestros servicios.
+
+⭐ *¿Quedó satisfecho con nuestro servicio?*
+Comparta su experiencia en Google:
+https://g.page/r/CYfAY05X_ylIEBM/review?utm_source=gbp&utm_medium=reviews&utm_campaign=qr
+
+Su opinión nos ayuda a mejorar cada día.`;
 };
 
 /**

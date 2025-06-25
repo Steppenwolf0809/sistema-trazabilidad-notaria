@@ -53,25 +53,611 @@
   line-height: 1.4; /* Aumentado para mejor espaciado */
   width: 100%;
   margin-bottom: 0;
-  table-layout: fixed;
+  table-layout: auto; /* Cambiado de fixed a auto para mejor alineamiento */
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   border-collapse: separate;
   border-spacing: 0;
 }
 
+/* ✅ REGLA CRÍTICA PARA EVITAR SUPERPOSICIÓN */
+.table-responsive .table {
+  margin-bottom: 0 !important;
+}
+
+.table-responsive {
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+/* ✅ ASEGURAR QUE TODAS LAS TABLAS USEN EL SISTEMA UNIVERSAL */
+#tablaDocumentosAdmin,
+#tablaDocumentosCaja,
+#tablaDocumentosMatrizadores,
+#tablaDocumentosArchivo,
+#tablaDocumentosRecepcion {
+  table-layout: auto !important;
+  width: 100% !important;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+}
+
 /* ====================================================
-   📐 DISTRIBUCIÓN DE COLUMNAS OPTIMIZADA
+   🎯 DISTRIBUCIÓN ESPECÍFICA PARA MATRIZADORES (7 COLUMNAS)
    ==================================================== */
 
-.col-codigo { width: 15%; }
-.col-cliente { width: 25%; }
-.col-tipo { width: 5%; }
-.col-matrizador { width: 10%; }
-.col-fecha { width: 8%; }
-.col-estado { width: 6%; }
-.col-pago { width: 8%; }
-.col-valor { width: 8%; }
-.col-acciones { width: 10%; }
+/* Vista de matrizadores con ICONOS - 7 columnas ULTRA OPTIMIZADA */
+#tablaDocumentosMatrizadores .col-codigo { 
+  width: 22% !important; 
+  min-width: 160px !important;
+  max-width: 250px !important;
+}
+
+#tablaDocumentosMatrizadores .col-cliente { 
+  width: 35% !important; 
+  min-width: 220px !important;
+  max-width: 400px !important;
+}
+
+#tablaDocumentosMatrizadores .col-fecha { 
+  width: 12% !important; 
+  min-width: 90px !important;
+  max-width: 120px !important;
+}
+
+#tablaDocumentosMatrizadores .col-estado { 
+  width: 6% !important; 
+  min-width: 50px !important;
+  max-width: 70px !important;
+  text-align: center !important;
+}
+
+#tablaDocumentosMatrizadores .col-pago { 
+  width: 6% !important; 
+  min-width: 50px !important;
+  max-width: 70px !important;
+  text-align: center !important;
+}
+
+#tablaDocumentosMatrizadores .col-valor { 
+  width: 11% !important; 
+  min-width: 90px !important;
+  max-width: 130px !important;
+}
+
+#tablaDocumentosMatrizadores .col-acciones { 
+  width: 8% !important; 
+  min-width: 120px !important;
+  max-width: 160px !important;
+}
+
+/* ====================================================
+   📱 RESPONSIVE PARA MATRIZADORES
+   ==================================================== */
+
+/* Para pantallas medianas (1366px y menores) con ICONOS */
+@media (max-width: 1366px) {
+  #tablaDocumentosMatrizadores .col-codigo { 
+    width: 20% !important; 
+    min-width: 140px !important;
+  }
+  
+  #tablaDocumentosMatrizadores .col-cliente { 
+    width: 32% !important; 
+    min-width: 180px !important;
+  }
+  
+  #tablaDocumentosMatrizadores .col-fecha { 
+    width: 10% !important; 
+    min-width: 80px !important;
+  }
+  
+  #tablaDocumentosMatrizadores .col-estado { 
+    width: 6% !important; 
+    min-width: 45px !important;
+  }
+  
+  #tablaDocumentosMatrizadores .col-pago { 
+    width: 6% !important; 
+    min-width: 45px !important;
+  }
+  
+  #tablaDocumentosMatrizadores .col-valor { 
+    width: 10% !important; 
+    min-width: 80px !important;
+  }
+  
+  #tablaDocumentosMatrizadores .col-acciones { 
+    width: 16% !important; 
+    min-width: 120px !important;
+  }
+}
+
+/* Para pantallas pequeñas (móviles) */
+@media (max-width: 767px) {
+  #tablaDocumentosMatrizadores {
+    min-width: 790px !important;
+  }
+  
+  #tablaDocumentosMatrizadores .col-codigo { width: 160px !important; min-width: 160px !important; max-width: 160px !important; }
+  #tablaDocumentosMatrizadores .col-cliente { width: 200px !important; min-width: 200px !important; max-width: 200px !important; }
+  #tablaDocumentosMatrizadores .col-fecha { width: 90px !important; min-width: 90px !important; max-width: 90px !important; }
+  #tablaDocumentosMatrizadores .col-estado { width: 50px !important; min-width: 50px !important; max-width: 50px !important; }
+  #tablaDocumentosMatrizadores .col-pago { width: 50px !important; min-width: 50px !important; max-width: 50px !important; }
+  #tablaDocumentosMatrizadores .col-valor { width: 100px !important; min-width: 100px !important; max-width: 100px !important; }
+  #tablaDocumentosMatrizadores .col-acciones { width: 140px !important; min-width: 140px !important; max-width: 140px !important; }
+}
+
+/* ====================================================
+   📐 DISTRIBUCIÓN DE COLUMNAS OPTIMIZADA - ANTI-SUPERPOSICIÓN
+   ==================================================== */
+
+/* ====================================================
+   📐 SISTEMA UNIVERSAL DE COLUMNAS - TODOS LOS ROLES
+   ==================================================== */
+
+/* ✅ ANCHOS UNIVERSALES PARA TODAS LAS TABLAS */
+.col-codigo { 
+  width: 16% !important; 
+  min-width: 130px !important;
+  max-width: 200px !important;
+  padding: 0.75rem 0.5rem !important;
+  word-wrap: break-word !important;
+}
+
+.col-cliente { 
+  width: 25% !important; 
+  min-width: 180px !important;
+  max-width: 280px !important;
+  padding: 0.75rem 0.5rem !important;
+  word-wrap: break-word !important;
+}
+
+.col-tipo { 
+  width: 5% !important; 
+  min-width: 60px !important;
+  max-width: 80px !important;
+  text-align: center !important;
+}
+
+.col-matrizador { 
+  width: 10% !important; 
+  min-width: 80px !important;
+  max-width: 120px !important;
+  text-align: center !important;
+  padding: 0.75rem 0.3rem !important;
+}
+
+.col-fecha { 
+  width: 9% !important; 
+  min-width: 85px !important;
+  max-width: 110px !important;
+  text-align: center !important;
+  padding: 0.75rem 0.3rem !important;
+}
+
+.col-estado { 
+  width: 13% !important; 
+  min-width: 110px !important;
+  max-width: 150px !important;
+  text-align: center !important;
+  padding: 0.75rem 0.3rem !important;
+}
+
+.col-pago { 
+  width: 13% !important; 
+  min-width: 110px !important;
+  max-width: 150px !important;
+  text-align: center !important;
+  padding: 0.75rem 0.3rem !important;
+}
+
+.col-valor { 
+  width: 10% !important; 
+  min-width: 90px !important;
+  max-width: 130px !important;
+  text-align: right !important;
+  padding: 0.75rem 0.5rem !important;
+}
+
+.col-acciones { 
+  width: 14% !important; 
+  min-width: 150px !important;
+  max-width: 200px !important;
+  text-align: center !important;
+  padding: 0.75rem 0.3rem !important;
+}
+
+/* ====================================================
+   ✨ MEJORAS VISUALES RESTAURADAS v3.0
+   ==================================================== */
+
+/* ====================================================
+   🎯 CÓDIGOS DESTACADOS - VERSIÓN MEJORADA
+   ==================================================== */
+
+/* Códigos destacados con fondo */
+.codigo-destacado {
+  font-family: 'Courier New', monospace !important;
+  font-weight: bold !important;
+  font-size: 0.9rem !important;
+  padding: 0.4rem 0.7rem !important;
+  border: 2px solid #0d6efd !important;
+  background-color: #e7f1ff !important;
+  color: #0d6efd !important;
+  border-radius: 0.5rem !important;
+  display: inline-block !important;
+  letter-spacing: 0.5px !important;
+  text-transform: uppercase !important;
+}
+
+/* Compatibilidad con badges antiguos */
+.badge.bg-light.text-dark.border {
+  font-family: 'Courier New', monospace !important;
+  font-weight: bold !important;
+  font-size: 0.9rem !important;
+  padding: 0.4rem 0.7rem !important;
+  border: 2px solid #0d6efd !important;
+  background-color: #e7f1ff !important;
+  color: #0d6efd !important;
+  border-radius: 0.5rem !important;
+  letter-spacing: 0.5px !important;
+  text-transform: uppercase !important;
+}
+
+/* Tooltips mejorados para nombres truncados */
+[data-bs-toggle="tooltip"] {
+  cursor: help;
+  border-bottom: 1px dotted #6c757d;
+}
+
+/* ====================================================
+   👥 NOMBRES DE CLIENTES - ANTI-SUPERPOSICIÓN
+   ==================================================== */
+
+.cliente-nombre {
+  font-weight: 500;
+  font-size: 0.9rem;
+  line-height: 1.3;
+  margin-bottom: 0.2rem;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  max-width: 100%;
+}
+
+.cliente-identificacion {
+  font-size: 0.8rem;
+  color: #6c757d;
+  font-family: 'Courier New', monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ✅ CONTENEDOR DE CÓDIGO OPTIMIZADO */
+.col-codigo {
+  padding: 0.75rem 0.5rem !important;
+  vertical-align: middle !important;
+  overflow: hidden !important;
+}
+
+.col-codigo .tipo-documento {
+  margin-top: 0.3rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.col-codigo .tipo-documento small {
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ✅ CORRECCIÓN ESPECÍFICA PARA CLIENTE */
+.col-cliente {
+  overflow: hidden !important;
+}
+
+.col-cliente .cliente-nombre {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  max-width: 100% !important;
+  display: block !important;
+}
+
+.col-cliente .cliente-identificacion {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  max-width: 100% !important;
+  display: block !important;
+}
+
+/* Badges de estado mejorados */
+.badge.px-2.py-1 {
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.02em !important;
+  text-transform: uppercase !important;
+  border-radius: 0.375rem !important;
+}
+
+/* Estados específicos con colores optimizados */
+.badge.bg-success {
+  background-color: #198754 !important;
+}
+
+.badge.bg-primary {
+  background-color: #0d6efd !important;
+}
+
+.badge.bg-warning {
+  background-color: #ffc107 !important;
+  color: #000 !important;
+}
+
+.badge.bg-danger {
+  background-color: #dc3545 !important;
+}
+
+/* Iconos en badges */
+.badge i.me-1 {
+  margin-right: 0.3rem !important;
+  font-size: 0.8em;
+}
+
+/* ====================================================
+   📱 RESPONSIVIDAD COMPLETA PARA TODAS LAS TABLAS
+   ==================================================== */
+
+/* Contenedor de tabla con scroll horizontal en móviles */
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 0.375rem;
+  border: 1px solid #dee2e6;
+}
+
+/* ✅ CORRECCIÓN CRÍTICA PARA ALINEAMIENTO DE COLUMNAS */
+.table-documentos,
+.tabla-ordenable,
+.tabla-notaria {
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  width: 100% !important;
+  table-layout: auto !important;
+}
+
+.table-documentos th,
+.table-documentos td,
+.tabla-ordenable th,
+.tabla-ordenable td,
+.tabla-notaria th,
+.tabla-notaria td {
+  border: none !important;
+  border-bottom: 1px solid #dee2e6 !important;
+  vertical-align: middle !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  position: relative !important;
+}
+
+/* ✅ PREVENIR SUPERPOSICIÓN DE CONTENIDO */
+.table-documentos tbody td,
+.tabla-ordenable tbody td,
+.tabla-notaria tbody td {
+  padding: 0.75rem 0.5rem !important;
+  line-height: 1.4 !important;
+  font-size: 14px !important;
+}
+
+/* ✅ CONTENIDO DE CELDAS SIN DESBORDAMIENTO */
+.cliente-nombre,
+.cliente-identificacion,
+.tipo-documento,
+.codigo-destacado {
+  max-width: 100% !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+/* ✅ EXCEPCIÓN PARA BADGES Y BOTONES */
+.badge,
+.btn-group,
+.btn-universal {
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+}
+
+/* ✅ CORRECCIÓN FINAL PARA HEADERS */
+.tabla-ordenable th,
+.tabla-notaria th,
+.table-documentos th {
+  white-space: nowrap !important;
+  overflow: visible !important; /* Headers pueden expandirse */
+  text-overflow: clip !important;
+}
+
+/* ✅ CORRECCIÓN FINAL PARA CELDAS DE DATOS */
+.tabla-ordenable td,
+.tabla-notaria td,
+.table-documentos td {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* ✅ EXCEPCIONES ESPECÍFICAS PARA CONTENIDO MULTILÍNEA */
+.col-codigo,
+.col-cliente {
+  white-space: normal !important; /* Permitir múltiples líneas en código y cliente */
+}
+
+.col-codigo * {
+  white-space: nowrap !important;
+}
+
+.col-cliente .cliente-nombre,
+.col-cliente .cliente-identificacion {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Tabla en dispositivos móviles */
+@media (max-width: 767px) {
+  .tabla-notaria,
+  .tabla-ordenable,
+  .table-documentos {
+    font-size: 12px !important;
+    min-width: 1100px !important; /* Aumentado para acomodar todas las columnas */
+    table-layout: fixed !important; /* Fixed para control estricto en móvil */
+    width: 1100px !important;
+  }
+  
+  .tabla-notaria th,
+  .tabla-ordenable th {
+    padding: 0.4rem 0.2rem !important;
+    font-size: 11px !important;
+    height: 45px !important;
+    white-space: nowrap;
+  }
+  
+  .tabla-notaria td,
+  .tabla-ordenable td {
+    padding: 0.3rem 0.2rem !important;
+    vertical-align: middle;
+  }
+  
+  /* ✅ ANCHOS FIJOS EN MÓVIL PARA EVITAR SUPERPOSICIÓN */
+  .col-codigo { width: 120px !important; min-width: 120px !important; max-width: 120px !important; }
+  .col-cliente { width: 160px !important; min-width: 160px !important; max-width: 160px !important; }
+  .col-matrizador { width: 70px !important; min-width: 70px !important; max-width: 70px !important; }
+  .col-fecha { width: 85px !important; min-width: 85px !important; max-width: 85px !important; }
+  .col-estado { width: 110px !important; min-width: 110px !important; max-width: 110px !important; }
+  .col-pago { width: 110px !important; min-width: 110px !important; max-width: 110px !important; }
+  .col-valor { width: 90px !important; min-width: 90px !important; max-width: 90px !important; }
+  .col-acciones { width: 140px !important; min-width: 140px !important; max-width: 140px !important; }
+  
+  /* Nombres de cliente más compactos en móvil */
+  .cliente-nombre {
+    font-size: 0.8rem !important;
+    line-height: 1.2 !important;
+    margin-bottom: 0.1rem !important;
+  }
+  
+  .cliente-identificacion {
+    font-size: 0.7rem !important;
+  }
+  
+  /* Badges más pequeños en móvil */
+  .badge.px-2.py-1 {
+    font-size: 0.65rem !important;
+    padding: 0.2rem 0.4rem !important;
+  }
+  
+  /* Botones más pequeños en móvil */
+  .btn-group-sm .btn {
+    padding: 0.2rem 0.3rem !important;
+    font-size: 0.7rem !important;
+  }
+  
+  /* Códigos más compactos */
+  .badge.bg-light.text-dark.border {
+    font-size: 0.7rem !important;
+    padding: 0.2rem 0.4rem !important;
+  }
+}
+
+/* Tablet (768px - 1023px) */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .tabla-notaria,
+  .tabla-ordenable,
+  .table-documentos {
+    font-size: 13px !important;
+  }
+  
+  .tabla-notaria th,
+  .tabla-ordenable th {
+    padding: 0.5rem 0.3rem !important;
+    font-size: 13px !important;
+    height: 50px !important;
+  }
+  
+  .col-codigo { width: 12%; }
+  .col-cliente { width: 22%; }
+  .col-matrizador { width: 8%; }
+  .col-fecha { width: 8%; }
+  .col-estado { width: 12%; }
+  .col-pago { width: 12%; }
+  .col-valor { width: 8%; }
+  .col-acciones { width: 10%; }
+}
+
+/* Desktop grande (1200px+) */
+@media (min-width: 1200px) {
+  .tabla-notaria,
+  .tabla-ordenable,
+  .table-documentos {
+    font-size: 15px !important;
+  }
+  
+  .tabla-notaria th,
+  .tabla-ordenable th {
+    padding: 0.8rem 0.6rem !important;
+    font-size: 15px !important;
+  }
+  
+  .col-cliente { width: 28%; }
+  .col-acciones { width: 12%; }
+}
+
+/* Indicador de scroll horizontal para móviles - MEJORADO */
+@media (max-width: 767px) {
+  .table-responsive::after {
+    content: "← Desliza horizontalmente para ver más datos →";
+    display: block;
+    text-align: center;
+    font-size: 0.85rem;
+    color: #495057;
+    font-weight: 500;
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    border-radius: 0.5rem;
+    border: 2px solid #2196f3;
+    box-shadow: 0 2px 4px rgba(33, 150, 243, 0.2);
+    animation: bounce 2s infinite;
+  }
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-3px);
+  }
+  60% {
+    transform: translateY(-2px);
+  }
+}
+
+/* Ocultar indicador en desktop */
+@media (min-width: 768px) {
+  .table-responsive::after {
+    display: none;
+  }
+}
 
 /* ====================================================
    📋 HEADERS UNIVERSALES - FUNCIONALES Y ELEGANTES
@@ -925,15 +1511,69 @@
    🎨 ELEMENTOS ADICIONALES PARA ROLES ESPECÍFICOS
    ==================================================== */
 
-/* Badges especiales */
+/* ====================================================
+   🔔 BADGE "NUEVO" - VERSIÓN MEJORADA Y VISIBLE
+   ==================================================== */
+
 .badge-nuevo {
-  font-size: 0.6rem;
-  padding: 0.2rem 0.4rem;
+  background-color: #dc3545 !important;
+  color: white !important;
+  font-weight: bold !important;
+  font-size: 0.7rem !important;
+  padding: 0.25rem 0.5rem !important;
+  border-radius: 0.375rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  animation: pulse 2s infinite;
+  box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
+  margin-left: 0.25rem !important;  /* Reducido de 0.5rem a 0.25rem */
+  margin-top: 0.25rem !important;   /* Agregado para separar verticalmente */
+  display: inline-block !important;
+  position: relative;
+  z-index: 1;  /* Reducido de 10 a 1 para evitar problemas de layout */
 }
 
 .documento-nuevo {
-  background-color: rgba(220, 53, 69, 0.05);
-  border-left: 3px solid #dc3545;
+  background-color: rgba(220, 53, 69, 0.08) !important;
+  border-left: 4px solid #dc3545 !important;
+  position: relative;
+  animation: highlight 3s ease-in-out infinite;
+}
+
+.documento-nuevo::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(45deg, #dc3545, #c82333);
+  animation: shimmer 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { 
+    opacity: 1; 
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 0.8; 
+    transform: scale(1.05);
+  }
+}
+
+@keyframes highlight {
+  0%, 100% { 
+    background-color: rgba(220, 53, 69, 0.05);
+  }
+  50% { 
+    background-color: rgba(220, 53, 69, 0.12);
+  }
+}
+
+@keyframes shimmer {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
 }
 
 /* Links de código */

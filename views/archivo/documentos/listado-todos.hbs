@@ -145,9 +145,9 @@
     <tbody>
       {{#each documentos}}
       <tr {{#if (esDocumentoAjeno ../usuario this)}}class="documento-ajeno"{{/if}}>
-        <!-- Código con formato mejorado -->
+        <!-- Código DESTACADO con fondo -->
         <td class="col-codigo">
-            <span class="codigo-documento">{{this.codigoBarras}}</span>
+            {{{highlightCode this.codigoBarras}}}
             <div class="tipo-documento">
                 <small class="text-muted">{{this.tipoDocumento}}</small>
             </div>
@@ -156,9 +156,9 @@
             {{/if}}
         </td>
         
-        <!-- Cliente con formato mejorado (sin truncar) -->
+        <!-- Cliente OPTIMIZADO con truncado y tooltip -->
         <td class="col-cliente">
-          <div class="cliente-nombre">{{this.nombreCliente}}</div>
+          <div class="cliente-nombre">{{{truncateWithTooltip this.nombreCliente 25}}}</div>
           <div class="cliente-identificacion">{{this.identificacionCliente}}</div>
         </td>
         
@@ -287,12 +287,18 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🎯 Inicializando tabla ARCHIVO - Sistema Universal v1.0');
+    console.log('🎯 Inicializando tabla ARCHIVO - Sistema Universal v2.0 OPTIMIZADA');
     
     // Inicializar ordenamiento manual corregido
     inicializarOrdenamientoManual();
     
-    console.log('✅ Vista ARCHIVO migrada al sistema universal - Funcionalidad completa');
+    // ✨ INICIALIZAR TOOLTIPS PARA NOMBRES TRUNCADOS
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+    
+    console.log('✅ Vista ARCHIVO migrada al sistema universal - Funcionalidad completa + Tooltips activos');
 });
 
 // Función de ordenamiento manual específica para ARCHIVO
