@@ -102,6 +102,8 @@
                 <div class="tipo-documento">
                     <small class="text-muted">{{this.tipoDocumento}}</small>
                 </div>
+                <!-- Contenedor para badges de autorización -->
+                <div class="badges-autorizacion mt-1"></div>
             </td>
             
             <!-- Cliente OPTIMIZADO con truncado y tooltip - MÁS ESPACIO -->
@@ -172,11 +174,7 @@
                 </a>
                 {{/if}}
                 
-                {{#if (ne this.estado 'entregado')}}
-                <button class="btn btn-outline-success btn-universal" onclick="marcarComoListo({{this.id}})" title="Marcar como Listo">
-                  <i class="fas fa-check"></i>
-                </button>
-                {{/if}}
+
               </div>
             </td>
           </tr>
@@ -230,28 +228,7 @@
   </div>
 </div>
 
-<!-- Modal de confirmación para marcar como listo -->
-<div class="modal fade" id="marcarListoModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Marcar documento como listo</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <p>Al marcar este documento como listo para entrega, se generará un código de verificación de 4 dígitos que será enviado al cliente.</p>
-        <p>¿Está seguro de que el documento está listo para ser entregado?</p>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <form id="marcarListoForm" action="/matrizador/documentos/marcar-listo" method="POST">
-          <input type="hidden" id="documentoId" name="documentoId">
-          <button type="submit" class="btn btn-success">Confirmar</button>
-        </form>
-      </div>
-    </div>
-  </div>
-</div>
+
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
@@ -319,35 +296,6 @@
     
     console.log('✅ Ordenamiento manual configurado para MATRIZADORES:', headersOrdenables.length, 'columnas');
   }
-
-
-
-  // Función para marcar documento como listo
-  function marcarComoListo(documentoId) {
-    if (confirm('¿Está seguro de marcar este documento como listo para entrega?')) {
-      fetch(`/matrizador/documentos/${documentoId}/marcar-listo`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest'
-        }
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          location.reload(); // Recargar para ver cambios de estado
-        } else {
-          alert('Error al marcar como listo: ' + data.message);
-        }
-      })
-      .catch(error => {
-        console.error('❌ Error marcando como listo:', error);
-        alert('Error de conexión');
-      });
-    }
-  }
-
-
 
   function limpiarFiltrosMatrizadores() {
     document.getElementById('busqueda').value = '';

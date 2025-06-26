@@ -1,8 +1,13 @@
 <div class="card">
   <div class="card-header d-flex justify-content-between align-items-center">
     <span><i class="fas fa-list me-2"></i> Documentos</span>
+    <button type="button" class="btn btn-warning btn-sm" data-accion="solicitar-autorizacion-grupal">
+      <i class="fas fa-shield-alt me-1"></i> Solicitar Autorización Grupal
+    </button>
   </div>
     <div class="card-body">
+      
+      
       <!-- Filtros -->
       <form method="GET" action="/recepcion/documentos" class="mb-4">
         <div class="row mb-3">
@@ -101,13 +106,15 @@
           </thead>
           <tbody>
             {{#each documentos}}
-            <tr>
+            <tr data-documento-id="{{this.id}}">
               <!-- Código DESTACADO con fondo -->
               <td class="col-codigo">
                   {{{highlightCode this.codigoBarras}}}
                   <div class="tipo-documento">
                       <small class="text-muted">{{this.tipoDocumento}}</small>
                   </div>
+                  <!-- Contenedor para badges de autorización -->
+                  <div class="badges-autorizacion mt-1"></div>
               </td>
               
               <!-- Cliente OPTIMIZADO con truncado y tooltip -->
@@ -227,28 +234,7 @@
     </div>
   </div>
 
-<!-- Modal de Confirmación para Marcar como Listo (Recepción) -->
-<div class="modal fade" id="marcarListoModalRecepcion" tabindex="-1" aria-labelledby="marcarListoModalRecepcionLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="marcarListoModalRecepcionLabel">Confirmar Acción</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <p>¿Está seguro de que desea marcar este documento como "Listo para Entrega"?</p>
-        <p class="text-muted small">Esto generará un nuevo código de verificación si no existe uno o si se decide regenerar.</p>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <form id="marcarListoFormRecepcion" action="/recepcion/documentos/marcar-listo" method="POST" class="d-inline">
-          <input type="hidden" id="idDocumentoMarcarListoRecepcion" name="documentoId">
-          <button type="submit" class="btn btn-success">Confirmar y Marcar Listo</button>
-        </form>
-      </div>
-    </div>
-  </div>
-</div>
+
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {

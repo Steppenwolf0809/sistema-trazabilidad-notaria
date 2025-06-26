@@ -40,6 +40,12 @@ router.get('/documentos/detalle/:id', validarAccesoConAuditoria(['matrizador', '
 router.get('/documentos/editar/:id', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), documentoController.mostrarFormularioEdicionMatrizador);
 router.post('/documentos/editar/:id', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), documentoController.actualizarDocumento);
 
+// NUEVA RUTA: Obtener datos actuales del documento para modal inteligente
+router.get('/documentos/:id/datos', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.obtenerDatosDocumento);
+
+// NUEVA RUTA: Marcar documento como listo para entrega
+router.post('/documentos/:id/marcar-listo', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.marcarComoListo);
+
 // =============== MARCADO COMO LISTO Y PROCESAMIENTO ===============
 // Función principal del matrizador: procesar y marcar como listo
 router.post('/documentos/marcar-listo', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.marcarDocumentoListo);

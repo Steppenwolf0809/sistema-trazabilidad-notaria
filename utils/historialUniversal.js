@@ -70,6 +70,15 @@ const moment = require('moment');
      categoriaTexto: 'Estado',
      mostrarEn: ['admin', 'caja', 'archivo', 'matrizador', 'recepcion'],
      prioridad: 'alta'
+   },
+   'autorizacion_credito': {
+     icono: '<i class="fas fa-shield-check"></i>',
+     titulo: 'Autorización de crédito',
+     color: 'warning',
+     categoria: 'financiero',
+     categoriaTexto: 'Financiero',
+     mostrarEn: ['admin', 'caja', 'archivo', 'matrizador', 'recepcion'],
+     prioridad: 'alta'
    }
 };
 
@@ -211,6 +220,12 @@ function formatearEventoEspecifico(eventoDB, documento) {
 
 
 function determinarTipoEspecifico(eventoDB, documento) {
+  // Verificar si es una autorización de crédito específica
+  if (eventoDB.tipo === 'modificacion' && 
+      eventoDB.metadatos?.accion_especial === 'autorizacion_credito') {
+    return 'autorizacion_credito';
+  }
+  
   const mapeoTipos = {
     'pago': 'pago_registrado',
     'entrega': 'documento_entregado',
@@ -245,6 +260,19 @@ function construirDescripcionEspecifica(tipoEvento, eventoDB, documento, detalle
     
     case 'marcado_listo':
       return `Documento marcado como listo para entrega por el matrizador`;
+    
+    case 'autorizacion_credito':
+      const justificacion = detalles.justificacion_entrega_sin_pago || 
+                           eventoDB.metadatos?.justificacion_entrega_sin_pago ||
+                           'No especificada';
+      const justificacionTexto = {
+        'historial_pagos': 'Cliente con excelente historial de pagos',
+        'cliente_corporativo': 'Cliente corporativo de confianza',
+        'emergencia': 'Situación de emergencia autorizada',
+        'director_notaria': 'Autorización directa del director'
+      }[justificacion] || justificacion;
+      
+      return `Autorización de crédito: ${justificacionTexto}. Cliente puede retirar sin verificar pago`;
     
     default:
       return eventoDB.descripcion || eventoDB.titulo || 'Evento del sistema';

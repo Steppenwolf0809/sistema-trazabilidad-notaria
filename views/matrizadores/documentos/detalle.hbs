@@ -36,6 +36,11 @@
           <h5 class="border-bottom pb-2">Información General</h5>
           <p><strong>Código:</strong> <span class="badge bg-primary">{{documento.codigoBarras}}</span></p>
           <p><strong>Tipo:</strong> {{documento.tipoDocumento}}</p>
+          
+          <!-- Contenedor para badges de autorización -->
+          <div class="badges-autorizacion mb-2" data-documento-id="{{documento.id}}">
+            <!-- Los badges se cargan dinámicamente via JavaScript -->
+          </div>
           <p><strong>Estado:</strong> 
             {{#if (eq documento.estado "en_proceso")}}
             <span class="badge bg-warning text-dark">En Proceso</span>
@@ -292,16 +297,15 @@
         <h5 class="modal-title">Marcar documento como listo</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <div class="modal-body">
-        <p>Al marcar este documento como listo para entrega, se generará un código de verificación de 4 dígitos que será enviado al cliente.</p>
-        <p>¿Está seguro de que el documento está listo para ser entregado?</p>
+      <div class="modal-body" id="modalBodyContent">
+        <!-- El contenido se carga dinámicamente según el estado actual -->
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <form id="marcarListoForm" action="/matrizador/documentos/marcar-listo" method="POST" style="display: inline;">
-          <input type="hidden" id="documentoId" name="documentoId" value="{{documento.id}}">
-          <button type="submit" class="btn btn-success">Confirmar</button>
-        </form>
+        <button type="button" class="btn btn-success" onclick="confirmarMarcarListoDetalle()">
+          <i class="fas fa-check me-1"></i> Confirmar
+        </button>
+        <input type="hidden" id="documentoIdDetalle" name="documentoId" value="{{documento.id}}">
       </div>
     </div>
   </div>
@@ -310,10 +314,356 @@
 <!-- CSS eliminado - Ahora usa el sistema universal -->
 
 <script>
+  // 🎯 SISTEMA DE DOBLE VERIFICACIÓN - CHECKPOINT 2
   function marcarListo(id) {
-    document.getElementById('documentoId').value = id;
+    document.getElementById('documentoIdDetalle').value = id;
+    
+    // Mostrar modal dinámico según estado real del servidor
+    mostrarModalMarcarListo(id);
+    
     const modal = new bootstrap.Modal(document.getElementById('marcarListoModal'));
     modal.show();
+  }
+
+  // 🔄 MODAL HÍBRIDO - BD + CHECKBOX ACTUAL
+  function mostrarModalMarcarListo(documentoId) {
+    console.log('🔍 DEBUG MODAL ABIERTO (BD + CHECKBOX) - Documento:', documentoId);
+    
+    // 1. VERIFICAR estado actual del checkbox en la página (si existe)
+    const checkboxCredito = document.getElementById('preAutorizacionCredito');
+    const estadoCheckbox = checkboxCredito ? checkboxCredito.checked : null;
+    const justificacionSelect = document.querySelector('select[name="justificacion_entrega_sin_pago"]');
+    const justificacionCheckbox = justificacionSelect ? justificacionSelect.value : null;
+    
+    console.log('📋 Estado actual del checkbox:', {
+      checkbox_existe: !!checkboxCredito,
+      checkbox_elemento: checkboxCredito ? 'ENCONTRADO' : 'NO EXISTE (vista detalle)',
+      checkbox_marcado: estadoCheckbox,
+      justificacion_checkbox: justificacionCheckbox,
+      vista_actual: checkboxCredito ? 'EDITAR' : 'DETALLE'
+    });
+    
+    // 2. OBTENER datos guardados en la BASE DE DATOS
+    fetch(`/matrizador/documentos/${documentoId}/datos`)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+      })
+      .then(respuestaServidor => {
+        // EXTRAER documento de la respuesta del servidor
+        const documento = respuestaServidor.documento || respuestaServidor;
+        
+        console.log('📋 Datos obtenidos del servidor:', {
+          respuesta_completa: respuestaServidor,
+          documento_extraido: documento,
+          id: documento?.id || 'No disponible',
+          entrega_sin_verificar_pago_bd: documento?.entrega_sin_verificar_pago,
+          tipo_dato: typeof documento?.entrega_sin_verificar_pago,
+          valor_exacto: documento?.entrega_sin_verificar_pago,
+          es_true: documento?.entrega_sin_verificar_pago === true,
+          es_string_true: documento?.entrega_sin_verificar_pago === 'true',
+          justificacion_bd: documento?.justificacion_entrega_sin_pago || null,
+          fuente: 'SERVIDOR BD'
+        });
+        
+        // 3. DETERMINAR estado final: BD es base, checkbox solo sobrescribe si existe
+        let estadoFinal = documento?.entrega_sin_verificar_pago === true; // CORRECCIÓN: comparación exacta
+        let justificacionFinal = documento?.justificacion_entrega_sin_pago || null;
+        let fuente = 'BD';
+        
+        // SOLO si hay checkbox presente, usar su valor (vista de editar)
+        if (checkboxCredito && estadoCheckbox === true) {
+          estadoFinal = true;
+          justificacionFinal = justificacionCheckbox || justificacionFinal || 'cliente_corporativo';
+          fuente = 'CHECKBOX ACTUAL (marcado)';
+        } else if (checkboxCredito && estadoCheckbox === false) {
+          estadoFinal = false;
+          justificacionFinal = null;
+          fuente = 'CHECKBOX ACTUAL (desmarcado)';
+        }
+        // Si no hay checkbox (vista detalle), mantener estado de BD
+        
+        console.log('🎯 ESTADO FINAL DETERMINADO:', {
+          bd_original: documento?.entrega_sin_verificar_pago,
+          bd_es_true: documento?.entrega_sin_verificar_pago === true,
+          checkbox_presente: !!checkboxCredito,
+          checkbox_valor: estadoCheckbox,
+          estado_final: estadoFinal,
+          sera_credito: estadoFinal === true,
+          justificacion: justificacionFinal,
+          fuente: fuente
+        });
+        
+        // 4. Configurar modal con estado final
+        const documentoFinal = {
+          ...documento,
+          entrega_sin_verificar_pago: estadoFinal,
+          justificacion_entrega_sin_pago: justificacionFinal,
+          fuente_estado: fuente
+        };
+        
+        configurarModalSegunDatos(documentoFinal);
+      })
+      .catch(error => {
+        console.error('❌ Error al obtener datos del documento:', error);
+        alert('Error al cargar información del documento. Por favor, recargue la página.');
+      });
+  }
+
+  // 🎯 CONFIGURAR MODAL CON DATOS HÍBRIDOS (BD + CHECKBOX)
+  function configurarModalSegunDatos(documento) {
+    const modalBody = document.getElementById('modalBodyContent');
+    const tieneCredito = documento.entrega_sin_verificar_pago === true;
+    const fuente = documento.fuente_estado || 'BD';
+    
+            console.log('🔍 DEBUG CONFIGURACIÓN MODAL:', {
+          documento_id: documento?.id || 'No disponible',
+          tiene_credito: tieneCredito,
+          justificacion: documento?.justificacion_entrega_sin_pago || 'No especificada',
+          fuente_datos: fuente
+        });
+    
+    if (tieneCredito) {
+      // ESCENARIO A: DOCUMENTO CON CRÉDITO AUTORIZADO
+      const fuenteTexto = fuente.includes('CHECKBOX') ? 
+        '<small class="text-success"><i class="fas fa-edit"></i> Estado actualizado en esta sesión</small>' :
+        `<small>Autorizado por: ${documento?.matrizador_nombre || 'Sistema'} el ${formatearFecha(documento?.fecha_autorizacion_entrega)}</small>`;
+      
+      modalBody.innerHTML = `
+        <div class="alert alert-success">
+          <i class="fas fa-shield-check"></i>
+          <strong>Cliente con crédito autorizado</strong><br>
+          Justificación: ${formatearJustificacion(documento?.justificacion_entrega_sin_pago)}<br>
+          ${fuenteTexto}
+        </div>
+        <p>¿Confirma marcar como listo para entrega?</p>
+        <p><strong>Recepción podrá entregar SIN verificar estado de pago.</strong></p>
+        
+        <div class="form-check mt-3">
+          <input type="checkbox" id="revocarAutorizacion" name="revocar_autorizacion">
+          <label for="revocarAutorizacion" class="text-warning">
+            <i class="fas fa-exclamation-triangle"></i>
+            Cambiar: Requiere verificación de pago para entregar
+          </label>
+        </div>
+      `;
+    } else {
+      // ESCENARIO B: DOCUMENTO SIN AUTORIZACIÓN
+      const fuenteTexto = fuente.includes('CHECKBOX') ? 
+        '<small class="text-muted"><i class="fas fa-edit"></i> Sin autorización (actualizado en esta sesión)</small>' :
+        '<small class="text-muted">Estado actual: Sin autorización de crédito</small>';
+      
+      modalBody.innerHTML = `
+        <div class="alert alert-info">
+          <i class="fas fa-credit-card"></i>
+          <strong>Entrega con verificación de pago</strong><br>
+          Recepción verificará que el pago esté al día antes de entregar.<br>
+          ${fuenteTexto}
+        </div>
+        <p>¿Confirma marcar como listo para entrega?</p>
+        
+        <div class="form-check mt-3">
+          <input type="checkbox" id="autorizarAhora" name="autorizar_ahora">
+          <label for="autorizarAhora" class="text-success">
+            <i class="fas fa-university"></i>
+            <strong>Cliente con crédito autorizado</strong> - Última oportunidad
+          </label>
+          <small class="form-text text-muted">
+            Marque solo si el cliente tiene crédito autorizado por la notaría
+          </small>
+        </div>
+        
+        <div id="justificacionFinal" style="display: none;" class="mt-3">
+          <label class="form-label">Justificación:</label>
+          <select class="form-select" name="justificacion_final">
+            <option value="cliente_corporativo">Cliente corporativo con convenio</option>
+            <option value="historial_pagos">Cliente con excelente historial</option>
+            <option value="urgencia">Situación urgente justificada</option>
+            <option value="otro">Otro motivo</option>
+          </select>
+        </div>
+      `;
+      
+      // Event listener para justificación
+      setTimeout(() => {
+        const checkbox = document.getElementById('autorizarAhora');
+        const justDiv = document.getElementById('justificacionFinal');
+        if (checkbox && justDiv) {
+          checkbox.addEventListener('change', function() {
+            justDiv.style.display = this.checked ? 'block' : 'none';
+          });
+        }
+      }, 100);
+    }
+  }
+
+  // FUNCIÓN PARA FORMATEAR FECHAS
+  function formatearFecha(fechaString) {
+    if (!fechaString) return 'Fecha no disponible';
+    
+    const fecha = new Date(fechaString);
+    return fecha.toLocaleDateString('es-EC', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  // FUNCIÓN PARA FORMATEAR JUSTIFICACIONES
+  function formatearJustificacion(justificacion) {
+    if (!justificacion) return 'No especificada';
+    
+    const traducciones = {
+      'cliente_corporativo': 'Cliente corporativo con convenio',
+      'historial_pagos': 'Cliente con excelente historial de pagos',
+      'urgencia_justificada': 'Situación urgente justificada',
+      'cliente_frecuente': 'Cliente frecuente de confianza',
+      'otro': 'Otro motivo'
+    };
+    
+    return traducciones[justificacion] || justificacion;
+  }
+
+  // 🚀 CONFIRMACIÓN FINAL HÍBRIDA (BD + CHECKBOX)
+  async function confirmarMarcarListoDetalle() {
+    const documentoId = document.getElementById('documentoIdDetalle').value;
+    
+    console.log('🔍 DEBUG CONFIRMACIÓN (BD + CHECKBOX) - Documento:', documentoId);
+    
+    // 1. VERIFICAR estado actual del checkbox en la página (si existe)
+    const checkboxCredito = document.getElementById('preAutorizacionCredito');
+    const estadoCheckboxPagina = checkboxCredito ? checkboxCredito.checked : null;
+    const justificacionSelectPagina = document.querySelector('select[name="justificacion_entrega_sin_pago"]');
+    const justificacionCheckboxPagina = justificacionSelectPagina ? justificacionSelectPagina.value : null;
+    
+    // 2. OBTENER estado desde checkboxes del modal
+    const revocarCheckbox = document.getElementById('revocarAutorizacion');
+    const autorizarCheckbox = document.getElementById('autorizarAhora');
+    const justificacionSelect = document.querySelector('select[name="justificacion_final"]');
+    
+    let estadoFinal = false;
+    let justificacion = null;
+    let fuenteDecision = '';
+    
+    // 3. LÓGICA DE PRIORIDAD PARA DETERMINAR ESTADO FINAL
+    if (revocarCheckbox && revocarCheckbox.checked) {
+      // Usuario quiere REVOCAR crédito en el modal
+      estadoFinal = false;
+      justificacion = null;
+      fuenteDecision = 'MODAL: Revocado';
+    } else if (autorizarCheckbox && autorizarCheckbox.checked) {
+      // Usuario quiere AUTORIZAR crédito en el modal
+      estadoFinal = true;
+      justificacion = justificacionSelect ? justificacionSelect.value : 'cliente_corporativo';
+      fuenteDecision = 'MODAL: Autorizado';
+      
+      if (!justificacion) {
+        alert('⚠️ Debe seleccionar una justificación para autorizar el crédito');
+        return;
+      }
+    } else if (estadoCheckboxPagina !== null) {
+      // USAR estado del checkbox de la página (prioridad alta)
+      estadoFinal = estadoCheckboxPagina;
+      justificacion = estadoCheckboxPagina ? (justificacionCheckboxPagina || 'cliente_corporativo') : null;
+      fuenteDecision = estadoCheckboxPagina ? 'CHECKBOX PÁGINA: Autorizado' : 'CHECKBOX PÁGINA: Sin autorización';
+    } else {
+      // FALLBACK: Consultar BD para mantener estado actual
+      try {
+        const response = await fetch(`/matrizador/documentos/${documentoId}/datos`);
+        const documento = await response.json();
+        estadoFinal = documento.entrega_sin_verificar_pago === true;
+        justificacion = documento.justificacion_entrega_sin_pago;
+        fuenteDecision = 'BD: Estado mantenido';
+      } catch (error) {
+        console.error('Error al obtener estado actual:', error);
+        estadoFinal = false;
+        fuenteDecision = 'FALLBACK: Sin crédito';
+      }
+    }
+    
+    console.log('🎯 DECISIÓN FINAL:', {
+      estado_final: estadoFinal,
+      justificacion: justificacion,
+      fuente: fuenteDecision
+    });
+    
+    // ENVIAR al servidor
+    const datosEnvio = {
+      entrega_sin_verificar_pago: estadoFinal,
+      justificacion_entrega_sin_pago: justificacion
+    };
+    
+    console.log('📤 Enviando al servidor:', datosEnvio);
+    
+    // Deshabilitar botón
+    const btnConfirmar = document.querySelector('#marcarListoModal .btn-success');
+    if (btnConfirmar) {
+      btnConfirmar.disabled = true;
+      btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Procesando...';
+    }
+    
+    try {
+      const response = await fetch(`/matrizador/documentos/${documentoId}/marcar-listo`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(datosEnvio)
+      });
+      
+      const data = await response.json();
+      console.log('✅ Respuesta del servidor:', data);
+      
+      if (data.success) {
+        const mensaje = estadoFinal 
+          ? `✅ Documento marcado como listo - CRÉDITO AUTORIZADO`
+          : `✅ Documento marcado como listo - VERIFICAR PAGO antes de entregar`;
+        
+        alert(mensaje);
+        
+        // Cerrar modal y recargar
+        const modal = bootstrap.Modal.getInstance(document.getElementById('marcarListoModal'));
+        modal.hide();
+        
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+        
+      } else {
+        throw new Error(data.message || 'Error desconocido');
+      }
+    } catch (error) {
+      console.error('❌ Error:', error);
+      alert(`Error al marcar documento como listo: ${error.message}`);
+      
+      // Rehabilitar botón
+      if (btnConfirmar) {
+        btnConfirmar.disabled = false;
+        btnConfirmar.innerHTML = '<i class="fas fa-check me-1"></i> Confirmar';
+      }
+    }
+  }
+
+  // 🎨 ACTUALIZAR VISUAL DEL DOCUMENTO
+  function actualizarEstadoDocumento(creditoAutorizado) {
+    // Cambiar badge de estado
+    const estadoElement = document.querySelector('.badge');
+    if (estadoElement && estadoElement.textContent.includes('En Proceso')) {
+      estadoElement.className = 'badge bg-info';
+      estadoElement.innerHTML = 'Listo para Entrega';
+    }
+    
+    // Ocultar botón de marcar
+    const botonMarcar = document.querySelector('button[onclick*="marcarListo"]');
+    if (botonMarcar) {
+      botonMarcar.style.display = 'none';
+    }
+    
+    // Ya no se usan badges de autorización (sistema limpiado)
   }
 
   console.log('📖 Vista de detalle cargada para documento {{documento.codigoBarras}}');

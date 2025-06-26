@@ -507,43 +507,87 @@ function estructurarDocumentosJerarquicamente(documentos) {
 
 /**
  * Valida documentos para entrega y genera alertas específicas
+ * CORREGIDO: Considera autorizaciones de crédito de la base de datos
  * @param {Array} documentos - Array de documentos a validar
  * @returns {Object} Validación con alertas específicas
  */
 function validarDocumentosParaEntrega(documentos) {
   const documentosValidos = [];
   const documentosPendientes = [];
+  const documentosConCreditoAutorizado = [];
   const alertas = [];
   
   for (const documento of documentos) {
+    console.log(`🔍 [VALIDACIÓN] Documento ${documento.codigoBarras}:`, {
+      estadoPago: documento.estadoPago,
+      entrega_sin_verificar_pago: documento.entrega_sin_verificar_pago,
+      justificacion: documento.justificacion_entrega_sin_pago,
+      fecha_autorizacion: documento.fecha_autorizacion_entrega
+    });
+    
     // Verificar estado de pago
     const tienePagoPendiente = !['pagado_completo', 'pagado_con_retencion'].includes(documento.estadoPago);
     
+    // CRÍTICO: Verificar autorización de crédito desde BD
+    const tieneAutorizacionCredito = documento.entrega_sin_verificar_pago === true || documento.entrega_sin_verificar_pago === 1;
+    
     if (tienePagoPendiente) {
-      documentosPendientes.push(documento);
-      alertas.push({
-        tipo: 'pago_pendiente',
-        codigo: documento.codigoBarras,
-        tipoDocumento: documento.tipoDocumento,
-        valor: documento.valorFactura,
-        estadoPago: documento.estadoPago,
-        matrizador: documento.matrizador?.nombre || 'Sin asignar',
-        mensaje: `${documento.codigoBarras} - ${documento.tipoDocumento} tiene pago pendiente (${documento.estadoPago})`
-      });
+      if (tieneAutorizacionCredito) {
+        // Documento con pago pendiente PERO tiene autorización de crédito
+        documentosConCreditoAutorizado.push(documento);
+        alertas.push({
+          tipo: 'credito_autorizado',
+          codigo: documento.codigoBarras,
+          tipoDocumento: documento.tipoDocumento,
+          valor: documento.valorFactura,
+          estadoPago: documento.estadoPago,
+          justificacion: documento.justificacion_entrega_sin_pago,
+          fecha_autorizacion: documento.fecha_autorizacion_entrega,
+          matrizador: documento.matrizador?.nombre || 'Sin asignar',
+          mensaje: `✅ ${documento.codigoBarras} - CRÉDITO AUTORIZADO: Cliente puede retirar sin pago previo (${documento.justificacion_entrega_sin_pago || 'Sin justificación'})`
+        });
+        console.log(`✅ [VALIDACIÓN] ${documento.codigoBarras}: CRÉDITO AUTORIZADO - No requiere verificación de pago`);
+      } else {
+        // Documento con pago pendiente y SIN autorización de crédito
+        documentosPendientes.push(documento);
+        alertas.push({
+          tipo: 'pago_pendiente',
+          codigo: documento.codigoBarras,
+          tipoDocumento: documento.tipoDocumento,
+          valor: documento.valorFactura,
+          estadoPago: documento.estadoPago,
+          matrizador: documento.matrizador?.nombre || 'Sin asignar',
+          mensaje: `⚠️ ${documento.codigoBarras} - ${documento.tipoDocumento} tiene pago pendiente (${documento.estadoPago})`
+        });
+        console.log(`⚠️ [VALIDACIÓN] ${documento.codigoBarras}: PAGO PENDIENTE - Requiere autorización`);
+      }
+    } else {
+      console.log(`💰 [VALIDACIÓN] ${documento.codigoBarras}: PAGO COMPLETO - No requiere verificación`);
     }
     
     documentosValidos.push(documento);
   }
 
+  const requiereAutorizacion = documentosPendientes.length > 0;
+  
+  console.log(`📊 [VALIDACIÓN FINAL]:`, {
+    total_documentos: documentos.length,
+    con_pago_pendiente_sin_credito: documentosPendientes.length,
+    con_credito_autorizado: documentosConCreditoAutorizado.length,
+    requiere_autorizacion: requiereAutorizacion
+  });
+
   return {
     puedeEntregar: true, // Recepción siempre puede entregar pero con confirmación
-    requiereAutorizacion: documentosPendientes.length > 0,
+    requiereAutorizacion: requiereAutorizacion,
     documentosPendientes: documentosPendientes,
+    documentosConCreditoAutorizado: documentosConCreditoAutorizado,
     documentosValidos: documentosValidos,
     alertas: alertas,
     totalDocumentos: documentos.length,
-    documentosPagados: documentos.length - documentosPendientes.length,
-    advertencias: documentosPendientes.length > 0 ? [
+    documentosPagados: documentos.length - documentosPendientes.length - documentosConCreditoAutorizado.length,
+    documentosConCredito: documentosConCreditoAutorizado.length,
+    advertencias: requiereAutorizacion ? [
       {
         tipo: 'autorizacion_requerida',
         mensaje: `Se requiere confirmación para entregar ${documentosPendientes.length} documento(s) con pago pendiente`
@@ -563,7 +607,7 @@ async function detectarDocumentosGrupalesRecepcion(identificacionCliente, docume
     console.log(`🔍 [RECEPCIÓN] Detectando documentos grupales para cliente: ${identificacionCliente}`);
     
     // CORRECCIÓN CRÍTICA: Detectar SOLO documentos que realmente están listos para entrega
-    // EXCLUIR documentos habilitantes ya entregados automáticamente
+    // INCLUIR CAMPOS DE AUTORIZACIÓN DE CRÉDITO
     const documentosListos = await Documento.findAll({
       where: {
         identificacionCliente: identificacionCliente,
@@ -588,7 +632,23 @@ async function detectarDocumentosGrupalesRecepcion(identificacionCliente, docume
           }
         ]
       },
-
+      // CRÍTICO: Incluir campos de autorización de crédito
+      attributes: [
+        'id', 'codigoBarras', 'tipoDocumento', 'nombreCliente', 'identificacionCliente',
+        'estado', 'estadoPago', 'valorFactura', 'numeroFactura', 'fechaFactura',
+        'fechaEntrega', 'esDocumentoPrincipal', 'documentoPrincipalId',
+        // NUEVOS CAMPOS CRÍTICOS PARA AUTORIZACIÓN
+        'entrega_sin_verificar_pago', 'justificacion_entrega_sin_pago', 
+        'fecha_autorizacion_entrega', 'autorizado_por_matrizador_id',
+        'created_at', 'motivoEliminacion'
+      ],
+      include: [
+        {
+          model: Matrizador,
+          as: 'matrizador',
+          attributes: ['id', 'nombre', 'email']
+        }
+      ],
       order: [['created_at', 'ASC']]
     });
     
@@ -648,7 +708,24 @@ async function detectarDocumentosGrupalesRecepcion(identificacionCliente, docume
     // para que se puedan formar grupos correctamente
     
     // Obtener el documento actual para incluirlo en la estructuración
-    const documentoActual = await Documento.findByPk(documentoActualId);
+    const documentoActual = await Documento.findByPk(documentoActualId, {
+      attributes: [
+        'id', 'codigoBarras', 'tipoDocumento', 'nombreCliente', 'identificacionCliente',
+        'estado', 'estadoPago', 'valorFactura', 'numeroFactura', 'fechaFactura',
+        'fechaEntrega', 'esDocumentoPrincipal', 'documentoPrincipalId',
+        // CRÍTICO: Incluir campos de autorización de crédito
+        'entrega_sin_verificar_pago', 'justificacion_entrega_sin_pago', 
+        'fecha_autorizacion_entrega', 'autorizado_por_matrizador_id',
+        'created_at', 'motivoEliminacion'
+      ],
+      include: [
+        {
+          model: Matrizador,
+          as: 'matrizador',
+          attributes: ['id', 'nombre', 'email']
+        }
+      ]
+    });
     
     // Crear lista completa incluyendo el documento actual
     const todosLosDocumentos = documentoActual ? [documentoActual, ...documentosDisponibles] : documentosDisponibles;
@@ -1498,6 +1575,17 @@ const recepcionController = {
             id: documentoId,
             estado: 'listo_para_entrega'
           },
+          // CRÍTICO: Incluir campos de autorización de crédito
+          attributes: [
+            'id', 'codigoBarras', 'tipoDocumento', 'nombreCliente', 'identificacionCliente',
+            'estado', 'estadoPago', 'valorFactura', 'numeroFactura', 'fechaFactura',
+            'fechaEntrega', 'esDocumentoPrincipal', 'documentoPrincipalId', 'codigoVerificacion',
+            'telefonoCliente', 'emailCliente', 'notas',
+            // CRÍTICO: Campos de autorización de crédito
+            'entrega_sin_verificar_pago', 'justificacion_entrega_sin_pago', 
+            'fecha_autorizacion_entrega', 'autorizado_por_matrizador_id',
+            'created_at', 'motivoEliminacion'
+          ],
           include: [
             {
               model: Matrizador,
@@ -1641,12 +1729,27 @@ const recepcionController = {
         attributes: ['id', 'nombre']
       };
       
-      if (matrizador) {
-        matrizadorInclude.where = {
-          nombre: { [Op.iLike]: `%${matrizador}%` }
-        };
+      // Filtro por ID de matrizador (desplegable) o nombre (texto)
+      if (matrizador && matrizador.trim() !== '') {
+        const matrizadorTrim = matrizador.trim();
+        
+        // Si es un número, filtrar por ID
+        if (!isNaN(matrizadorTrim) && Number.isInteger(Number(matrizadorTrim))) {
+          whereClause.idMatrizador = parseInt(matrizadorTrim);
+        } else {
+          // Si es texto, filtrar por nombre (para compatibilidad)
+          matrizadorInclude.where = {
+            nombre: { [Op.iLike]: `%${matrizadorTrim}%` }
+          };
+        }
       }
       
+      // Obtener lista de todos los matrizadores para el filtro desplegable
+      const matrizadores = await Matrizador.findAll({
+        attributes: ['id', 'nombre', 'rol'],
+        order: [['nombre', 'ASC']]
+      });
+
       // Obtener documentos listos para entrega con filtros aplicados
       const documentosListos = await Documento.findAll({
         where: whereClause,
@@ -1658,11 +1761,13 @@ const recepcionController = {
       });
       
       console.log(`Documentos listos para entrega encontrados: ${documentosListos.length}`);
+      console.log(`Matrizadores disponibles para filtro: ${matrizadores.length}`);
       
       return res.render('recepcion/documentos/entrega', {
         layout: 'recepcion',
         title: 'Entrega de Documentos',
         documentosListos,
+        matrizadores, // Agregar lista de matrizadores
         userRole: req.matrizador?.rol,
         userName: req.matrizador?.nombre,
         filtros: {

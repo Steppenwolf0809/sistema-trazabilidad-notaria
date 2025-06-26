@@ -377,6 +377,45 @@ const Documento = sequelize.define('Documento', {
     allowNull: true,
     comment: 'Razón específica por la cual no se debe notificar este documento'
   },
+
+  // ============== CAMPOS DE AUTORIZACIÓN DE CRÉDITO ==============
+  
+  // Indica si el documento puede entregarse sin verificar pago
+  entrega_sin_verificar_pago: {
+    type: DataTypes.BOOLEAN,
+    field: 'entrega_sin_verificar_pago',
+    defaultValue: false,
+    allowNull: false,
+    comment: 'Indica si el cliente tiene crédito autorizado y puede retirar sin pago previo'
+  },
+  
+  // Justificación para la autorización de entrega sin pago
+  justificacion_entrega_sin_pago: {
+    type: DataTypes.ENUM('cliente_corporativo', 'historial_pagos', 'urgencia_justificada', 'cliente_frecuente', 'otro'),
+    field: 'justificacion_entrega_sin_pago',
+    allowNull: true,
+    comment: 'Justificación para autorizar entrega sin verificación de pago'
+  },
+  
+  // Fecha y hora cuando se autorizó la entrega sin pago
+  fecha_autorizacion_entrega: {
+    type: DataTypes.DATE,
+    field: 'fecha_autorizacion_entrega',
+    allowNull: true,
+    comment: 'Timestamp de cuando se autorizó la entrega sin verificación de pago'
+  },
+  
+  // ID del matrizador que autorizó la entrega sin pago
+  autorizado_por_matrizador_id: {
+    type: DataTypes.INTEGER,
+    field: 'autorizado_por_matrizador_id',
+    allowNull: true,
+    references: {
+      model: 'matrizadores',
+      key: 'id'
+    },
+    comment: 'ID del matrizador que autorizó la entrega sin verificación de pago'
+  },
   
   // ============== CAMPOS DE ELIMINACIÓN ==============
   

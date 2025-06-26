@@ -11,6 +11,8 @@
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
+
+  
   <!-- Estilos personalizados -->
   <style>
     body {
@@ -67,5 +69,23 @@
 
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <!-- Script para limpiar datos antiguos de localStorage -->
+  <script>
+    // FUNCIÓN PARA LIMPIAR DATOS ANTIGUOS DE LOCALSTORAGE
+    function limpiarDatosAntiguos() {
+      // Limpiar localStorage de autorizaciones anteriores
+      localStorage.removeItem('notaria_autorizaciones');
+      localStorage.removeItem('notaria_preautorizaciones');
+      localStorage.removeItem('sistema_autorizaciones');
+      
+      console.log('✅ Datos antiguos de localStorage limpiados');
+    }
+
+    // EJECUTAR una vez
+    document.addEventListener('DOMContentLoaded', function() {
+      limpiarDatosAntiguos();
+    });
+  </script>
 </body>
 </html> 

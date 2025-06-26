@@ -1,9 +1,8 @@
 /**
- * 🔧 CORRECCIÓN AUTOMÁTICA DE BADGES ENTREGADO
- * Script para optimizar el tamaño de badges "ENTREGADO" en todo el sistema
+ * 🔧 CORRECCIÓN AUTOMÁTICA DE BADGES ENTREGADO - Sistema Optimizado
  * 
- * PROBLEMA: Los badges "ENTREGADO" aparecen muy grandes (95px+) 
- * SOLUCIÓN: Reducir a 80px con fuente y padding optimizados
+ * Este script corrige automáticamente el problema visual de badges muy pequeños
+ * aplicando estilos de ancho mínimo y padding adecuado
  */
 
 (function() {
@@ -11,9 +10,10 @@
   
   console.log('🔧 Iniciando corrección automática de badges ENTREGADO...');
   
-  // Configuración de estilos optimizados
+  // ✅ CONFIGURACIÓN OPTIMIZADA
   const ESTILOS_OPTIMIZADOS = {
     minWidth: '80px',
+    maxWidth: '85px', 
     fontSize: '0.7rem',
     padding: '0.3rem 0.5rem',
     fontWeight: '500',
@@ -23,14 +23,14 @@
     borderRadius: '0.375rem'
   };
   
-  // Palabras clave que identifican badges que necesitan optimización
+  // Palabras clave que indican badges problemáticos
   const PALABRAS_CLAVE = [
     'entregado',
-    'con retención',
     'pagado completo',
+    'con retención', 
     'nota crédito',
-    'con retencion',
-    'pagado con retencion'
+    'listo para entrega',
+    'en proceso'
   ];
   
   /**
@@ -71,25 +71,30 @@
   }
   
   /**
-   * Función para corregir badges específicos por selector
+   * Función para corregir badges específicos por selector - CORREGIDA
    */
   function corregirBadgesEspecificos() {
+    // ✅ SELECTORES VÁLIDOS SIN :contains()
     const selectoresEspecificos = [
       '.badge-estado-largo',
       '.badge[class*="estado-largo"]',
-      'span.badge.bg-primary:contains("Entregado")',
-      'span.badge.bg-success:contains("Entregado")',
-      '.table .badge:contains("ENTREGADO")'
+      'span.badge.bg-primary',
+      'span.badge.bg-success', 
+      '.table .badge'
     ];
     
     selectoresEspecificos.forEach(selector => {
       try {
         const elementos = document.querySelectorAll(selector);
         elementos.forEach(elemento => {
-          Object.entries(ESTILOS_OPTIMIZADOS).forEach(([propiedad, valor]) => {
-            const propiedadCSS = propiedad.replace(/([A-Z])/g, '-$1').toLowerCase();
-            elemento.style.setProperty(propiedadCSS, valor, 'important');
-          });
+          // Verificar contenido específico manualmente
+          const texto = elemento.textContent.trim().toLowerCase();
+          if (texto.includes('entregado') || texto.includes('pagado') || texto.includes('retención')) {
+            Object.entries(ESTILOS_OPTIMIZADOS).forEach(([propiedad, valor]) => {
+              const propiedadCSS = propiedad.replace(/([A-Z])/g, '-$1').toLowerCase();
+              elemento.style.setProperty(propiedadCSS, valor, 'important');
+            });
+          }
         });
       } catch (error) {
         console.warn('⚠️ Error aplicando selector:', selector, error);
@@ -114,11 +119,7 @@
         
         .badge-estado-largo,
         .badge[class*="estado-largo"],
-        .badge:contains("Entregado"),
-        .badge:contains("ENTREGADO"),
-        .badge:contains("Con Retención"),
-        .badge:contains("Pagado Completo"),
-        .badge:contains("Nota Crédito") {
+        .badge-optimizado-automatico {
           min-width: 80px !important;
           max-width: 85px !important;
           font-size: 0.7rem !important;
@@ -139,12 +140,9 @@
           padding: 0.3rem 0.5rem !important;
         }
         
-        /* Corrección ultra-específica para badges problemáticos */
-        span.badge.badge-estado.badge-estado-largo.bg-primary,
-        span.badge.badge-estado.badge-estado-largo.bg-success,
-        .badge-optimizado-automatico {
-          min-width: 80px !important;
-          max-width: 85px !important;
+        /* Corrección para badges con texto específico */
+        .badge:is([class*="primary"], [class*="success"], [class*="info"], [class*="warning"]) {
+          min-width: 75px !important;
           font-size: 0.7rem !important;
           padding: 0.3rem 0.5rem !important;
         }

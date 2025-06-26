@@ -4,12 +4,14 @@
       <div>
         <i class="fas fa-list me-2"></i> Listado de Documentos
       </div>
-      <a href="/caja/documentos/registro" class="btn btn-sm btn-primary">
+      <a href="/caja/documentos/nuevo-xml" class="btn btn-sm btn-primary">
         <i class="fas fa-plus-circle me-1"></i> Nuevo Documento
       </a>
     </div>
   </div>
   <div class="card-body">
+
+    
     <!-- Filtros -->
     <div class="mb-4">
       <form id="filtrosFormCaja" action="/caja/documentos" method="GET" class="row g-3 align-items-end">
@@ -113,15 +115,17 @@
       </tr>
     </thead>
     <tbody>
-      {{#each documentos}}
-      <tr>
-        <!-- Código DESTACADO con fondo -->
-        <td class="col-codigo">
-            {{{highlightCode this.codigoBarras}}}
-            <div class="tipo-documento">
-                <small class="text-muted">{{this.tipoDocumento}}</small>
-            </div>
-        </td>
+                  {{#each documentos}}
+            <tr data-documento-id="{{this.id}}">
+              <!-- Código DESTACADO con fondo -->
+              <td class="col-codigo">
+                  {{{highlightCode this.codigoBarras}}}
+                  <div class="tipo-documento">
+                      <small class="text-muted">{{this.tipoDocumento}}</small>
+                  </div>
+                  <!-- Contenedor para badges de autorización -->
+                  <div class="badges-autorizacion mt-1"></div>
+              </td>
         
         <!-- Cliente OPTIMIZADO con truncado y tooltip -->
         <td class="col-cliente">

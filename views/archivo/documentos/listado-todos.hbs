@@ -144,7 +144,7 @@
     </thead>
     <tbody>
       {{#each documentos}}
-      <tr {{#if (esDocumentoAjeno ../usuario this)}}class="documento-ajeno"{{/if}}>
+      <tr data-documento-id="{{this.id}}" {{#if (esDocumentoAjeno ../usuario this)}}class="documento-ajeno"{{/if}}>
         <!-- Código DESTACADO con fondo -->
         <td class="col-codigo">
             {{{highlightCode this.codigoBarras}}}
@@ -154,6 +154,8 @@
             {{#if (esDocumentoAjeno ../usuario this)}}
             <small class="badge bg-warning text-dark ms-1">AJENO</small>
             {{/if}}
+            <!-- Contenedor para badges de autorización -->
+            <div class="badges-autorizacion mt-1"></div>
         </td>
         
         <!-- Cliente OPTIMIZADO con truncado y tooltip -->

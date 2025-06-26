@@ -74,9 +74,37 @@
               </div>
               <div class="col-md-3">
                 <h6><i class="fas fa-credit-card me-1"></i> Estado Pago</h6>
-                <span class="badge {{estadoPagoClass documento.estadoPago}} fs-6">
-                  {{estadoPagoTexto documento.estadoPago}}
-                </span>
+                {{#if documento.entrega_sin_verificar_pago}}
+                  {{!-- DOCUMENTO CON CRÉDITO AUTORIZADO --}}
+                  <div class="d-flex flex-column gap-1">
+                    <span class="badge bg-success fs-6">
+                      <i class="fas fa-shield-check me-1"></i>CRÉDITO AUTORIZADO
+                    </span>
+                    <small class="text-success">
+                      <i class="fas fa-info-circle me-1"></i>
+                      {{#if (eq documento.justificacion_entrega_sin_pago 'historial_pagos')}}
+                        Cliente con excelente historial de pagos
+                      {{else if (eq documento.justificacion_entrega_sin_pago 'cliente_corporativo')}}
+                        Cliente corporativo autorizado
+                      {{else if (eq documento.justificacion_entrega_sin_pago 'emergencia')}}
+                        Entrega por emergencia autorizada
+                      {{else}}
+                        {{documento.justificacion_entrega_sin_pago}}
+                      {{/if}}
+                    </small>
+                  </div>
+                {{else}}
+                  {{!-- ESTADO DE PAGO NORMAL --}}
+                  <span class="badge {{estadoPagoClass documento.estadoPago}} fs-6">
+                    {{estadoPagoTexto documento.estadoPago}}
+                  </span>
+                  {{#if (eq documento.estadoPago 'pendiente')}}
+                    <br><small class="text-warning">
+                      <i class="fas fa-exclamation-triangle me-1"></i>
+                      Requiere verificación de pago
+                    </small>
+                  {{/if}}
+                {{/if}}
               </div>
             </div>
           </div>
@@ -97,30 +125,86 @@
                   <strong>Acceso Recepción:</strong> Puede entregar TODOS los documentos sin restricciones
                 </p>
                 
-                {{!-- ============== NUEVA SECCIÓN: ALERTAS DE DOCUMENTOS PENDIENTES ============== --}}
-                {{#if documentosGrupales.requiereAutorizacion}}
-                  <div class="alert alert-warning mt-3" id="alerta-documentos-pendientes">
-                    <h6><i class="fas fa-exclamation-triangle me-2"></i>Documentos con Pago Pendiente Detectados</h6>
-                    <p class="mb-2">
-                      <strong>{{documentosGrupales.documentosPendientes.length}} documento(s)</strong> tienen pago pendiente.
-                      Debe confirmar que ha consultado con el matrizador responsable.
-                    </p>
-                    <div class="mt-2">
-                      {{#each documentosGrupales.alertas}}
-                        <div class="alert alert-light border-warning p-2 mb-2">
-                          <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                              <strong>{{this.codigo}}</strong> - {{this.tipoDocumento}}
-                              <br><small class="text-muted">Valor: ${{formatMoney this.valor}} - Estado: {{this.estadoPago}}</small>
+                {{!-- ============== ALERTAS INTELIGENTES SEGÚN TIPO ============== --}}
+                {{#if documentosGrupales.alertas.length}}
+                  <div class="mt-3" id="alertas-validacion">
+                    {{#each documentosGrupales.alertas}}
+                      {{#if (eq this.tipo 'credito_autorizado')}}
+                        {{!-- ALERTA VERDE: Crédito autorizado --}}
+                        <div class="alert alert-success border-success p-3 mb-2">
+                          <div class="d-flex align-items-center">
+                            <i class="fas fa-shield-check text-success fs-4 me-3"></i>
+                            <div class="flex-grow-1">
+                              <h6 class="mb-1 text-success">
+                                <strong>✅ CRÉDITO AUTORIZADO</strong>
+                              </h6>
+                              <p class="mb-1">
+                                <strong>{{this.codigo}}</strong> - {{this.tipoDocumento}} (${{formatMoney this.valor}})
+                              </p>
+                              <small class="text-success">
+                                <i class="fas fa-university me-1"></i>
+                                Cliente autorizado para retirar sin verificar pago previo
+                                {{#if this.justificacion}}
+                                  <br><i class="fas fa-info-circle me-1"></i>
+                                  Justificación: <strong>{{this.justificacion}}</strong>
+                                {{/if}}
+                                {{#if this.fecha_autorizacion}}
+                                  <br><i class="fas fa-clock me-1"></i>
+                                  Autorizado: {{formatDateTime this.fecha_autorizacion}}
+                                {{/if}}
+                              </small>
                             </div>
                             <div class="text-end">
-                              <small><strong>Matrizador:</strong><br>{{this.matrizador}}</small>
+                              <span class="badge bg-success fs-6">
+                                <i class="fas fa-check-circle me-1"></i>ENTREGA LIBRE
+                              </span>
+                              <br><small class="text-success">
+                                <strong>{{this.matrizador}}</strong>
+                              </small>
                             </div>
                           </div>
                         </div>
-                      {{/each}}
-                    </div>
+                      {{else if (eq this.tipo 'pago_pendiente')}}
+                        {{!-- ALERTA AMARILLA: Pago pendiente --}}
+                        <div class="alert alert-warning border-warning p-3 mb-2">
+                          <div class="d-flex align-items-center">
+                            <i class="fas fa-exclamation-triangle text-warning fs-4 me-3"></i>
+                            <div class="flex-grow-1">
+                              <h6 class="mb-1 text-warning">
+                                <strong>⚠️ PAGO PENDIENTE</strong>
+                              </h6>
+                              <p class="mb-1">
+                                <strong>{{this.codigo}}</strong> - {{this.tipoDocumento}} (${{formatMoney this.valor}})
+                              </p>
+                              <small class="text-warning">
+                                <i class="fas fa-credit-card me-1"></i>
+                                Estado: <strong>{{this.estadoPago}}</strong> - Requiere verificación de pago
+                              </small>
+                            </div>
+                            <div class="text-end">
+                              <span class="badge bg-warning text-dark fs-6">
+                                <i class="fas fa-clock me-1"></i>VERIFICAR PAGO
+                              </span>
+                              <br><small class="text-muted">
+                                <strong>{{this.matrizador}}</strong>
+                              </small>
+                            </div>
+                          </div>
+                        </div>
+                      {{/if}}
+                    {{/each}}
                   </div>
+                  
+                  {{!-- RESUMEN FINAL --}}
+                  {{#if documentosGrupales.requiereAutorizacion}}
+                    <div class="alert alert-info border-info mt-3">
+                      <h6><i class="fas fa-info-circle me-2"></i>Resumen de Validación</h6>
+                      <p class="mb-2">
+                        <strong>{{documentosGrupales.documentosPendientes.length}} documento(s)</strong> con pago pendiente detectados.
+                        Para continuar, debe confirmar que ha consultado con el matrizador responsable.
+                      </p>
+                    </div>
+                  {{/if}}
                 {{/if}}
               </div>
               <button type="button" class="btn btn-sm btn-outline-secondary" onclick="ocultarEntregaGrupal()">
@@ -535,7 +619,18 @@
                         <option value="pago_parcial" {{#if (eq filtros.estadoPago 'pago_parcial')}}selected{{/if}}>Pago Parcial</option>
                       </select>
                     </div>
-                    <div class="col-md-4 mb-3">
+                    <div class="col-md-2 mb-3">
+                      <label for="matrizador" class="form-label">Matrizador</label>
+                      <select class="form-select" name="matrizador" id="matrizador">
+                        <option value="">Todos los matrizadores</option>
+                        {{#each matrizadores}}
+                          <option value="{{this.id}}" {{#if (eq ../filtros.matrizador (stringifyNumber this.id))}}selected{{/if}}>
+                            {{this.nombre}}{{#if (eq this.rol 'archivo')}} (Archivo){{/if}}
+                          </option>
+                        {{/each}}
+                      </select>
+                    </div>
+                    <div class="col-md-2 mb-3">
                       <label for="fechaDesde" class="form-label">Fecha</label>
                       <div class="row">
                         <div class="col-6">

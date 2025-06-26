@@ -53,6 +53,9 @@ router.post('/documentos/editar/:id', archivoController.actualizarDocumento);
 // Marcar documento como listo (solo documentos propios)
 router.post('/documentos/marcar-listo/:id', archivoController.marcarComoListo);
 
+// NUEVA RUTA: Marcar documento como listo con sistema de autorizaciones
+router.post('/documentos/:id/marcar-listo', archivoController.marcarComoListo);
+
 // Entrega de documentos (solo documentos propios)
 router.get('/documentos/entrega/:id', archivoController.mostrarFormularioEntrega);
 router.post('/documentos/entrega/:id', archivoController.entregarDocumento);

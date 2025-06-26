@@ -668,6 +668,108 @@ const helpers = {
   highlightCode: (codigo) => {
     if (!codigo) return 'N/A';
     return `<span class="codigo-destacado">${codigo}</span>`;
+  },
+
+  // ===============================================
+  // == HELPERS PARA SISTEMA DE AUTORIZACIONES ==
+  // ===============================================
+
+  // Helper para verificar si un documento tiene autorización de crédito
+  tieneAutorizacionCredito: (documentoId) => {
+    // Este helper consulta localStorage en el frontend
+    return `<script>
+      if (window.sistemaAutorizaciones && window.sistemaAutorizaciones.preAutorizaciones && window.sistemaAutorizaciones.preAutorizaciones['${documentoId}']) {
+        document.write('<span class="badge bg-info me-1"><i class="fas fa-university me-1"></i>CRÉDITO AUTORIZADO</span>');
+      }
+    </script>`;
+  },
+
+  // Helper para verificar si el usuario actual puede autorizar
+  puedeAutorizar: (usuarioRol) => {
+    const rolesAutorizan = ['admin', 'caja'];
+    return rolesAutorizan.includes(usuarioRol);
+  },
+
+  // Helper para verificar si el usuario actual puede solicitar autorizaciones
+  puedeSolicitar: (usuarioRol) => {
+    const rolesSolicitan = ['recepcion', 'matrizador'];
+    return rolesSolicitan.includes(usuarioRol);
+  },
+
+  // Helper para verificar si un documento es del mismo cliente que otros
+  esMismoCliente: (cliente1, cliente2) => {
+    if (!cliente1 || !cliente2) return false;
+    return cliente1.toLowerCase().trim() === cliente2.toLowerCase().trim();
+  },
+
+  // Helper para mostrar estado de autorización
+  estadoAutorizacion: (estado) => {
+    const estados = {
+      'pendiente': '<span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i>PENDIENTE</span>',
+      'autorizada': '<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>AUTORIZADA</span>',
+      'rechazada': '<span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i>RECHAZADA</span>',
+      'expirada': '<span class="badge bg-secondary"><i class="fas fa-clock me-1"></i>EXPIRADA</span>'
+    };
+    return estados[estado] || estado;
+  },
+
+  // Helper para determinar si un documento está sin pago
+  esSinPago: (estadoPago) => {
+    if (!estadoPago) return true;
+    const estadoBajo = estadoPago.toLowerCase();
+    return estadoBajo.includes('pendiente') || estadoBajo.includes('no_pagado') || estadoBajo.includes('sin pago');
+  },
+
+  // Helper para obtener el rol desde la URL actual
+  obtenerRolActual: () => {
+    return `<script>
+      (function() {
+        const path = window.location.pathname;
+        let rol = 'anonimo';
+        if (path.includes('/admin')) rol = 'admin';
+        else if (path.includes('/caja')) rol = 'caja';
+        else if (path.includes('/recepcion')) rol = 'recepcion';
+        else if (path.includes('/matrizador')) rol = 'matrizador';
+        else if (path.includes('/archivo')) rol = 'archivo';
+        window.rolActual = rol;
+      })();
+    </script>`;
+  },
+
+  // CRÍTICO: Helper getPriorityIcon que estaba faltando
+  getPriorityIcon: (prioridad) => {
+    const iconos = {
+      'alta': '<i class="fas fa-exclamation-circle text-danger"></i>',
+      'media': '<i class="fas fa-exclamation-triangle text-warning"></i>',
+      'baja': '<i class="fas fa-info-circle text-info"></i>',
+      'urgente': '<i class="fas fa-fire text-danger"></i>',
+      'normal': '<i class="fas fa-circle text-secondary"></i>'
+    };
+    return iconos[prioridad] || iconos['normal'];
+  },
+
+  // Helper adicional para clase de prioridad
+  getPriorityClass: (prioridad) => {
+    const clases = {
+      'alta': 'text-danger',
+      'media': 'text-warning', 
+      'baja': 'text-info',
+      'urgente': 'text-danger fw-bold',
+      'normal': 'text-secondary'
+    };
+    return clases[prioridad] || clases['normal'];
+  },
+
+  // Helper para texto de prioridad
+  getPriorityText: (prioridad) => {
+    const textos = {
+      'alta': 'Alta',
+      'media': 'Media',
+      'baja': 'Baja', 
+      'urgente': 'Urgente',
+      'normal': 'Normal'
+    };
+    return textos[prioridad] || textos['normal'];
   }
 };
 

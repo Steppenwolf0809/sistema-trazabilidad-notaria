@@ -1864,6 +1864,328 @@ const matrizadorController = {
   },
 
   /**
+   * Obtener datos actuales del documento para modal inteligente
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  obtenerDatosDocumento: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const usuarioId = req.matrizador?.id || req.user?.id;
+      
+      const documento = await Documento.findByPk(id, {
+        include: [
+          {
+            model: Matrizador,
+            as: 'matrizador',
+            attributes: ['id', 'nombre']
+          }
+        ]
+      });
+      
+      if (!documento) {
+        return res.status(404).json({ 
+          error: 'Documento no encontrado' 
+        });
+      }
+      
+      // Verificar permisos (solo el matrizador asignado puede ver los datos)
+      if (documento.idMatrizador !== usuarioId) {
+        return res.status(403).json({ 
+          error: 'No tiene permisos para acceder a este documento' 
+        });
+      }
+      
+      console.log(`📋 Obteniendo datos actuales del documento ${id}:`, {
+        entrega_sin_verificar_pago: documento.entrega_sin_verificar_pago,
+        tipo_dato: typeof documento.entrega_sin_verificar_pago,
+        es_true: documento.entrega_sin_verificar_pago === true,
+        justificacion_entrega_sin_pago: documento.justificacion_entrega_sin_pago,
+        fecha_autorizacion_entrega: documento.fecha_autorizacion_entrega
+      });
+      
+      res.json({
+        id: documento.id,
+        codigoBarras: documento.codigoBarras,
+        nombreCliente: documento.nombreCliente,
+        entrega_sin_verificar_pago: documento.entrega_sin_verificar_pago === true, // CORRECCIÓN: comparación exacta
+        justificacion_entrega_sin_pago: documento.justificacion_entrega_sin_pago || null,
+        fecha_autorizacion_entrega: documento.fecha_autorizacion_entrega || null,
+        matrizador_nombre: documento.matrizador?.nombre || 'Sin asignar',
+        estado: documento.estado
+      });
+      
+    } catch (error) {
+      console.error('Error al obtener datos del documento:', error);
+      res.status(500).json({ 
+        error: 'Error interno del servidor',
+        message: error.message 
+      });
+    }
+  },
+
+  /**
+   * Marcar documento como listo para entrega con autorización de crédito
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  marcarComoListo: async (req, res) => {
+    const transaction = await sequelize.transaction();
+    
+    try {
+      const { id } = req.params;
+      const { 
+        entrega_sin_verificar_pago, 
+        justificacion_entrega_sin_pago,
+        accion_autorizacion 
+      } = req.body;
+      
+      const usuarioId = req.matrizador?.id || req.user?.id;
+      const usuarioNombre = req.matrizador?.nombre || req.user?.nombre || 'Sistema';
+      
+      console.log(`🎯 [MARCAR LISTO] Procesando documento ${id}:`, {
+        entrega_sin_verificar_pago,
+        justificacion_entrega_sin_pago,
+        accion_autorizacion,
+        usuario: usuarioNombre
+      });
+      
+      // Buscar el documento
+      const documento = await Documento.findByPk(id, { 
+        include: [{ model: Matrizador, as: 'matrizador', attributes: ['id', 'nombre'] }],
+        transaction 
+      });
+      
+      if (!documento) {
+        await transaction.rollback();
+        return res.status(404).json({ 
+          success: false, 
+          message: 'Documento no encontrado' 
+        });
+      }
+      
+      // Verificar permisos
+      if (documento.idMatrizador !== usuarioId) {
+        await transaction.rollback();
+        return res.status(403).json({ 
+          success: false, 
+          message: 'No tiene permisos para modificar este documento' 
+        });
+      }
+      
+      // Verificar que el documento esté en proceso
+      if (documento.estado !== 'en_proceso') {
+        await transaction.rollback();
+        return res.status(400).json({ 
+          success: false, 
+          message: `El documento está en estado "${documento.estado}" y no puede marcarse como listo` 
+        });
+      }
+      
+      // Generar código de verificación de 4 dígitos ANTES de usarlo
+      const codigoVerificacion = Math.floor(1000 + Math.random() * 9000).toString();
+      
+      // Preparar datos de actualización
+      const tieneAutorizacionCredito = entrega_sin_verificar_pago === true || entrega_sin_verificar_pago === 'true';
+      
+      const datosActualizacion = {
+        estado: 'listo_para_entrega',
+        entrega_sin_verificar_pago: tieneAutorizacionCredito,
+        justificacion_entrega_sin_pago: tieneAutorizacionCredito ? justificacion_entrega_sin_pago : null,
+        fecha_autorizacion_entrega: tieneAutorizacionCredito ? new Date() : null,
+        autorizado_por_matrizador_id: tieneAutorizacionCredito ? usuarioId : null,
+        codigoVerificacion: codigoVerificacion // CRÍTICO: Guardar código en el documento
+      };
+      
+      console.log(`✅ [MARCAR LISTO] Actualizando documento ${id}:`, datosActualizacion);
+      
+      // Actualizar documento
+      await documento.update(datosActualizacion, { transaction });
+      
+      // Crear evento en historial
+      const detalleEvento = tieneAutorizacionCredito 
+        ? `Documento marcado como listo para entrega. ✅ CRÉDITO AUTORIZADO: Cliente puede retirar sin pago previo. Justificación: ${justificacion_entrega_sin_pago || 'No especificada'}. Código: ${codigoVerificacion}`
+        : `Documento marcado como listo para entrega. ⚠️ VERIFICAR PAGO: Cliente debe completar pago antes de retirar. Código: ${codigoVerificacion}`;
+      
+      await EventoDocumento.create({
+        documentoId: documento.id,
+        tipo: 'documento_listo', // USAR TIPO VÁLIDO DEL ENUM
+        detalles: detalleEvento,
+        usuario: usuarioNombre,
+        metadatos: {
+          idUsuario: usuarioId,
+          rolUsuario: req.matrizador?.rol || req.user?.rol,
+          accion_autorizacion: accion_autorizacion,
+          estado_anterior: 'en_proceso',
+          estado_nuevo: 'listo_para_entrega',
+          entrega_sin_verificar_pago: tieneAutorizacionCredito,
+          justificacion_entrega_sin_pago: justificacion_entrega_sin_pago,
+          tipo_marcado: tieneAutorizacionCredito ? 'con_credito' : 'verificar_pago',
+          codigoVerificacion: codigoVerificacion
+        }
+      }, { transaction });
+      
+      await transaction.commit();
+      
+      // 📱 ENVIAR NOTIFICACIÓN WHATSAPP DESPUÉS DEL COMMIT
+      let notificacionEnviada = false;
+      try {
+        if (documento.telefonoCliente && !documento.omitirNotificacion) {
+          console.log(`📱 [MARCAR LISTO] Enviando notificación WhatsApp a ${documento.telefonoCliente}`);
+          
+          // Enviar notificación usando el servicio (que ya maneja todo internamente)
+          const resultadoNotificacion = await NotificationService.enviarNotificacionDocumentoListo(documento.id);
+          
+          if (resultadoNotificacion.exito) {
+            notificacionEnviada = true;
+            console.log(`✅ [MARCAR LISTO] Notificación enviada exitosamente`);
+          } else {
+            console.error(`❌ [MARCAR LISTO] Error al enviar notificación:`, resultadoNotificacion.error);
+          }
+        } else {
+          console.log(`⚠️ [MARCAR LISTO] No se envía notificación - Sin teléfono o notificaciones omitidas`);
+        }
+      } catch (errorNotificacion) {
+        console.error('❌ [MARCAR LISTO] Error al enviar notificación:', errorNotificacion);
+      }
+      
+      console.log(`🎉 [MARCAR LISTO] Documento ${id} marcado como listo exitosamente`);
+      
+      // Mensaje de respuesta personalizado según la configuración del documento
+      let mensajeRespuesta = '';
+      
+      if (notificacionEnviada) {
+        const estadoCredito = tieneAutorizacionCredito ? ' - CRÉDITO AUTORIZADO' : ' - VERIFICAR PAGO';
+        mensajeRespuesta = `Documento marcado como listo y notificación enviada por WhatsApp${estadoCredito}`;
+      } else {
+        const estadoCredito = tieneAutorizacionCredito ? ' (CRÉDITO AUTORIZADO)' : ' (VERIFICAR PAGO)';
+        if (documento.omitirNotificacion) {
+          mensajeRespuesta = `Documento marcado como listo${estadoCredito}. No se envió notificación según configuración`;
+        } else {
+          mensajeRespuesta = `Documento marcado como listo${estadoCredito}. No se pudo enviar notificación por falta de teléfono`;
+        }
+      }
+      
+      res.json({
+        success: true,
+        message: mensajeRespuesta,
+        documento: {
+          id: documento.id,
+          codigoBarras: documento.codigoBarras,
+          estado: 'listo_para_entrega',
+          entrega_sin_verificar_pago: tieneAutorizacionCredito,
+          justificacion_entrega_sin_pago: justificacion_entrega_sin_pago,
+          codigoVerificacion: codigoVerificacion,
+          notificacionEnviada: notificacionEnviada
+        }
+      });
+      
+    } catch (error) {
+      await transaction.rollback();
+      console.error('❌ [MARCAR LISTO] Error:', error);
+      res.status(500).json({
+        success: false,
+        message: `Error al marcar documento como listo: ${error.message}`
+      });
+    }
+  },
+
+  /**
+   * Obtener datos básicos de un documento (para verificar estado de crédito)
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  obtenerDatosDocumento: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const matrizadorId = req.matrizador?.id;
+      
+      // 🔍 DEBUG: Parámetros recibidos
+      console.log('=== DEBUG OBTENER DATOS DOCUMENTO ===');
+      console.log('🔍 DEBUG PARÁMETROS:', {
+        documento_id: id,
+        tipo_id: typeof id,
+        matrizador_id: matrizadorId,
+        url_completa: req.originalUrl,
+        metodo: req.method
+      });
+      
+      if (!id) {
+        console.log('❌ ERROR: ID de documento no proporcionado');
+        return res.status(400).json({
+          success: false,
+          message: 'ID de documento no proporcionado'
+        });
+      }
+      
+      // Buscar el documento
+      const documento = await Documento.findOne({
+        where: {
+          id: id,
+          idMatrizador: matrizadorId
+        },
+        attributes: [
+          'id', 'codigoBarras', 'estado', 
+          'entrega_sin_verificar_pago', 'justificacion_entrega_sin_pago',
+          'fecha_autorizacion_entrega', 'autorizado_por_matrizador_id'
+        ]
+      });
+      
+      if (!documento) {
+        console.log(`❌ DOCUMENTO NO ENCONTRADO: ID ${id} para matrizador ${matrizadorId}`);
+        return res.status(404).json({
+          success: false,
+          message: 'Documento no encontrado o no tienes permisos para verlo'
+        });
+      }
+      
+      // 🔍 DEBUG: Datos encontrados en BD
+      console.log('🔍 DEBUG DOCUMENTO ENCONTRADO EN BD:', {
+        id: documento.id,
+        estado: documento.estado,
+        entrega_sin_verificar_pago: documento.entrega_sin_verificar_pago,
+        tipo_entrega_bd: typeof documento.entrega_sin_verificar_pago,
+        valor_exacto_bd: documento.entrega_sin_verificar_pago,
+        es_true_bd: documento.entrega_sin_verificar_pago === true,
+        es_false_bd: documento.entrega_sin_verificar_pago === false,
+        justificacion_bd: documento.justificacion_entrega_sin_pago,
+        fecha_autorizacion_bd: documento.fecha_autorizacion_entrega,
+        autorizado_por_id_bd: documento.autorizado_por_matrizador_id
+      });
+      
+      const respuesta = {
+        success: true,
+        documento: {
+          id: documento.id,
+          codigoBarras: documento.codigoBarras,
+          estado: documento.estado,
+          entrega_sin_verificar_pago: documento.entrega_sin_verificar_pago,
+          justificacion_entrega_sin_pago: documento.justificacion_entrega_sin_pago,
+          fecha_autorizacion_entrega: documento.fecha_autorizacion_entrega,
+          autorizado_por_matrizador_id: documento.autorizado_por_matrizador_id
+        }
+      };
+
+      // 🔍 DEBUG: Respuesta que se envía
+      console.log('🔍 DEBUG RESPUESTA ENVIADA AL FRONTEND:', {
+        respuesta_completa: respuesta,
+        documento_en_respuesta: respuesta.documento,
+        entrega_sin_verificar_pago_enviado: respuesta.documento.entrega_sin_verificar_pago,
+        tipo_enviado: typeof respuesta.documento.entrega_sin_verificar_pago
+      });
+      
+      return res.json(respuesta);
+      
+    } catch (error) {
+      console.error('❌ [DATOS] Error al obtener datos del documento:', error);
+      return res.status(500).json({
+        success: false,
+        message: `Error al obtener datos: ${error.message}`
+      });
+    }
+  },
+
+  /**
    * Marcar un documento como visto por el matrizador
    * @param {Object} req - Objeto de solicitud Express
    * @param {Object} res - Objeto de respuesta Express

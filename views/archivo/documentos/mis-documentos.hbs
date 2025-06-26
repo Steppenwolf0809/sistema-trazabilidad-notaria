@@ -94,13 +94,15 @@
         </thead>
         <tbody>
           {{#each documentos}}
-          <tr>
+          <tr data-documento-id="{{this.id}}">
             <!-- Código con formato mejorado -->
             <td class="col-codigo">
                 <span class="codigo-documento">{{this.codigoBarras}}</span>
                 <div class="tipo-documento">
                     <small class="text-muted">{{this.tipoDocumento}}</small>
                 </div>
+                <!-- Contenedor para badges de autorización -->
+                <div class="badges-autorizacion mt-1"></div>
             </td>
             
             <!-- Cliente con formato mejorado (sin truncar) -->
@@ -158,12 +160,7 @@
                 </a>
                 {{/if}}
                 
-                <!-- Marcar como Listo - Solo para documentos en proceso -->
-                {{#if (eq this.estado 'en_proceso')}}
-                <button class="btn btn-outline-success btn-universal" onclick="marcarComoListo({{this.id}})" title="Marcar como Listo">
-                  <i class="fas fa-check-circle"></i>
-                </button>
-                {{/if}}
+
                 
                 <!-- Ver Código - Solo para documentos listos -->
                 {{#if (eq this.estado 'listo_para_entrega')}}
@@ -251,6 +248,8 @@
   </div>
 </div>
 
+
+
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     console.log('🎯 Inicializando tabla ARCHIVO MIS DOCUMENTOS - Sistema Universal v1.0');
@@ -312,55 +311,13 @@
     console.log('✅ Ordenamiento manual configurado para ARCHIVO MIS DOCUMENTOS:', headersOrdenables.length, 'columnas');
   }
 
-  // Función para marcar documento como listo
-  function marcarComoListo(documentoId) {
-    if (!confirm('¿Está seguro de marcar este documento como listo para entrega?\n\nSe generará un código de verificación y se enviará una notificación automática al cliente.')) {
-      return;
-    }
-    
-    // Mostrar indicador de carga
-    const button = event.target.closest('button');
-    const originalHTML = button.innerHTML;
-    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-    button.disabled = true;
-    
-    fetch(`/archivo/documentos/marcar-listo/${documentoId}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest'
-      }
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.exito) {
-        // Mostrar código generado
-        alert(`✅ Documento marcado como listo exitosamente!\n\n🔑 Código de verificación: ${data.codigoVerificacion}\n\n📱 Se ha enviado notificación automática al cliente.`);
-        location.reload();
-      } else {
-        alert('❌ Error: ' + data.mensaje);
-        // Restaurar botón
-        button.innerHTML = originalHTML;
-        button.disabled = false;
-      }
-    })
-    .catch(error => {
-      console.error('Error:', error);
-      alert('❌ Error de conexión. Intente nuevamente.');
-      // Restaurar botón
-      button.innerHTML = originalHTML;
-      button.disabled = false;
-    });
-  }
-
-  // Función para mostrar código de verificación
-  function mostrarCodigo(codigo) {
-    if (!codigo) {
+  function mostrarCodigo(codigoVerificacion) {
+    if (!codigoVerificacion) {
       alert('⚠️ No hay código de verificación disponible para este documento.');
       return;
     }
     
-    alert(`🔑 Código de verificación: ${codigo}\n\n📋 Este código debe proporcionarse al cliente para autorizar la entrega por terceros.\n\n💡 El cliente debe presentar este código junto con su identificación para retirar el documento.`);
+    alert(`🔑 Código de verificación: ${codigoVerificacion}\n\n📋 Este código debe proporcionarse al cliente para autorizar la entrega por terceros.\n\n💡 El cliente debe presentar este código junto con su identificación para retirar el documento.`);
   }
 
   function limpiarFiltrosArchivoMis() {

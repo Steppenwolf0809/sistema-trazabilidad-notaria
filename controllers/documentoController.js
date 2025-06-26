@@ -1871,9 +1871,33 @@ exports.actualizarDocumento = async (req, res) => {
       razonSinNotificar,
       entregaInmediata,
       esHabilitante,
-      documentoPrincipalId
+      documentoPrincipalId,
+      // CRÍTICO: Campos de autorización de crédito
+      entrega_sin_verificar_pago,
+      justificacion_entrega_sin_pago
     } = req.body;
 
+    // 🔍 DEBUG COMPLETO: ENTRADA DE FUNCIÓN
+    console.log('=== DEBUG ACTUALIZAR DOCUMENTO ===');
+    console.log('🔍 URL:', req.originalUrl);
+    console.log('🔍 Método:', req.method);
+    console.log('🔍 Usuario:', {
+      id: usuario?.id,
+      nombre: usuario?.nombre,
+      rol: usuario?.rol
+    });
+    console.log('🔍 Documento ID:', documentoId);
+    console.log('🔍 Body completo keys:', Object.keys(req.body));
+    console.log('🔍 CAMPOS DE AUTORIZACIÓN EN REQ.BODY:', {
+      entrega_sin_verificar_pago,
+      tipo_entrega: typeof entrega_sin_verificar_pago,
+      justificacion_entrega_sin_pago,
+      tipo_justificacion: typeof justificacion_entrega_sin_pago,
+      valor_exacto_entrega: entrega_sin_verificar_pago,
+      valor_checkbox_on: entrega_sin_verificar_pago === 'on',
+      valor_checkbox_true: entrega_sin_verificar_pago === true
+    });
+    
     // Agregar logs para debugging
     console.log('🔧 Datos de notificación recibidos:', {
       politicaNotificacion,
@@ -2005,6 +2029,20 @@ exports.actualizarDocumento = async (req, res) => {
       });
     }
 
+    // CRÍTICO: Procesar autorización de crédito
+    const tieneAutorizacionCredito = entrega_sin_verificar_pago === 'on' || entrega_sin_verificar_pago === true;
+    
+    console.log('🔐 DEBUG AUTORIZACIÓN DE CRÉDITO:', {
+      entrega_sin_verificar_pago_raw: entrega_sin_verificar_pago,
+      tipo_raw: typeof entrega_sin_verificar_pago,
+      es_on: entrega_sin_verificar_pago === 'on',
+      es_true: entrega_sin_verificar_pago === true,
+      justificacion_entrega_sin_pago,
+      tieneAutorizacionCredito,
+      estado_bd_anterior: documento.entrega_sin_verificar_pago,
+      cambiara_estado: tieneAutorizacionCredito !== documento.entrega_sin_verificar_pago
+    });
+
     const datosActualizar = {
       tipoDocumento: tipoDocumento || documento.tipoDocumento,
       nombreCliente: nombreCliente || documento.nombreCliente,
@@ -2021,7 +2059,12 @@ exports.actualizarDocumento = async (req, res) => {
       estadoPago: estadoPago || documento.estadoPago || 'pendiente',
       metodoPago: metodoPago !== undefined ? metodoPago : documento.metodoPago,
       // Configuración de notificaciones
-      ...configNotificaciones
+      ...configNotificaciones,
+      // CRÍTICO: Campos de autorización de crédito
+      entrega_sin_verificar_pago: tieneAutorizacionCredito,
+      justificacion_entrega_sin_pago: tieneAutorizacionCredito ? (justificacion_entrega_sin_pago || null) : null,
+      fecha_autorizacion_entrega: tieneAutorizacionCredito ? new Date() : null,
+      autorizado_por_matrizador_id: tieneAutorizacionCredito ? usuario.id : null
     };
 
     if (usuario.rol === 'admin') {
@@ -2052,16 +2095,95 @@ exports.actualizarDocumento = async (req, res) => {
       // Matrizador no puede cambiar estado ni idMatrizador aquí.
     }
     
-    await documento.update(datosActualizar, { transaction });
+    // 🔍 DEBUG: Datos finales que se van a guardar
+    console.log('🔍 DEBUG DATOS A GUARDAR:', {
+      datosActualizar_completo: datosActualizar,
+      entrega_sin_verificar_pago_final: datosActualizar.entrega_sin_verificar_pago,
+      justificacion_final: datosActualizar.justificacion_entrega_sin_pago,
+      fecha_autorizacion_final: datosActualizar.fecha_autorizacion_entrega,
+      autorizado_por_final: datosActualizar.autorizado_por_matrizador_id
+    });
 
+    // ACTUALIZAR EN BASE DE DATOS
+    const resultadoUpdate = await documento.update(datosActualizar, { transaction });
+    
+    // 🔍 DEBUG: Verificar que se actualizó
+    console.log('🔍 DEBUG RESULTADO ACTUALIZACIÓN BD:', {
+      resultado_update: resultadoUpdate,
+      tipo_resultado: typeof resultadoUpdate,
+      es_array: Array.isArray(resultadoUpdate),
+      documento_id: documentoId,
+      actualizacion_exitosa: true // Si llegamos aquí, la actualización fue exitosa
+    });
+
+    // Verificar datos después de actualizar
+    const documentoVerificacion = await Documento.findByPk(documentoId, { transaction });
+    
+    // 🔍 DEBUG: Mostrar datos después de guardar
+    console.log('🔍 DEBUG VERIFICACIÓN POST-GUARDADO:', {
+      documento_id: documentoVerificacion.id,
+      entrega_sin_verificar_pago_bd: documentoVerificacion.entrega_sin_verificar_pago,
+      tipo_bd: typeof documentoVerificacion.entrega_sin_verificar_pago,
+      justificacion_bd: documentoVerificacion.justificacion_entrega_sin_pago,
+      fecha_autorizacion_bd: documentoVerificacion.fecha_autorizacion_entrega,
+      autorizado_por_bd: documentoVerificacion.autorizado_por_matrizador_id,
+      updated_at: documentoVerificacion.updated_at
+    });
+
+    // CREAR EVENTO ESPECÍFICO PARA AUTORIZACIÓN DE CRÉDITO
+    if (tieneAutorizacionCredito !== documento.entrega_sin_verificar_pago) {
+      if (tieneAutorizacionCredito) {
+        // EVENTO: Crédito autorizado
+        await EventoDocumento.create({
+          documentoId: documento.id,
+          tipo: 'cambio_estado', // USAR TIPO VÁLIDO DEL ENUM
+          detalles: `✅ CRÉDITO AUTORIZADO: Cliente autorizado para retirar sin pago previo. Justificación: ${justificacion_entrega_sin_pago || 'No especificada'}`,
+          usuario: usuario.nombre || 'sistema',
+          metadatos: {
+            idUsuario: usuario.id,
+            rolUsuario: usuario.rol,
+            justificacion: justificacion_entrega_sin_pago,
+            fecha_autorizacion: new Date(),
+            estado_anterior: documento.entrega_sin_verificar_pago,
+            estado_nuevo: true,
+            tipo_cambio: 'autorizacion_credito'
+          }
+        }, { transaction });
+        
+        console.log(`✅ EVENTO CREADO: Autorización de crédito para documento ${documento.id}`);
+      } else {
+        // EVENTO: Crédito revocado
+        await EventoDocumento.create({
+          documentoId: documento.id,
+          tipo: 'cambio_estado', // USAR TIPO VÁLIDO DEL ENUM
+          detalles: `❌ CRÉDITO REVOCADO: Se removió la autorización para entrega sin pago. Cliente debe verificar pago antes de retirar.`,
+          usuario: usuario.nombre || 'sistema',
+          metadatos: {
+            idUsuario: usuario.id,
+            rolUsuario: usuario.rol,
+            justificacion_anterior: documento.justificacion_entrega_sin_pago,
+            fecha_revocacion: new Date(),
+            estado_anterior: documento.entrega_sin_verificar_pago,
+            estado_nuevo: false,
+            tipo_cambio: 'revocacion_credito'
+          }
+        }, { transaction });
+        
+        console.log(`❌ EVENTO CREADO: Revocación de crédito para documento ${documento.id}`);
+      }
+    }
+
+    // EVENTO GENERAL DE MODIFICACIÓN (solo si hubo otros cambios además del crédito)
     await EventoDocumento.create({
-      documentoId: documento.id, // CORREGIDO: usar documentoId en lugar de idDocumento
+      documentoId: documento.id,
       tipo: 'modificacion',
       detalles: `Documento modificado por ${usuario.nombre || 'sistema'} (${usuario.rol || 'N/A'}).`,
       usuario: usuario.nombre || 'sistema',
       metadatos: {
         idUsuario: usuario.id,
-        rolUsuario: usuario.rol
+        rolUsuario: usuario.rol,
+        campos_modificados: Object.keys(datosActualizar).filter(key => key !== 'entrega_sin_verificar_pago' && key !== 'justificacion_entrega_sin_pago'),
+        incluye_autorizacion_credito: tieneAutorizacionCredito !== documento.entrega_sin_verificar_pago
       }
     }, { transaction });
     

@@ -786,13 +786,28 @@ const archivoController = {
   },
 
   /**
-   * Marcar documento como listo (solo documentos propios)
+   * Marcar documento como listo (solo documentos propios) - CON SISTEMA DE AUTORIZACIONES
    */
   marcarComoListo: async (req, res) => {
     const transaction = await sequelize.transaction();
     
     try {
       const documentoId = req.params.id;
+      const { 
+        entrega_sin_verificar_pago, 
+        justificacion_entrega_sin_pago,
+        accion_autorizacion 
+      } = req.body;
+      
+      const usuarioId = req.matrizador?.id;
+      const usuarioNombre = req.matrizador?.nombre || 'Sistema';
+      
+      console.log(`🎯 [ARCHIVO - MARCAR LISTO] Procesando documento ${documentoId}:`, {
+        entrega_sin_verificar_pago,
+        justificacion_entrega_sin_pago,
+        accion_autorizacion,
+        usuario: usuarioNombre
+      });
       
       // Verificar que el documento existe y es del usuario
       const documento = await Documento.findOne({
@@ -820,6 +835,17 @@ const archivoController = {
         });
       }
 
+      // Preparar datos de actualización con SISTEMA DE AUTORIZACIONES
+      const tieneAutorizacionCredito = entrega_sin_verificar_pago === true || entrega_sin_verificar_pago === 'true';
+      
+      const datosActualizacion = {
+        estado: 'listo_para_entrega',
+        entrega_sin_verificar_pago: tieneAutorizacionCredito,
+        justificacion_entrega_sin_pago: tieneAutorizacionCredito ? justificacion_entrega_sin_pago : null,
+        fecha_autorizacion_entrega: tieneAutorizacionCredito ? new Date() : null,
+        autorizado_por_matrizador_id: tieneAutorizacionCredito ? usuarioId : null
+      };
+      
       // ============== GENERACIÓN CONDICIONAL DE CÓDIGO DE VERIFICACIÓN - SOLO WHATSAPP ==============
       
       // Verificar si debe generar código de verificación - SOLO WHATSAPP
@@ -855,22 +881,33 @@ const archivoController = {
         }
       }
       
-      // Actualizar el estado y código
-      await documento.update({
-        estado: 'listo_para_entrega',
-        codigoVerificacion: codigoVerificacion // Puede ser null
-      }, { transaction });
+      // Agregar código de verificación a los datos de actualización
+      datosActualizacion.codigoVerificacion = codigoVerificacion;
+      
+      console.log(`✅ [ARCHIVO - MARCAR LISTO] Actualizando documento ${documentoId}:`, datosActualizacion);
+      
+      // Actualizar el documento con TODAS las configuraciones
+      await documento.update(datosActualizacion, { transaction });
 
-      // Crear evento de cambio de estado
+      // Crear evento en historial
+      const detalleEvento = tieneAutorizacionCredito 
+        ? `Documento marcado como listo para entrega por ${usuarioNombre}. ✅ CRÉDITO AUTORIZADO: Cliente puede retirar sin pago previo. Justificación: ${justificacion_entrega_sin_pago || 'No especificada'}. Código: ${codigoVerificacion || 'N/A'}`
+        : `Documento marcado como listo para entrega por ${usuarioNombre}. ⚠️ VERIFICAR PAGO: Cliente debe completar pago antes de retirar. Código: ${codigoVerificacion || 'N/A'}`;
+      
       await EventoDocumento.create({
         documentoId: documento.id,
-        tipo: 'estado',
-        descripcion: `Documento marcado como listo para entrega por ${req.matrizador.nombre} - Código: ${codigoVerificacion}`,
-        usuarioId: req.matrizador.id,
-        detalles: {
-          estadoAnterior: 'en_proceso',
-          estadoNuevo: 'listo_para_entrega',
-          usuario: req.matrizador.nombre,
+        tipo: 'documento_listo', // USAR TIPO VÁLIDO DEL ENUM
+        detalles: detalleEvento,
+        usuario: usuarioNombre,
+        metadatos: {
+          idUsuario: usuarioId,
+          rolUsuario: 'archivo',
+          accion_autorizacion: accion_autorizacion,
+          estado_anterior: 'en_proceso',
+          estado_nuevo: 'listo_para_entrega',
+          entrega_sin_verificar_pago: tieneAutorizacionCredito,
+          justificacion_entrega_sin_pago: justificacion_entrega_sin_pago,
+          tipo_marcado: tieneAutorizacionCredito ? 'con_credito' : 'verificar_pago',
           codigoVerificacion: codigoVerificacion
         }
       }, { transaction });
@@ -916,21 +953,34 @@ const archivoController = {
       let mensajeRespuesta = '';
       
       if (codigoVerificacion) {
-        mensajeRespuesta = 'Documento marcado como listo y notificación enviada por WhatsApp';
+        const estadoCredito = tieneAutorizacionCredito ? ' - CRÉDITO AUTORIZADO' : ' - VERIFICAR PAGO';
+        mensajeRespuesta = `Documento marcado como listo y notificación enviada por WhatsApp${estadoCredito}`;
       } else {
+        const estadoCredito = tieneAutorizacionCredito ? ' (CRÉDITO AUTORIZADO)' : ' (VERIFICAR PAGO)';
         if (documento.omitirNotificacion) {
-          mensajeRespuesta = 'Documento marcado como listo. No se envió notificación según configuración';
+          mensajeRespuesta = `Documento marcado como listo${estadoCredito}. No se envió notificación según configuración`;
         } else if (esEntregaInmediata) {
-          mensajeRespuesta = 'Documento marcado como listo para entrega inmediata';
+          mensajeRespuesta = `Documento marcado como listo para entrega inmediata${estadoCredito}`;
         } else {
-          mensajeRespuesta = 'Documento marcado como listo. No se pudo enviar notificación por falta de teléfono';
+          mensajeRespuesta = `Documento marcado como listo${estadoCredito}. No se pudo enviar notificación por falta de teléfono`;
         }
       }
 
+      console.log(`🎉 [ARCHIVO - MARCAR LISTO] Documento ${documentoId} marcado como listo exitosamente`);
+
       res.json({
-        exito: true,
+        success: true, // CAMBIAR A 'success' PARA COMPATIBILIDAD CON FRONTEND
+        exito: true,   // MANTENER POR COMPATIBILIDAD
         mensaje: mensajeRespuesta,
-        codigoVerificacion: codigoVerificacion
+        message: mensajeRespuesta, // AGREGAR PARA COMPATIBILIDAD
+        codigoVerificacion: codigoVerificacion,
+        documento: {
+          id: documento.id,
+          codigoBarras: documento.codigoBarras,
+          estado: 'listo_para_entrega',
+          entrega_sin_verificar_pago: tieneAutorizacionCredito,
+          justificacion_entrega_sin_pago: justificacion_entrega_sin_pago
+        }
       });
 
     } catch (error) {

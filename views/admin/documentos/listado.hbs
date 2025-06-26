@@ -6,6 +6,8 @@
     <span><i class="fas fa-binoculars me-2"></i> Supervisión de Documentos</span>
   </div>
   <div class="card-body">
+
+    
     <!-- Filtros Compactos MEJORADOS con Fechas -->
     <div class="row mb-4">
       <div class="col-md-12">
@@ -137,13 +139,15 @@
         </thead>
         <tbody>
           {{#each documentos}}
-          <tr>
+          <tr data-documento-id="{{this.id}}">
             <!-- Código DESTACADO con fondo -->
             <td class="col-codigo">
                 {{{highlightCode this.codigoBarras}}}
                 <div class="tipo-documento">
                     <small class="text-muted">{{this.tipoDocumento}}</small>
                 </div>
+                <!-- Contenedor para badges de autorización -->
+                <div class="badges-autorizacion mt-1"></div>
             </td>
             
             <!-- Cliente OPTIMIZADO con truncado y tooltip -->
