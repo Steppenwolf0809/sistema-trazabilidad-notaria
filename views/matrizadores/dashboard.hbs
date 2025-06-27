@@ -43,6 +43,11 @@
   </div>
 </div>
 
+<!-- Sistema de Alertas de Autorización Urgente -->
+<div class="row mb-4" id="alertas-autorizacion-urgente">
+  <!-- Las alertas se cargarán aquí dinámicamente -->
+</div>
+
 <!-- Sistema de Alertas -->
 <div class="row mb-4">
   <div class="col-12">
@@ -392,6 +397,9 @@
   </div>
 </div>
 
+<!-- Contenedor para Alertas de Autorización Urgente -->
+<div id="contenedor-alertas-urgentes" class="mb-4"></div>
+
 <!-- Scripts para el funcionamiento del dashboard -->
 <script>
   // Mostrar/ocultar selector de fechas personalizadas
@@ -612,6 +620,123 @@
     });
     
     console.log('✅ Formateo de fechas de documentos en dashboard completado');
+    
+    // ============== SISTEMA DE ALERTAS DE AUTORIZACIÓN URGENTE ==============
+    
+    function cargarAlertasAutorizacionUrgente() {
+      console.log('🔄 Cargando alertas de autorización urgente...');
+      
+      fetch('/api/autorizaciones-urgentes/pendientes', {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+        .then(response => {
+          console.log('📡 Respuesta del servidor:', response.status);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then(data => {
+          console.log('📊 Datos recibidos:', data);
+          if (data.success && data.autorizaciones && data.autorizaciones.length > 0) {
+            console.log(`✅ Mostrando ${data.autorizaciones.length} alertas de autorización`);
+            mostrarAlertasAutorizacion(data.autorizaciones);
+          } else {
+            console.log('ℹ️ No hay autorizaciones pendientes');
+            ocultarAlertasAutorizacion();
+          }
+        })
+        .catch(error => {
+          console.error('❌ Error al cargar alertas de autorización urgente:', error);
+        });
+    }
+    
+    function mostrarAlertasAutorizacion(autorizaciones) {
+      console.log('🎯 Mostrando alertas de autorización:', autorizaciones);
+      const contenedor = document.getElementById('alertas-autorizacion-urgente');
+      
+      if (!contenedor) {
+        console.error('❌ No se encontró el contenedor de alertas: alertas-autorizacion-urgente');
+        return;
+      }
+      
+      const alertasHTML = autorizaciones.map(auth => {
+        const esUrgente = auth.es_urgente;
+        const badgeClass = esUrgente ? 'bg-danger' : 'bg-warning';
+        const iconClass = esUrgente ? 'fa-bell' : 'fa-clock';
+        const cardClass = esUrgente ? 'border-danger' : 'border-warning';
+        const headerClass = esUrgente ? 'bg-danger' : 'bg-warning';
+        
+        return `
+          <div class="col-12 mb-3">
+            <div class="card ${cardClass} shadow-sm">
+              <div class="card-header ${headerClass} text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                  <h6 class="mb-0">
+                    <i class="fas ${iconClass} me-2"></i>
+                    ${esUrgente ? '🚨 AUTORIZACIÓN URGENTE CRÍTICA' : '⚠️ Solicitud de Autorización Urgente'}
+                  </h6>
+                  <span class="badge ${badgeClass}">
+                    ${auth.minutos_espera} min esperando
+                  </span>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-md-8">
+                    <h6 class="text-primary">${auth.cliente_nombre}</h6>
+                    <p class="mb-1">
+                      <strong>Documento:</strong> ${auth.tipo_documento} - ${auth.codigo_barras}
+                    </p>
+                    <p class="mb-1">
+                      <strong>Monto pendiente:</strong> $${auth.monto_pendiente}
+                    </p>
+                    <p class="mb-1">
+                      <strong>Solicitado por:</strong> ${auth.solicitado_por_nombre} (${auth.solicitado_por_rol})
+                    </p>
+                    <p class="mb-0 text-muted">
+                      <strong>Justificación:</strong> ${auth.justificacion_solicitud}
+                    </p>
+                  </div>
+                  <div class="col-md-4 text-end">
+                    <div class="mb-2">
+                      <small class="text-muted">Solicitado hace:</small><br>
+                      <strong class="${esUrgente ? 'text-danger' : 'text-warning'}">
+                        ${auth.minutos_espera} minutos
+                      </strong>
+                    </div>
+                    <a href="/matrizador/autorizacion/revisar/${auth.id}" 
+                       class="btn ${esUrgente ? 'btn-danger' : 'btn-warning'} btn-lg">
+                      <i class="fas fa-gavel me-1"></i>
+                      <strong>REVISAR Y AUTORIZAR</strong>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+      
+      contenedor.innerHTML = alertasHTML;
+      console.log('✅ Alertas de autorización mostradas en el DOM');
+    }
+    
+    function ocultarAlertasAutorizacion() {
+      const contenedor = document.getElementById('alertas-autorizacion-urgente');
+      contenedor.innerHTML = '';
+    }
+    
+    // Cargar alertas al inicio
+    cargarAlertasAutorizacionUrgente();
+    
+    // Actualizar alertas cada 20 segundos
+    setInterval(cargarAlertasAutorizacionUrgente, 20000);
+    
   });
 </script>
 
@@ -620,4 +745,6 @@
   <div class="d-flex align-items-center">
     <h2>${{formatMoney stats.totalFacturado}}</h2>
   </div>
-</div> 
+</div>
+
+ 

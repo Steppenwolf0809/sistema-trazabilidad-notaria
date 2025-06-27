@@ -1,0 +1,497 @@
+{{! Página de Revisión de Autorización Urgente }}
+<div class="container-fluid">
+  
+  <!-- Encabezado con estado de urgencia -->
+  <div class="row mb-4">
+    <div class="col-12">
+      {{#if esUrgente}}
+      <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <h4 class="alert-heading"><i class="fas fa-exclamation-triangle fa-shake me-2"></i>¡AUTORIZACIÓN URGENTE!</h4>
+        <p class="mb-1">Esta solicitud lleva <strong>{{minutosEspera}} minutos</strong> esperando una respuesta.</p>
+        <p class="mb-0">Se requiere acción inmediata para evitar demoras al cliente.</p>
+      </div>
+      {{else}}
+      <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        <h4 class="alert-heading"><i class="fas fa-clock me-2"></i>Solicitud de Autorización</h4>
+        <p class="mb-0">Solicitud pendiente hace <strong>{{minutosEspera}} minutos</strong>.</p>
+      </div>
+      {{/if}}
+    </div>
+  </div>
+
+  <!-- Información Principal -->
+  <div class="row mb-4">
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="fas fa-file-alt me-2"></i>Información del Documento</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <p><strong>Cliente:</strong> {{autorizacion.cliente_nombre}}</p>
+              <p><strong>Tipo de Documento:</strong> {{autorizacion.tipo_documento}}</p>
+              <p><strong>Código de Barras:</strong> 
+                <span class="badge bg-secondary">{{autorizacion.codigo_barras}}</span>
+              </p>
+            </div>
+            <div class="col-md-6">
+              <p><strong>Monto Pendiente:</strong> 
+                <span class="fs-4 text-danger">${{formatMoney autorizacion.monto_pendiente}}</span>
+              </p>
+              <p><strong>Estado Actual:</strong> 
+                <span class="badge bg-warning">{{autorizacion.estado}}</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header bg-info text-white">
+          <h5 class="mb-0"><i class="fas fa-user me-2"></i>Información de Solicitud</h5>
+        </div>
+        <div class="card-body">
+          <p><strong>Solicitado por:</strong><br>
+            {{autorizacion.solicitado_por_nombre}}<br>
+            <small class="text-muted">({{autorizacion.solicitado_por_rol}})</small>
+          </p>
+          <p><strong>Fecha de Solicitud:</strong><br>
+            {{formatDateTime autorizacion.solicitud_fecha}}
+          </p>
+          {{#if autorizacion.matrizadorResponsable}}
+          <p><strong>Responsable:</strong><br>
+            {{autorizacion.matrizadorResponsable.nombre}}
+            {{#if autorizacion.matrizadorResponsable.cargo}}
+            <br><small class="text-muted">{{autorizacion.matrizadorResponsable.cargo}}</small>
+            {{/if}}
+          </p>
+          {{/if}}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Justificación de la Solicitud -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header bg-warning text-dark">
+          <h5 class="mb-0"><i class="fas fa-comment me-2"></i>Justificación de la Solicitud</h5>
+        </div>
+        <div class="card-body">
+          <blockquote class="blockquote">
+            <p class="mb-0">"{{autorizacion.justificacion_solicitud}}"</p>
+            <footer class="blockquote-footer mt-2">
+              Justificación proporcionada por <cite title="Source Title">{{autorizacion.solicitado_por_nombre}}</cite>
+            </footer>
+          </blockquote>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Botones de Acción -->
+  <div class="row mb-4">
+    <div class="col-12 text-center">
+      <div class="btn-group" role="group" aria-label="Acciones de autorización">
+        <button type="button" class="btn btn-success btn-lg" data-bs-toggle="modal" data-bs-target="#modalAutorizar">
+          <i class="fas fa-check-circle me-2"></i>AUTORIZAR ENTREGA
+        </button>
+        <button type="button" class="btn btn-danger btn-lg" data-bs-toggle="modal" data-bs-target="#modalRechazar">
+          <i class="fas fa-times-circle me-2"></i>RECHAZAR
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Botón de Regreso -->
+  <div class="row">
+    <div class="col-12 text-center">
+      <a href="javascript:history.back()" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Volver al Dashboard
+      </a>
+    </div>
+  </div>
+
+</div>
+
+<!-- Modal para Autorizar -->
+<div class="modal fade" id="modalAutorizar" tabindex="-1" aria-labelledby="modalAutorizarLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title" id="modalAutorizarLabel">
+          <i class="fas fa-check-circle me-2"></i>Autorizar Entrega Sin Verificación de Pago
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="alerta-autorizacion" class="alert d-none"></div>
+
+        <div class="alert alert-info">
+          <p class="mb-1"><strong>Confirmación:</strong> Está autorizando la entrega del documento <strong>{{autorizacion.codigo_barras}}</strong> para el cliente <strong>{{autorizacion.cliente_nombre}}</strong>.</p>
+          <p class="mb-0">El documento será entregado <strong>SIN</strong> verificar el pago completo de <strong>${{formatMoney autorizacion.monto_pendiente}}</strong>.</p>
+        </div>
+
+        <form id="form-autorizar">
+          <input type="hidden" id="autorizacion-id" value="{{autorizacion.id}}">
+          
+          <div class="mb-3">
+            <label for="tipo-justificacion" class="form-label">Tipo de Justificación <span class="text-danger">*</span></label>
+            <select id="tipo-justificacion" class="form-select" required>
+              <option value="">Seleccione una razón...</option>
+              <option value="cliente_corporativo">Cliente Corporativo Conocido</option>
+              <option value="historial_excelente">Cliente con Historial Excelente</option>
+              <option value="urgencia_medica">Urgencia Médica o Familiar</option>
+              <option value="error_sistema">Error del Sistema de Pagos</option>
+              <option value="cliente_conocido">Cliente Conocido y Confiable</option>
+              <option value="personalizado">Razón Personalizada</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label for="justificacion-autorizacion" class="form-label">Justificación Detallada <span class="text-danger">*</span></label>
+            <textarea id="justificacion-autorizacion" class="form-control" rows="3" 
+                      placeholder="Describa las razones específicas para autorizar esta entrega sin verificación de pago..." 
+                      required minlength="10"></textarea>
+            <small class="form-text text-muted">Mínimo 10 caracteres. Esta justificación quedará registrada en la auditoría.</small>
+          </div>
+
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" value="" id="confirmacion-autorizacion" required>
+            <label class="form-check-label" for="confirmacion-autorizacion">
+              <strong>Confirmo que autorizo la entrega de este documento sin verificación completa de pago.</strong>
+            </label>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" form="form-autorizar" class="btn btn-success" id="btn-confirmar-autorizacion">
+          <span id="btn-autorizar-text">Confirmar Autorización</span>
+          <span id="btn-autorizar-spinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para Rechazar -->
+<div class="modal fade" id="modalRechazar" tabindex="-1" aria-labelledby="modalRechazarLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="modalRechazarLabel">
+          <i class="fas fa-times-circle me-2"></i>Rechazar Solicitud de Autorización
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="alerta-rechazo" class="alert d-none"></div>
+
+        <div class="alert alert-warning">
+          <p class="mb-0">Está rechazando la solicitud de autorización. El documento <strong>NO</strong> será entregado hasta que se confirme el pago completo.</p>
+        </div>
+
+        <form id="form-rechazar">
+          <div class="mb-3">
+            <label for="motivo-rechazo" class="form-label">Motivo del Rechazo <span class="text-danger">*</span></label>
+            <textarea id="motivo-rechazo" class="form-control" rows="3" 
+                      placeholder="Explique las razones para rechazar esta solicitud de autorización..." 
+                      required minlength="10"></textarea>
+            <small class="form-text text-muted">Mínimo 10 caracteres. Esta justificación será visible para el solicitante.</small>
+          </div>
+
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" value="" id="confirmacion-rechazo" required>
+            <label class="form-check-label" for="confirmacion-rechazo">
+              Confirmo que deseo rechazar esta solicitud de autorización.
+            </label>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" form="form-rechazar" class="btn btn-danger" id="btn-confirmar-rechazo">
+          <span id="btn-rechazar-text">Confirmar Rechazo</span>
+          <span id="btn-rechazar-spinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('🎯 JavaScript de autorización cargado');
+
+  // Manejar formulario de autorización
+  const formAutorizar = document.getElementById('form-autorizar');
+  const btnConfirmarAutorizacion = document.getElementById('btn-confirmar-autorizacion');
+  const alertaAutorizacion = document.getElementById('alerta-autorizacion');
+
+  if (formAutorizar) {
+    formAutorizar.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      console.log('📝 Enviando autorización...');
+
+      const autorizacionId = document.getElementById('autorizacion-id').value;
+      const tipoJustificacion = document.getElementById('tipo-justificacion').value;
+      const justificacion = document.getElementById('justificacion-autorizacion').value;
+      const confirmacion = document.getElementById('confirmacion-autorizacion').checked;
+
+      // Validaciones
+      if (!tipoJustificacion) {
+        mostrarAlerta(alertaAutorizacion, 'danger', 'Debe seleccionar un tipo de justificación');
+        return;
+      }
+
+      // La justificación detallada es opcional, pero si se proporciona debe tener al menos 5 caracteres
+      if (justificacion && justificacion.trim().length > 0 && justificacion.trim().length < 5) {
+        mostrarAlerta(alertaAutorizacion, 'danger', 'Si proporciona justificación detallada, debe tener al menos 5 caracteres');
+        return;
+      }
+
+      if (!confirmacion) {
+        mostrarAlerta(alertaAutorizacion, 'danger', 'Debe confirmar la autorización');
+        return;
+      }
+
+      // Mostrar spinner
+      btnConfirmarAutorizacion.disabled = true;
+      document.getElementById('btn-autorizar-text').classList.add('d-none');
+      document.getElementById('btn-autorizar-spinner').classList.remove('d-none');
+
+      try {
+        const response = await fetch(`/api/autorizaciones-urgentes/${autorizacionId}/autorizar`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            justificacion: justificacion,
+            tipo_justificacion: tipoJustificacion
+          })
+        });
+
+        const data = await response.json();
+        console.log('📊 Respuesta del servidor:', data);
+
+        if (data.success) {
+          mostrarAlerta(alertaAutorizacion, 'success', '✅ Autorización concedida exitosamente. Redirigiendo en 3 segundos...');
+          
+          // Cerrar el modal para mostrar mejor el mensaje
+          const modal = bootstrap.Modal.getInstance(document.getElementById('modalAutorizar'));
+          if (modal) modal.hide();
+          
+          // Mostrar alerta en la página principal también
+          const alertaPrincipal = document.createElement('div');
+          alertaPrincipal.className = 'alert alert-success alert-dismissible fade show position-fixed';
+          alertaPrincipal.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+          alertaPrincipal.innerHTML = `
+            <strong>✅ ¡Éxito!</strong> Autorización concedida correctamente.
+            <br><small>Redirigiendo al dashboard en <span id="countdown">3</span> segundos...</small>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          `;
+          document.body.appendChild(alertaPrincipal);
+          
+          // Contador regresivo
+          let segundos = 3;
+          const countdown = document.getElementById('countdown');
+          const interval = setInterval(() => {
+            segundos--;
+            if (countdown) countdown.textContent = segundos;
+            if (segundos <= 0) {
+              clearInterval(interval);
+              window.location.href = '/matrizador';
+            }
+          }, 1000);
+          
+        } else {
+          // Manejar casos específicos de error
+          if (data.ya_procesada) {
+            // Autorización ya procesada - mostrar mensaje más prominente
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalAutorizar'));
+            if (modal) modal.hide();
+            
+            const alertaPrincipal = document.createElement('div');
+            alertaPrincipal.className = 'alert alert-warning alert-dismissible fade show position-fixed';
+            alertaPrincipal.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 350px;';
+            alertaPrincipal.innerHTML = `
+              <strong>⚠️ Atención</strong><br>
+              ${data.message}<br>
+              <small><strong>Estado actual:</strong> ${data.estado_actual}</small><br>
+              <small>Redirigiendo al dashboard en <span id="countdown-procesada">3</span> segundos...</small>
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(alertaPrincipal);
+            
+            // Contador regresivo para ya procesada
+            let segundos = 3;
+            const countdown = document.getElementById('countdown-procesada');
+            const interval = setInterval(() => {
+              segundos--;
+              if (countdown) countdown.textContent = segundos;
+              if (segundos <= 0) {
+                clearInterval(interval);
+                window.location.href = '/matrizador';
+              }
+            }, 1000);
+          } else {
+            // Error normal
+            mostrarAlerta(alertaAutorizacion, 'danger', '❌ Error: ' + data.message);
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error al autorizar:', error);
+        mostrarAlerta(alertaAutorizacion, 'danger', '❌ Error de conexión');
+      } finally {
+        // Ocultar spinner
+        btnConfirmarAutorizacion.disabled = false;
+        document.getElementById('btn-autorizar-text').classList.remove('d-none');
+        document.getElementById('btn-autorizar-spinner').classList.add('d-none');
+      }
+    });
+  }
+
+  // Manejar formulario de rechazo
+  const formRechazar = document.getElementById('form-rechazar');
+  const btnConfirmarRechazo = document.getElementById('btn-confirmar-rechazo');
+  const alertaRechazo = document.getElementById('alerta-rechazo');
+
+  if (formRechazar) {
+    formRechazar.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      console.log('❌ Enviando rechazo...');
+
+      const autorizacionId = document.getElementById('autorizacion-id').value;
+      const motivoRechazo = document.getElementById('motivo-rechazo').value;
+      const confirmacion = document.getElementById('confirmacion-rechazo').checked;
+
+      // Validaciones
+      if (!motivoRechazo || motivoRechazo.length < 10) {
+        mostrarAlerta(alertaRechazo, 'danger', 'El motivo del rechazo debe tener al menos 10 caracteres');
+        return;
+      }
+
+      if (!confirmacion) {
+        mostrarAlerta(alertaRechazo, 'danger', 'Debe confirmar el rechazo');
+        return;
+      }
+
+      // Mostrar spinner
+      btnConfirmarRechazo.disabled = true;
+      document.getElementById('btn-rechazar-text').classList.add('d-none');
+      document.getElementById('btn-rechazar-spinner').classList.remove('d-none');
+
+      try {
+        const response = await fetch(`/api/autorizaciones-urgentes/${autorizacionId}/rechazar`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            motivo: motivoRechazo
+          })
+        });
+
+        const data = await response.json();
+        console.log('📊 Respuesta del servidor:', data);
+
+        if (data.success) {
+          mostrarAlerta(alertaRechazo, 'success', '✅ Autorización rechazada exitosamente. Redirigiendo en 3 segundos...');
+          
+          // Cerrar el modal para mostrar mejor el mensaje
+          const modal = bootstrap.Modal.getInstance(document.getElementById('modalRechazar'));
+          if (modal) modal.hide();
+          
+          // Mostrar alerta en la página principal también
+          const alertaPrincipal = document.createElement('div');
+          alertaPrincipal.className = 'alert alert-warning alert-dismissible fade show position-fixed';
+          alertaPrincipal.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+          alertaPrincipal.innerHTML = `
+            <strong>⚠️ Rechazada</strong> Autorización rechazada correctamente.
+            <br><small>Redirigiendo al dashboard en <span id="countdown-rechazo">3</span> segundos...</small>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          `;
+          document.body.appendChild(alertaPrincipal);
+          
+          // Contador regresivo
+          let segundos = 3;
+          const countdown = document.getElementById('countdown-rechazo');
+          const interval = setInterval(() => {
+            segundos--;
+            if (countdown) countdown.textContent = segundos;
+            if (segundos <= 0) {
+              clearInterval(interval);
+              window.location.href = '/matrizador';
+            }
+          }, 1000);
+          
+        } else {
+          // Manejar casos específicos de error
+          if (data.ya_procesada) {
+            // Autorización ya procesada - mostrar mensaje más prominente
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalRechazar'));
+            if (modal) modal.hide();
+            
+            const alertaPrincipal = document.createElement('div');
+            alertaPrincipal.className = 'alert alert-warning alert-dismissible fade show position-fixed';
+            alertaPrincipal.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 350px;';
+            alertaPrincipal.innerHTML = `
+              <strong>⚠️ Atención</strong><br>
+              ${data.message}<br>
+              <small><strong>Estado actual:</strong> ${data.estado_actual}</small><br>
+              <small>Redirigiendo al dashboard en <span id="countdown-procesada-rechazo">3</span> segundos...</small>
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(alertaPrincipal);
+            
+            // Contador regresivo para ya procesada
+            let segundos = 3;
+            const countdown = document.getElementById('countdown-procesada-rechazo');
+            const interval = setInterval(() => {
+              segundos--;
+              if (countdown) countdown.textContent = segundos;
+              if (segundos <= 0) {
+                clearInterval(interval);
+                window.location.href = '/matrizador';
+              }
+            }, 1000);
+          } else {
+            // Error normal
+            mostrarAlerta(alertaRechazo, 'danger', '❌ Error: ' + data.message);
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error al rechazar:', error);
+        mostrarAlerta(alertaRechazo, 'danger', '❌ Error de conexión');
+      } finally {
+        // Ocultar spinner
+        btnConfirmarRechazo.disabled = false;
+        document.getElementById('btn-rechazar-text').classList.remove('d-none');
+        document.getElementById('btn-rechazar-spinner').classList.add('d-none');
+      }
+    });
+  }
+
+  // Función auxiliar para mostrar alertas
+  function mostrarAlerta(elemento, tipo, mensaje) {
+    elemento.className = `alert alert-${tipo}`;
+    elemento.textContent = mensaje;
+    elemento.classList.remove('d-none');
+    
+    // Auto-ocultar después de 5 segundos si es éxito
+    if (tipo === 'success') {
+      setTimeout(() => {
+        elemento.classList.add('d-none');
+      }, 5000);
+    }
+  }
+});
+</script> 

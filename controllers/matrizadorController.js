@@ -28,6 +28,7 @@ const {
 const NotificationService = require('../services/notificationService');
 const configNotaria = require('../config/notaria');
 const NotificacionEnviada = require('../models/NotificacionEnviada');
+const AutorizacionUrgente = require('../models/AutorizacionUrgente');
 const { obtenerHistorialUniversal } = require('../utils/historialUniversal');
 const notificacionController = require('./notificacionController');
 
@@ -3164,6 +3165,90 @@ const matrizadorController = {
         exito: false,
         mensaje: 'Error al procesar entrega grupal',
         error: error.message
+      });
+    }
+  },
+
+  /**
+   * Página para revisar y autorizar una solicitud urgente
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  revisarAutorizacion: async (req, res) => {
+    try {
+      console.log('🔍 [AUTORIZACIÓN] Accediendo a revisar autorización:', req.params.id);
+      const { id } = req.params;
+      const usuario = req.matrizador || req.user;
+      console.log('👤 [AUTORIZACIÓN] Usuario:', usuario ? usuario.nombre : 'No encontrado');
+
+      // Obtener la autorización con datos relacionados
+      const autorizacion = await AutorizacionUrgente.findByPk(id, {
+        include: [
+          {
+            model: Documento,
+            as: 'documento',
+            attributes: ['id', 'codigoBarras', 'nombreCliente', 'tipoDocumento']
+          },
+          {
+            model: Matrizador,
+            as: 'solicitante',
+            attributes: ['nombre', 'rol']
+          },
+          {
+            model: Matrizador,
+            as: 'matrizadorResponsable',
+            attributes: ['nombre', 'email', 'cargo']
+          }
+        ]
+      });
+
+      console.log('📋 [AUTORIZACIÓN] Autorización encontrada:', autorizacion ? 'Sí' : 'No');
+      
+      if (!autorizacion) {
+        console.log('❌ [AUTORIZACIÓN] No se encontró la autorización con ID:', id);
+        return res.status(404).render('error', {
+          message: 'Autorización no encontrada',
+          layout: usuario.rol === 'matrizador' ? 'matrizador' : 'caja'
+        });
+      }
+
+      // Verificar permisos usando el método del modelo
+      if (!autorizacion.puedeAutorizar(usuario)) {
+        return res.status(403).render('error', {
+          message: 'No tiene permisos para autorizar esta solicitud',
+          layout: usuario.rol === 'matrizador' ? 'matrizador' : 'caja'
+        });
+      }
+
+      // Verificar que la autorización esté pendiente
+      if (autorizacion.estado !== 'pendiente') {
+        return res.render('error', {
+          message: `Esta autorización ya está ${autorizacion.estado}`,
+          layout: usuario.rol === 'matrizador' ? 'matrizador' : 'caja'
+        });
+      }
+
+      // Calcular información adicional
+      const minutosEspera = autorizacion.calcularMinutosEspera();
+      const esUrgente = autorizacion.esUrgente();
+
+      console.log('🎯 [AUTORIZACIÓN] Renderizando vista de revisión para usuario:', usuario.nombre);
+      console.log('⏱️ [AUTORIZACIÓN] Minutos de espera:', minutosEspera, 'Es urgente:', esUrgente);
+      
+      res.render('matrizadores/autorizacion/revisar', {
+        autorizacion,
+        minutosEspera,
+        esUrgente,
+        usuario,
+        layout: usuario.rol === 'matrizador' ? 'matrizador' : 'caja',
+        title: 'Revisar Autorización Urgente'
+      });
+
+    } catch (error) {
+      console.error('Error al cargar página de autorización:', error);
+      res.status(500).render('error', {
+        message: 'Error interno del servidor',
+        layout: 'main'
       });
     }
   },

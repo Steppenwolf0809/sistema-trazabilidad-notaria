@@ -454,6 +454,7 @@ const cajaRoutes = require('./routes/cajaRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const archivoRoutes = require('./routes/archivoRoutes');
 const eliminacionRoutes = require('./routes/eliminacionRoutes');
+const autorizacionUrgenteRoutes = require('./routes/autorizacionUrgenteRoutes');
 
 // Importar middleware de autenticación
 const { verificarToken } = require('./middlewares/auth');
@@ -468,6 +469,8 @@ app.use('/admin', adminRoutes);
 app.use('/archivo', archivoRoutes);
 // Rutas de eliminación definitiva (solo para administradores)
 app.use('/api/admin', verificarToken, eliminacionRoutes);
+// Rutas de autorización urgente
+app.use('/api/autorizaciones-urgentes', verificarToken, autorizacionUrgenteRoutes);
 
 // Ruta de login
 app.get('/login', (req, res) => {

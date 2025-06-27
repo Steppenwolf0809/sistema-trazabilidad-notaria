@@ -12,6 +12,7 @@ const AutorizacionEntrega = require('./AutorizacionEntrega');
 const DocumentosRelacionados = require('./DocumentosRelacionados');
 const AuditoriaEliminacion = require('./AuditoriaEliminacion');
 const NotificacionEnviada = require('./NotificacionEnviada');
+const AutorizacionUrgente = require('./AutorizacionUrgente');
 
 // Relaciones entre modelos
 
@@ -197,6 +198,58 @@ NotificacionEnviada.belongsTo(Documento, {
   as: 'documento'
 });
 
+// ============== RELACIONES PARA AUTORIZACIONES URGENTES ==============
+
+// Relación Documento - AutorizacionUrgente
+Documento.hasMany(AutorizacionUrgente, {
+  foreignKey: 'documento_id',
+  as: 'autorizacionesUrgentes'
+});
+AutorizacionUrgente.belongsTo(Documento, {
+  foreignKey: 'documento_id',
+  as: 'documento'
+});
+
+// Relación Matrizador (solicitante) - AutorizacionUrgente
+Matrizador.hasMany(AutorizacionUrgente, {
+  foreignKey: 'solicitado_por_id',
+  as: 'autorizacionesSolicitadas'
+});
+AutorizacionUrgente.belongsTo(Matrizador, {
+  foreignKey: 'solicitado_por_id',
+  as: 'solicitante'
+});
+
+// Relación Matrizador (responsable) - AutorizacionUrgente
+Matrizador.hasMany(AutorizacionUrgente, {
+  foreignKey: 'matrizador_responsable_id',
+  as: 'autorizacionesAsignadas'
+});
+AutorizacionUrgente.belongsTo(Matrizador, {
+  foreignKey: 'matrizador_responsable_id',
+  as: 'matrizadorResponsable'
+});
+
+// Relación Matrizador (autorizador) - AutorizacionUrgente
+Matrizador.hasMany(AutorizacionUrgente, {
+  foreignKey: 'autorizada_por_id',
+  as: 'autorizacionesOtorgadasUrgentes'
+});
+AutorizacionUrgente.belongsTo(Matrizador, {
+  foreignKey: 'autorizada_por_id',
+  as: 'autorizador'
+});
+
+// Relación Matrizador (rechazador) - AutorizacionUrgente
+Matrizador.hasMany(AutorizacionUrgente, {
+  foreignKey: 'rechazada_por_id',
+  as: 'autorizacionesRechazadas'
+});
+AutorizacionUrgente.belongsTo(Matrizador, {
+  foreignKey: 'rechazada_por_id',
+  as: 'rechazador'
+});
+
 // NOTA: Las relaciones para el sistema de notificaciones están definidas en models/Documento.js
 // para evitar conflictos de alias duplicados
 
@@ -210,5 +263,6 @@ module.exports = {
   AutorizacionEntrega,
   DocumentosRelacionados,
   AuditoriaEliminacion,
-  NotificacionEnviada
+  NotificacionEnviada,
+  AutorizacionUrgente
 }; 

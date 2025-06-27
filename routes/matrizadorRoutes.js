@@ -78,6 +78,10 @@ router.get('/notificaciones/historial', validarAccesoConAuditoria(['matrizador',
 // API para obtener detalles de notificación
 router.get('/api/notificaciones/:id', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.obtenerDetalleNotificacion);
 
+// =============== AUTORIZACIONES URGENTES ===============
+// Página para revisar y autorizar solicitudes urgentes
+router.get('/autorizacion/revisar/:id', validarAccesoConAuditoria(['matrizador', 'caja', 'admin']), matrizadorController.revisarAutorizacion);
+
 // =============== LOGOUT ===============
 router.get('/logout', matrizadorController.logout);
 

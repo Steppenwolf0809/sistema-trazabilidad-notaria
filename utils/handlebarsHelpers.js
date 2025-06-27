@@ -770,6 +770,17 @@ const helpers = {
       'normal': 'Normal'
     };
     return textos[prioridad] || textos['normal'];
+  },
+
+  // ===============================================
+  // == HELPER SECTION PARA HANDLEBARS ==
+  // ===============================================
+  
+  // Helper section para inyectar contenido en layouts
+  section: function(name, options) {
+    if (!this._sections) this._sections = {};
+    this._sections[name] = options.fn(this);
+    return '';
   }
 };
 

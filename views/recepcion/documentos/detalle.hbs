@@ -8,10 +8,12 @@
       <a href="/recepcion/documentos" class="btn btn-sm btn-outline-secondary">
         <i class="fas fa-arrow-left me-1"></i> Volver
       </a>
+      
       {{#if (eq documento.estado "listo_para_entrega")}}
-      <a href="/recepcion/documentos/entrega/{{documento.id}}" class="btn btn-sm btn-success">
-        <i class="fas fa-hand-holding me-1"></i> Entregar
-      </a>
+        {{! Botón de Entrega - Disponible para todos los documentos listos }}
+        <a href="/recepcion/documentos/entrega/{{documento.id}}" class="btn btn-sm btn-success">
+          <i class="fas fa-hand-holding me-1"></i> Entregar
+        </a>
       {{/if}}
     </div>
   </div>

@@ -521,27 +521,78 @@
             </div>
           </div>
 
-          {{!-- ============== NUEVA SECCIÓN: AUTORIZACIÓN PARA DOCUMENTOS PENDIENTES ============== --}}
-          {{#if documentosGrupales.requiereAutorizacion}}
-            <div class="card mb-4 border-warning table-universal-card" id="seccion-autorizacion">
-              <div class="card-header bg-warning text-dark table-universal-header">
-                <h6 class="mb-0">
-                  <i class="fas fa-exclamation-triangle me-2"></i>
-                  Autorización Requerida
-                </h6>
-              </div>
-              <div class="card-body table-universal-body">
-                <div class="alert alert-warning">
-                  <p class="mb-3">
-                    <strong>Se detectaron documentos con pago pendiente.</strong> 
-                    Para proceder con la entrega, debe confirmar que ha consultado con el matrizador responsable.
-                  </p>
-                  <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="confirmarEntregaPendiente" name="confirmarEntregaPendiente" value="true" required>
-                    <label class="form-check-label" for="confirmarEntregaPendiente">
-                      <strong>Confirmo que he consultado con el matrizador responsable y autorizo la entrega de documentos con pago pendiente</strong>
-                    </label>
+
+
+          {{!-- ============== SECCIÓN AUTORIZACIÓN URGENTE ============== --}}
+          {{#if (and (or (eq documento.estadoPago 'pendiente') (eq documento.estadoPago 'pago_parcial')) (not documento.entrega_sin_verificar_pago))}}
+            <div class="card mb-4 border-warning" id="seccion-autorizacion-urgente">
+              <div class="card-header bg-light">
+                <div class="d-flex align-items-center justify-content-between">
+                  <div>
+                    <h6 class="mb-1 text-warning">
+                      <i class="fas fa-exclamation-triangle me-2"></i>
+                      Cliente Presente - Pago Pendiente
+                    </h6>
+                    <small class="text-muted">
+                      ¿El cliente necesita retirar el documento sin verificar el pago?
+                    </small>
                   </div>
+                  <span class="badge bg-warning text-dark fs-6">
+                    AUTORIZACIÓN DISPONIBLE
+                  </span>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="alert alert-info border-info">
+                  <div class="d-flex align-items-start">
+                    <i class="fas fa-info-circle me-3 mt-1 fs-5 text-info"></i>
+                    <div class="flex-grow-1">
+                      <h6 class="mb-2 text-info">📋 ¿Cuándo usar la Autorización Urgente?</h6>
+                      <ul class="mb-2 small">
+                        <li><strong>Cliente presente</strong> esperando el documento</li>
+                        <li><strong>Emergencia médica</strong> o situación urgente</li>
+                        <li><strong>Cliente corporativo</strong> con historial confiable</li>
+                        <li><strong>Error del sistema</strong> de pagos</li>
+                      </ul>
+                      <div class="text-warning small">
+                        <i class="fas fa-clock me-1"></i>
+                        <strong>Proceso rápido:</strong> El matrizador responsable recibirá una alerta y puede autorizar en 2-5 minutos.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                                 {{!-- Botón principal de solicitar autorización --}}
+                 <div class="d-grid gap-2 mb-3">
+                   <button type="button" class="btn btn-warning btn-lg" id="btnSolicitarAutorizacion"
+                           data-documento-id="{{documento.id}}"
+                           data-cliente="{{documento.nombreCliente}}"
+                           data-monto="{{documento.valorFactura}}"
+                           data-matrizador="{{#if documento.matrizador}}{{documento.matrizador.nombre}}{{else}}Sin asignar{{/if}}"
+                           data-extension="{{#if documento.matrizador}}{{documento.matrizador.extension}}{{else}}---{{/if}}"
+                           onclick="solicitarAutorizacionUrgente()">
+                     <i class="fas fa-exclamation-triangle me-2"></i>
+                     Solicitar Autorización Urgente
+                   </button>
+                 </div>
+
+                {{!-- Estado de la solicitud (se actualiza dinámicamente) --}}
+                <div id="estado-autorizacion" class="d-none">
+                  <div class="alert alert-success border-success">
+                    <div class="d-flex align-items-center">
+                      <i class="fas fa-check-circle me-3 fs-4 text-success"></i>
+                      <div class="flex-grow-1">
+                        <h6 class="mb-1 text-success">✅ Autorización Concedida</h6>
+                        <p class="mb-0 small">Puede proceder con la entrega del documento.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {{!-- Información del proceso --}}
+                <div class="small text-muted">
+                  <i class="fas fa-shield-alt me-1"></i>
+                  <strong>Proceso seguro:</strong> Se registra auditoría completa de quien autoriza y por qué.
                 </div>
               </div>
             </div>
@@ -922,5 +973,469 @@ document.addEventListener('DOMContentLoaded', function() {
       document.getElementById('seccion-entrega-grupal').style.display = 'none';
     };
   }
+
+  // ===================================================================
+  //            SISTEMA DE AUTORIZACIÓN URGENTE COMPLETO
+  // ===================================================================
+  
+  // Variables globales para el documento actual
+  window.documentoActual = {
+    id: '{{documento.id}}',
+    cliente_nombre: '{{documento.nombreCliente}}',
+    tipo_documento: '{{documento.tipoDocumento}}',
+    codigo_barras: '{{documento.codigoBarras}}',
+    valor_factura: '{{documento.valorFactura}}',
+    matrizador_nombre: '{{#if documento.matrizador}}{{documento.matrizador.nombre}}{{else}}Sin asignar{{/if}}',
+    matrizador_extension: '{{#if documento.matrizador}}{{documento.matrizador.extension}}{{else}}---{{/if}}'
+  };
+  
+  // Contadores y temporizadores
+  let tiempoInicioEspera = null;
+  let intervaloPoll = null;
+  let contadorTiempo = null;
+  
+     // ============== FUNCIÓN PRINCIPAL: SOLICITAR AUTORIZACIÓN URGENTE ==============
+   
+   window.solicitarAutorizacionUrgente = function() {
+     // Poblar modal con datos del documento actual
+     crearModalAutorizacion();
+   }
+   
+   function crearModalAutorizacion() {
+     const modalHTML = `
+       <div class="modal fade" id="modalSolicitarAutorizacion" tabindex="-1">
+         <div class="modal-dialog modal-lg">
+           <div class="modal-content">
+             <div class="modal-header bg-warning text-dark">
+               <h5 class="modal-title">
+                 <i class="fas fa-exclamation-triangle"></i> Solicitar Autorización Urgente
+               </h5>
+               <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+             </div>
+             <div class="modal-body">
+               
+               <!-- Información del documento -->
+               <div class="alert alert-info">
+                 <h6><i class="fas fa-file-text"></i> Documento a Autorizar</h6>
+                 <p><strong>Cliente:</strong> ${window.documentoActual.cliente_nombre}</p>
+                 <p><strong>Documento:</strong> ${window.documentoActual.tipo_documento} #${window.documentoActual.codigo_barras}</p>
+                 <p><strong>Monto pendiente:</strong> $${window.documentoActual.valor_factura}</p>
+                 <p class="mb-0"><strong>Matrizador responsable:</strong> ${window.documentoActual.matrizador_nombre}</p>
+               </div>
+               
+               <!-- Justificación detallada -->
+               <div class="mb-4">
+                 <label for="justificacionDetallada" class="form-label">
+                   <i class="fas fa-comment"></i> Justificación detallada de la urgencia *
+                 </label>
+                 <textarea class="form-control" id="justificacionDetallada" rows="3" 
+                           placeholder="Explique detalladamente por qué es necesario entregar sin verificar pago..."></textarea>
+                 <div class="form-text">
+                   <strong>Ejemplos:</strong> "Cliente presente con urgencia bancaria para crédito hipotecario", 
+                   "Situación médica familiar urgente", "Cliente corporativo con convenio establecido"
+                 </div>
+               </div>
+               
+               <!-- Método de autorización preferido -->
+               <div class="mb-4">
+                 <h6><i class="fas fa-route"></i> Método de Autorización Preferido</h6>
+                 
+                 <div class="form-check mb-2">
+                   <input class="form-check-input" type="radio" name="metodoAutorizacion" 
+                          id="metodoDigital" value="digital" checked>
+                   <label class="form-check-label" for="metodoDigital">
+                     <strong><i class="fas fa-desktop text-primary"></i> Autorización Digital (Recomendada)</strong><br>
+                     <small class="text-muted">Notificación inmediata a dashboard del matrizador + caja + admin</small>
+                   </label>
+                 </div>
+                 
+                 <div class="form-check">
+                   <input class="form-check-input" type="radio" name="metodoAutorizacion" 
+                          id="metodoVerbal" value="verbal">
+                   <label class="form-check-label" for="metodoVerbal">
+                     <strong><i class="fas fa-phone text-warning"></i> Autorización Verbal + Confirmación</strong><br>
+                     <small class="text-muted">Para cuando el matrizador no está en su computadora</small>
+                   </label>
+                 </div>
+               </div>
+               
+               <!-- Información de contacto (aparece si elige verbal) -->
+               <div id="infoContactoVerbal" style="display: none;" class="alert alert-warning">
+                 <h6><i class="fas fa-phone"></i> Información de Contacto</h6>
+                 <p><strong>Matrizador:</strong> ${window.documentoActual.matrizador_nombre}</p>
+                 <p><strong>Extensión:</strong> ${window.documentoActual.matrizador_extension}</p>
+                 <p class="mb-0"><strong>Recordatorio:</strong> El matrizador debe confirmar en sistema dentro de 24 horas</p>
+               </div>
+               
+               <!-- Confirmación de responsabilidad -->
+               <div class="form-check">
+                 <input class="form-check-input" type="checkbox" id="confirmoUrgencia">
+                 <label class="form-check-label" for="confirmoUrgencia">
+                   <strong>Confirmo que esta es una situación que justifica autorización urgente</strong>
+                 </label>
+               </div>
+               
+             </div>
+             <div class="modal-footer">
+               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                 <i class="fas fa-times"></i> Cancelar
+               </button>
+               <button type="button" class="btn btn-warning btn-lg" id="btnEnviarSolicitud" disabled>
+                 <i class="fas fa-paper-plane"></i> <strong>ENVIAR SOLICITUD</strong>
+               </button>
+             </div>
+           </div>
+         </div>
+       </div>
+     `;
+     
+     // Remover modal existente si existe
+     const modalExistente = document.getElementById('modalSolicitarAutorizacion');
+     if (modalExistente) modalExistente.remove();
+     
+     // Añadir modal al DOM
+     document.body.insertAdjacentHTML('beforeend', modalHTML);
+     
+     // Configurar event listeners
+     configurarModalListeners();
+     
+     // Mostrar modal
+     const modal = new bootstrap.Modal(document.getElementById('modalSolicitarAutorizacion'));
+     modal.show();
+   }
+   
+   function configurarModalListeners() {
+     // Event listeners para el modal
+     document.querySelectorAll('input[name="metodoAutorizacion"]').forEach(radio => {
+       radio.addEventListener('change', function() {
+         const infoContacto = document.getElementById('infoContactoVerbal');
+         infoContacto.style.display = this.value === 'verbal' ? 'block' : 'none';
+       });
+     });
+
+     document.getElementById('justificacionDetallada').addEventListener('input', validarModalAutorizacion);
+     document.getElementById('confirmoUrgencia').addEventListener('change', validarModalAutorizacion);
+     
+     document.getElementById('btnEnviarSolicitud').addEventListener('click', enviarSolicitudAutorizacion);
+   }
+   
+   function validarModalAutorizacion() {
+     const justificacion = document.getElementById('justificacionDetallada').value.trim();
+     const confirmado = document.getElementById('confirmoUrgencia').checked;
+     
+     document.getElementById('btnEnviarSolicitud').disabled = !(justificacion.length >= 15 && confirmado);
+   }
+  
+  // ============== FUNCIONES DE ENVÍO Y PROCESAMIENTO ==============
+   
+   function enviarSolicitudAutorizacion() {
+     const metodo = document.querySelector('input[name="metodoAutorizacion"]:checked').value;
+     const justificacion = document.getElementById('justificacionDetallada').value.trim();
+     
+     if (metodo === 'digital') {
+       enviarAutorizacionDigital(justificacion);
+     } else {
+       iniciarAutorizacionVerbal(justificacion);
+     }
+   }
+
+   function enviarAutorizacionDigital(justificacion) {
+     // Cerrar modal
+     bootstrap.Modal.getInstance(document.getElementById('modalSolicitarAutorizacion')).hide();
+     
+     // Mostrar indicador de carga
+     mostrarIndicadorEspera();
+     
+     // Enviar solicitud
+     fetch('/api/autorizaciones-urgentes/solicitar', {
+       method: 'POST',
+       headers: { 
+         'Content-Type': 'application/json'
+       },
+       body: JSON.stringify({
+         documento_id: window.documentoActual.id,
+         justificacion: justificacion,
+         urgencia: 'alta',
+         solicitado_desde: 'vista_entrega'
+       })
+     })
+     .then(response => response.json())
+     .then(data => {
+       if (data.success) {
+         // Actualizar UI para mostrar estado de espera
+         actualizarUIEsperandoAutorizacion(data.autorizacion_id);
+         
+         // Iniciar verificación periódica
+         verificarAutorizacionPeriodicamente(data.autorizacion_id);
+       } else {
+         alert('Error al enviar solicitud: ' + data.message);
+         ocultarIndicadorEspera();
+       }
+     })
+     .catch(error => {
+       console.error('Error:', error);
+       alert('Error de conexión al enviar solicitud');
+       ocultarIndicadorEspera();
+     });
+   }
+
+   function mostrarIndicadorEspera() {
+     const seccionAutorizacion = document.getElementById('seccion-autorizacion-urgente');
+     if (seccionAutorizacion) {
+       seccionAutorizacion.innerHTML = `
+         <div class="alert alert-info">
+           <div class="d-flex justify-content-between align-items-center">
+             <div>
+               <h6><i class="fas fa-hourglass-half"></i> Enviando solicitud...</h6>
+               <p class="mb-0">Procesando autorización urgente</p>
+             </div>
+             <div class="spinner-border spinner-border-sm text-info" role="status"></div>
+           </div>
+         </div>
+       `;
+     }
+   }
+
+   function actualizarUIEsperandoAutorizacion(autorizacionId) {
+     const seccionAutorizacion = document.getElementById('seccion-autorizacion-urgente');
+     if (seccionAutorizacion) {
+       seccionAutorizacion.innerHTML = `
+         <div class="alert alert-info">
+           <div class="d-flex justify-content-between align-items-center">
+             <div>
+               <h6><i class="fas fa-hourglass-half"></i> Esperando Autorización Digital</h6>
+               <p class="mb-1">Solicitud enviada a matrizador, caja y administradores</p>
+               <small class="text-muted">ID de solicitud: ${autorizacionId}</small>
+             </div>
+             <div class="text-end">
+               <div class="spinner-border spinner-border-sm text-info me-2" role="status"></div>
+               <span class="badge bg-info">EN PROCESO</span>
+             </div>
+           </div>
+           
+           <div class="progress mt-2" style="height: 4px;">
+             <div class="progress-bar progress-bar-striped progress-bar-animated bg-info" 
+                  style="width: 100%"></div>
+           </div>
+           
+           <div class="mt-2">
+             <small><i class="fas fa-clock"></i> Tiempo transcurrido: <span id="tiempoEspera">0:00</span></small>
+             <button class="btn btn-outline-warning btn-sm ms-2" onclick="cambiarAVerbal('${autorizacionId}')">
+               <i class="fas fa-phone"></i> Usar método verbal
+             </button>
+           </div>
+         </div>
+       `;
+       
+       // Iniciar contador de tiempo
+       iniciarContadorTiempo();
+     }
+   }
+
+   function verificarAutorizacionPeriodicamente(autorizacionId) {
+     // Limpiar intervalo previo si existe
+     if (intervaloPoll) clearInterval(intervaloPoll);
+     
+     intervaloPoll = setInterval(() => {
+       fetch(`/api/autorizaciones-urgentes/${autorizacionId}/datos`)
+         .then(response => response.json())
+         .then(data => {
+           if (data.success) {
+             if (data.estado === 'autorizada') {
+               clearInterval(intervaloPoll);
+               onAutorizacionConcedida(data);
+             } else if (data.estado === 'rechazada') {
+               clearInterval(intervaloPoll);
+               onAutorizacionRechazada(data);
+             }
+           }
+           // Si sigue pendiente, continúa verificando
+         })
+         .catch(error => console.error('Error verificando autorización:', error));
+     }, 15000); // Verificar cada 15 segundos
+     
+     // Timeout después de 10 minutos
+     setTimeout(() => {
+       if (intervaloPoll) {
+         clearInterval(intervaloPoll);
+         mostrarOpcionEscalacion(autorizacionId);
+       }
+     }, 10 * 60 * 1000);
+   }
+  
+   function iniciarContadorTiempo() {
+     tiempoInicioEspera = new Date();
+     
+     if (contadorTiempo) clearInterval(contadorTiempo);
+     
+     contadorTiempo = setInterval(() => {
+       const ahora = new Date();
+       const diferencia = Math.floor((ahora - tiempoInicioEspera) / 1000);
+       const minutos = Math.floor(diferencia / 60);
+       const segundos = diferencia % 60;
+       
+       const tiempoElement = document.getElementById('tiempoEspera');
+       if (tiempoElement) {
+         tiempoElement.textContent = `${minutos}:${segundos.toString().padStart(2, '0')}`;
+       }
+     }, 1000);
+   }
+
+   function onAutorizacionConcedida(data) {
+     // Limpiar temporizadores
+     if (contadorTiempo) clearInterval(contadorTiempo);
+     if (intervaloPoll) clearInterval(intervaloPoll);
+     
+     // Actualizar UI para mostrar autorización concedida
+     const seccionAutorizacion = document.getElementById('seccion-autorizacion-urgente');
+     if (seccionAutorizacion) {
+       seccionAutorizacion.innerHTML = `
+         <div class="alert alert-success">
+           <div class="d-flex justify-content-between align-items-center">
+             <div>
+               <h6><i class="fas fa-check-circle"></i> Autorización Concedida</h6>
+               <p class="mb-1"><strong>Autorizada por:</strong> ${data.autorizado_por_nombre || 'N/A'}</p>
+               <p class="mb-1"><strong>Justificación:</strong> ${data.justificacion_autorizacion || 'N/A'}</p>
+               <small class="text-muted">Autorizada el ${formatearFecha(data.fecha_autorizacion)}</small>
+             </div>
+             <div class="text-end">
+               <span class="badge bg-success">AUTORIZADA</span>
+             </div>
+           </div>
+         </div>
+       `;
+     }
+     
+     // Habilitar entrega final
+     habilitarEntregaFinal();
+     
+     // Mostrar notificación de éxito
+     mostrarNotificacionExito('¡Autorización concedida! Puede proceder con la entrega del documento.');
+   }
+
+   function onAutorizacionRechazada(data) {
+     // Limpiar temporizadores
+     if (contadorTiempo) clearInterval(contadorTiempo);
+     if (intervaloPoll) clearInterval(intervaloPoll);
+     
+     // Actualizar UI para mostrar rechazo
+     const seccionAutorizacion = document.getElementById('seccion-autorizacion-urgente');
+     if (seccionAutorizacion) {
+       seccionAutorizacion.innerHTML = `
+         <div class="alert alert-danger">
+           <div class="d-flex justify-content-between align-items-center">
+             <div>
+               <h6><i class="fas fa-times-circle"></i> Autorización Rechazada</h6>
+               <p class="mb-1"><strong>Rechazada por:</strong> ${data.rechazado_por_nombre || 'N/A'}</p>
+               <p class="mb-1"><strong>Motivo:</strong> ${data.motivo_rechazo || 'No especificado'}</p>
+               <small class="text-muted">Rechazada el ${formatearFecha(data.fecha_rechazo)}</small>
+             </div>
+             <div class="text-end">
+               <span class="badge bg-danger">RECHAZADA</span>
+             </div>
+           </div>
+           <div class="mt-2">
+             <p class="mb-2"><strong>Opciones disponibles:</strong></p>
+             <button class="btn btn-warning btn-sm me-2" onclick="solicitarAutorizacionUrgente()">
+               <i class="fas fa-redo"></i> Nueva solicitud
+             </button>
+             <button class="btn btn-info btn-sm" onclick="contactarSupervision()">
+               <i class="fas fa-phone"></i> Contactar supervisión
+             </button>
+           </div>
+         </div>
+       `;
+     }
+   }
+
+   function habilitarEntregaFinal() {
+     // Encontrar y habilitar el botón de confirmación de entrega
+     const formEntrega = document.querySelector('form[action*="confirmar-entrega"]');
+     if (formEntrega) {
+       const btnConfirmar = formEntrega.querySelector('button[type="submit"]');
+       if (btnConfirmar) {
+         btnConfirmar.disabled = false;
+         btnConfirmar.className = 'btn btn-success btn-lg';
+         btnConfirmar.innerHTML = '<i class="fas fa-check-circle"></i> <strong>CONFIRMAR ENTREGA AUTORIZADA</strong>';
+       }
+     }
+   }
+
+   function mostrarNotificacionExito(mensaje) {
+     // Crear notificación toast
+     const toastHTML = `
+       <div class="toast align-items-center text-white bg-success border-0" role="alert">
+         <div class="d-flex">
+           <div class="toast-body">
+             <i class="fas fa-check-circle me-2"></i>${mensaje}
+           </div>
+           <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+         </div>
+       </div>
+     `;
+     
+     // Añadir al DOM y mostrar
+     document.body.insertAdjacentHTML('beforeend', toastHTML);
+     const toast = new bootstrap.Toast(document.body.lastElementChild);
+     toast.show();
+   }
+
+   function formatearFecha(fecha) {
+     if (!fecha) return 'N/A';
+     return new Date(fecha).toLocaleString('es-EC', {
+       year: 'numeric',
+       month: '2-digit',
+       day: '2-digit',
+       hour: '2-digit',
+       minute: '2-digit'
+     });
+   }
+
+   function ocultarIndicadorEspera() {
+     // Restaurar estado original de la sección
+     const seccionAutorizacion = document.getElementById('seccion-autorizacion-urgente');
+     if (seccionAutorizacion) {
+       seccionAutorizacion.innerHTML = `
+         <div class="alert alert-warning">
+           <!-- Contenido original restaurado -->
+         </div>
+       `;
+     }
+   }
+
+   // ============== FUNCIONES ADICIONALES ==============
+   
+   window.cambiarAVerbal = function(autorizacionId) {
+     if (confirm('¿Está seguro de cambiar a autorización verbal? Esto requerirá contacto directo con el matrizador.')) {
+       iniciarAutorizacionVerbal(null, autorizacionId);
+     }
+   }
+   
+   function iniciarAutorizacionVerbal(justificacion, autorizacionExistente = null) {
+     alert('Función de autorización verbal en desarrollo. Por favor use el método digital o contacte al administrador.');
+   }
+   
+   window.contactarSupervision = function() {
+     alert('Por favor contacte a supervisión al ext. 101 para resolver esta situación.');
+   }
+   
+        function mostrarOpcionEscalacion(autorizacionId) {
+       const seccionAutorizacion = document.getElementById('seccion-autorizacion-urgente');
+     if (seccionAutorizacion) {
+       const alertaEscalacion = document.createElement('div');
+       alertaEscalacion.className = 'alert alert-warning mt-2';
+       alertaEscalacion.innerHTML = `
+         <h6><i class="fas fa-exclamation-triangle"></i> Sin respuesta después de 10 minutos</h6>
+         <p>Considere usar autorización verbal o contactar supervisión.</p>
+         <button class="btn btn-warning btn-sm me-2" onclick="cambiarAVerbal('${autorizacionId}')">
+           <i class="fas fa-phone"></i> Autorización verbal
+         </button>
+         <button class="btn btn-info btn-sm" onclick="contactarSupervision()">
+           <i class="fas fa-user-tie"></i> Contactar supervisión
+         </button>
+       `;
+       seccionAutorizacion.appendChild(alertaEscalacion);
+     }
+   }
 });
 </script> 
