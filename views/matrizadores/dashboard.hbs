@@ -48,6 +48,23 @@
   <!-- Las alertas se cargarán aquí dinámicamente -->
 </div>
 
+<!-- Autorizaciones Verbales Pendientes de Ratificación -->
+<div class="row mb-4" id="autorizaciones-verbales-pendientes" style="display: none;">
+  <div class="col-12">
+    <div class="card border-warning">
+      <div class="card-header bg-warning text-dark">
+        <h5 class="mb-0">
+          <i class="fas fa-phone-check me-2"></i> Autorizaciones Verbales - Requieren Ratificación
+          <span class="badge bg-dark float-end" id="contador-verbales">0</span>
+        </h5>
+      </div>
+      <div class="card-body p-0" id="tabla-verbales-container">
+        <!-- Se carga dinámicamente -->
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Sistema de Alertas -->
 <div class="row mb-4">
   <div class="col-12">
@@ -657,6 +674,15 @@
     
     function mostrarAlertasAutorizacion(autorizaciones) {
       console.log('🎯 Mostrando alertas de autorización:', autorizaciones);
+      
+      // FILTRAR SOLO LAS AUTORIZACIONES DIGITALES PENDIENTES (excluir verbales)
+      const autorizacionesDigitales = autorizaciones.filter(auth => auth.estado === 'pendiente');
+      
+      if (autorizacionesDigitales.length === 0) {
+        ocultarAlertasAutorizacion();
+        return;
+      }
+      
       const contenedor = document.getElementById('alertas-autorizacion-urgente');
       
       if (!contenedor) {
@@ -664,7 +690,7 @@
         return;
       }
       
-      const alertasHTML = autorizaciones.map(auth => {
+      const alertasHTML = autorizacionesDigitales.map(auth => {
         const esUrgente = auth.es_urgente;
         const badgeClass = esUrgente ? 'bg-danger' : 'bg-warning';
         const iconClass = esUrgente ? 'fa-bell' : 'fa-clock';
@@ -723,7 +749,7 @@
       }).join('');
       
       contenedor.innerHTML = alertasHTML;
-      console.log('✅ Alertas de autorización mostradas en el DOM');
+      console.log('✅ Alertas de autorización digital mostradas en el DOM');
     }
     
     function ocultarAlertasAutorizacion() {
@@ -737,7 +763,164 @@
     // Actualizar alertas cada 20 segundos
     setInterval(cargarAlertasAutorizacionUrgente, 20000);
     
+    // ============== SISTEMA DE AUTORIZACIONES VERBALES PENDIENTES ==============
+    
+    function cargarAutorizacionesVerbalesPendientes() {
+      console.log('🔄 Cargando autorizaciones verbales pendientes...');
+      
+      fetch('/api/autorizaciones-urgentes/pendientes', {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success && data.autorizaciones) {
+            // Filtrar solo las que están en estado 'verbal_pendiente'
+            const verbalesPendientes = data.autorizaciones.filter(auth => auth.estado === 'verbal_pendiente');
+            
+            if (verbalesPendientes.length > 0) {
+              mostrarAutorizacionesVerbales(verbalesPendientes);
+            } else {
+              ocultarAutorizacionesVerbales();
+            }
+          }
+        })
+        .catch(error => {
+          console.error('❌ Error al cargar autorizaciones verbales:', error);
+        });
+    }
+    
+    function mostrarAutorizacionesVerbales(autorizaciones) {
+      const contenedor = document.getElementById('autorizaciones-verbales-pendientes');
+      const contador = document.getElementById('contador-verbales');
+      const tablaContainer = document.getElementById('tabla-verbales-container');
+      
+      contador.textContent = autorizaciones.length;
+      contenedor.style.display = 'block';
+      
+      const tablaHTML = `
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-warning">
+              <tr>
+                <th>Cliente</th>
+                <th>Documento</th>
+                <th>Monto</th>
+                <th>Autorizado Verbalmente</th>
+                <th>Fecha Límite</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${autorizaciones.map(auth => {
+                const fechaLimite = new Date(auth.verbal_fecha_limite);
+                const horasRestantes = Math.max(0, Math.floor((fechaLimite - new Date()) / (1000 * 60 * 60)));
+                const esUrgente = horasRestantes <= 6;
+                
+                return `
+                  <tr class="${esUrgente ? 'table-danger' : ''}">
+                    <td>
+                      <strong>${auth.cliente_nombre}</strong>
+                      <br><small class="text-muted">${auth.solicitado_por_nombre}</small>
+                    </td>
+                    <td>
+                      <span class="badge bg-info">${auth.tipo_documento}</span>
+                      <br><small>${auth.codigo_barras}</small>
+                    </td>
+                    <td>
+                      <strong>$${auth.monto_pendiente}</strong>
+                    </td>
+                    <td>
+                      <strong>${auth.verbal_quien_autorizo}</strong>
+                      <br><small class="text-muted">${new Date(auth.verbal_fecha).toLocaleString('es-EC')}</small>
+                    </td>
+                    <td>
+                      <span class="badge ${esUrgente ? 'bg-danger' : 'bg-warning'}">
+                        ${horasRestantes}h restantes
+                      </span>
+                      <br><small class="text-muted">${fechaLimite.toLocaleDateString('es-EC')}</small>
+                    </td>
+                    <td>
+                      <button class="btn btn-success btn-sm me-1" 
+                              onclick="ratificarAutorizacionVerbal('${auth.id}', true)">
+                        <i class="fas fa-check"></i> Ratificar
+                      </button>
+                      <button class="btn btn-danger btn-sm" 
+                              onclick="ratificarAutorizacionVerbal('${auth.id}', false)">
+                        <i class="fas fa-times"></i> Rechazar
+                      </button>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+      
+      tablaContainer.innerHTML = tablaHTML;
+    }
+    
+    function ocultarAutorizacionesVerbales() {
+      const contenedor = document.getElementById('autorizaciones-verbales-pendientes');
+      contenedor.style.display = 'none';
+    }
+    
+    // Función global para ratificar autorizaciones verbales
+    window.ratificarAutorizacionVerbal = function(autorizacionId, confirmar) {
+      const accion = confirmar ? 'ratificar' : 'rechazar';
+      const mensaje = confirmar 
+        ? '¿Confirma que ratifica esta autorización verbal? Esto validará la entrega ya realizada.'
+        : '¿Está seguro de rechazar esta ratificación? Esto revocará la autorización y se registrará en auditoría.';
+      
+      if (!confirm(mensaje)) return;
+      
+      const btnRatificar = document.querySelector(`button[onclick*="${autorizacionId}"][onclick*="true"]`);
+      const btnRechazar = document.querySelector(`button[onclick*="${autorizacionId}"][onclick*="false"]`);
+      
+      if (btnRatificar) btnRatificar.disabled = true;
+      if (btnRechazar) btnRechazar.disabled = true;
+      
+      fetch(`/api/autorizaciones-urgentes/${autorizacionId}/ratificar`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          confirmar_ratificacion: confirmar
+        })
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert(confirmar ? 'Autorización ratificada correctamente' : 'Ratificación rechazada');
+            location.reload(); // Recargar para actualizar
+          } else {
+            alert('Error: ' + data.message);
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Error al procesar la ratificación');
+        })
+        .finally(() => {
+          if (btnRatificar) btnRatificar.disabled = false;
+          if (btnRechazar) btnRechazar.disabled = false;
+        });
+    };
+    
+    // Cargar autorizaciones verbales al inicio
+    cargarAutorizacionesVerbalesPendientes();
+    
+    // Actualizar cada 30 segundos
+    setInterval(cargarAutorizacionesVerbalesPendientes, 30000);
+
   });
+
 </script>
 
 <div class="statistic">

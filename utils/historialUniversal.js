@@ -79,6 +79,60 @@ const moment = require('moment');
      categoriaTexto: 'Financiero',
      mostrarEn: ['admin', 'caja', 'archivo', 'matrizador', 'recepcion'],
      prioridad: 'alta'
+   },
+   'autorizacion_urgente_solicitada': {
+     icono: '<i class="fas fa-exclamation-triangle"></i>',
+     titulo: 'Autorización urgente solicitada',
+     color: 'warning',
+     categoria: 'autorizacion',
+     categoriaTexto: 'Autorización',
+     mostrarEn: ['admin', 'caja', 'archivo', 'matrizador', 'recepcion'],
+     prioridad: 'alta'
+   },
+   'autorizacion_urgente_digital': {
+     icono: '<i class="fas fa-computer"></i>',
+     titulo: 'Autorización urgente concedida (digital)',
+     color: 'success',
+     categoria: 'autorizacion',
+     categoriaTexto: 'Autorización',
+     mostrarEn: ['admin', 'caja', 'archivo', 'matrizador', 'recepcion'],
+     prioridad: 'alta'
+   },
+   'autorizacion_urgente_rechazada': {
+     icono: '<i class="fas fa-times-circle"></i>',
+     titulo: 'Autorización urgente rechazada',
+     color: 'danger',
+     categoria: 'autorizacion',
+     categoriaTexto: 'Autorización',
+     mostrarEn: ['admin', 'caja', 'archivo', 'matrizador', 'recepcion'],
+     prioridad: 'alta'
+   },
+   'autorizacion_verbal_registrada': {
+     icono: '<i class="fas fa-phone"></i>',
+     titulo: 'Autorización verbal registrada',
+     color: 'info',
+     categoria: 'autorizacion',
+     categoriaTexto: 'Autorización',
+     mostrarEn: ['admin', 'caja', 'archivo', 'matrizador', 'recepcion'],
+     prioridad: 'alta'
+   },
+   'autorizacion_verbal_ratificada': {
+     icono: '<i class="fas fa-phone-check"></i>',
+     titulo: 'Autorización verbal ratificada',
+     color: 'success',
+     categoria: 'autorizacion',
+     categoriaTexto: 'Autorización',
+     mostrarEn: ['admin', 'caja', 'archivo', 'matrizador', 'recepcion'],
+     prioridad: 'alta'
+   },
+   'autorizacion_verbal_rechazada': {
+     icono: '<i class="fas fa-phone-times"></i>',
+     titulo: 'Autorización verbal rechazada',
+     color: 'danger',
+     categoria: 'autorizacion',
+     categoriaTexto: 'Autorización',
+     mostrarEn: ['admin', 'caja', 'archivo', 'matrizador', 'recepcion'],
+     prioridad: 'alta'
    }
 };
 
@@ -100,7 +154,8 @@ async function obtenerHistorialUniversal(documentoId, userRole, options = {}) {
     // 2. Obtener eventos de la base de datos
     const eventosDB = await EventoDocumento.findAll({
       where: { documentoId: documentoId },
-      order: [['created_at', 'DESC']]
+      order: [['created_at', 'DESC']],
+      raw: true  // Obtener datos raw para evitar problemas de Sequelize con JSON
     });
     
     // 3. Formatear eventos
@@ -182,12 +237,19 @@ function formatearEventoEspecifico(eventoDB, documento) {
     
     let detalles = {};
     try {
-      if (typeof eventoDB.detalles === 'string' && eventoDB.detalles.trim()) {
-        detalles = JSON.parse(eventoDB.detalles);
-      } else if (typeof eventoDB.detalles === 'object' && eventoDB.detalles) {
+      if (typeof eventoDB.detalles === 'string') {
+        // Verificar si es un string vacío o solo comillas
+        if (eventoDB.detalles === '""' || eventoDB.detalles === "''" || eventoDB.detalles.trim() === '') {
+          detalles = {};
+        } else {
+          // Simple parseado directo
+          detalles = JSON.parse(eventoDB.detalles);
+        }
+      } else if (typeof eventoDB.detalles === 'object' && eventoDB.detalles !== null) {
         detalles = eventoDB.detalles;
       }
     } catch (e) {
+      console.warn(`⚠️ Error parseando detalles del evento ${eventoDB.id}: ${e.message}`);
       detalles = {};
     }
     
@@ -226,6 +288,31 @@ function determinarTipoEspecifico(eventoDB, documento) {
     return 'autorizacion_credito';
   }
   
+  // Verificar eventos de autorización urgente
+  if (eventoDB.tipo === 'autorizacion_urgente_solicitada') {
+    return 'autorizacion_urgente_solicitada';
+  }
+  
+  if (eventoDB.tipo === 'autorizacion_urgente_autorizada') {
+    return 'autorizacion_urgente_digital';
+  }
+  
+  if (eventoDB.tipo === 'autorizacion_urgente_rechazada') {
+    return 'autorizacion_urgente_rechazada';
+  }
+  
+  if (eventoDB.tipo === 'autorizacion_verbal_registrada') {
+    return 'autorizacion_verbal_registrada';
+  }
+  
+  if (eventoDB.tipo === 'autorizacion_verbal_ratificada') {
+    return 'autorizacion_verbal_ratificada';
+  }
+  
+  if (eventoDB.tipo === 'autorizacion_verbal_rechazada') {
+    return 'autorizacion_verbal_rechazada';
+  }
+  
   const mapeoTipos = {
     'pago': 'pago_registrado',
     'entrega': 'documento_entregado',
@@ -247,8 +334,32 @@ function construirDescripcionEspecifica(tipoEvento, eventoDB, documento, detalle
       return `Pago de $${monto} procesado mediante ${metodo}`;
     
     case 'documento_entregado':
-      const receptor = detalles.receptor || documento.nombreReceptor || 'receptor no especificado';
-      return `Documento entregado a ${receptor}`;
+      // WORKAROUND: Parsear detalles directamente si no están parseados
+      let detallesReales = detalles;
+      if (typeof detalles === 'string' && eventoDB.detalles) {
+        try {
+          detallesReales = JSON.parse(eventoDB.detalles);
+        } catch (e) {
+          detallesReales = {};
+        }
+      }
+      
+      // Priorizar detalles del evento sobre datos del documento
+      const receptor = detallesReales.receptor || eventoDB.descripcion?.match(/Entregado a ([^(]+)/)?.[1]?.trim() || documento.nombreReceptor || 'receptor no especificado';
+      const identificacionReceptor = detallesReales.identificacion_receptor;
+      const relacionReceptor = detallesReales.relacion_receptor;
+      
+      let descripcionEntrega = `Documento entregado a ${receptor}`;
+      
+      if (identificacionReceptor) {
+        descripcionEntrega += ` (ID: ${identificacionReceptor})`;
+      }
+      
+      if (relacionReceptor && relacionReceptor !== 'titular') {
+        descripcionEntrega += ` como ${relacionReceptor}`;
+      }
+      
+      return descripcionEntrega;
     
     case 'matrizador_asignado':
       const matrizador = detalles.matrizadorNuevo || eventoDB.matrizador?.nombre || 'matrizador';
@@ -273,6 +384,36 @@ function construirDescripcionEspecifica(tipoEvento, eventoDB, documento, detalle
       }[justificacion] || justificacion;
       
       return `Autorización de crédito: ${justificacionTexto}. Cliente puede retirar sin verificar pago`;
+    
+    case 'autorizacion_urgente_solicitada':
+      const solicitadoPor = detalles.solicitado_por_nombre || eventoDB.usuario || 'Usuario';
+      const justificacionSolicitud = detalles.justificacion || detalles.justificacion_solicitud || 'No especificada';
+      return `${solicitadoPor} solicitó autorización urgente. Motivo: ${justificacionSolicitud}`;
+    
+    case 'autorizacion_urgente_digital':
+      const autorizadoPor = detalles.autorizado_por_nombre || eventoDB.usuario || 'Matrizador';
+      const justificacionAutorizacion = detalles.justificacion_autorizacion || 'Autorización concedida';
+      const tiempoRespuesta = detalles.minutos_respuesta ? ` (Respuesta en ${detalles.minutos_respuesta} minutos)` : '';
+      return `${autorizadoPor} autorizó digitalmente la entrega urgente. ${justificacionAutorizacion}${tiempoRespuesta}`;
+    
+    case 'autorizacion_urgente_rechazada':
+      const rechazadoPor = detalles.rechazado_por_nombre || eventoDB.usuario || 'Matrizador';
+      const motivoRechazo = detalles.motivo_rechazo || 'No especificado';
+      return `${rechazadoPor} rechazó la autorización urgente. Motivo: ${motivoRechazo}`;
+    
+    case 'autorizacion_verbal_registrada':
+      const quienAutorizo = detalles.verbal_quien_autorizo || 'Persona autorizada';
+      const fechaVerbal = detalles.verbal_fecha ? new Date(detalles.verbal_fecha).toLocaleString('es-EC') : 'fecha no especificada';
+      return `Autorización verbal registrada por ${quienAutorizo} el ${fechaVerbal}. Requiere ratificación en 24 horas`;
+    
+    case 'autorizacion_verbal_ratificada':
+      const ratificadoPor = detalles.autorizado_por_nombre || eventoDB.usuario || 'Matrizador';
+      return `${ratificadoPor} ratificó digitalmente la autorización verbal. Proceso completado correctamente`;
+    
+    case 'autorizacion_verbal_rechazada':
+      const rechazadoVerbalPor = detalles.rechazado_por_nombre || eventoDB.usuario || 'Matrizador';
+      const motivoRechazoVerbal = detalles.motivo_rechazo || 'Ratificación denegada';
+      return `${rechazadoVerbalPor} rechazó la ratificación de la autorización verbal. ${motivoRechazoVerbal}`;
     
     default:
       return eventoDB.descripcion || eventoDB.titulo || 'Evento del sistema';
@@ -301,7 +442,18 @@ function obtenerInformacionUsuario(eventoDB) {
 }
 
 function esEventoVago(tipo) {
-  const tiposVagos = ['otro', 'actualizacion', 'evento', 'tipoEvento', 'vista'];
+  const tiposVagos = [
+    'otro', 
+    'actualizacion', 
+    'evento', 
+    'tipoEvento', 
+    'vista',
+    'edicion',           // Eventos genéricos de edición
+    'actualizacion_general',
+    'cambio_estado',     // Estados genéricos sin especificar
+    'evento_generico'
+  ];
+  
   return tiposVagos.includes(tipo);
 }
 
@@ -318,8 +470,44 @@ function ordenarEventos(eventos) {
   return eventos.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 }
 
+/**
+ * FUNCIÓN HELPER: Registrar evento de autorización urgente en el historial
+ */
+async function registrarEventoAutorizacion(documentoId, tipo, detalles, usuario = null) {
+  try {
+    console.log(`📝 [HISTORIAL] Registrando evento ${tipo} para documento ${documentoId}`);
+    
+    const EventoDocumento = require('../models/EventoDocumento');
+    
+    const eventoData = {
+      documentoId: documentoId,
+      tipo: tipo,
+      titulo: TIPOS_EVENTO_UNIVERSAL[tipo]?.titulo || tipo,
+      descripcion: `Evento de ${tipo}`,
+      usuario: usuario?.nombre || usuario || 'Sistema',
+      detalles: detalles,
+      metadatos: {
+        categoria: 'autorizacion',
+        timestamp: new Date().toISOString(),
+        usuario_id: usuario?.id || null,
+        usuario_rol: usuario?.rol || null
+      }
+    };
+    
+    const evento = await EventoDocumento.create(eventoData);
+    console.log(`✅ [HISTORIAL] Evento ${tipo} registrado con ID ${evento.id}`);
+    
+    return evento;
+    
+  } catch (error) {
+    console.error(`❌ [HISTORIAL] Error registrando evento ${tipo}:`, error);
+    throw error;
+  }
+}
+
 module.exports = {
   obtenerHistorialUniversal,
-  TIPOS_EVENTO_UNIVERSAL
+  TIPOS_EVENTO_UNIVERSAL,
+  registrarEventoAutorizacion
 };
 

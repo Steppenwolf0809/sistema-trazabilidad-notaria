@@ -42,7 +42,40 @@ const EventoDocumento = sequelize.define('EventoDocumento', {
     type: DataTypes.STRING,
     allowNull: false,
     validate: {
-      isIn: [['creacion', 'cambio_estado', 'entrega', 'entrega_grupal', 'cancelacion', 'edicion', 'otro', 'verificacion_codigo', 'verificacion_llamada', 'modificacion', 'pago', 'confirmacion_pago', 'tipoEvento', 'documento_listo', 'documento_entregado', 'notificacion_enviada', 'notificacion_grupal', 'registro', 'vista', 'asignacion', 'evento', 'eliminacion', 'actualizacion', 'estado']]
+      isIn: [[
+        'creacion', 
+        'cambio_estado', 
+        'entrega', 
+        'entrega_grupal', 
+        'cancelacion', 
+        'edicion', 
+        'otro', 
+        'verificacion_codigo', 
+        'verificacion_llamada', 
+        'modificacion', 
+        'pago', 
+        'confirmacion_pago', 
+        'tipoEvento', 
+        'documento_listo', 
+        'documento_entregado', 
+        'notificacion_enviada', 
+        'notificacion_grupal', 
+        'registro', 
+        'vista', 
+        'asignacion', 
+        'evento', 
+        'eliminacion', 
+        'actualizacion', 
+        'estado',
+        // Nuevos tipos de eventos de autorización urgente
+        'autorizacion_urgente_solicitada',
+        'autorizacion_urgente_autorizada',
+        'autorizacion_urgente_digital',
+        'autorizacion_urgente_rechazada',
+        'autorizacion_verbal_registrada',
+        'autorizacion_verbal_ratificada',
+        'autorizacion_verbal_rechazada'
+      ]]
     }
   },
   
@@ -65,11 +98,10 @@ const EventoDocumento = sequelize.define('EventoDocumento', {
     allowNull: true
   },
   
-  // Detalles adicionales del evento (como JSON)
+  // Detalles del evento en formato JSON
   detalles: {
     type: DataTypes.JSON,
-    allowNull: true,
-    defaultValue: {}
+    allowNull: true
   },
   
   // Usuario que realizó la acción (texto plano para compatibilidad)
@@ -78,11 +110,10 @@ const EventoDocumento = sequelize.define('EventoDocumento', {
     allowNull: true
   },
   
-  // Datos adicionales del evento (como JSON)
+  // Metadatos adicionales en formato JSON
   metadatos: {
     type: DataTypes.JSON,
-    allowNull: true,
-    defaultValue: {}
+    allowNull: true
   }
 }, {
   // Opciones del modelo

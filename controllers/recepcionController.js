@@ -2045,8 +2045,25 @@ const recepcionController = {
               await EventoDocumento.create({
                 documentoId: docHabilitante.id,
                 tipo: 'entrega',
-                detalles: detallesHabilitante,
-                usuario: req.matrizador.nombre
+                titulo: 'Documento entregado',
+                descripcion: detallesHabilitante,
+                usuario: req.matrizador.nombre,
+                detalles: {
+                  receptor: nombreReceptor,
+                  identificacion_receptor: identificacionReceptor,
+                  relacion_receptor: relacionReceptor,
+                  tipo_verificacion: tipoVerificacion,
+                  observaciones: observaciones,
+                  entregado_por: req.matrizador.nombre,
+                  fecha_entrega: new Date().toISOString(),
+                  documento_habilitante: true
+                },
+                metadatos: {
+                  categoria: 'entrega',
+                  usuario_id: req.matrizador.id,
+                  usuario_rol: req.matrizador.rol,
+                  timestamp: new Date().toISOString()
+                }
               }, { transaction });
               
               console.log(`✅ Evento de entrega registrado para documento habilitante: ${docHabilitante.codigoBarras}`);
@@ -2089,8 +2106,24 @@ const recepcionController = {
         await EventoDocumento.create({
           documentoId: documento.id,
           tipo: 'entrega',
-          detalles,
-          usuario: req.matrizador.nombre
+          titulo: 'Documento entregado',
+          descripcion: detalles,
+          usuario: req.matrizador.nombre,
+          detalles: {
+            receptor: nombreReceptor,
+            identificacion_receptor: identificacionReceptor,
+            relacion_receptor: relacionReceptor,
+            tipo_verificacion: tipoVerificacion,
+            observaciones: observaciones,
+            entregado_por: req.matrizador.nombre,
+            fecha_entrega: new Date().toISOString()
+          },
+          metadatos: {
+            categoria: 'entrega',
+            usuario_id: req.matrizador.id,
+            usuario_rol: req.matrizador.rol,
+            timestamp: new Date().toISOString()
+          }
         }, { transaction });
       } catch (eventError) {
         console.error('Error al registrar evento de entrega:', eventError);

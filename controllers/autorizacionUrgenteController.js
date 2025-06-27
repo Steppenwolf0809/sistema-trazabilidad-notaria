@@ -1,5 +1,6 @@
 const { AutorizacionUrgente, Documento, Matrizador } = require('../models');
 const { Op } = require('sequelize');
+const { registrarEventoAutorizacion } = require('../utils/historialUniversal');
 
 /**
  * SOLICITAR AUTORIZACIÓN URGENTE (DIGITAL PREFERIDA)
@@ -84,6 +85,27 @@ const solicitarAutorizacion = async (req, res) => {
 
     console.log('✅ [AUTORIZACIÓN] Creada exitosamente:', autorizacion.id);
 
+    // Registrar evento en el historial
+    try {
+      await registrarEventoAutorizacion(
+        documento_id,
+        'autorizacion_urgente_solicitada',
+        {
+          solicitado_por_nombre: usuario.nombre,
+          solicitado_por_rol: usuario.rol,
+          justificacion: justificacion,
+          urgencia: urgencia,
+          codigo_barras: documento.codigoBarras || documento.codigoVerificacion,
+          monto_pendiente: documento.valorFactura,
+          matrizador_responsable: documento.matrizador?.nombre || 'Sin asignar'
+        },
+        usuario
+      );
+    } catch (historialError) {
+      console.warn('⚠️ Error registrando evento en historial:', historialError);
+      // No fallar la operación principal por errores de historial
+    }
+
     // TODO: Aquí se enviarían las notificaciones en tiempo real
     // await notificarAutorizacionUrgente(autorizacion);
 
@@ -112,7 +134,7 @@ const obtenerPendientes = async (req, res) => {
     const usuario = req.matrizador;
     
     let whereClause = {
-      estado: { [Op.in]: ['pendiente'] }
+      estado: { [Op.in]: ['pendiente', 'verbal_pendiente'] }
     };
 
     if (usuario.rol === 'matrizador') {
@@ -153,7 +175,12 @@ const obtenerPendientes = async (req, res) => {
         solicitado_por_rol: auth.solicitado_por_rol,
         fecha_solicitud: auth.solicitud_fecha,
         minutos_espera: minutosEspera,
-        es_urgente: esUrgente
+        es_urgente: esUrgente,
+        estado: auth.estado,
+        // Campos específicos para autorizaciones verbales
+        verbal_quien_autorizo: auth.verbal_quien_autorizo,
+        verbal_fecha: auth.verbal_fecha,
+        verbal_fecha_limite: auth.verbal_fecha_limite
       };
     });
 
@@ -324,6 +351,29 @@ const autorizar = async (req, res) => {
       // Confirmar transacción
       await transaction.commit();
       
+      // Registrar evento en el historial
+      try {
+        const minutosRespuesta = autorizacion.solicitud_fecha ? 
+          Math.floor((new Date() - new Date(autorizacion.solicitud_fecha)) / (1000 * 60)) : null;
+          
+        await registrarEventoAutorizacion(
+          autorizacion.documento_id,
+          'autorizacion_urgente_digital',
+          {
+            autorizado_por_nombre: usuario.nombre,
+            autorizado_por_rol: usuario.rol,
+            justificacion_autorizacion: justificacionFinal,
+            tipo_justificacion: tipo_justificacion,
+            minutos_respuesta: minutosRespuesta,
+            solicitado_originalmente_por: autorizacion.solicitado_por_nombre
+          },
+          usuario
+        );
+      } catch (historialError) {
+        console.warn('⚠️ Error registrando evento en historial:', historialError);
+        // No fallar la operación principal por errores de historial
+      }
+      
     } catch (transactionError) {
       // Revertir transacción si algo falla
       await transaction.rollback();
@@ -420,6 +470,24 @@ const rechazar = async (req, res) => {
       motivo_rechazo: motivo
     });
 
+    // Registrar evento en el historial
+    try {
+      await registrarEventoAutorizacion(
+        autorizacion.documento_id,
+        'autorizacion_urgente_rechazada',
+        {
+          rechazado_por_nombre: usuario.nombre,
+          rechazado_por_rol: usuario.rol,
+          motivo_rechazo: motivo,
+          solicitado_originalmente_por: autorizacion.solicitado_por_nombre
+        },
+        usuario
+      );
+    } catch (historialError) {
+      console.warn('⚠️ Error registrando evento en historial:', historialError);
+      // No fallar la operación principal por errores de historial
+    }
+
     res.json({
       success: true,
       message: '❌ Autorización rechazada correctamente',
@@ -466,28 +534,64 @@ const marcarVerbal = async (req, res) => {
       });
     }
 
-    // Marcar como verbal
-    const fechaLimite = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    await autorizacion.update({
-      es_verbal: true,
-      estado: 'verbal_pendiente',
-      verbal_fecha: new Date(),
-      verbal_quien_autorizo: quien_autorizo,
-      verbal_fecha_limite: fechaLimite
-    });
-    
-    // Actualizar documento con valor válido del enum
-    await Documento.update({
-      entrega_sin_verificar_pago: true,
-      justificacion_entrega_sin_pago: 'urgencia_justificada'  // Valor válido del enum
-    }, {
-      where: { id: autorizacion.documento_id }
-    });
+    // Usar transacción para garantizar consistencia
+    const { sequelize } = require('../config/database');
+    const transaction = await sequelize.transaction();
 
-    res.json({
-      success: true,
-      message: 'Autorización verbal registrada. Requiere ratificación en 24 horas.'
-    });
+    try {
+      // Marcar como verbal
+      const fechaLimite = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      await autorizacion.update({
+        es_verbal: true,
+        estado: 'verbal_pendiente',
+        verbal_fecha: new Date(),
+        verbal_quien_autorizo: quien_autorizo,
+        verbal_fecha_limite: fechaLimite,
+        justificacion_autorizacion: justificacion // Guardar también la justificación
+      }, { transaction });
+      
+      // Actualizar documento con valor válido del enum
+      await Documento.update({
+        entrega_sin_verificar_pago: true,
+        justificacion_entrega_sin_pago: 'urgencia_justificada'  // Valor válido del enum
+      }, {
+        where: { id: autorizacion.documento_id },
+        transaction
+      });
+
+      await transaction.commit();
+
+      // Registrar evento en el historial
+      try {
+        await registrarEventoAutorizacion(
+          autorizacion.documento_id,
+          'autorizacion_verbal_registrada',
+          {
+            verbal_quien_autorizo: quien_autorizo,
+            verbal_fecha: new Date(),
+            justificacion: justificacion,
+            fecha_limite_ratificacion: fechaLimite,
+            solicitado_originalmente_por: autorizacion.solicitado_por_nombre
+          },
+          {
+            nombre: quien_autorizo,
+            rol: 'autorizado_verbal'
+          }
+        );
+      } catch (historialError) {
+        console.warn('⚠️ Error registrando evento en historial:', historialError);
+        // No fallar la operación principal por errores de historial
+      }
+
+      res.json({
+        success: true,
+        message: 'Autorización verbal registrada. Requiere ratificación en 24 horas.'
+      });
+
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
 
   } catch (error) {
     console.error('❌ Error al registrar autorización verbal:', error);
@@ -548,6 +652,24 @@ const ratificarVerbal = async (req, res) => {
         autorizada_por_rol: usuario.rol
       });
 
+      // Registrar evento en el historial
+      try {
+        await registrarEventoAutorizacion(
+          autorizacion.documento_id,
+          'autorizacion_verbal_ratificada',
+          {
+            autorizado_por_nombre: usuario.nombre,
+            autorizado_por_rol: usuario.rol,
+            autorizado_verbalmente_por: autorizacion.verbal_quien_autorizo,
+            fecha_autorizacion_verbal: autorizacion.verbal_fecha,
+            solicitado_originalmente_por: autorizacion.solicitado_por_nombre
+          },
+          usuario
+        );
+      } catch (historialError) {
+        console.warn('⚠️ Error registrando evento en historial:', historialError);
+      }
+
       res.json({
         success: true,
         message: 'Autorización verbal ratificada correctamente'
@@ -569,6 +691,25 @@ const ratificarVerbal = async (req, res) => {
       }, {
         where: { id: autorizacion.documento_id }
       });
+
+      // Registrar evento en el historial
+      try {
+        await registrarEventoAutorizacion(
+          autorizacion.documento_id,
+          'autorizacion_verbal_rechazada',
+          {
+            rechazado_por_nombre: usuario.nombre,
+            rechazado_por_rol: usuario.rol,
+            motivo_rechazo: 'Ratificación denegada por el responsable',
+            autorizado_verbalmente_por: autorizacion.verbal_quien_autorizo,
+            fecha_autorizacion_verbal: autorizacion.verbal_fecha,
+            solicitado_originalmente_por: autorizacion.solicitado_por_nombre
+          },
+          usuario
+        );
+      } catch (historialError) {
+        console.warn('⚠️ Error registrando evento en historial:', historialError);
+      }
 
       res.json({
         success: true,

@@ -562,19 +562,42 @@
                   </div>
                 </div>
 
-                                 {{!-- Botón principal de solicitar autorización --}}
-                 <div class="d-grid gap-2 mb-3">
-                   <button type="button" class="btn btn-warning btn-lg" id="btnSolicitarAutorizacion"
-                           data-documento-id="{{documento.id}}"
-                           data-cliente="{{documento.nombreCliente}}"
-                           data-monto="{{documento.valorFactura}}"
-                           data-matrizador="{{#if documento.matrizador}}{{documento.matrizador.nombre}}{{else}}Sin asignar{{/if}}"
-                           data-extension="{{#if documento.matrizador}}{{documento.matrizador.extension}}{{else}}---{{/if}}"
-                           onclick="solicitarAutorizacionUrgente()">
-                     <i class="fas fa-exclamation-triangle me-2"></i>
-                     Solicitar Autorización Urgente
-                   </button>
-                 </div>
+                {{!-- Botones de autorización --}}
+                <div class="row mb-3">
+                  <div class="col-md-6">
+                    <div class="d-grid">
+                      <button type="button" class="btn btn-warning btn-lg" id="btnSolicitarAutorizacion"
+                              data-documento-id="{{documento.id}}"
+                              data-cliente="{{documento.nombreCliente}}"
+                              data-monto="{{documento.valorFactura}}"
+                              data-matrizador="{{#if documento.matrizador}}{{documento.matrizador.nombre}}{{else}}Sin asignar{{/if}}"
+                              data-extension="{{#if documento.matrizador}}{{documento.matrizador.extension}}{{else}}---{{/if}}"
+                              onclick="solicitarAutorizacionUrgente()">
+                        <i class="fas fa-computer me-2"></i>
+                        Autorización Digital
+                      </button>
+                      <small class="text-muted mt-1 text-center">
+                        <i class="fas fa-bolt me-1"></i>Respuesta en 2-5 minutos
+                      </small>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="d-grid">
+                      <button type="button" class="btn btn-info btn-lg" id="btnAutorizacionVerbal"
+                              data-documento-id="{{documento.id}}"
+                              data-cliente="{{documento.nombreCliente}}"
+                              data-monto="{{documento.valorFactura}}"
+                              data-matrizador="{{#if documento.matrizador}}{{documento.matrizador.nombre}}{{else}}Sin asignar{{/if}}"
+                              onclick="mostrarModalAutorizacionVerbal()">
+                        <i class="fas fa-phone me-2"></i>
+                        Autorización Verbal
+                      </button>
+                      <small class="text-muted mt-1 text-center">
+                        <i class="fas fa-phone me-1"></i>Confirmar por teléfono
+                      </small>
+                    </div>
+                  </div>
+                </div>
 
                 {{!-- Estado de la solicitud (se actualiza dinámicamente) --}}
                 <div id="estado-autorizacion" class="d-none">
@@ -1438,4 +1461,264 @@ document.addEventListener('DOMContentLoaded', function() {
      }
    }
 });
+
+// ============== FUNCIONES PARA AUTORIZACIÓN VERBAL ==============
+
+function mostrarModalAutorizacionVerbal() {
+  // Crear o mostrar modal
+  const modalId = 'modalAutorizacionVerbal';
+  let modal = document.getElementById(modalId);
+  
+  if (!modal) {
+    // Crear modal dinámicamente
+    const modalHTML = `
+      <div class="modal fade" id="${modalId}" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+              <h5 class="modal-title">
+                <i class="fas fa-phone me-2"></i>Autorización Verbal por Teléfono
+              </h5>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <div class="alert alert-info">
+                <h6><i class="fas fa-info-circle me-2"></i>Instrucciones</h6>
+                <ol class="mb-0">
+                  <li><strong>Llame</strong> al matrizador responsable por teléfono</li>
+                  <li><strong>Explique</strong> la situación del cliente presente</li>
+                  <li><strong>Obtenga</strong> autorización verbal clara</li>
+                  <li><strong>Complete</strong> este formulario con los datos</li>
+                </ol>
+              </div>
+              
+              <form id="formAutorizacionVerbal">
+                <div class="row mb-3">
+                  <div class="col-md-6">
+                    <label class="form-label"><strong>Cliente:</strong></label>
+                    <input type="text" class="form-control" id="clienteVerbal" readonly>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label"><strong>Monto:</strong></label>
+                    <input type="text" class="form-control" id="montoVerbal" readonly>
+                  </div>
+                </div>
+                
+                <div class="row mb-3">
+                  <div class="col-md-8">
+                    <label class="form-label"><strong>Matrizador Responsable:</strong></label>
+                    <input type="text" class="form-control" id="matrizadorVerbal" readonly>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label"><strong>Hora de Llamada:</strong></label>
+                    <input type="text" class="form-control" id="horaLlamada" readonly>
+                  </div>
+                </div>
+                
+                <div class="mb-3">
+                  <label for="quienAutorizo" class="form-label">
+                    <strong>¿Quién autorizó verbalmente?</strong>
+                    <span class="text-danger">*</span>
+                  </label>
+                  <select class="form-select" id="quienAutorizo" required>
+                    <option value="">Seleccione...</option>
+                    <option value="matrizador_responsable">Matrizador responsable directamente</option>
+                    <option value="supervisor_caja">Supervisor de caja</option>
+                    <option value="administrador">Administrador</option>
+                    <option value="otro">Otro (especificar)</option>
+                  </select>
+                </div>
+                
+                <div class="mb-3" id="divOtroAutorizador" style="display: none;">
+                  <label for="otroAutorizador" class="form-label">
+                    <strong>Especifique quién autorizó:</strong>
+                  </label>
+                  <input type="text" class="form-control" id="otroAutorizador" 
+                         placeholder="Nombre y cargo de quien autorizó">
+                </div>
+                
+                <div class="mb-3">
+                  <label for="justificacionVerbal" class="form-label">
+                    <strong>Justificación de la Autorización Verbal</strong>
+                    <span class="text-danger">*</span>
+                  </label>
+                  <textarea class="form-control" id="justificacionVerbal" rows="3" required
+                            placeholder="Explique por qué se requiere autorización verbal (ej: Cliente presente esperando, emergencia médica, etc.)"></textarea>
+                </div>
+                
+                <div class="form-check mb-3">
+                  <input class="form-check-input" type="checkbox" id="confirmarLlamada" required>
+                  <label class="form-check-label" for="confirmarLlamada">
+                    <strong>Confirmo que hablé directamente con el matrizador y obtuve autorización verbal clara</strong>
+                  </label>
+                </div>
+                
+                <div class="alert alert-warning">
+                  <h6><i class="fas fa-exclamation-triangle me-2"></i>Importante</h6>
+                  <ul class="mb-0">
+                    <li>Esta autorización permitirá la entrega inmediata</li>
+                    <li>El matrizador debe <strong>ratificar digitalmente</strong> en 24 horas</li>
+                    <li>Se registra auditoría completa de esta transacción</li>
+                  </ul>
+                </div>
+              </form>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                <i class="fas fa-times me-1"></i>Cancelar
+              </button>
+              <button type="button" class="btn btn-info" onclick="procesarAutorizacionVerbal()">
+                <i class="fas fa-phone-check me-1"></i>Confirmar Autorización Verbal
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    modal = document.getElementById(modalId);
+    
+    // Agregar event listener para mostrar/ocultar campo "otro"
+    document.getElementById('quienAutorizo').addEventListener('change', function() {
+      const divOtro = document.getElementById('divOtroAutorizador');
+      divOtro.style.display = this.value === 'otro' ? 'block' : 'none';
+    });
+  }
+  
+  // Llenar datos del documento
+  const btnVerbal = document.getElementById('btnAutorizacionVerbal');
+  document.getElementById('clienteVerbal').value = btnVerbal.dataset.cliente;
+  document.getElementById('montoVerbal').value = '$' + parseFloat(btnVerbal.dataset.monto || 0).toFixed(2);
+  document.getElementById('matrizadorVerbal').value = btnVerbal.dataset.matrizador;
+  document.getElementById('horaLlamada').value = new Date().toLocaleTimeString('es-EC');
+  
+  // Mostrar modal
+  const bsModal = new bootstrap.Modal(modal);
+  bsModal.show();
+}
+
+function procesarAutorizacionVerbal() {
+  const form = document.getElementById('formAutorizacionVerbal');
+  if (!form.checkValidity()) {
+    form.reportValidity();
+    return;
+  }
+  
+  const documentoId = document.getElementById('btnAutorizacionVerbal').dataset.documentoId;
+  const quienAutorizo = document.getElementById('quienAutorizo').value;
+  const otroAutorizador = document.getElementById('otroAutorizador').value;
+  const justificacion = document.getElementById('justificacionVerbal').value;
+  
+  // Determinar nombre de quien autorizó
+  let nombreAutorizador;
+  switch(quienAutorizo) {
+    case 'matrizador_responsable':
+      nombreAutorizador = document.getElementById('matrizadorVerbal').value;
+      break;
+    case 'supervisor_caja':
+      nombreAutorizador = 'Supervisor de Caja';
+      break;
+    case 'administrador':
+      nombreAutorizador = 'Administrador';
+      break;
+    case 'otro':
+      nombreAutorizador = otroAutorizador;
+      break;
+    default:
+      nombreAutorizador = 'No especificado';
+  }
+  
+  // Mostrar loading
+  const btnConfirmar = document.querySelector('#modalAutorizacionVerbal .modal-footer .btn-info');
+  const textoOriginal = btnConfirmar.innerHTML;
+  btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
+  btnConfirmar.disabled = true;
+  
+  // Primero solicitar autorización urgente
+  fetch('/api/autorizaciones-urgentes/solicitar', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + (localStorage.getItem('token') || '')
+    },
+    body: JSON.stringify({
+      documento_id: documentoId,
+      justificacion: justificacion,
+      urgencia: 'alta',
+      solicitado_desde: 'autorización_verbal'
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // Ahora marcar como verbal
+      return fetch('/api/autorizaciones-urgentes/' + data.autorizacion_id + '/verbal', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + (localStorage.getItem('token') || '')
+        },
+        body: JSON.stringify({
+          quien_autorizo: nombreAutorizador,
+          justificacion: justificacion
+        })
+      });
+    } else {
+      throw new Error(data.message || 'Error al crear solicitud');
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // Cerrar modal
+      bootstrap.Modal.getInstance(document.getElementById('modalAutorizacionVerbal')).hide();
+      
+      // Actualizar UI
+      actualizarUIAutorizacionVerbal();
+      
+      // Mostrar mensaje de éxito
+      mostrarNotificacionExito('Autorización verbal registrada. El documento puede ser entregado.');
+      
+    } else {
+      throw new Error(data.message || 'Error al procesar autorización verbal');
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('Error al procesar autorización verbal: ' + error.message);
+  })
+  .finally(() => {
+    // Restaurar botón
+    btnConfirmar.innerHTML = textoOriginal;
+    btnConfirmar.disabled = false;
+  });
+}
+
+function actualizarUIAutorizacionVerbal() {
+  const seccionAutorizacion = document.getElementById('seccion-autorizacion-urgente');
+  if (seccionAutorizacion) {
+    seccionAutorizacion.innerHTML = 
+      '<div class="alert alert-success border-success">' +
+        '<div class="d-flex align-items-center">' +
+          '<i class="fas fa-phone-check me-3 fs-4 text-success"></i>' +
+          '<div class="flex-grow-1">' +
+            '<h6 class="mb-1 text-success">✅ Autorización Verbal Registrada</h6>' +
+            '<p class="mb-1">El documento puede ser entregado inmediatamente.</p>' +
+            '<small class="text-success">' +
+              '<i class="fas fa-clock me-1"></i>' +
+              '<strong>Pendiente:</strong> El matrizador debe ratificar digitalmente en 24 horas.' +
+            '</small>' +
+          '</div>' +
+          '<div class="text-end">' +
+            '<span class="badge bg-success fs-6">AUTORIZADA</span>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+  }
+  
+  // Habilitar entrega
+  habilitarEntregaFinal();
+}
+
 </script> 
