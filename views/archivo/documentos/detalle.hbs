@@ -90,6 +90,73 @@
         </div>
       </div>
     </div>
+
+    <!-- ============== SECCIÓN DE NOTIFICACIONES GRUPALES ============== -->
+    {{#if esDocumentoPropio}}
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">
+              <i class="fas fa-users me-2"></i>Sistema de Notificaciones Grupales
+              <small class="text-muted">(Solo documentos propios)</small>
+            </h5>
+          </div>
+          <div class="card-body">
+            <!-- Información de grupo actual -->
+            <div id="infoGrupoActual">
+              {{#if documento.notificacionGrupal}}
+                <div class="alert alert-info">
+                  <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                      <h6><i class="fas fa-users me-1"></i> Documento en Grupo</h6>
+                      <p class="mb-1"><strong>Código del Grupo:</strong> <span class="badge bg-primary">{{documento.notificacionGrupal.codigoVerificacion}}</span></p>
+                      <p class="mb-1"><strong>Total de Documentos:</strong> {{documento.notificacionGrupal.totalDocumentos}}</p>
+                      <p class="mb-1"><strong>Rol en el Grupo:</strong> 
+                        {{#if documento.esLiderGrupo}}
+                          <span class="badge bg-success">👑 Líder del Grupo</span>
+                        {{else}}
+                          <span class="badge bg-secondary">👥 Miembro del Grupo</span>
+                        {{/if}}
+                      </p>
+                      <p class="mb-0"><small class="text-muted">Creado: {{formatDateTime documento.notificacionGrupal.fechaCreacion}}</small></p>
+                    </div>
+                    <div>
+                      <button type="button" class="btn btn-sm btn-outline-danger" onclick="abrirModalSeparar()">
+                        <i class="fas fa-unlink me-1"></i> Separar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              {{else}}
+                <div class="alert alert-light">
+                  <h6><i class="fas fa-info-circle me-1"></i> Documento Individual</h6>
+                  <p class="mb-2">Este documento no pertenece a ningún grupo de notificación.</p>
+                  <button type="button" class="btn btn-sm btn-primary" onclick="abrirModalAgrupar()">
+                    <i class="fas fa-plus me-1"></i> Agrupar con otros documentos
+                  </button>
+                  {{!-- 💡 AVISO INFORMATIVO PARA ARCHIVO --}}
+                  <div class="mt-3 pt-2 border-top">
+                    <small class="text-muted d-flex align-items-start">
+                      <i class="fas fa-lightbulb me-2 mt-1 opacity-75" style="font-size: 0.8rem;"></i>
+                      <span>
+                        <strong>Código grupal:</strong> Se generará automáticamente cuando agrupe documentos propios del mismo cliente. 
+                        Solo puede agrupar documentos que le pertenecen.
+                      </span>
+                    </small>
+                  </div>
+                </div>
+              {{/if}}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {{/if}}
+    <!-- ============== FIN SECCIÓN NOTIFICACIONES GRUPALES ============== -->
+        </div>
+      </div>
+    </div>
     
     <!-- Información financiera -->
     {{#if documento.valorFactura}}
@@ -160,8 +227,34 @@
 
 <!-- CSS eliminado - Ahora usa el sistema universal -->
 
+<!-- Incluir sistema de notificaciones grupales para archivo -->
+<script src="/js/notificaciones-grupales.js"></script>
 <script>
+// Configuración específica para archivo
+window.NOTIFICACIONES_GRUPALES_CONFIG = {
+  documentoId: {{documento.id}},
+  documentoCodigoBarras: '{{documento.codigoBarras}}',
+  clienteIdentificacion: '{{documento.identificacionCliente}}',
+  esDocumentoPropio: {{#if esDocumentoPropio}}true{{else}}false{{/if}},
+  perteneceAGrupo: {{#if documento.notificacionGrupal}}true{{else}}false{{/if}},
+  esLiderGrupo: {{#if documento.esLiderGrupo}}true{{else}}false{{/if}},
+  endpoints: {
+    detectar: '/archivo/api/documentos/{{documento.id}}/detectar-notificacion',
+    crear: '/archivo/api/grupos-notificacion/crear',
+    separar: '/archivo/api/grupos-notificacion/{{documento.id}}/separar',
+    marcarListo: '/archivo/api/documentos/{{documento.id}}/marcar-listo-grupo'
+  },
+  interfaz: {
+    contenedorInfo: '#infoGrupoActual',
+    botonMarcarListo: 'button[onclick*="marcarListo"]'
+  }
+};
+
+// Función original de marcar listo (interceptada por el sistema de grupos)
 function marcarListo(documentoId) {
+  // Esta función será interceptada por el sistema de notificaciones grupales
+  // si el documento pertenece a un grupo
+  
   if (confirm('¿Está seguro de marcar este documento como listo para entrega?')) {
     fetch(`/archivo/documentos/marcar-listo/${documentoId}`, {
       method: 'POST',
@@ -174,6 +267,11 @@ function marcarListo(documentoId) {
       if (data.exito) {
         alert('Documento marcado como listo exitosamente');
         location.reload();
+      } else if (data.requiereConfirmacionGrupo) {
+        // Redirigir al sistema de grupos
+        if (window.notificacionesGrupales) {
+          window.notificacionesGrupales.mostrarModalMarcarGrupo(data.grupo);
+        }
       } else {
         alert('Error: ' + data.mensaje);
       }
@@ -184,4 +282,29 @@ function marcarListo(documentoId) {
     });
   }
 }
+
+// Funciones para modales de notificaciones grupales
+function abrirModalAgrupar() {
+  if (window.notificacionesGrupales) {
+    window.notificacionesGrupales.abrirModalAgrupar();
+  } else {
+    alert('Sistema de notificaciones grupales no disponible');
+  }
+}
+
+function abrirModalSeparar() {
+  if (window.notificacionesGrupales) {
+    window.notificacionesGrupales.abrirModalSeparar();
+  } else {
+    alert('Sistema de notificaciones grupales no disponible');
+  }
+}
+
+// Inicializar sistema de notificaciones grupales cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', function() {
+  if (window.NotificacionesGrupales && window.NOTIFICACIONES_GRUPALES_CONFIG.esDocumentoPropio) {
+    window.notificacionesGrupales = new NotificacionesGrupales(window.NOTIFICACIONES_GRUPALES_CONFIG);
+    console.log('✅ Sistema de notificaciones grupales inicializado para archivo');
+  }
+});
 </script> 

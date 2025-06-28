@@ -75,6 +75,9 @@ router.get('/api/documentos/principales', validarAccesoConAuditoria(['matrizador
 // =============== NOTIFICACIONES Y HISTORIAL ===============
 router.get('/notificaciones/historial', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.historialNotificaciones);
 
+// Ruta para detalle de notificación (modal)
+router.get('/notificaciones/detalle/:id', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.obtenerDetalleNotificacion);
+
 // API para obtener detalles de notificación
 router.get('/api/notificaciones/:id', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.obtenerDetalleNotificacion);
 
@@ -111,5 +114,21 @@ router.get('/api/:id/qr', roleAuth(['admin']), matrizadorController.generarQR);
 
 // Rutas de administración de matrizadores
 router.get('/admin', roleAuth(['admin']), matrizadorController.adminMatrizadores);
+
+// =============== NUEVAS RUTAS: NOTIFICACIONES GRUPALES - SPRINT 3 ===============
+
+// API para detectar documentos del mismo cliente para notificación grupal
+router.get('/api/documentos/:documentoId/detectar-notificacion', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.detectarDocumentosParaNotificacion);
+
+// API para crear grupo de notificación
+router.post('/api/grupos-notificacion/crear', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.crearGrupoNotificacion);
+
+// API para separar documento de grupo de notificación
+router.post('/api/grupos-notificacion/:documentoId/separar', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.separarDeGrupoNotificacion);
+
+// API específica para marcar grupo completo como listo
+router.post('/api/documentos/:id/marcar-listo-grupo', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.marcarGrupoComoListo);
+
+// =============== FUNCIONES ESPECIALIZADAS PARA MATRIZADOR ===============
 
 module.exports = router; 

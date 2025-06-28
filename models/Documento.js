@@ -378,6 +378,29 @@ const Documento = sequelize.define('Documento', {
     comment: 'Razón específica por la cual no se debe notificar este documento'
   },
 
+  // ============== NOTIFICACIONES GRUPALES ==============
+  
+  // Relación con notificación grupal
+  notificacionGrupalId: {
+    type: DataTypes.INTEGER,
+    field: 'notificacion_grupal_id',
+    allowNull: true,
+    references: {
+      model: 'notificaciones_grupales',
+      key: 'id'
+    },
+    comment: 'ID del grupo de notificación al que pertenece este documento'
+  },
+  
+  // Indica si es el documento líder del grupo
+  esLiderGrupo: {
+    type: DataTypes.BOOLEAN,
+    field: 'es_lider_grupo',
+    defaultValue: false,
+    allowNull: false,
+    comment: 'True si es el documento principal/líder del grupo de notificación'
+  },
+
   // ============== CAMPOS DE AUTORIZACIÓN DE CRÉDITO ==============
   
   // Indica si el documento puede entregarse sin verificar pago
@@ -526,6 +549,23 @@ Documento.hasMany(Documento, {
   as: 'documentosHabilitantes',
   constraints: false
 });
+
+// ============== RELACIONES PARA NOTIFICACIONES GRUPALES ==============
+
+// Configurar relaciones después de la definición del modelo
+Documento.associate = function(models) {
+  // Un documento pertenece a una notificación grupal (opcional)
+  Documento.belongsTo(models.NotificacionGrupal, {
+    foreignKey: 'notificacionGrupalId',
+    as: 'notificacionGrupal'
+  });
+  
+  // Un documento pertenece a un matrizador
+  Documento.belongsTo(models.Matrizador, {
+    foreignKey: 'idMatrizador',
+    as: 'matrizador'
+  });
+};
 
 // ============== FUNCIÓN AUXILIAR PARA CÁLCULO AUTOMÁTICO ==============
 

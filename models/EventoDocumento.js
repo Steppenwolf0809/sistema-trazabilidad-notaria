@@ -74,7 +74,10 @@ const EventoDocumento = sequelize.define('EventoDocumento', {
         'autorizacion_urgente_rechazada',
         'autorizacion_verbal_registrada',
         'autorizacion_verbal_ratificada',
-        'autorizacion_verbal_rechazada'
+        'autorizacion_verbal_rechazada',
+        // Nuevos tipos para sistema de notificaciones grupales
+        'agrupacion',
+        'separacion'
       ]]
     }
   },

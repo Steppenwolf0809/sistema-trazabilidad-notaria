@@ -29,6 +29,61 @@
     </div>
   </div>
   <div class="card-body">
+    {{!-- 🚨 AVISOS IMPORTANTES PARA NOTIFICACIONES GRUPALES --}}
+    
+    {{!-- CASO 1: Documento puede agruparse con otros --}}
+    {{#if (and (eq documento.estado "en_proceso") informacionGrupal.puedeCrearGrupo)}}
+    <div class="alert alert-warning border-start border-warning border-4 mb-4" role="alert">
+      <div class="d-flex align-items-start">
+        <i class="fas fa-exclamation-triangle text-warning me-3 mt-1"></i>
+        <div>
+          <h6 class="alert-heading mb-2">
+            <strong>⚠️ ¡Atención! Documentos agrupables detectados</strong>
+          </h6>
+          <p class="mb-2">
+            Se encontraron <strong>{{informacionGrupal.totalAgrupables}} documentos adicionales</strong> del mismo cliente 
+            (<strong>{{documento.nombreCliente}}</strong>) que pueden agruparse para enviar una sola notificación.
+          </p>
+          <div class="d-flex flex-wrap gap-2 align-items-center">
+            <small class="text-warning">
+              <i class="fas fa-lightbulb me-1"></i>
+              <strong>Recomendación:</strong> Considere agrupar antes de marcar como listo para optimizar las notificaciones al cliente.
+            </small>
+            <a href="#seccion-notificaciones-grupales" class="btn btn-sm btn-outline-warning">
+              <i class="fas fa-arrow-down me-1"></i> Ver documentos disponibles
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+    {{/if}}
+    
+    {{!-- CASO 2: Documento YA está en un grupo --}}
+    {{#if (and (eq documento.estado "en_proceso") informacionGrupal.grupo)}}
+    <div class="alert alert-info border-start border-info border-4 mb-4" role="alert">
+      <div class="d-flex align-items-start">
+        <i class="fas fa-layer-group text-info me-3 mt-1"></i>
+        <div>
+          <h6 class="alert-heading mb-2">
+            <strong>📱 Documento agrupado para notificación</strong>
+          </h6>
+          <p class="mb-2">
+            Este documento está agrupado con <strong>{{informacionGrupal.totalDocumentosGrupo}} documentos</strong> del mismo cliente 
+            (<strong>{{documento.nombreCliente}}</strong>) para notificación consolidada.
+          </p>
+          <div class="d-flex flex-wrap gap-2 align-items-center">
+            <small class="text-info">
+              <i class="fas fa-info-circle me-1"></i>
+              <strong>Al marcar como listo:</strong> Puede elegir procesar solo este documento o todo el grupo.
+            </small>
+            <a href="#seccion-notificaciones-grupales" class="btn btn-sm btn-outline-info">
+              <i class="fas fa-arrow-down me-1"></i> Ver grupo completo
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+    {{/if}}
     <!-- Información general -->
     <div class="row mb-4">
       <div class="col-md-4">
@@ -95,10 +150,16 @@
             {{/if}}
           </p>
           {{#if (eq documento.estado "listo_para_entrega")}}
-          <p><strong>🔑 Código de Entrega:</strong> 
-            <span class="badge bg-success fs-4">{{documento.codigoVerificacion}}</span>
-          </p>
-          <p class="small text-muted">Proporcione este código al cliente para confirmar la entrega</p>
+            {{#if documento.codigoVerificacion}}
+            <p><strong>🔑 Código de Entrega:</strong> 
+              <span class="badge bg-success fs-4">{{documento.codigoVerificacion}}</span>
+            </p>
+            <p class="small text-muted">Proporcione este código al cliente para confirmar la entrega</p>
+            {{else}}
+            <div class="alert alert-warning py-2">
+              <small><i class="fas fa-exclamation-triangle me-1"></i>Documento listo pero sin código de verificación (entrega inmediata o notificación omitida)</small>
+            </div>
+            {{/if}}
           {{else if (eq documento.estado "en_proceso")}}
           <div class="alert alert-info py-2">
             <small><i class="fas fa-info-circle me-1"></i>El código de entrega se generará cuando marque el documento como listo</small>
@@ -284,6 +345,215 @@
     </div>
     {{/if}}
     
+    <!-- ============== NUEVA SECCIÓN: NOTIFICACIONES GRUPALES ============== -->
+    {{#if informacionGrupal}}
+    <div class="row mb-4" id="seccion-notificaciones-grupales" 
+         data-grupo-id="{{#if informacionGrupal.grupo}}{{informacionGrupal.grupo.id}}{{else}}null{{/if}}"
+         data-es-lider="{{informacionGrupal.esLiderDelGrupo}}"
+         data-puede-modificar="{{informacionGrupal.puedeModificarGrupo}}">
+      <div class="col-12">
+        <div class="card border-info">
+          <div class="card-header bg-info text-white">
+            <h5 class="mb-0">
+              <i class="fas fa-bell me-2"></i>Notificación Grupal
+              {{#if informacionGrupal.grupo}}
+              <span class="badge bg-light text-dark ms-2">Grupo activo</span>
+              {{else}}
+              <span class="badge bg-warning text-dark ms-2">Disponible</span>
+              {{/if}}
+            </h5>
+          </div>
+          <div class="card-body">
+            {{#if informacionGrupal.grupo}}
+            <!-- DOCUMENTO YA ESTÁ EN GRUPO -->
+            <div class="alert alert-info mb-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <i class="fas fa-info-circle me-2"></i>
+                  <strong>Este documento está agrupado para notificación</strong>
+                  <br>
+                  <small>
+                    {{#if informacionGrupal.esLiderDelGrupo}}
+                    Rol: <span class="badge bg-primary">Líder del grupo</span>
+                    {{else}}
+                    Rol: <span class="badge bg-secondary">Miembro del grupo</span>
+                    {{/if}}
+                    | Código de verificación único: <span class="badge bg-success">{{informacionGrupal.grupo.codigoVerificacion}}</span>
+                  </small>
+                </div>
+                {{#if informacionGrupal.puedeModificarGrupo}}
+                <button class="btn btn-warning btn-sm" onclick="separarDeGrupo({{documento.id}})">
+                  <i class="fas fa-unlink me-1"></i> Separar
+                </button>
+                {{/if}}
+              </div>
+            </div>
+            
+            {{#if informacionGrupal.documentosDelGrupo.length}}
+            <h6 class="border-bottom pb-2">Documentos en el mismo grupo ({{informacionGrupal.documentosDelGrupo.length}})</h6>
+            <div class="table-responsive">
+              <table class="table table-sm table-hover">
+                <thead>
+                  <tr>
+                    <th>Código</th>
+                    <th>Tipo</th>
+                    <th>Estado</th>
+                    <th>Rol</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {{#each informacionGrupal.documentosDelGrupo}}
+                  <tr>
+                    <td>
+                      <a href="/matrizador/documentos/detalle/{{this.id}}" class="text-decoration-none">
+                        {{this.codigoBarras}}
+                      </a>
+                    </td>
+                    <td>{{this.tipoDocumento}}</td>
+                    <td>
+                      {{#if (eq this.estado "en_proceso")}}
+                      <span class="badge bg-warning text-dark">En Proceso</span>
+                      {{else if (eq this.estado "listo_para_entrega")}}
+                      <span class="badge bg-success">Listo</span>
+                      {{else}}
+                      <span class="badge bg-secondary">{{this.estado}}</span>
+                      {{/if}}
+                    </td>
+                    <td>
+                      {{#if this.esLiderGrupo}}
+                      <span class="badge bg-primary">Líder</span>
+                      {{else}}
+                      <span class="badge bg-secondary">Miembro</span>
+                      {{/if}}
+                    </td>
+                  </tr>
+                  {{/each}}
+                </tbody>
+              </table>
+            </div>
+            {{/if}}
+            
+            <div class="alert alert-warning mt-3">
+              <small>
+                <i class="fas fa-lightbulb me-1"></i>
+                <strong>Notificación consolidada:</strong> Al marcar cualquier documento del grupo como listo, 
+                se enviará UNA SOLA notificación WhatsApp con todos los documentos del grupo.
+              </small>
+            </div>
+            
+            {{else}}
+            <!-- DOCUMENTO NO ESTÁ EN GRUPO - MOSTRAR OPCIÓN PARA AGRUPAR -->
+            {{#if informacionGrupal.puedeCrearGrupo}}
+            <div class="alert alert-success mb-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <i class="fas fa-plus-circle me-2"></i>
+                  <strong>¡Notificación grupal disponible!</strong>
+                  <br>
+                  <small>Se encontraron {{informacionGrupal.totalAgrupables}} documentos adicionales del mismo cliente</small>
+                </div>
+                <button class="btn btn-success btn-sm" onclick="mostrarModalAgrupar({{documento.id}})">
+                  <i class="fas fa-bell me-1"></i> Agrupar notificación
+                </button>
+              </div>
+              {{!-- 💡 AVISO INFORMATIVO SIMILAR AL CÓDIGO DE ENTREGA --}}
+              <div class="mt-2 pt-2 border-top border-success-subtle">
+                <small class="text-success d-flex align-items-start">
+                  <i class="fas fa-lightbulb me-2 mt-1 opacity-75" style="font-size: 0.8rem;"></i>
+                  <span>
+                    <strong>Código grupal:</strong> Se generará automáticamente cuando agrupe los documentos. 
+                    El cliente recibirá una sola notificación WhatsApp válida para todos los documentos seleccionados.
+                  </span>
+                </small>
+              </div>
+            </div>
+            
+            <h6 class="border-bottom pb-2">Documentos disponibles para agrupar ({{informacionGrupal.totalAgrupables}})</h6>
+            <div class="table-responsive">
+              <table class="table table-sm table-hover">
+                <thead>
+                  <tr>
+                    <th width="50">
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="selectAllDocs" onchange="toggleSelectAll(this.checked)">
+                        <label class="form-check-label" for="selectAllDocs">
+                          <small>Todos</small>
+                        </label>
+                      </div>
+                    </th>
+                    <th>Código</th>
+                    <th>Tipo</th>
+                    <th>Estado</th>
+                    <th>Fecha</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {{#each informacionGrupal.documentosAgrupables}}
+                  <tr>
+                    <td>
+                      <div class="form-check">
+                        <input class="form-check-input doc-checkbox" type="checkbox" 
+                               id="doc_{{this.id}}" value="{{this.id}}" 
+                               data-codigo="{{this.codigoBarras}}" 
+                               data-tipo="{{this.tipoDocumento}}"
+                               onchange="updateGroupButton()">
+                      </div>
+                    </td>
+                    <td>
+                      <label class="form-check-label" for="doc_{{this.id}}">
+                        <a href="/matrizador/documentos/detalle/{{this.id}}" class="text-decoration-none">
+                          {{this.codigoBarras}}
+                        </a>
+                      </label>
+                    </td>
+                    <td>{{this.tipoDocumento}}</td>
+                    <td>
+                      <span class="badge bg-warning text-dark">En Proceso</span>
+                    </td>
+                    <td>{{formatDate this.created_at}}</td>
+                  </tr>
+                  {{/each}}
+                </tbody>
+              </table>
+            </div>
+            
+            <!-- Botón de agrupación mejorado -->
+            <div class="mt-3 d-flex justify-content-between align-items-center">
+              <div class="text-muted">
+                <small>
+                  <i class="fas fa-info-circle me-1"></i>
+                  Selecciona los documentos que quieres agrupar con este documento
+                </small>
+              </div>
+              <button class="btn btn-success" id="btnAgruparSeleccionados" onclick="procesarAgrupacion()" disabled>
+                <i class="fas fa-layer-group me-1"></i> 
+                Agrupar <span id="contadorSeleccionados">0</span> documentos
+              </button>
+            </div>
+            
+            <div class="alert alert-info mt-3">
+              <small>
+                <i class="fas fa-info-circle me-1"></i>
+                <strong>Ventaja de agrupar:</strong> El cliente recibirá una sola notificación WhatsApp 
+                con todos sus documentos y un código de verificación único para retirar todo junto.
+              </small>
+            </div>
+            
+            {{else}}
+            <div class="alert alert-secondary">
+              <i class="fas fa-info-circle me-2"></i>
+              <strong>Sin documentos agrupables</strong>
+              <br>
+              <small>No hay otros documentos del mismo cliente en proceso para agrupar en la notificación.</small>
+            </div>
+            {{/if}}
+            {{/if}}
+          </div>
+        </div>
+      </div>
+    </div>
+    {{/if}}
+    
     <!-- 🆕 HISTORIAL UNIVERSAL -->
     {{> historial-universal eventos=eventos esAdmin=false userRole="matrizador"}}
   </div>
@@ -418,23 +688,43 @@
     const tieneCredito = documento.entrega_sin_verificar_pago === true;
     const fuente = documento.fuente_estado || 'BD';
     
-            console.log('🔍 DEBUG CONFIGURACIÓN MODAL:', {
-          documento_id: documento?.id || 'No disponible',
-          tiene_credito: tieneCredito,
-          justificacion: documento?.justificacion_entrega_sin_pago || 'No especificada',
-          fuente_datos: fuente
-        });
+    // ✅ NUEVA VALIDACIÓN: Verificar estado de pago del documento
+    const estadoPago = documento.estadoPago || documento.estado_pago || 'sin_informacion';
+    const estaPagado = ['pagado_completo', 'pagado_con_retencion'].includes(estadoPago);
     
-    if (tieneCredito) {
-      // ESCENARIO A: DOCUMENTO CON CRÉDITO AUTORIZADO
+    console.log('🔍 DEBUG CONFIGURACIÓN MODAL:', {
+      documento_id: documento?.id || 'No disponible',
+      tiene_credito: tieneCredito,
+      estado_pago: estadoPago,
+      esta_pagado: estaPagado,
+      justificacion: documento?.justificacion_entrega_sin_pago || 'No especificada',
+      fuente_datos: fuente
+    });
+    
+    // ✅ NUEVA LÓGICA: Priorizar estado de pago sobre autorización de crédito
+    if (estaPagado) {
+      // ESCENARIO A: DOCUMENTO YA PAGADO - No necesita autorización de crédito
+      modalBody.innerHTML = `
+        <div class="alert alert-success">
+          <i class="fas fa-check-circle"></i>
+          <strong>✅ Documento pagado</strong><br>
+          Estado de pago: <span class="badge bg-success">${estadoPago.replace('_', ' ').toUpperCase()}</span><br>
+          <small class="text-success">El cliente ya completó el pago. Listo para entrega.</small>
+        </div>
+        <p>¿Confirma marcar como listo para entrega?</p>
+        <p><strong>Recepción entregará directamente al verificar identidad.</strong></p>
+      `;
+    } else if (tieneCredito) {
+      // ESCENARIO B: DOCUMENTO CON CRÉDITO AUTORIZADO (pero no pagado)
       const fuenteTexto = fuente.includes('CHECKBOX') ? 
         '<small class="text-success"><i class="fas fa-edit"></i> Estado actualizado en esta sesión</small>' :
         `<small>Autorizado por: ${documento?.matrizador_nombre || 'Sistema'} el ${formatearFecha(documento?.fecha_autorizacion_entrega)}</small>`;
       
       modalBody.innerHTML = `
-        <div class="alert alert-success">
+        <div class="alert alert-warning">
           <i class="fas fa-shield-check"></i>
           <strong>Cliente con crédito autorizado</strong><br>
+          Estado de pago: <span class="badge bg-warning text-dark">${estadoPago.replace('_', ' ').toUpperCase()}</span><br>
           Justificación: ${formatearJustificacion(documento?.justificacion_entrega_sin_pago)}<br>
           ${fuenteTexto}
         </div>
@@ -450,7 +740,7 @@
         </div>
       `;
     } else {
-      // ESCENARIO B: DOCUMENTO SIN AUTORIZACIÓN
+      // ESCENARIO C: DOCUMENTO SIN PAGO Y SIN AUTORIZACIÓN
       const fuenteTexto = fuente.includes('CHECKBOX') ? 
         '<small class="text-muted"><i class="fas fa-edit"></i> Sin autorización (actualizado en esta sesión)</small>' :
         '<small class="text-muted">Estado actual: Sin autorización de crédito</small>';
@@ -459,6 +749,7 @@
         <div class="alert alert-info">
           <i class="fas fa-credit-card"></i>
           <strong>Entrega con verificación de pago</strong><br>
+          Estado de pago: <span class="badge bg-secondary">${estadoPago.replace('_', ' ').toUpperCase()}</span><br>
           Recepción verificará que el pago esté al día antes de entregar.<br>
           ${fuenteTexto}
         </div>
@@ -591,10 +882,49 @@
       fuente: fuenteDecision
     });
     
+    // ✅ LÓGICA CORREGIDA: Detectar si el documento está en grupo
+    let accionGrupo = 'marcar_solo_documento'; // Valor por defecto
+    
+    // Verificar si hay información de grupo en la página
+    const informacionGrupal = document.querySelector('[data-grupo-id]');
+    const grupoId = informacionGrupal ? informacionGrupal.getAttribute('data-grupo-id') : null;
+    
+    if (grupoId && grupoId !== 'null') {
+      console.log('🔍 Documento está en grupo:', grupoId);
+      
+      // 🎯 MENSAJE CORREGIDO: Preguntar si quiere marcar todo el grupo
+      const marcarTodoElGrupo = confirm(
+        '📱 Este documento está en un grupo de notificación.\n\n' +
+        'Al marcar como listo se procesará todo el grupo.\n\n' +
+        '✅ Aceptar = Marcar todo el grupo como listo\n' +
+        '❌ Cancelar = Volver al detalle\n\n' +
+        '¿Desea continuar?'
+      );
+      
+      if (marcarTodoElGrupo) {
+        accionGrupo = 'marcar_todo_grupo';
+        console.log('👥 Usuario eligió: Marcar todo el grupo');
+      } else {
+        // 🚫 CANCELAR: Volver al detalle sin hacer nada
+        console.log('❌ Usuario canceló la acción - Volviendo al detalle');
+        
+        // Rehabilitar botón si estaba deshabilitado
+        const btnConfirmar = document.querySelector('#marcarListoModal .btn-success');
+        if (btnConfirmar) {
+          btnConfirmar.disabled = false;
+          btnConfirmar.innerHTML = '<i class="fas fa-check me-1"></i> Confirmar';
+        }
+        
+        return; // 🔄 SALIR de la función sin enviar nada al servidor
+      }
+    }
+    
     // ENVIAR al servidor
     const datosEnvio = {
       entrega_sin_verificar_pago: estadoFinal,
-      justificacion_entrega_sin_pago: justificacion
+      justificacion_entrega_sin_pago: justificacion,
+      accion_autorizacion: accionGrupo,
+      marcarTodoElGrupo: accionGrupo === 'marcar_todo_grupo'
     };
     
     console.log('📤 Enviando al servidor:', datosEnvio);
@@ -619,9 +949,22 @@
       console.log('✅ Respuesta del servidor:', data);
       
       if (data.success) {
-        const mensaje = estadoFinal 
-          ? `✅ Documento marcado como listo - CRÉDITO AUTORIZADO`
-          : `✅ Documento marcado como listo - VERIFICAR PAGO antes de entregar`;
+        // 🎯 MENSAJE INTELIGENTE basado en estado de pago y crédito
+        let mensaje;
+        
+        if (estadoFinal) {
+          mensaje = `✅ Documento marcado como listo - CRÉDITO AUTORIZADO`;
+        } else {
+          // Verificar estado de pago del documento para mensaje correcto
+          const estadoPago = '{{documento.estadoPago}}';
+          const valorPendiente = parseFloat('{{documento.valorPendiente}}' || '0');
+          
+          if (estadoPago === 'pagado_completo' || valorPendiente <= 0) {
+            mensaje = `✅ Documento marcado como listo - PAGO VERIFICADO`;
+          } else {
+            mensaje = `✅ Documento marcado como listo - VERIFICAR PAGO antes de entregar`;
+          }
+        }
         
         alert(mensaje);
         
@@ -754,6 +1097,408 @@
     
     console.log('✅ Formateo de fechas de eventos completado');
   });
+</script>
+
+{{!-- 🆕 SCRIPT DE NOTIFICACIONES GRUPALES - SPRINT 3 --}}
+<script src="/js/notificaciones-grupales.js"></script>
+<script>
+  // ============== FUNCIONES GLOBALES PARA NOTIFICACIONES GRUPALES ==============
+  
+  /**
+   * Función global para mostrar modal de agrupación
+   * @param {number} documentoId - ID del documento
+   */
+  function mostrarModalAgrupar(documentoId) {
+    console.log('📱 [MODAL AGRUPAR] Iniciando agrupación para documento:', documentoId);
+    
+    // Scroll hacia la sección de documentos disponibles
+    const seccionDocumentos = document.querySelector('h6:contains("Documentos disponibles para agrupar")') || 
+                             document.querySelector('.table-responsive');
+    
+    if (seccionDocumentos) {
+      seccionDocumentos.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
+      });
+      
+      // Destacar la sección por un momento
+      seccionDocumentos.style.boxShadow = '0 0 20px rgba(40, 167, 69, 0.5)';
+      setTimeout(() => {
+        seccionDocumentos.style.boxShadow = '';
+      }, 2000);
+      
+      // Mostrar mensaje de ayuda
+      const mensaje = document.createElement('div');
+      mensaje.className = 'alert alert-success alert-dismissible fade show mt-2';
+      mensaje.innerHTML = `
+        <i class="fas fa-hand-point-down me-2"></i>
+        <strong>¡Perfecto!</strong> Ahora selecciona los documentos que quieres agrupar usando los checkboxes de abajo.
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      `;
+      
+      seccionDocumentos.parentNode.insertBefore(mensaje, seccionDocumentos);
+      
+      // Auto-remover el mensaje después de 5 segundos
+      setTimeout(() => {
+        if (mensaje.parentNode) {
+          mensaje.remove();
+        }
+      }, 5000);
+      
+    } else {
+      console.warn('⚠️ No se encontró la sección de documentos disponibles');
+      alert('📋 Usa los checkboxes de abajo para seleccionar los documentos que quieres agrupar');
+    }
+  }
+  
+  /**
+   * Función global para separar documento del grupo
+   * @param {number} documentoId - ID del documento
+   */
+  async function separarDeGrupo(documentoId) {
+    console.log('🔗 [SEPARAR GRUPO] Separando documento:', documentoId);
+    
+    // Confirmar acción
+    if (!confirm('¿Estás seguro de que quieres separar este documento del grupo?\n\nEsto creará notificaciones individuales para cada documento.')) {
+      return;
+    }
+    
+    try {
+      // Llamar a la API para separar del grupo
+      const response = await fetch(`/matrizador/api/grupos-notificacion/${documentoId}/separar`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const resultado = await response.json();
+      
+      if (resultado.exito) {
+        alert('✅ Documento separado del grupo exitosamente.\n\nAhora tendrá su propia notificación individual.');
+        
+        // Recargar la página para mostrar el nuevo estado
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+        
+      } else {
+        throw new Error(resultado.mensaje || 'Error desconocido al separar del grupo');
+      }
+      
+    } catch (error) {
+      console.error('❌ Error separando del grupo:', error);
+      alert(`❌ Error al separar del grupo: ${error.message}`);
+    }
+  }
+
+  // ============== FUNCIONES PARA MANEJO DE CHECKBOXES ==============
+  
+  /**
+   * Seleccionar/deseleccionar todos los documentos
+   * @param {boolean} seleccionar - Si seleccionar o deseleccionar
+   */
+  function toggleSelectAll(seleccionar) {
+    console.log('🔄 [CHECKBOXES] Seleccionar todos:', seleccionar);
+    const checkboxes = document.querySelectorAll('.doc-checkbox');
+    console.log('📋 [CHECKBOXES] Encontrados', checkboxes.length, 'checkboxes');
+    
+    checkboxes.forEach((checkbox, index) => {
+      checkbox.checked = seleccionar;
+      console.log(`   - Checkbox ${index + 1}:`, checkbox.id, '→', checkbox.checked);
+    });
+    
+    updateGroupButton();
+  }
+  
+  /**
+   * Actualizar el estado del botón de agrupación
+   */
+  function updateGroupButton() {
+    const checkboxes = document.querySelectorAll('.doc-checkbox:checked');
+    const contador = document.getElementById('contadorSeleccionados');
+    const boton = document.getElementById('btnAgruparSeleccionados');
+    
+    console.log('🔄 [BOTÓN] Actualizando botón - Seleccionados:', checkboxes.length);
+    
+    if (contador) {
+      contador.textContent = checkboxes.length;
+    }
+    
+    if (boton) {
+      boton.disabled = checkboxes.length === 0;
+      
+      if (checkboxes.length > 0) {
+        boton.innerHTML = `<i class="fas fa-layer-group me-1"></i> Agrupar ${checkboxes.length} documentos`;
+        boton.classList.remove('btn-secondary');
+        boton.classList.add('btn-success');
+        console.log('✅ [BOTÓN] Habilitado para', checkboxes.length, 'documentos');
+      } else {
+        boton.innerHTML = `<i class="fas fa-layer-group me-1"></i> Agrupar <span id="contadorSeleccionados">0</span> documentos`;
+        boton.classList.remove('btn-success');
+        boton.classList.add('btn-secondary');
+        console.log('❌ [BOTÓN] Deshabilitado - sin selecciones');
+      }
+    } else {
+      console.warn('⚠️ [BOTÓN] No se encontró el botón btnAgruparSeleccionados');
+    }
+  }
+  
+  /**
+   * Procesar la agrupación de documentos seleccionados
+   */
+  async function procesarAgrupacion() {
+    const checkboxes = document.querySelectorAll('.doc-checkbox:checked');
+    const documentoActualId = {{documento.id}};
+    
+    console.log('📋 [AGRUPACIÓN] Iniciando procesamiento:', {
+      documentoActual: documentoActualId,
+      checkboxesSeleccionados: checkboxes.length
+    });
+    
+    if (checkboxes.length === 0) {
+      alert('Por favor selecciona al menos un documento para agrupar');
+      return;
+    }
+    
+    // Obtener IDs de documentos seleccionados
+    const documentosIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+    
+    console.log('📋 [AGRUPACIÓN] Procesando agrupación:', {
+      documentoLider: documentoActualId,
+      documentosAdicionales: documentosIds,
+      total: documentosIds.length + 1
+    });
+    
+    // Mostrar estado de carga
+    const boton = document.getElementById('btnAgruparSeleccionados');
+    const textoOriginal = boton.innerHTML;
+    boton.disabled = true;
+    boton.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Agrupando...';
+    
+    try {
+      // Llamar a la API para crear el grupo
+      const response = await fetch('/matrizador/api/grupos-notificacion/crear', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          documentoLiderId: documentoActualId,
+          documentosIds: documentosIds
+        })
+      });
+      
+      const resultado = await response.json();
+      
+      if (resultado.exito) {
+        // Mostrar mensaje de éxito
+        alert(`✅ ¡Grupo creado exitosamente!\n\nSe agruparon ${resultado.datos.documentosAgrupados} documentos.\nCódigo de verificación: ${resultado.datos.codigoVerificacion}\n\nAhora el cliente recibirá una sola notificación para todos los documentos.`);
+        
+        // Recargar la página para mostrar el nuevo estado
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+        
+      } else {
+        throw new Error(resultado.mensaje || 'Error desconocido al crear el grupo');
+      }
+      
+    } catch (error) {
+      console.error('❌ Error en agrupación:', error);
+      alert(`❌ Error al agrupar documentos: ${error.message}`);
+      
+      // Restaurar botón
+      boton.disabled = false;
+      boton.innerHTML = textoOriginal;
+    }
+  }
+
+  // Configurar datos del documento para notificaciones grupales
+  document.addEventListener('DOMContentLoaded', function() {
+    // Agregar atributos de datos al elemento principal
+    const documentoContainer = document.querySelector('.document-detail-container') || document.body;
+    
+    {{#if documento}}
+    documentoContainer.setAttribute('data-documento-id', '{{documento.id}}');
+    documentoContainer.setAttribute('data-nombre-cliente', '{{documento.nombreCliente}}');
+    documentoContainer.setAttribute('data-identificacion-cliente', '{{documento.identificacionCliente}}');
+    
+    {{#if notificacionGrupal}}
+    documentoContainer.setAttribute('data-grupo-info', 'true');
+    documentoContainer.setAttribute('data-grupo-id', '{{notificacionGrupal.id}}');
+    documentoContainer.setAttribute('data-codigo-verificacion', '{{notificacionGrupal.codigoVerificacion}}');
+    documentoContainer.setAttribute('data-total-documentos', '{{notificacionGrupal.documentos.length}}');
+    documentoContainer.setAttribute('data-es-lider', '{{#if documento.esLiderGrupo}}true{{else}}false{{/if}}');
+    {{/if}}
+    {{/if}}
+    
+    // Inicializar sistema de notificaciones grupales
+    if (window.NotificacionesGrupales) {
+      window.NotificacionesGrupales.init();
+      console.log('📱 [NOTIFICACIONES GRUPALES] Sistema inicializado correctamente');
+    } else {
+      console.warn('⚠️ [NOTIFICACIONES GRUPALES] Sistema no disponible');
+    }
+    
+    console.log('📱 [NOTIFICACIONES GRUPALES] Datos del documento configurados');
+    
+    // ============== INICIALIZAR SISTEMA DE CHECKBOXES ==============
+    
+    // Verificar si hay elementos de agrupación en la página
+    const checkboxes = document.querySelectorAll('.doc-checkbox');
+    const selectAllCheckbox = document.getElementById('selectAllDocs');
+    const botonAgrupar = document.getElementById('btnAgruparSeleccionados');
+    
+    console.log('🔍 [INIT] Elementos encontrados:', {
+      checkboxes: checkboxes.length,
+      selectAll: !!selectAllCheckbox,
+      botonAgrupar: !!botonAgrupar
+    });
+    
+    // Agregar event listeners a checkboxes individuales
+    checkboxes.forEach((checkbox, index) => {
+      checkbox.addEventListener('change', function() {
+        console.log(`📋 [CHECKBOX ${index + 1}] Cambio:`, this.id, '→', this.checked);
+        updateGroupButton();
+        
+        // Actualizar el checkbox "Todos" si es necesario
+        if (selectAllCheckbox) {
+          const todosSeleccionados = Array.from(checkboxes).every(cb => cb.checked);
+          const ningunoSeleccionado = Array.from(checkboxes).every(cb => !cb.checked);
+          
+          if (todosSeleccionados) {
+            selectAllCheckbox.checked = true;
+            selectAllCheckbox.indeterminate = false;
+          } else if (ningunoSeleccionado) {
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = false;
+          } else {
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = true;
+          }
+        }
+      });
+    });
+    
+    // Agregar event listener al checkbox "Todos"
+    if (selectAllCheckbox) {
+      selectAllCheckbox.addEventListener('change', function() {
+        console.log('📋 [SELECT ALL] Cambio:', this.checked);
+        toggleSelectAll(this.checked);
+      });
+    }
+    
+    // Inicializar estado del botón
+    if (botonAgrupar) {
+      updateGroupButton();
+    }
+    
+    console.log('✅ [INIT] Sistema de checkboxes inicializado correctamente');
+    
+    // ============== VERIFICACIÓN DE TELÉFONOS PARA AGRUPACIÓN ==============
+    
+    // Verificar consistencia de teléfonos al mostrar documentos agrupables
+    verificarConsistenciaTelefonos();
+  });
+
+  /**
+   * 📱 NUEVA FUNCIÓN: Verificar consistencia de teléfonos en documentos agrupables
+   */
+  function verificarConsistenciaTelefonos() {
+    const telefonoActual = '{{documento.telefonoCliente}}';
+    const documentosAgrupables = document.querySelectorAll('.doc-checkbox');
+    
+    if (!telefonoActual || telefonoActual === '' || documentosAgrupables.length === 0) {
+      return; // No hay nada que verificar
+    }
+    
+    console.log('📱 [TELÉFONOS] Verificando consistencia...');
+    
+    // Verificar si el teléfono actual es válido para WhatsApp (celular)
+    const esWhatsAppValido = /^09\d{8}$/.test(telefonoActual);
+    
+    if (!esWhatsAppValido) {
+      mostrarAlertaTelefono('actual_invalido', telefonoActual);
+      return;
+    }
+    
+    // TODO: En una implementación futura, verificar teléfonos de otros documentos
+    // Por ahora, mostrar sugerencia para sincronizar
+    if (documentosAgrupables.length > 0) {
+      mostrarSugerenciaSincronizacion(telefonoActual);
+    }
+  }
+  
+  /**
+   * 📱 NUEVA FUNCIÓN: Mostrar alerta sobre problemas de teléfono
+   */
+  function mostrarAlertaTelefono(tipo, telefono) {
+    let mensaje = '';
+    let icono = '⚠️';
+    let clase = 'alert-warning';
+    
+    switch (tipo) {
+      case 'actual_invalido':
+        mensaje = `El número de teléfono actual (${telefono}) no es válido para WhatsApp. `;
+        mensaje += `Para notificaciones grupales, necesitas un número de celular que inicie con 09.`;
+        icono = '❌';
+        clase = 'alert-danger';
+        break;
+      case 'inconsistente':
+        mensaje = `Los documentos del mismo cliente tienen números diferentes. `;
+        mensaje += `Para notificaciones grupales efectivas, todos deberían tener el mismo número de WhatsApp.`;
+        break;
+    }
+    
+    // Crear alerta temporal
+    const alertaHtml = `
+      <div class="alert ${clase} alert-dismissible fade show mt-3" role="alert" id="alerta-telefono">
+        <strong>${icono} Atención:</strong> ${mensaje}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    `;
+    
+    // Insertar la alerta después del título del documento
+    const titulo = document.querySelector('h2');
+    if (titulo) {
+      titulo.insertAdjacentHTML('afterend', alertaHtml);
+      
+      // Auto-remover después de 10 segundos
+      setTimeout(() => {
+        const alerta = document.getElementById('alerta-telefono');
+        if (alerta) {
+          alerta.remove();
+        }
+      }, 10000);
+    }
+  }
+  
+  /**
+   * 📱 NUEVA FUNCIÓN: Mostrar sugerencia de sincronización de teléfonos
+   */
+  function mostrarSugerenciaSincronizacion(telefonoValido) {
+    // Solo mostrar si hay documentos agrupables
+    const seccionAgrupacion = document.querySelector('.documentos-agrupables');
+    if (!seccionAgrupacion) return;
+    
+    const sugerenciaHtml = `
+      <div class="alert alert-info mt-2" id="sugerencia-telefono">
+        <i class="fas fa-lightbulb me-2"></i>
+        <strong>💡 Sugerencia:</strong> 
+        Para notificaciones grupales efectivas, asegúrate de que todos los documentos del cliente 
+        tengan el mismo número de WhatsApp: <strong>${telefonoValido}</strong>
+        <br>
+        <small class="text-muted">
+          <i class="fas fa-info-circle me-1"></i>
+          Edita cada documento para actualizar el número antes de agrupar.
+        </small>
+      </div>
+    `;
+    
+    // Agregar la sugerencia al final de la sección de agrupación
+    seccionAgrupacion.insertAdjacentHTML('beforeend', sugerenciaHtml);
+  }
 </script>
 {{else}}
 <div class="alert alert-warning">

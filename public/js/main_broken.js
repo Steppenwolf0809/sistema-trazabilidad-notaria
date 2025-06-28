@@ -1,0 +1,1609 @@
+/**
+ * JavaScript principal para el Sistema de Trazabilidad Documental
+ * Contiene funciones para interactuar con la API y gestionar la interfaz de usuario
+ */
+
+// Cuando el documento esté listo
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('Sistema de Trazabilidad Documental - Frontend cargado');
+  
+  // Actualizar año en el pie de página
+  actualizarAnioPiePagina();
+  
+  // Inicializar formulario de verificación
+  inicializarFormularioVerificacion();
+  
+  // Inicializar ordenamiento de tablas
+  console.log('Llamando a inicializarOrdenamientoTablas...');
+  setTimeout(() => {
+    inicializarOrdenamientoTablas();
+  }, 100);
+});
+
+/**
+ * Actualiza el año en el pie de página
+ */
+function actualizarAnioPiePagina() {
+  // Buscar todas las instancias de currentYear y reemplazarlas con el año actual
+  const currentYearElements = document.querySelectorAll('.current-year');
+  const currentYear = new Date().getFullYear();
+  
+  currentYearElements.forEach(element => {
+    element.textContent = currentYear;
+  });
+}
+
+/**
+ * Inicializa el formulario de verificación de documentos
+ */
+function inicializarFormularioVerificacion() {
+  const form = document.getElementById('verificar-form');
+  
+  if (form) {
+    form.addEventListener('submit', function(event) {
+      event.preventDefault();
+      
+      const codigoBarras = document.getElementById('codigo-barras').value.trim();
+      
+      if (!codigoBarras) {
+        mostrarAlerta('Por favor, ingrese un código de barras', 'danger');
+        return;
+      }
+      
+      verificarDocumento(codigoBarras);
+    });
+  }
+}
+
+/**
+ * Verifica un documento mediante su código de barras
+ * @param {string} codigoBarras - Código de barras del documento
+ */
+function verificarDocumento(codigoBarras) {
+  // Mostrar indicador de carga
+  mostrarAlerta('Verificando documento...', 'info');
+  
+  // Hacer la petición a la API
+  fetch(`/api/documentos/buscar/codigo/${codigoBarras}`)
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Documento no encontrado');
+      }
+      return response.json();
+    })
+    .then(data => {
+      if (data.exito) {
+        // Redirigir a la página de detalles del documento
+        window.location.href = `/documentos/detalle/${data.datos.id}`;
+      } else {
+        mostrarAlerta(data.mensaje, 'warning');
+      }
+    })
+    .catch(error => {
+      mostrarAlerta(error.message, 'danger');
+    });
+}
+
+/**
+ * Muestra una alerta en la página
+ * @param {string} mensaje - Mensaje a mostrar
+ * @param {string} tipo - Tipo de alerta (success, danger, warning, info)
+ */
+function mostrarAlerta(mensaje, tipo = 'info') {
+  // Crear elemento de alerta
+  const alertaDiv = document.createElement('div');
+  alertaDiv.className = `alert alert-${tipo} alert-dismissible fade show`;
+  alertaDiv.setAttribute('role', 'alert');
+  
+  // Agregar contenido de la alerta
+  alertaDiv.innerHTML = `
+    ${mensaje}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+  `;
+  
+  // Buscar contenedor para alertas, o crear uno si no existe
+  let alertasContainer = document.getElementById('alertas-container');
+  
+  if (!alertasContainer) {
+    alertasContainer = document.createElement('div');
+    alertasContainer.id = 'alertas-container';
+    alertasContainer.className = 'container mt-3';
+    
+    // Insertar al principio del contenedor principal
+    const mainContainer = document.querySelector('main.container');
+    if (mainContainer) {
+      mainContainer.insertBefore(alertasContainer, mainContainer.firstChild);
+    } else {
+      document.body.insertBefore(alertasContainer, document.body.firstChild);
+    }
+  }
+  
+  // Agregar alerta al contenedor
+  alertasContainer.appendChild(alertaDiv);
+  
+  // Eliminar la alerta después de 5 segundos
+  setTimeout(() => {
+    alertaDiv.remove();
+  }, 5000);
+}
+
+/**
+ * 🔧 SISTEMA DE ORDENAMIENTO DE TABLAS UNIVERSAL CORREGIDO
+ * Versión 2.0 - Soluciona problemas de CSS hover y ordenamiento bidireccional
+ * 
+ * PROBLEMAS CORREGIDOS:
+ * ✅ Headers no se ponen blancos en hover
+ * ✅ Ordenamiento bidireccional funcional
+ * ✅ Iconos claros que indican dirección
+ * ✅ Compatible con todos los roles
+ * ✅ Manejo de errores robusto
+ */
+
+// Estado global del ordenamiento mejorado
+let estadoOrdenamientoGlobal = {
+  columnaActual: null,
+  direccionActual: 'asc',
+  tablaActual: null,
+  configuracion: {
+    debug: true,
+    animaciones: true,
+    persistirEstado: true
+  }
+};
+
+/**
+ * 🚀 INICIALIZACIÓN PRINCIPAL DEL SISTEMA
+ * Función principal que configura todas las tablas ordenables
+ */
+function inicializarOrdenamientoTablas() {
+  console.log('🔄 [ORDENAMIENTO v2.0] Inicializando sistema corregido...');
+  
+  try {
+    // Inyectar CSS corregido primero
+    inyectarEstilosCorregidos();
+    
+    // Buscar y configurar todas las tablas ordenables
+    const tablasOrdenables = document.querySelectorAll('.tabla-ordenable');
+    
+    if (tablasOrdenables.length === 0) {
+      console.log('ℹ️ [ORDENAMIENTO] No se encontraron tablas ordenables en esta página');
+      return;
+    }
+    
+    // Configurar cada tabla
+    let tablasConfiguradas = 0;
+    tablasOrdenables.forEach((tabla, index) => {
+      try {
+        configurarTablaOrdenableV2(tabla, index);
+        tablasConfiguradas++;
+      } catch (error) {
+        console.error(`❌ [ORDENAMIENTO] Error configurando tabla ${index}:`, error);
+      }
+    });
+    
+    console.log(`✅ [ORDENAMIENTO] Sistema configurado exitosamente para ${tablasConfiguradas}/${tablasOrdenables.length} tabla(s)`);
+    
+    // Restaurar estado si existe
+    restaurarEstadoOrdenamiento();
+    
+  } catch (error) {
+    console.error('❌ [ORDENAMIENTO] Error crítico en inicialización:', error);
+  }
+}
+
+/**
+ * 💉 INYECCIÓN DE CSS CORREGIDO
+ * Inyecta estilos que solucionan los problemas de hover blanco
+ */
+function inyectarEstilosCorregidos() {
+  console.log('🎨 [ORDENAMIENTO] Inyectando CSS corregido...');
+  
+  // Verificar si ya existe
+  if (document.getElementById('ordenamiento-css-corregido')) {
+    return;
+  }
+  
+  const estilosCorregidos = `
+    <style id="ordenamiento-css-corregido">
+      /* 🔧 CORRECCIÓN CRÍTICA: Estilos de hover para headers ordenables */
+      
+      /* Estilos base para headers ordenables */
+      .tabla-ordenable th.ordenable {
+        cursor: pointer !important;
+        user-select: none !important;
+        position: relative !important;
+        transition: all 0.2s ease !important;
+        border-bottom: 2px solid transparent !important;
+      }
+      
+      /* 🎯 CORRECCIÓN PRINCIPAL: Hover apropiado según el tema */
+      
+      /* Para tablas con fondo claro (table-light) */
+      .table-light .tabla-ordenable th.ordenable:hover,
+      .table:not(.table-dark) .tabla-ordenable th.ordenable:hover {
+        background-color: rgba(0, 0, 0, 0.05) !important;
+        color: #495057 !important;
+        border-bottom-color: #007bff !important;
+      }
+      
+      /* Para tablas con fondo oscuro (table-dark) */
+      .table-dark .tabla-ordenable th.ordenable:hover {
+        background-color: rgba(255, 255, 255, 0.1) !important;
+        color: #ffffff !important;
+        border-bottom-color: #ffc107 !important;
+      }
+      
+      /* Estados activos */
+      .tabla-ordenable th.ordenable.activo {
+        font-weight: 600 !important;
+      }
+      
+      .table-light .tabla-ordenable th.ordenable.activo {
+        background-color: #e3f2fd !important;
+        color: #1976d2 !important;
+        border-bottom-color: #1976d2 !important;
+      }
+      
+      .table-dark .tabla-ordenable th.ordenable.activo {
+        background-color: rgba(255, 193, 7, 0.2) !important;
+        color: #ffc107 !important;
+        border-bottom-color: #ffc107 !important;
+      }
+      
+      /* 🎯 ICONOS DE ORDENAMIENTO MEJORADOS */
+      .ordenamiento-icono {
+        margin-left: 0.5rem !important;
+        font-size: 0.8em !important;
+        transition: all 0.2s ease !important;
+        display: inline-block !important;
+      }
+      
+      .ordenamiento-icono.neutro {
+        opacity: 0.4 !important;
+        color: currentColor !important;
+      }
+      
+      .ordenamiento-icono.activo {
+        opacity: 1 !important;
+        transform: scale(1.1) !important;
+      }
+      
+      .table-light .ordenamiento-icono.activo {
+        color: #1976d2 !important;
+      }
+      
+      .table-dark .ordenamiento-icono.activo {
+        color: #ffc107 !important;
+      }
+      
+      /* Animaciones suaves */
+      .ordenamiento-icono.cambiando {
+        animation: cambioOrden 0.3s ease-in-out !important;
+      }
+      
+      @keyframes cambioOrden {
+        0% { transform: scale(1); opacity: 0.4; }
+        50% { transform: scale(1.2); opacity: 0.8; }
+        100% { transform: scale(1.1); opacity: 1; }
+      }
+      
+      /* 🔧 CORRECCIONES ESPECÍFICAS PARA PROBLEMAS IDENTIFICADOS */
+      
+      /* Sobrescribir estilos problemáticos de vistas específicas */
+      .tabla-ordenable th.ordenable:hover {
+        background-color: unset !important;
+      }
+      
+      /* Aplicar estilos correctos según contexto */
+      .table-light .tabla-ordenable th.ordenable:hover {
+        background-color: rgba(0, 0, 0, 0.05) !important;
+      }
+      
+      .table-dark .tabla-ordenable th.ordenable:hover {
+        background-color: rgba(255, 255, 255, 0.1) !important;
+      }
+      
+      /* Estados de carga */
+      .tabla-ordenando {
+        opacity: 0.7 !important;
+        pointer-events: none !important;
+      }
+      
+      .tabla-ordenando tbody {
+        position: relative !important;
+      }
+      
+      .tabla-ordenando tbody::after {
+        content: "Ordenando..." !important;
+        position: absolute !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        background: rgba(0, 0, 0, 0.8) !important;
+        color: white !important;
+        padding: 1rem 2rem !important;
+        border-radius: 0.5rem !important;
+        font-size: 0.9rem !important;
+        z-index: 1000 !important;
+      }
+      
+      /* Responsividad */
+      @media (max-width: 768px) {
+        .tabla-ordenable th.ordenable {
+          font-size: 0.85rem !important;
+          padding: 0.5rem 0.25rem !important;
+        }
+        
+        .ordenamiento-icono {
+          font-size: 0.7em !important;
+          margin-left: 0.25rem !important;
+        }
+      }
+    </style>
+  `;
+  
+  document.head.insertAdjacentHTML('beforeend', estilosCorregidos);
+  console.log('✅ [ORDENAMIENTO] CSS corregido inyectado exitosamente');
+}
+
+/**
+ * ⚙️ CONFIGURACIÓN DE TABLA INDIVIDUAL
+ * Configura una tabla específica para ordenamiento robusto
+ */
+function configurarTablaOrdenableV2(tabla, indice) {
+  const tablaId = tabla.id || `tabla-ordenable-${indice}`;
+  console.log(`📊 [ORDENAMIENTO] Configurando tabla: ${tablaId}`);
+  
+  // Asignar ID si no tiene
+  if (!tabla.id) {
+    tabla.id = tablaId;
+  }
+  
+  // Buscar headers ordenables
+  const headers = tabla.querySelectorAll('th.ordenable');
+  
+  if (headers.length === 0) {
+    console.warn(`⚠️ [ORDENAMIENTO] No se encontraron headers ordenables en tabla ${tablaId}`);
+    return;
+  }
+  
+  // Configurar cada header
+  headers.forEach((header, headerIndex) => {
+    configurarHeaderOrdenable(header, tabla, headerIndex);
+  });
+  
+  console.log(`✅ [ORDENAMIENTO] Tabla ${tablaId} configurada con ${headers.length} columnas ordenables`);
+}
+
+/**
+ * 🎯 CONFIGURACIÓN DE HEADER INDIVIDUAL
+ * Configura un header específico para ordenamiento
+ */
+function configurarHeaderOrdenable(header, tabla, indice) {
+  const columna = header.getAttribute('data-columna');
+  const tipoColumna = header.getAttribute('data-tipo') || 'texto';
+  
+  if (!columna) {
+    console.warn(`⚠️ [ORDENAMIENTO] Header ${indice} sin atributo data-columna`);
+    return;
+  }
+  
+  // Limpiar eventos previos
+  const nuevoHeader = header.cloneNode(true);
+  header.parentNode.replaceChild(nuevoHeader, header);
+  
+  // Configurar estructura del header
+  configurarEstructuraHeader(nuevoHeader, columna, tipoColumna);
+  
+  // Agregar evento de click
+  nuevoHeader.addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    manejarClickHeaderV2(this, tabla, columna, tipoColumna);
+  });
+  
+  console.log(`🎯 [ORDENAMIENTO] Header configurado: ${columna} (${tipoColumna})`);
+}
+
+/**
+ * 🏗️ CONFIGURACIÓN DE ESTRUCTURA DE HEADER
+ * Asegura que el header tenga la estructura correcta
+ */
+function configurarEstructuraHeader(header, columna, tipoColumna) {
+  // Buscar o crear el span del texto
+  let spanTexto = header.querySelector('span');
+  if (!spanTexto) {
+    const textoActual = header.textContent.trim();
+    header.innerHTML = `<span>${textoActual}</span>`;
+    spanTexto = header.querySelector('span');
+  }
+  
+  // Remover iconos existentes
+  header.querySelectorAll('.ordenamiento-icono, .fa-sort, .fa-sort-up, .fa-sort-down').forEach(icono => {
+    icono.remove();
+  });
+  
+  // Agregar icono de ordenamiento
+  const icono = document.createElement('i');
+  icono.className = 'fas fa-sort ordenamiento-icono neutro';
+  icono.setAttribute('data-columna', columna);
+  header.appendChild(icono);
+  
+  // Agregar atributos de accesibilidad
+  header.setAttribute('role', 'button');
+  header.setAttribute('tabindex', '0');
+  header.setAttribute('aria-label', `Ordenar por ${spanTexto.textContent}`);
+  header.setAttribute('title', `Clic para ordenar por ${spanTexto.textContent}`);
+}
+
+/**
+ * 🖱️ MANEJO DE CLICK EN HEADER
+ * Función principal que maneja el click en headers ordenables
+ */
+function manejarClickHeaderV2(header, tabla, columna, tipoColumna) {
+  console.log(`🖱️ [ORDENAMIENTO] Click en columna: ${columna} (${tipoColumna})`);
+  
+  try {
+    // Mostrar estado de carga
+    mostrarEstadoCarga(tabla, true);
+    
+    // Determinar nueva dirección
+    const direccionActual = header.getAttribute('data-direccion') || null;
+    let nuevaDireccion;
+    
+    if (direccionActual === 'asc') {
+      nuevaDireccion = 'desc';
+    } else if (direccionActual === 'desc') {
+      nuevaDireccion = 'asc';
+    } else {
+      nuevaDireccion = 'asc'; // Primera vez
+    }
+    
+    console.log(`📊 [ORDENAMIENTO] ${columna}: ${direccionActual || 'ninguna'} → ${nuevaDireccion}`);
+    
+    // Actualizar estado global
+    estadoOrdenamientoGlobal.columnaActual = columna;
+    estadoOrdenamientoGlobal.direccionActual = nuevaDireccion;
+    estadoOrdenamientoGlobal.tablaActual = tabla;
+    
+    // Actualizar UI de headers
+    actualizarUIHeaders(tabla, columna, nuevaDireccion);
+    
+    // Ejecutar ordenamiento
+    setTimeout(() => {
+      ejecutarOrdenamiento(tabla, columna, nuevaDireccion, tipoColumna);
+    }, 100); // Pequeño delay para mostrar el cambio de UI
+    
+  } catch (error) {
+    console.error('❌ [ORDENAMIENTO] Error en manejo de click:', error);
+    mostrarEstadoCarga(tabla, false);
+    mostrarError('Error al ordenar. Intente nuevamente.');
+  }
+}
+
+/**
+ * 🎨 ACTUALIZACIÓN DE UI DE HEADERS
+ * Actualiza los iconos y estados visuales de todos los headers
+ */
+function actualizarUIHeaders(tabla, columnaActiva, direccion) {
+  const headers = tabla.querySelectorAll('th.ordenable');
+  
+  headers.forEach(header => {
+    const columnaHeader = header.getAttribute('data-columna');
+    const icono = header.querySelector('.ordenamiento-icono');
+    
+    if (!icono) return;
+    
+    // Limpiar estados previos
+    header.classList.remove('activo');
+    header.removeAttribute('data-direccion');
+    icono.classList.remove('activo', 'neutro', 'cambiando');
+    
+    if (columnaHeader === columnaActiva) {
+      // Header activo
+      header.classList.add('activo');
+      header.setAttribute('data-direccion', direccion);
+      
+      // Cambiar icono con animación
+      icono.classList.add('cambiando');
+      
+      setTimeout(() => {
+        icono.className = `fas fa-sort-${direccion} ordenamiento-icono activo`;
+        icono.classList.remove('cambiando');
+      }, 150);
+      
+    } else {
+      // Headers inactivos
+      icono.className = 'fas fa-sort ordenamiento-icono neutro';
+    }
+  });
+}
+
+/**
+ * ⚡ EJECUCIÓN DE ORDENAMIENTO
+ * Ejecuta el ordenamiento según el tipo de tabla
+ */
+function ejecutarOrdenamiento(tabla, columna, direccion, tipoColumna) {
+  console.log(`⚡ [ORDENAMIENTO] Ejecutando: ${columna} (${direccion})`);
+  
+  try {
+    // Determinar tipo de ordenamiento
+    if (esOrdenamientoLocal(tabla)) {
+      ejecutarOrdenamientoLocal(tabla, columna, direccion, tipoColumna);
+    } else {
+      ejecutarOrdenamientoServidor(columna, direccion);
+    }
+    
+    // Guardar estado
+    guardarEstadoOrdenamiento(columna, direccion);
+    
+  } catch (error) {
+    console.error('❌ [ORDENAMIENTO] Error en ejecución:', error);
+    mostrarEstadoCarga(tabla, false);
+    mostrarError('Error al ordenar datos.');
+  }
+}
+
+/**
+ * 🌐 ORDENAMIENTO POR SERVIDOR
+ * Maneja ordenamiento con recarga de página (mantiene filtros y paginación)
+ */
+function ejecutarOrdenamientoServidor(columna, direccion) {
+  console.log(`🌐 [ORDENAMIENTO] Servidor: ${columna} (${direccion})`);
+  
+  try {
+    // Construir nueva URL con parámetros de ordenamiento
+    const url = new URL(window.location);
+    
+    // Actualizar parámetros de ordenamiento
+    url.searchParams.set('ordenarPor', columna);
+    url.searchParams.set('ordenDireccion', direccion);
+    
+    // Resetear página a 1 para ver resultados ordenados desde el principio
+    url.searchParams.set('page', '1');
+    
+    console.log(`🔄 [ORDENAMIENTO] Navegando a: ${url.pathname}${url.search}`);
+    
+    // Navegar a nueva URL
+    window.location.href = url.toString();
+    
+  } catch (error) {
+    console.error('❌ [ORDENAMIENTO] Error en ordenamiento servidor:', error);
+    throw error;
+  }
+}
+
+/**
+ * 🏠 ORDENAMIENTO LOCAL
+ * Maneja ordenamiento en el cliente (para tablas pequeñas)
+ */
+function ejecutarOrdenamientoLocal(tabla, columna, direccion, tipoColumna) {
+  console.log(`🏠 [ORDENAMIENTO] Local: ${columna} (${direccion})`);
+  
+  try {
+    const tbody = tabla.querySelector('tbody');
+    if (!tbody) {
+      throw new Error('No se encontró tbody en la tabla');
+    }
+    
+    const filas = Array.from(tbody.querySelectorAll('tr'));
+    
+    if (filas.length === 0) {
+      console.log('ℹ️ [ORDENAMIENTO] No hay filas para ordenar');
+      mostrarEstadoCarga(tabla, false);
+      return;
+    }
+    
+    // Obtener índice de columna
+    const indiceColumna = obtenerIndiceColumna(tabla, columna);
+    if (indiceColumna === -1) {
+      throw new Error(`No se encontró la columna: ${columna}`);
+    }
+    
+    // Ordenar filas
+    filas.sort((filaA, filaB) => {
+      const valorA = extraerValorCelda(filaA, indiceColumna, tipoColumna);
+      const valorB = extraerValorCelda(filaB, indiceColumna, tipoColumna);
+      
+      let comparacion = compararValores(valorA, valorB, tipoColumna);
+      
+      return direccion === 'desc' ? -comparacion : comparacion;
+    });
+    
+    // Reordenar DOM
+    filas.forEach(fila => tbody.appendChild(fila));
+    
+    // Ocultar estado de carga
+    setTimeout(() => {
+      mostrarEstadoCarga(tabla, false);
+      console.log('✅ [ORDENAMIENTO] Local completado');
+    }, 300);
+    
+  } catch (error) {
+    console.error('❌ [ORDENAMIENTO] Error en ordenamiento local:', error);
+    mostrarEstadoCarga(tabla, false);
+    throw error;
+  }
+}
+
+/**
+ * 🔍 FUNCIONES AUXILIARES DE ORDENAMIENTO
+ */
+
+function esOrdenamientoLocal(tabla) {
+  return tabla.hasAttribute('data-ordenamiento-local') || 
+         tabla.getAttribute('data-ordenamiento') === 'local';
+}
+
+function obtenerIndiceColumna(tabla, nombreColumna) {
+  const headers = tabla.querySelectorAll('th');
+  for (let i = 0; i < headers.length; i++) {
+    if (headers[i].getAttribute('data-columna') === nombreColumna) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+function extraerValorCelda(fila, indiceColumna, tipoColumna) {
+  const celda = fila.cells[indiceColumna];
+  if (!celda) return '';
+  
+  // Buscar valor específico para ordenamiento
+  const valorSort = celda.getAttribute('data-sort-value');
+  if (valorSort) return valorSort;
+  
+  // Extraer texto limpio
+  let valor = celda.textContent.trim();
+  
+  // Procesar según tipo
+  switch (tipoColumna) {
+    case 'numero':
+      valor = valor.replace(/[$,\s]/g, '');
+      return parseFloat(valor) || 0;
+      
+    case 'fecha':
+      return new Date(valor).getTime() || 0;
+      
+    case 'texto':
+    default:
+      return valor.toLowerCase();
+  }
+}
+
+function compararValores(a, b, tipoColumna) {
+  if (tipoColumna === 'numero' || tipoColumna === 'fecha') {
+    return a - b;
+  } else {
+    return a.localeCompare(b);
+  }
+}
+
+/**
+ * 🎭 FUNCIONES DE UI Y ESTADO
+ */
+
+function mostrarEstadoCarga(tabla, mostrar) {
+  if (mostrar) {
+    tabla.classList.add('tabla-ordenando');
+  } else {
+    tabla.classList.remove('tabla-ordenando');
+  }
+}
+
+function mostrarError(mensaje) {
+  console.error(`❌ [ORDENAMIENTO] ${mensaje}`);
+  
+  // Crear notificación temporal
+  const alerta = document.createElement('div');
+  alerta.className = 'alert alert-warning alert-dismissible fade show position-fixed';
+  alerta.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 300px;';
+  alerta.innerHTML = `
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    ${mensaje}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+  
+  document.body.appendChild(alerta);
+  
+  // Auto-remover después de 5 segundos
+  setTimeout(() => {
+    if (alerta.parentNode) {
+      alerta.remove();
+    }
+  }, 5000);
+}
+
+/**
+ * 💾 PERSISTENCIA DE ESTADO
+ */
+
+function guardarEstadoOrdenamiento(columna, direccion) {
+  if (!estadoOrdenamientoGlobal.configuracion.persistirEstado) return;
+  
+  try {
+    const estado = {
+      columna,
+      direccion,
+      timestamp: Date.now(),
+      url: window.location.pathname
+    };
+    
+    localStorage.setItem('ordenamiento-estado', JSON.stringify(estado));
+    console.log(`💾 [ORDENAMIENTO] Estado guardado: ${columna} (${direccion})`);
+  } catch (error) {
+    console.warn('⚠️ [ORDENAMIENTO] No se pudo guardar estado:', error);
+  }
+}
+
+function restaurarEstadoOrdenamiento() {
+  if (!estadoOrdenamientoGlobal.configuracion.persistirEstado) return;
+  
+  try {
+    const estadoGuardado = localStorage.getItem('ordenamiento-estado');
+    if (!estadoGuardado) return;
+    
+    const estado = JSON.parse(estadoGuardado);
+    
+    // Verificar si es la misma página y no muy antiguo (1 hora)
+    if (estado.url === window.location.pathname && 
+        (Date.now() - estado.timestamp) < 3600000) {
+      
+      console.log(`🔄 [ORDENAMIENTO] Restaurando estado: ${estado.columna} (${estado.direccion})`);
+      
+      // Buscar header correspondiente y aplicar estado
+      const header = document.querySelector(`th.ordenable[data-columna="${estado.columna}"]`);
+      if (header && header.closest('table')) {
+        const tabla = header.closest('table');
+        actualizarUIHeaders(tabla, estado.columna, estado.direccion);
+        
+        estadoOrdenamientoGlobal.columnaActual = estado.columna;
+        estadoOrdenamientoGlobal.direccionActual = estado.direccion;
+        estadoOrdenamientoGlobal.tablaActual = tabla;
+      }
+    }
+  } catch (error) {
+    console.warn('⚠️ [ORDENAMIENTO] Error restaurando estado:', error);
+  }
+}
+
+/**
+ * 🌍 EXPOSICIÓN GLOBAL
+ * Hacer funciones disponibles globalmente
+ */
+window.inicializarOrdenamientoTablas = inicializarOrdenamientoTablas;
+window.estadoOrdenamientoGlobal = estadoOrdenamientoGlobal;
+
+// Auto-inicialización cuando el DOM esté listo
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', inicializarOrdenamientoTablas);
+} else {
+  // DOM ya está listo
+  setTimeout(inicializarOrdenamientoTablas, 100);
+}
+
+console.log('📚 [ORDENAMIENTO v2.0] Sistema universal cargado y listo');
+
+// ============== SISTEMA DE NOTIFICACIONES GRUPALES - SPRINT 3 ==============
+
+/**
+ * NOTIFICACIONES GRUPALES MOVIDAS A ARCHIVO SEPARADO
+ * Ver: /public/js/notificaciones-grupales.js
+ * 
+ * Esta sección fue eliminada para evitar conflictos con el archivo dedicado.
+ * El sistema de notificaciones grupales ahora se maneja completamente en su propio archivo.
+ */
+
+console.log('📚 [MAIN.JS] Sistema principal cargado correctamente');
+    this.documentosDisponibles = [];
+    this.grupoActual = null;
+    this.modales = {};
+    
+    console.log('📱 [NOTIFICACIONES GRUPALES] Sistema inicializado');
+    this.inicializar();
+  }
+  
+  /**
+   * Inicializa el sistema de notificaciones grupales
+   */
+  inicializar() {
+    this.configurarEventListeners();
+    this.verificarInterfazExistente();
+  }
+  
+  /**
+   * Configura los event listeners para botones y elementos de la interfaz
+   */
+  configurarEventListeners() {
+    // Botón para agrupar documentos
+    const btnAgrupar = document.getElementById('btn-agrupar-notificacion');
+    if (btnAgrupar) {
+      btnAgrupar.addEventListener('click', (e) => {
+        e.preventDefault();
+        const documentoId = btnAgrupar.dataset.documentoId;
+        this.abrirModalAgrupar(documentoId);
+      });
+    }
+    
+    // Botón para separar de grupo
+    const btnSeparar = document.getElementById('btn-separar-grupo');
+    if (btnSeparar) {
+      btnSeparar.addEventListener('click', (e) => {
+        e.preventDefault();
+        const documentoId = btnSeparar.dataset.documentoId;
+        this.confirmarSeparacion(documentoId);
+      });
+    }
+    
+    // Botón marcar como listo (interceptar para grupos)
+    const btnMarcarListo = document.getElementById('btn-marcar-listo');
+    if (btnMarcarListo) {
+      // Remover event listeners existentes y agregar el nuestro
+      const nuevoBtn = btnMarcarListo.cloneNode(true);
+      btnMarcarListo.parentNode.replaceChild(nuevoBtn, btnMarcarListo);
+      
+      nuevoBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.interceptarMarcarComoListo(nuevoBtn.dataset.documentoId);
+      });
+    }
+  }
+  
+  /**
+   * Verifica si hay información de grupos en la interfaz actual
+   */
+  verificarInterfazExistente() {
+    // Verificar si hay información de grupo embebida en la página
+    const infoGrupal = document.getElementById('informacion-grupal');
+    if (infoGrupal && infoGrupal.dataset.grupoInfo) {
+      try {
+        this.grupoActual = JSON.parse(infoGrupal.dataset.grupoInfo);
+        console.log('📊 [GRUPOS] Información de grupo cargada:', this.grupoActual);
+      } catch (error) {
+        console.error('❌ [GRUPOS] Error parseando información de grupo:', error);
+      }
+    }
+  }
+  
+  /**
+   * Abre modal para agrupar documentos
+   */
+  async abrirModalAgrupar(documentoId) {
+    try {
+      console.log(`📂 [AGRUPAR] Abriendo modal para documento ${documentoId}`);
+      
+      // Mostrar loader
+      this.mostrarCargando('Detectando documentos para agrupar...');
+      
+      // Detectar documentos disponibles
+      const response = await fetch(`/api/matrizador/documentos/${documentoId}/detectar-notificacion`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      });
+      
+      const resultado = await response.json();
+      
+      if (!response.ok || !resultado.exito) {
+        throw new Error(resultado.mensaje || 'Error detectando documentos');
+      }
+      
+      this.ocultarCargando();
+      
+      if (resultado.datos.yaEnGrupo) {
+        this.mostrarAlerta('Este documento ya está en un grupo de notificación', 'warning');
+        return;
+      }
+      
+      if (!resultado.datos.tieneDocumentosAdicionales) {
+        this.mostrarAlerta('No se encontraron documentos adicionales del mismo cliente para agrupar', 'info');
+        return;
+      }
+      
+      // Mostrar modal con documentos disponibles
+      this.mostrarModalAgrupar(documentoId, resultado.datos.documentosDisponibles);
+      
+    } catch (error) {
+      this.ocultarCargando();
+      console.error('❌ [AGRUPAR] Error:', error);
+      this.mostrarAlerta(`Error al detectar documentos: ${error.message}`, 'danger');
+    }
+  }
+  
+  /**
+   * Muestra el modal para seleccionar documentos a agrupar
+   */
+  mostrarModalAgrupar(documentoLiderId, documentos) {
+    const modalHtml = `
+      <div class="modal fade" id="modalAgruparDocumentos" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+              <h5 class="modal-title">
+                <i class="fas fa-layer-group me-2"></i>Agrupar en Notificación
+              </h5>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <div class="alert alert-info">
+                <h6><i class="fas fa-info-circle me-2"></i>Ventajas del Agrupamiento</h6>
+                <ul class="mb-0 small">
+                  <li><strong>Cliente:</strong> Recibe una sola notificación con todos los documentos</li>
+                  <li><strong>Código único:</strong> Un solo código de verificación para todo el grupo</li>
+                  <li><strong>Entrega simplificada:</strong> Todos los documentos se entregan juntos</li>
+                </ul>
+              </div>
+              
+              <h6 class="mb-3">
+                <i class="fas fa-check-square me-2"></i>Seleccione documentos para agrupar:
+              </h6>
+              
+              <div class="table-responsive">
+                <table class="table table-sm table-hover">
+                  <thead class="table-light">
+                    <tr>
+                      <th width="50">
+                        <div class="form-check">
+                          <input class="form-check-input" type="checkbox" id="selectAllGrupo">
+                          <label class="form-check-label" for="selectAllGrupo">Todo</label>
+                        </div>
+                      </th>
+                      <th>Código</th>
+                      <th>Tipo Documento</th>
+                      <th>Estado</th>
+                      <th>Fecha</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${documentos.map(doc => `
+                      <tr>
+                        <td>
+                          <div class="form-check">
+                            <input class="form-check-input documento-checkbox" 
+                                   type="checkbox" 
+                                   value="${doc.id}" 
+                                   id="doc_${doc.id}">
+                          </div>
+                        </td>
+                        <td><code class="small">${doc.codigoBarras}</code></td>
+                        <td>${doc.tipoDocumento}</td>
+                        <td><span class="badge bg-warning">${doc.estado}</span></td>
+                        <td class="small text-muted">${new Date(doc.created_at).toLocaleDateString()}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+              
+              <div class="mt-3">
+                <small class="text-muted">
+                  <i class="fas fa-lightbulb me-1"></i>
+                  <strong>Tip:</strong> Al agrupar documentos, cuando marque cualquiera como "listo", 
+                  todos se marcarán automáticamente y se enviará una sola notificación.
+                </small>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                <i class="fas fa-times me-1"></i>Cancelar
+              </button>
+              <button type="button" class="btn btn-primary" id="btnConfirmarAgrupacion" disabled>
+                <i class="fas fa-layer-group me-1"></i>
+                <span class="btn-text">Crear Grupo</span>
+                <span class="spinner-border spinner-border-sm d-none ms-2"></span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Remover modal existente
+    this.removerModal('modalAgruparDocumentos');
+    
+    // Agregar nuevo modal
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Configurar funcionalidad del modal
+    this.configurarModalAgrupar(documentoLiderId);
+    
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('modalAgruparDocumentos'));
+    this.modales.agrupar = modal;
+    modal.show();
+  }
+  
+  /**
+   * Configura la funcionalidad del modal de agrupar
+   */
+  configurarModalAgrupar(documentoLiderId) {
+    const modal = document.getElementById('modalAgruparDocumentos');
+    const selectAll = modal.querySelector('#selectAllGrupo');
+    const checkboxes = modal.querySelectorAll('.documento-checkbox');
+    const btnConfirmar = modal.querySelector('#btnConfirmarAgrupacion');
+    
+    // Funcionalidad de seleccionar todo
+    selectAll.addEventListener('change', () => {
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = selectAll.checked;
+      });
+      this.actualizarBotonAgrupar(btnConfirmar, checkboxes);
+    });
+    
+    // Funcionalidad de checkboxes individuales
+    checkboxes.forEach(checkbox => {
+      checkbox.addEventListener('change', () => {
+        this.actualizarBotonAgrupar(btnConfirmar, checkboxes);
+        
+        // Actualizar selectAll
+        const todosSeleccionados = Array.from(checkboxes).every(cb => cb.checked);
+        const algunoSeleccionado = Array.from(checkboxes).some(cb => cb.checked);
+        
+        selectAll.checked = todosSeleccionados;
+        selectAll.indeterminate = algunoSeleccionado && !todosSeleccionados;
+      });
+    });
+    
+    // Funcionalidad del botón confirmar
+    btnConfirmar.addEventListener('click', () => {
+      this.procesarAgrupacion(documentoLiderId, checkboxes, btnConfirmar);
+    });
+  }
+  
+  /**
+   * Actualiza el estado del botón de agrupar según selección
+   */
+  actualizarBotonAgrupar(boton, checkboxes) {
+    const seleccionados = Array.from(checkboxes).filter(cb => cb.checked);
+    const btnText = boton.querySelector('.btn-text');
+    
+    if (seleccionados.length === 0) {
+      boton.disabled = true;
+      btnText.textContent = 'Crear Grupo';
+    } else {
+      boton.disabled = false;
+      btnText.textContent = `Crear Grupo (${seleccionados.length + 1} documentos)`;
+    }
+  }
+  
+  /**
+   * Procesa la agrupación de documentos seleccionados
+   */
+  async procesarAgrupacion(documentoLiderId, checkboxes, boton) {
+    try {
+      // Obtener documentos seleccionados
+      const documentosSeleccionados = Array.from(checkboxes)
+        .filter(cb => cb.checked)
+        .map(cb => parseInt(cb.value));
+      
+      if (documentosSeleccionados.length === 0) {
+        this.mostrarAlerta('Debe seleccionar al menos un documento para agrupar', 'warning');
+        return;
+      }
+      
+      // Mostrar spinner
+      const spinner = boton.querySelector('.spinner-border');
+      const btnText = boton.querySelector('.btn-text');
+      
+      spinner.classList.remove('d-none');
+      btnText.textContent = 'Creando grupo...';
+      boton.disabled = true;
+      
+      // Llamada a la API
+      const response = await fetch('/api/matrizador/grupos-notificacion/crear', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+          documentoLiderId: parseInt(documentoLiderId),
+          documentosIds: documentosSeleccionados
+        })
+      });
+      
+      const resultado = await response.json();
+      
+      if (!response.ok || !resultado.exito) {
+        throw new Error(resultado.mensaje || 'Error creando grupo');
+      }
+      
+      // Éxito
+      this.mostrarAlerta(
+        `¡Grupo creado exitosamente! ${resultado.datos.documentosAgrupados} documentos agrupados con código: ${resultado.datos.codigoVerificacion}`,
+        'success'
+      );
+      
+      // Cerrar modal
+      this.modales.agrupar?.hide();
+      
+      // Recargar página para mostrar nueva información
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+      
+    } catch (error) {
+      console.error('❌ [AGRUPAR] Error procesando agrupación:', error);
+      this.mostrarAlerta(`Error creando grupo: ${error.message}`, 'danger');
+      
+      // Restaurar botón
+      const spinner = boton.querySelector('.spinner-border');
+      const btnText = boton.querySelector('.btn-text');
+      
+      spinner.classList.add('d-none');
+      btnText.textContent = 'Crear Grupo';
+      boton.disabled = false;
+    }
+  }
+  
+  /**
+   * Confirma la separación de un documento del grupo
+   */
+  confirmarSeparacion(documentoId) {
+    const modalHtml = `
+      <div class="modal fade" id="modalSepararGrupo" tabindex="-1">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+              <h5 class="modal-title">
+                <i class="fas fa-unlink me-2"></i>Separar de Grupo
+              </h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <div class="alert alert-info">
+                <h6><i class="fas fa-info-circle me-2"></i>¿Qué sucederá?</h6>
+                <ul class="mb-0 small">
+                  <li>El documento se separará del grupo actual</li>
+                  <li>Requerirá notificación individual cuando esté listo</li>
+                  <li>Los demás documentos permanecerán agrupados</li>
+                  <li>Si el grupo queda con un solo documento, se convertirá en individual</li>
+                </ul>
+              </div>
+              <p><strong>¿Está seguro de que desea separar este documento del grupo?</strong></p>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                <i class="fas fa-times me-1"></i>Cancelar
+              </button>
+              <button type="button" class="btn btn-warning" id="btnConfirmarSeparacion">
+                <i class="fas fa-unlink me-1"></i>
+                <span class="btn-text">Separar del Grupo</span>
+                <span class="spinner-border spinner-border-sm d-none ms-2"></span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Remover modal existente
+    this.removerModal('modalSepararGrupo');
+    
+    // Agregar nuevo modal
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Configurar funcionalidad
+    const btnConfirmar = document.getElementById('btnConfirmarSeparacion');
+    btnConfirmar.addEventListener('click', () => {
+      this.procesarSeparacion(documentoId, btnConfirmar);
+    });
+    
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('modalSepararGrupo'));
+    this.modales.separar = modal;
+    modal.show();
+  }
+  
+  /**
+   * Procesa la separación del documento del grupo
+   */
+  async procesarSeparacion(documentoId, boton) {
+    try {
+      // Mostrar spinner
+      const spinner = boton.querySelector('.spinner-border');
+      const btnText = boton.querySelector('.btn-text');
+      
+      spinner.classList.remove('d-none');
+      btnText.textContent = 'Separando...';
+      boton.disabled = true;
+      
+      // Llamada a la API
+      const response = await fetch(`/api/matrizador/grupos-notificacion/${documentoId}/separar`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      });
+      
+      const resultado = await response.json();
+      
+      if (!response.ok || !resultado.exito) {
+        throw new Error(resultado.mensaje || 'Error separando documento');
+      }
+      
+      // Éxito
+      this.mostrarAlerta('Documento separado del grupo exitosamente', 'success');
+      
+      // Cerrar modal
+      this.modales.separar?.hide();
+      
+      // Recargar página para mostrar nueva información
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+      
+    } catch (error) {
+      console.error('❌ [SEPARAR] Error procesando separación:', error);
+      this.mostrarAlerta(`Error separando documento: ${error.message}`, 'danger');
+      
+      // Restaurar botón
+      const spinner = boton.querySelector('.spinner-border');
+      const btnText = boton.querySelector('.btn-text');
+      
+      spinner.classList.add('d-none');
+      btnText.textContent = 'Separar del Grupo';
+      boton.disabled = false;
+    }
+  }
+  
+  /**
+   * Intercepta el botón "Marcar como Listo" para detectar grupos
+   */
+  async interceptarMarcarComoListo(documentoId) {
+    try {
+      console.log(`🎯 [MARCAR LISTO] Interceptando para documento ${documentoId}`);
+      
+      // Verificar si el documento está en un grupo
+      if (this.grupoActual && this.grupoActual.grupo) {
+        // Documento está en grupo, preguntar si marcar todo el grupo
+        this.mostrarModalMarcarGrupo(documentoId);
+      } else {
+        // Documento individual, proceder normalmente
+        this.marcarIndividualComoListo(documentoId);
+      }
+      
+    } catch (error) {
+      console.error('❌ [MARCAR LISTO] Error:', error);
+      this.mostrarAlerta(`Error al procesar marcado: ${error.message}`, 'danger');
+    }
+  }
+  
+  /**
+   * Muestra modal para confirmar marcado de todo el grupo
+   */
+  mostrarModalMarcarGrupo(documentoId) {
+    const grupo = this.grupoActual.grupo;
+    const documentosGrupo = this.grupoActual.documentosDelGrupo || [];
+    const totalDocumentos = grupo.totalDocumentos || 1;
+    
+    const modalHtml = `
+      <div class="modal fade" id="modalMarcarGrupo" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+              <h5 class="modal-title">
+                <i class="fas fa-check-circle me-2"></i>Marcar Grupo como Listo
+              </h5>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <div class="alert alert-info">
+                <h6><i class="fas fa-layer-group me-2"></i>Grupo de Notificación Detectado</h6>
+                <p class="mb-0">
+                  Este documento pertenece a un grupo de <strong>${totalDocumentos} documentos</strong> 
+                  con código único: <code class="bg-primary text-white px-2 py-1 rounded">${grupo.codigoVerificacion}</code>
+                </p>
+              </div>
+              
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="card border-primary">
+                    <div class="card-header bg-primary text-white">
+                      <i class="fas fa-layer-group me-2"></i>Marcar Todo el Grupo
+                    </div>
+                    <div class="card-body">
+                      <ul class="list-unstyled mb-3">
+                        <li><i class="fas fa-check text-success me-2"></i>Todos los documentos quedan listos</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Una sola notificación consolidada</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Código único para todo el grupo</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Entrega eficiente</li>
+                      </ul>
+                      <button type="button" class="btn btn-primary w-100" id="btnMarcarTodoGrupo">
+                        <i class="fas fa-layer-group me-2"></i>Marcar Todo el Grupo
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="col-md-6">
+                  <div class="card border-warning">
+                    <div class="card-header bg-warning text-dark">
+                      <i class="fas fa-file-alt me-2"></i>Solo Este Documento
+                    </div>
+                    <div class="card-body">
+                      <ul class="list-unstyled mb-3">
+                        <li><i class="fas fa-exclamation text-warning me-2"></i>Se separa del grupo automáticamente</li>
+                        <li><i class="fas fa-exclamation text-warning me-2"></i>Notificación individual</li>
+                        <li><i class="fas fa-exclamation text-warning me-2"></i>Código individual</li>
+                        <li><i class="fas fa-exclamation text-warning me-2"></i>Los demás siguen agrupados</li>
+                      </ul>
+                      <button type="button" class="btn btn-warning w-100" id="btnMarcarSoloDocumento">
+                        <i class="fas fa-file-alt me-2"></i>Solo Este Documento
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="mt-3">
+                <small class="text-muted">
+                  <i class="fas fa-lightbulb me-1"></i>
+                  <strong>Recomendación:</strong> Marcar todo el grupo es más eficiente para el cliente y la notaría.
+                </small>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                <i class="fas fa-times me-1"></i>Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Remover modal existente
+    this.removerModal('modalMarcarGrupo');
+    
+    // Agregar nuevo modal
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Configurar botones
+    document.getElementById('btnMarcarTodoGrupo').addEventListener('click', () => {
+      this.marcarTodoElGrupoComoListo(documentoId);
+    });
+    
+    document.getElementById('btnMarcarSoloDocumento').addEventListener('click', () => {
+      this.marcarSoloDocumentoComoListo(documentoId);
+    });
+    
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('modalMarcarGrupo'));
+    this.modales.marcarGrupo = modal;
+    modal.show();
+  }
+  
+  /**
+   * Marca todo el grupo como listo
+   */
+  async marcarTodoElGrupoComoListo(documentoId) {
+    try {
+      console.log(`📋 [GRUPO] Marcando todo el grupo como listo desde documento ${documentoId}`);
+      
+      // Cerrar modal
+      this.modales.marcarGrupo?.hide();
+      
+      // Mostrar loader
+      this.mostrarCargando('Marcando todo el grupo como listo...');
+      
+      // TODO: Implementar endpoint específico para marcar grupo completo
+      // Por ahora, usar el endpoint existente que debería detectar el grupo
+      const response = await fetch(`/api/matrizador/documentos/${documentoId}/marcar-listo-grupo`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+          marcarTodoElGrupo: true
+        })
+      });
+      
+      const resultado = await response.json();
+      
+      if (!response.ok || !resultado.success) {
+        throw new Error(resultado.message || 'Error marcando grupo como listo');
+      }
+      
+      this.ocultarCargando();
+      
+      // Éxito
+      this.mostrarAlerta(
+        '¡Todo el grupo marcado como listo! Se ha enviado una notificación consolidada al cliente.',
+        'success'
+      );
+      
+      // Recargar página
+      setTimeout(() => {
+        window.location.reload();
+      }, 3000);
+      
+    } catch (error) {
+      this.ocultarCargando();
+      console.error('❌ [GRUPO] Error marcando grupo:', error);
+      this.mostrarAlerta(`Error marcando grupo: ${error.message}`, 'danger');
+    }
+  }
+  
+  /**
+   * Marca solo el documento actual como listo (se separa del grupo)
+   */
+  async marcarSoloDocumentoComoListo(documentoId) {
+    try {
+      console.log(`📄 [INDIVIDUAL] Marcando solo documento ${documentoId} como listo`);
+      
+      // Cerrar modal
+      this.modales.marcarGrupo?.hide();
+      
+      // Primero separar del grupo, luego marcar como listo
+      this.mostrarCargando('Separando documento del grupo...');
+      
+      const responseSeparar = await fetch(`/api/matrizador/grupos-notificacion/${documentoId}/separar`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      });
+      
+      const resultadoSeparar = await responseSeparar.json();
+      
+      if (!responseSeparar.ok || !resultadoSeparar.exito) {
+        throw new Error(resultadoSeparar.mensaje || 'Error separando documento');
+      }
+      
+      // Ahora marcar como listo individualmente
+      this.mostrarCargando('Marcando documento como listo...');
+      
+      await this.marcarIndividualComoListo(documentoId);
+      
+    } catch (error) {
+      this.ocultarCargando();
+      console.error('❌ [INDIVIDUAL] Error:', error);
+      this.mostrarAlerta(`Error: ${error.message}`, 'danger');
+    }
+  }
+  
+  /**
+   * Marca un documento individual como listo (sin grupo)
+   */
+  async marcarIndividualComoListo(documentoId) {
+    try {
+      // Usar el endpoint existente de marcar como listo
+      const response = await fetch(`/matrizador/documentos/${documentoId}/marcar-listo`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      });
+      
+      const resultado = await response.json();
+      
+      if (!response.ok || !resultado.success) {
+        throw new Error(resultado.message || 'Error marcando documento como listo');
+      }
+      
+      this.ocultarCargando();
+      
+      // Éxito
+      this.mostrarAlerta(resultado.message || 'Documento marcado como listo exitosamente', 'success');
+      
+      // Recargar página
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+      
+    } catch (error) {
+      this.ocultarCargando();
+      console.error('❌ [INDIVIDUAL] Error marcando documento:', error);
+      this.mostrarAlerta(`Error: ${error.message}`, 'danger');
+    }
+  }
+  
+  /**
+   * Utilidades para manejo de modales y UI
+   */
+  removerModal(modalId) {
+    const modalExistente = document.getElementById(modalId);
+    if (modalExistente) {
+      const instance = bootstrap.Modal.getInstance(modalExistente);
+      if (instance) {
+        instance.hide();
+      }
+      modalExistente.remove();
+    }
+  }
+  
+  mostrarCargando(mensaje = 'Cargando...') {
+    this.ocultarCargando(); // Remover cualquier loader existente
+    
+    const loaderHtml = `
+      <div id="loader-notificaciones" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" 
+           style="background: rgba(0,0,0,0.5); z-index: 9999;">
+        <div class="bg-white p-4 rounded-3 text-center">
+          <div class="spinner-border text-primary mb-3" role="status"></div>
+          <p class="mb-0">${mensaje}</p>
+        </div>
+      </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', loaderHtml);
+  }
+  
+  ocultarCargando() {
+    const loader = document.getElementById('loader-notificaciones');
+    if (loader) {
+      loader.remove();
+    }
+  }
+  
+  mostrarAlerta(mensaje, tipo = 'info', duracion = 5000) {
+    // Reutilizar la función existente del sistema
+    if (typeof mostrarAlerta === 'function') {
+      mostrarAlerta(mensaje, tipo);
+    } else {
+      // Fallback si no existe la función
+      console.log(`[${tipo.toUpperCase()}] ${mensaje}`);
+      alert(mensaje);
+    }
+  }
+}
+
+// ============== INICIALIZACIÓN AUTOMÁTICA ==============
+
+/**
+ * Auto-inicialización del sistema de notificaciones grupales
+ */
+document.addEventListener('DOMContentLoaded', function() {
+  // Solo inicializar en páginas de matrizador que tengan elementos relevantes
+  if (document.body.classList.contains('matrizador-page') || 
+      document.querySelector('[data-page="matrizador"]') ||
+      document.getElementById('informacion-grupal') ||
+      document.getElementById('btn-agrupar-notificacion') ||
+      document.getElementById('btn-separar-grupo')) {
+    
+    console.log('📱 [NOTIFICACIONES GRUPALES] Inicializando sistema...');
+    
+    // Inicializar sistema con delay para asegurar que el DOM esté completo
+    setTimeout(() => {
+      window.notificacionesGrupales = new NotificacionesGrupales();
+    }, 500);
+  }
+});
+
+// ============== FUNCIONES GLOBALES PARA COMPATIBILIDAD ==============
+
+/**
+ * Funciones globales que pueden ser llamadas desde HTML o otras partes del sistema
+ */
+window.abrirModalAgrupar = function(documentoId) {
+  if (window.notificacionesGrupales) {
+    window.notificacionesGrupales.abrirModalAgrupar(documentoId);
+  } else {
+    console.error('❌ Sistema de notificaciones grupales no inicializado');
+  }
+};
+
+window.confirmarSeparacionGrupo = function(documentoId) {
+  if (window.notificacionesGrupales) {
+    window.notificacionesGrupales.confirmarSeparacion(documentoId);
+  } else {
+    console.error('❌ Sistema de notificaciones grupales no inicializado');
+  }
+};
+
+window.interceptarMarcarComoListo = function(documentoId) {
+  if (window.notificacionesGrupales) {
+    window.notificacionesGrupales.interceptarMarcarComoListo(documentoId);
+  } else {
+    console.error('❌ Sistema de notificaciones grupales no inicializado');
+  }
+};
+
+console.log('📱 [NOTIFICACIONES GRUPALES] Sistema JavaScript cargado exitosamente');
+*/

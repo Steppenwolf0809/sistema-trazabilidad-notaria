@@ -15,6 +15,7 @@ const Documento = require('../models/Documento');
 const Matrizador = require('../models/Matrizador');
 const EventoDocumento = require('../models/EventoDocumento');
 const NotificacionEnviada = require('../models/NotificacionEnviada');
+const NotificacionGrupal = require('../models/NotificacionGrupal');
 
 // Importar servicios de notificación
 const notificationService = require('../services/notificationService');
@@ -835,6 +836,135 @@ const archivoController = {
         });
       }
 
+      // ============== DETECCIÓN AUTOMÁTICA DE GRUPOS DE NOTIFICACIÓN ==============
+      
+      // Verificar si el parámetro marcarTodoElGrupo está presente
+      const marcarTodoElGrupo = req.body.marcarTodoElGrupo === 'true' || req.body.marcarTodoElGrupo === true;
+      
+      console.log(`🔍 [ARCHIVO - GRUPO] Verificando si documento ${documentoId} pertenece a grupo...`);
+      
+      // Verificar si el documento pertenece a un grupo de notificación
+      const documentoConGrupo = await Documento.findOne({
+        where: { id: documentoId },
+        include: [{
+          model: NotificacionGrupal,
+          as: 'notificacionGrupal',
+          required: false
+        }],
+        transaction
+      });
+      
+      const perteneceAGrupo = documentoConGrupo?.notificacionGrupal;
+      
+      if (perteneceAGrupo && !marcarTodoElGrupo) {
+        // El documento pertenece a un grupo pero no se especificó marcar todo el grupo
+        await transaction.rollback();
+        
+        console.log(`⚠️ [ARCHIVO - GRUPO] Documento ${documentoId} pertenece al grupo ${perteneceAGrupo.id}, requiere confirmación`);
+        
+        return res.status(409).json({
+          exito: false,
+          requiereConfirmacionGrupo: true,
+          mensaje: 'Este documento pertenece a un grupo de notificación',
+          grupo: {
+            id: perteneceAGrupo.id,
+            codigoVerificacion: perteneceAGrupo.codigoVerificacion,
+            fechaCreacion: perteneceAGrupo.fechaCreacion,
+            totalDocumentos: perteneceAGrupo.totalDocumentos
+          }
+        });
+      }
+      
+      if (perteneceAGrupo && marcarTodoElGrupo) {
+        // Marcar todo el grupo como listo
+        console.log(`📋 [ARCHIVO - GRUPO] Marcando todo el grupo ${perteneceAGrupo.id} como listo...`);
+        
+        // Obtener todos los documentos del grupo que pertenezcan al archivo actual
+        const documentosDelGrupo = await Documento.findAll({
+          where: {
+            notificacionGrupalId: perteneceAGrupo.id,
+            idMatrizador: req.matrizador.id, // Solo documentos propios del archivo
+            estado: 'en_proceso'
+          },
+          transaction
+        });
+        
+        console.log(`📋 [ARCHIVO - GRUPO] Encontrados ${documentosDelGrupo.length} documentos propios en el grupo para marcar`);
+        
+        // Procesar cada documento del grupo
+        const documentosActualizados = [];
+        
+        for (const docGrupo of documentosDelGrupo) {
+          // Generar código de verificación solo para el líder del grupo
+          const esLiderGrupo = docGrupo.esLiderGrupo;
+          const codigoVerificacionGrupo = esLiderGrupo ? perteneceAGrupo.codigoVerificacion : null;
+          
+          const datosActualizacionGrupo = {
+            estado: 'listo_para_entrega',
+            entrega_sin_verificar_pago: entrega_sin_verificar_pago === true || entrega_sin_verificar_pago === 'true',
+            justificacion_entrega_sin_pago: (entrega_sin_verificar_pago === true || entrega_sin_verificar_pago === 'true') ? justificacion_entrega_sin_pago : null,
+            fecha_autorizacion_entrega: (entrega_sin_verificar_pago === true || entrega_sin_verificar_pago === 'true') ? new Date() : null,
+            autorizado_por_matrizador_id: (entrega_sin_verificar_pago === true || entrega_sin_verificar_pago === 'true') ? usuarioId : null,
+            codigoVerificacion: codigoVerificacionGrupo
+          };
+          
+          await docGrupo.update(datosActualizacionGrupo, { transaction });
+          
+          // Crear evento para cada documento
+          const detalleEventoGrupo = `Documento marcado como listo (GRUPO ${perteneceAGrupo.id}) por ${usuarioNombre}. ${esLiderGrupo ? 'LÍDER DEL GRUPO' : 'MIEMBRO DEL GRUPO'}. Código: ${codigoVerificacionGrupo || 'N/A'}`;
+          
+          await EventoDocumento.create({
+            documentoId: docGrupo.id,
+            tipo: 'documento_listo',
+            detalles: detalleEventoGrupo,
+            usuario: usuarioNombre,
+            metadatos: {
+              idUsuario: usuarioId,
+              rolUsuario: 'archivo',
+              tipo_marcado: 'grupo',
+              grupoId: perteneceAGrupo.id,
+              esLiderGrupo: esLiderGrupo,
+              codigoVerificacion: codigoVerificacionGrupo
+            }
+          }, { transaction });
+          
+          documentosActualizados.push({
+            id: docGrupo.id,
+            codigoBarras: docGrupo.codigoBarras,
+            esLider: esLiderGrupo
+          });
+        }
+        
+        await transaction.commit();
+        
+        console.log(`✅ [ARCHIVO - GRUPO] Grupo ${perteneceAGrupo.id} marcado como listo: ${documentosActualizados.length} documentos propios`);
+        
+        // Enviar notificación grupal solo si hay documentos propios
+        if (documentosActualizados.length > 0) {
+          try {
+            // Reutilizar la función del matrizador para notificación grupal
+            const whatsappService = require('../services/whatsappService');
+            await whatsappService.enviarNotificacionGrupal(perteneceAGrupo.id);
+            console.log(`📱 [ARCHIVO - GRUPO] Notificación grupal enviada para grupo ${perteneceAGrupo.id}`);
+          } catch (notificationError) {
+            console.error('❌ [ARCHIVO - GRUPO] Error enviando notificación grupal:', notificationError);
+          }
+        }
+        
+        return res.json({
+          success: true,
+          exito: true,
+          mensaje: `Grupo marcado como listo: ${documentosActualizados.length} documentos propios procesados`,
+          tipoMarcado: 'grupo',
+          grupo: {
+            id: perteneceAGrupo.id,
+            codigoVerificacion: perteneceAGrupo.codigoVerificacion,
+            documentosActualizados: documentosActualizados.length
+          },
+          documentos: documentosActualizados
+        });
+      }
+
       // Preparar datos de actualización con SISTEMA DE AUTORIZACIONES
       const tieneAutorizacionCredito = entrega_sin_verificar_pago === true || entrega_sin_verificar_pago === 'true';
       
@@ -1236,6 +1366,273 @@ const archivoController = {
     } catch (error) {
       console.error('❌ Error al buscar documentos del mismo cliente:', error);
       res.status(500).json({ error: 'Error al buscar documentos' });
+    }
+  },
+
+  // ============== NUEVAS FUNCIONES PARA NOTIFICACIONES GRUPALES - ARCHIVO ==============
+
+  /**
+   * API: Detectar documentos del mismo cliente para agrupar en notificación
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  detectarDocumentosParaNotificacion: async (req, res) => {
+    try {
+      const { documentoId } = req.params;
+      const archivoId = req.matrizador?.id;
+
+      if (!documentoId) {
+        return res.status(400).json({
+          exito: false,
+          mensaje: 'ID de documento requerido'
+        });
+      }
+
+      // Obtener el documento actual
+      const documento = await Documento.findOne({
+        where: {
+          id: documentoId,
+          idMatrizador: archivoId
+        }
+      });
+
+      if (!documento) {
+        return res.status(404).json({
+          exito: false,
+          mensaje: 'Documento no encontrado o no tiene permisos'
+        });
+      }
+
+      // Reutilizar la función del matrizador
+      const { detectarDocumentosParaNotificacionGrupal } = require('./matrizadorController');
+      const deteccion = await detectarDocumentosParaNotificacionGrupal(
+        documento.identificacionCliente,
+        parseInt(documentoId),
+        archivoId
+      );
+
+      return res.status(200).json({
+        exito: true,
+        datos: deteccion,
+        mensaje: deteccion.tieneDocumentosAdicionales 
+          ? `Se encontraron ${deteccion.totalDisponibles || deteccion.documentosEnGrupo?.length || 0} documentos adicionales`
+          : 'No se encontraron documentos adicionales para agrupar'
+      });
+
+    } catch (error) {
+      console.error('Error detectando documentos para notificación grupal (archivo):', error);
+      return res.status(500).json({
+        exito: false,
+        mensaje: 'Error interno del servidor',
+        error: error.message
+      });
+    }
+  },
+
+  /**
+   * API: Crear grupo de notificación con documentos seleccionados
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  crearGrupoNotificacion: async (req, res) => {
+    try {
+      const { documentoLiderId, documentosIds } = req.body;
+      const archivoId = req.matrizador?.id;
+
+      if (!documentoLiderId || !Array.isArray(documentosIds)) {
+        return res.status(400).json({
+          exito: false,
+          mensaje: 'Parámetros requeridos: documentoLiderId y array documentosIds'
+        });
+      }
+
+      // Reutilizar la función del matrizador
+      const { crearGrupoNotificacion } = require('./matrizadorController');
+      const resultado = await crearGrupoNotificacion(
+        parseInt(documentoLiderId),
+        documentosIds.map(id => parseInt(id)),
+        archivoId
+      );
+
+      return res.status(200).json({
+        exito: true,
+        datos: resultado,
+        mensaje: `Grupo de notificación creado exitosamente con ${resultado.documentosAgrupados} documentos`
+      });
+
+    } catch (error) {
+      console.error('Error creando grupo de notificación (archivo):', error);
+      return res.status(500).json({
+        exito: false,
+        mensaje: 'Error creando grupo de notificación',
+        error: error.message
+      });
+    }
+  },
+
+  /**
+   * API: Separar documento de su grupo de notificación
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  separarDeGrupoNotificacion: async (req, res) => {
+    try {
+      const { documentoId } = req.params;
+      const archivoId = req.matrizador?.id;
+
+      if (!documentoId) {
+        return res.status(400).json({
+          exito: false,
+          mensaje: 'ID de documento requerido'
+        });
+      }
+
+      // Reutilizar la función del matrizador
+      const { separarDeGrupoNotificacion } = require('./matrizadorController');
+      const resultado = await separarDeGrupoNotificacion(
+        parseInt(documentoId),
+        archivoId
+      );
+
+      return res.status(200).json({
+        exito: true,
+        datos: resultado,
+        mensaje: 'Documento separado del grupo exitosamente'
+      });
+
+    } catch (error) {
+      console.error('Error separando documento del grupo (archivo):', error);
+      return res.status(500).json({
+        exito: false,
+        mensaje: 'Error separando documento del grupo',
+        error: error.message
+      });
+    }
+  },
+
+  /**
+   * API para detectar documentos grupales del mismo cliente (ARCHIVO - CON RESTRICCIONES SIMILARES A MATRIZADOR)
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  detectarDocumentosGrupales: async (req, res) => {
+    try {
+      const { identificacion, documentoId } = req.params;
+      
+      if (!identificacion || !documentoId) {
+        return res.status(400).json({
+          exito: false,
+          mensaje: 'Parámetros requeridos: identificación y documentoId'
+        });
+      }
+      
+      // Reutilizar la función del matrizador (archivo funciona igual que matrizador)
+      const { detectarDocumentosGrupalesMatrizador } = require('./matrizadorController');
+      const documentosGrupales = await detectarDocumentosGrupalesMatrizador(
+        identificacion, 
+        parseInt(documentoId),
+        req.matrizador.id
+      );
+      
+      return res.status(200).json({
+        exito: true,
+        datos: documentosGrupales,
+        mensaje: `Detectados ${documentosGrupales.documentosPropios.length} documentos propios`
+      });
+      
+    } catch (error) {
+      console.error('Error en API detectar documentos grupales archivo:', error);
+      return res.status(500).json({
+        exito: false,
+        mensaje: 'Error al detectar documentos grupales',
+        error: error.message
+      });
+    }
+  },
+
+  /**
+   * Procesa entrega grupal específica (ARCHIVO - SOLO DOCUMENTOS PROPIOS)
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  procesarEntregaGrupal: async (req, res) => {
+    const transaction = await sequelize.transaction();
+    
+    try {
+      const { id } = req.params;
+      const { 
+        documentosIds, 
+        nombreReceptor, 
+        identificacionReceptor, 
+        relacionReceptor,
+        tipoVerificacion,
+        observaciones
+      } = req.body;
+      
+      if (!id || !documentosIds || !Array.isArray(documentosIds)) {
+        await transaction.rollback();
+        return res.status(400).json({
+          exito: false,
+          mensaje: 'Parámetros requeridos: id del documento principal y array de documentosIds'
+        });
+      }
+      
+      // Obtener documento principal y verificar pertenencia
+      const documentoPrincipal = await Documento.findOne({
+        where: {
+          id: id,
+          idMatrizador: req.matrizador.id
+        },
+        transaction
+      });
+      
+      if (!documentoPrincipal) {
+        await transaction.rollback();
+        return res.status(404).json({
+          exito: false,
+          mensaje: 'Documento principal no encontrado o no pertenece al archivo'
+        });
+      }
+      
+      // Preparar datos de entrega
+      const datosEntrega = {
+        nombreReceptor,
+        identificacionReceptor,
+        relacionReceptor,
+        tipoVerificacion,
+        observaciones,
+        identificacionCliente: documentoPrincipal.identificacionCliente
+      };
+      
+      // Reutilizar la función del matrizador (archivo funciona igual)
+      const { procesarEntregaGrupalMatrizador } = require('./matrizadorController');
+      const resultado = await procesarEntregaGrupalMatrizador(
+        documentosIds, 
+        datosEntrega, 
+        req.matrizador, 
+        transaction
+      );
+      
+      await transaction.commit();
+      
+      return res.status(200).json({
+        exito: true,
+        mensaje: `Entrega grupal procesada exitosamente: ${resultado.documentosActualizados} documentos propios`,
+        datos: {
+          documentosActualizados: resultado.documentosActualizados,
+          tipoEntrega: 'archivo_limitada',
+          soloDocumentosPropiios: true
+        }
+      });
+      
+    } catch (error) {
+      await transaction.rollback();
+      console.error('Error en procesamiento entrega grupal archivo:', error);
+      return res.status(500).json({
+        exito: false,
+        mensaje: 'Error al procesar entrega grupal',
+        error: error.message
+      });
     }
   }
 };

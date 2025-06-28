@@ -190,15 +190,7 @@
                     </div>
                     
                     <div class="col-md-6">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="esHabilitante" name="esHabilitante" value="true" 
-                                   {{#if documento.documentoPrincipalId}}checked{{/if}}>
-                            <label class="form-check-label" for="esHabilitante">
-                                <i class="fas fa-link text-info me-1"></i>
-                                <strong>🔗 Documento habilitante</strong>
-                                <small class="text-muted d-block">Este documento es parte de otro documento principal</small>
-                            </label>
-                        </div>
+                        <!-- Espacio para futuras opciones especiales -->
                     </div>
                 </div>
                 
@@ -252,19 +244,7 @@
                     </div>
                 </div>
                 
-                <!-- Búsqueda de documento principal (solo visible si es habilitante) -->
-                <div id="busquedaDocumentoPrincipal" class="mt-3" style="display: none;">
-                    <label for="documentoPrincipalId" class="form-label">
-                        <i class="fas fa-file-alt me-1"></i> Documento Principal: <span class="text-danger">*</span>
-                    </label>
-                    <select class="form-select" id="documentoPrincipalId" name="documentoPrincipalId">
-                        <option value="">Seleccione el documento principal...</option>
-                        <!-- Las opciones se cargarán dinámicamente -->
-                    </select>
-                    <div class="form-text text-muted">
-                        Las notificaciones se enviarán solo para el documento principal.
-                    </div>
-                </div>
+                <!-- Búsqueda de documento principal eliminada para matrizadores -->
                 
                 <!-- Información de contacto requerida -->
                 <div class="alert alert-warning mt-3">
@@ -474,8 +454,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const canalesGroup = document.getElementById('canalesGroup');
     const razonGroup = document.getElementById('razonGroup');
     const entregaInmediataCheckbox = document.getElementById('entregaInmediata');
-    const esHabilitanteCheckbox = document.getElementById('esHabilitante');
-    const busquedaDocumentoPrincipal = document.getElementById('busquedaDocumentoPrincipal');
+    // Elementos de documento habilitante eliminados para matrizadores
     const razonSinNotificarTextarea = document.getElementById('razonSinNotificar');
 
     // Función para actualizar visibilidad de campos condicionales
@@ -535,202 +514,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Función para manejar documento habilitante con auto-configuración de notificaciones
-    function manejarDocumentoHabilitante() {
-        console.log('🔧 manejarDocumentoHabilitante ejecutada');
-        console.log('Checkbox habilitante:', esHabilitanteCheckbox ? esHabilitanteCheckbox.checked : 'elemento no encontrado');
-        
-        const noNotificarRadio = document.querySelector('input[name="politicaNotificacion"][value="no_notificar"]');
-        const notificarAutoRadio = document.querySelector('input[name="politicaNotificacion"][value="automatico"]');
-        const razonSinNotificarTextarea = document.getElementById('razonSinNotificar');
-        const canalesGroup = document.getElementById('canalesGroup');
-        const canalNotificacionSelect = document.getElementById('canalNotificacion');
-        
-        if (esHabilitanteCheckbox && esHabilitanteCheckbox.checked) {
-            console.log('✅ Documento marcado como habilitante - Auto-configurando notificaciones');
-            
-            // ============== AUTO-CONFIGURACIÓN DE NOTIFICACIONES ==============
-            
-            // 1. Seleccionar automáticamente "No notificar"
-            if (noNotificarRadio) {
-                noNotificarRadio.checked = true;
-                console.log('✅ Auto-seleccionado: No notificar');
-            }
-            
-            // 2. Llenar automáticamente la razón con texto explicativo
-            if (razonSinNotificarTextarea) {
-                const razonAutomatica = 'Documento habilitante - Se entrega junto con el documento principal. Las notificaciones se envían únicamente para el documento principal.';
-                razonSinNotificarTextarea.value = razonAutomatica;
-                razonSinNotificarTextarea.setAttribute('readonly', 'readonly');
-                razonSinNotificarTextarea.style.backgroundColor = '#f8f9fa';
-                razonSinNotificarTextarea.style.color = '#6c757d';
-                console.log('✅ Razón automática configurada');
-            }
-            
-            // 3. Deshabilitar campos de notificación (solo lectura)
-            if (notificarAutoRadio) {
-                notificarAutoRadio.disabled = true;
-            }
-            if (noNotificarRadio) {
-                noNotificarRadio.disabled = true;
-            }
-            if (canalNotificacionSelect) {
-                canalNotificacionSelect.disabled = true;
-                canalNotificacionSelect.style.backgroundColor = '#f8f9fa';
-            }
-            
-            // 4. Actualizar visibilidad de campos
-            toggleNotificationFields();
-            
-            // 5. Mostrar mensaje explicativo
-            mostrarMensajeHabilitante(true);
-            
-            // 6. Mostrar búsqueda de documento principal
-            if (busquedaDocumentoPrincipal) {
-                busquedaDocumentoPrincipal.style.display = 'block';
-                console.log('✅ Mostrando búsqueda de documento principal');
-                cargarDocumentosPrincipales();
-            }
-            
-        } else {
-            console.log('✅ Documento desmarcado como habilitante - Restaurando configuración normal');
-            
-            // ============== RESTAURAR CONFIGURACIÓN NORMAL ==============
-            
-            // 1. Restaurar "Notificar automáticamente" como opción por defecto
-            if (notificarAutoRadio) {
-                notificarAutoRadio.checked = true;
-                notificarAutoRadio.disabled = false;
-                console.log('✅ Restaurado: Notificar automáticamente');
-            }
-            
-            // 2. Habilitar todos los campos de notificación
-            if (noNotificarRadio) {
-                noNotificarRadio.disabled = false;
-            }
-            if (canalNotificacionSelect) {
-                canalNotificacionSelect.disabled = false;
-                canalNotificacionSelect.style.backgroundColor = '';
-            }
-            
-            // 3. Limpiar la razón automática y restaurar funcionalidad
-            if (razonSinNotificarTextarea) {
-                razonSinNotificarTextarea.value = '';
-                razonSinNotificarTextarea.removeAttribute('readonly');
-                razonSinNotificarTextarea.style.backgroundColor = '';
-                razonSinNotificarTextarea.style.color = '';
-                console.log('✅ Razón limpiada y campo habilitado');
-            }
-            
-            // 4. Actualizar visibilidad de campos
-            toggleNotificationFields();
-            
-            // 5. Ocultar mensaje explicativo
-            mostrarMensajeHabilitante(false);
-            
-            // 6. Ocultar búsqueda de documento principal
-            if (busquedaDocumentoPrincipal) {
-                busquedaDocumentoPrincipal.style.display = 'none';
-                console.log('✅ Ocultando búsqueda de documento principal');
-            }
-            const select = document.getElementById('documentoPrincipalId');
-            if (select) {
-                select.value = '';
-                console.log('✅ Limpiando selección de documento principal');
-            }
-        }
-    }
+    // Función manejarDocumentoHabilitante eliminada para matrizadores
     
-    // Función para mostrar/ocultar mensaje explicativo para documentos habilitantes
-    function mostrarMensajeHabilitante(mostrar) {
-        const mensajeId = 'mensaje-documento-habilitante';
-        let mensajeExistente = document.getElementById(mensajeId);
-        
-        if (mostrar) {
-            // Crear mensaje si no existe
-            if (!mensajeExistente) {
-                const mensajeDiv = document.createElement('div');
-                mensajeDiv.id = mensajeId;
-                mensajeDiv.className = 'alert alert-info mt-3';
-                mensajeDiv.innerHTML = `
-                    <div class="d-flex align-items-start">
-                        <i class="fas fa-info-circle me-3 mt-1" style="font-size: 1.2em;"></i>
-                        <div>
-                            <h6 class="alert-heading mb-2">
-                                <i class="fas fa-link me-1"></i> Documento Habilitante - Configuración Automática
-                            </h6>
-                            <p class="mb-2">
-                                <strong>🔔 Notificaciones:</strong> Este documento se entregará junto con el documento principal seleccionado. 
-                                Las notificaciones al cliente se enviarán únicamente cuando el documento principal esté listo.
-                            </p>
-                            <p class="mb-0">
-                                <strong>📋 Configuración:</strong> Los campos de notificación se han configurado automáticamente y no requieren modificación.
-                            </p>
-                        </div>
-                    </div>
-                `;
-                
-                // Insertar después del checkbox de documento habilitante
-                const checkboxContainer = esHabilitanteCheckbox.closest('.col-md-6');
-                if (checkboxContainer && checkboxContainer.parentNode) {
-                    checkboxContainer.parentNode.insertBefore(mensajeDiv, checkboxContainer.nextSibling);
-                }
-                
-                console.log('✅ Mensaje explicativo de documento habilitante mostrado');
-            }
-        } else {
-            // Eliminar mensaje si existe
-            if (mensajeExistente) {
-                mensajeExistente.remove();
-                console.log('✅ Mensaje explicativo de documento habilitante ocultado');
-            }
-        }
-    }
-
-    // Función para cargar documentos del mismo cliente
-    async function cargarDocumentosPrincipales() {
-        try {
-            const clienteIdentificacion = document.getElementById('identificacionCliente').value;
-            const documentoActualId = '{{documento.id}}';
-            
-            if (!clienteIdentificacion) {
-                mostrarAlertaTemp('warning', 'Debe especificar la identificación del cliente primero');
-                return;
-            }
-            
-            const response = await fetch(`/matrizador/documentos/buscar-principales?clienteId=${encodeURIComponent(clienteIdentificacion)}&excludeId=${documentoActualId}`);
-            const data = await response.json();
-            
-            const select = document.getElementById('documentoPrincipalId');
-            select.innerHTML = '<option value="">Seleccione el documento principal...</option>';
-            
-            if (data.exito && data.datos && data.datos.length > 0) {
-                console.log(`✅ Encontrados ${data.datos.length} documentos principales`);
-                data.datos.forEach(doc => {
-                    const option = document.createElement('option');
-                    option.value = doc.id;
-                    option.textContent = `${doc.codigoBarras} - ${doc.tipoDocumento}`;
-                    // Verificar si este documento está seleccionado actualmente
-                    const documentoPrincipalIdActual = '{{documento.documentoPrincipalId}}';
-                    if (documentoPrincipalIdActual && doc.id == documentoPrincipalIdActual) {
-                        option.selected = true;
-                        console.log(`✅ Documento principal seleccionado: ${doc.codigoBarras}`);
-                    }
-                    select.appendChild(option);
-                });
-            } else {
-                console.log('⚠️ No se encontraron documentos principales para este cliente');
-                const option = document.createElement('option');
-                option.value = '';
-                option.textContent = 'No hay documentos principales disponibles para este cliente';
-                option.disabled = true;
-                select.appendChild(option);
-            }
-        } catch (error) {
-            console.error('Error al cargar documentos principales:', error);
-            mostrarAlertaTemp('warning', 'No se pudieron cargar los documentos principales disponibles');
-        }
-    }
+    // Funciones de documento habilitante eliminadas para matrizadores
 
     // Función para mostrar alertas temporales
     function mostrarAlertaTemp(tipo, mensaje) {
@@ -772,18 +558,7 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('⚠️ Checkbox de entrega inmediata no encontrado');
     }
 
-    if (esHabilitanteCheckbox) {
-        console.log('✅ Configurando checkbox de documento habilitante');
-        esHabilitanteCheckbox.addEventListener('change', manejarDocumentoHabilitante);
-        
-        // Aplicar configuración inicial si ya está marcado como habilitante
-        if (esHabilitanteCheckbox.checked) {
-            console.log('✅ Documento ya marcado como habilitante, aplicando auto-configuración inicial');
-            manejarDocumentoHabilitante();
-        }
-    } else {
-        console.log('⚠️ Checkbox de documento habilitante no encontrado');
-    }
+    // Checkbox de documento habilitante eliminado para matrizadores
 
     // Inicializar estado de campos
     console.log('🔧 Inicializando estado de campos...');
@@ -832,7 +607,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Validación de notificaciones
             const politicaSeleccionada = document.querySelector('input[name="politicaNotificacion"]:checked')?.value;
-            const esDocumentoHabilitante = esHabilitanteCheckbox && esHabilitanteCheckbox.checked;
+            const esDocumentoHabilitante = false; // Eliminado para matrizadores
             
             console.log('🔧 Validando notificaciones:', { politicaSeleccionada, esDocumentoHabilitante });
             
@@ -867,24 +642,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
             
-            // Validación de documento habilitante
-            const esHabilitante = document.getElementById('esHabilitante');
-            if (esHabilitante && esHabilitante.checked) {
-                const documentoPrincipalSelect = document.getElementById('documentoPrincipalId');
-                const documentoPrincipalId = documentoPrincipalSelect ? documentoPrincipalSelect.value : '';
-                if (!documentoPrincipalId) {
-                    formValido = false;
-                    if (documentoPrincipalSelect) {
-                        documentoPrincipalSelect.classList.add('is-invalid');
-                        documentoPrincipalSelect.focus();
-                    }
-                    mostrarAlertaTemp('danger', '🔗 Debe seleccionar un documento principal si marca como habilitante');
-                } else {
-                    if (documentoPrincipalSelect) {
-                        documentoPrincipalSelect.classList.remove('is-invalid');
-                    }
-                }
-            }
+            // Validación de documento habilitante eliminada para matrizadores
             
             // Validación de información de contacto para notificaciones
             if (politicaSeleccionada === 'automatico') {
@@ -923,5 +681,31 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+</script>
+
+{{!-- 🆕 SCRIPT DE NOTIFICACIONES GRUPALES - SPRINT 3 --}}
+<script src="/js/notificaciones-grupales.js"></script>
+<script>
+  // Configurar datos del documento para notificaciones grupales
+  document.addEventListener('DOMContentLoaded', function() {
+    // Agregar atributos de datos al elemento principal
+    const documentoContainer = document.querySelector('.document-edit-container') || document.body;
+    
+    {{#if documento}}
+    documentoContainer.setAttribute('data-documento-id', '{{documento.id}}');
+    documentoContainer.setAttribute('data-nombre-cliente', '{{documento.nombreCliente}}');
+    documentoContainer.setAttribute('data-identificacion-cliente', '{{documento.identificacionCliente}}');
+    
+    {{#if notificacionGrupal}}
+    documentoContainer.setAttribute('data-grupo-info', 'true');
+    documentoContainer.setAttribute('data-grupo-id', '{{notificacionGrupal.id}}');
+    documentoContainer.setAttribute('data-codigo-verificacion', '{{notificacionGrupal.codigoVerificacion}}');
+    documentoContainer.setAttribute('data-total-documentos', '{{notificacionGrupal.documentos.length}}');
+    documentoContainer.setAttribute('data-es-lider', '{{#if documento.esLiderGrupo}}true{{else}}false{{/if}}');
+    {{/if}}
+    {{/if}}
+    
+    console.log('📱 [NOTIFICACIONES GRUPALES] Datos del documento configurados en edición');
+  });
 </script> 
 </script> 

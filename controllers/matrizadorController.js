@@ -13,6 +13,7 @@ const { redirigirSegunRol } = require('../middlewares/auth');
 const Documento = require('../models/Documento');
 const EventoDocumento = require('../models/EventoDocumento');
 const RegistroAuditoria = require('../models/RegistroAuditoria');
+const NotificacionGrupal = require('../models/NotificacionGrupal');
 const { Op } = require('sequelize');
 const moment = require('moment');
 const { 
@@ -151,6 +152,318 @@ function construirMensajeEntregaGrupalMatrizador(documentos, datosEntrega) {
 }
 
 // ============== FUNCIONES PARA NOTIFICACIONES GRUPALES - MATRIZADOR ==============
+
+/**
+ * Detecta documentos del mismo cliente para notificación grupal
+ * @param {string} identificacionCliente - Identificación del cliente
+ * @param {number} documentoActualId - ID del documento actual
+ * @param {number} matrizadorId - ID del matrizador
+ * @returns {Object} Información sobre documentos adicionales para agrupar
+ */
+async function detectarDocumentosParaNotificacionGrupal(identificacionCliente, documentoActualId, matrizadorId) {
+  try {
+    console.log(`🔍 [NOTIFICACIÓN GRUPAL] Detectando documentos para agrupar - Cliente: ${identificacionCliente}, Matrizador: ${matrizadorId}`);
+    
+    // Buscar documentos del mismo cliente, mismo matrizador, en estado 'en_proceso'
+    // que NO estén ya en un grupo de notificación
+    const documentosDisponibles = await Documento.findAll({
+      where: {
+        identificacionCliente: identificacionCliente,
+        idMatrizador: matrizadorId,
+        estado: 'en_proceso',
+        id: { [Op.ne]: documentoActualId }, // Excluir documento actual
+        notificacionGrupalId: null // Solo documentos sin grupo asignado
+      },
+      order: [['created_at', 'ASC']]
+    });
+    
+    console.log(`📄 [NOTIFICACIÓN GRUPAL] Encontrados ${documentosDisponibles.length} documentos disponibles para agrupar`);
+    
+    // Verificar si el documento actual ya está en un grupo
+    const documentoActual = await Documento.findByPk(documentoActualId);
+    const yaEnGrupo = documentoActual?.notificacionGrupalId !== null;
+    
+    if (yaEnGrupo) {
+      console.log(`⚠️ [NOTIFICACIÓN GRUPAL] Documento actual ya está en grupo: ${documentoActual.notificacionGrupalId}`);
+      
+      // Si ya está en grupo, obtener información del grupo
+      const grupoExistente = await NotificacionGrupal.findByPk(documentoActual.notificacionGrupalId, {
+        include: [{
+          model: Documento,
+          as: 'documentos',
+          where: { id: { [Op.ne]: documentoActualId } }
+        }]
+      });
+      
+      return {
+        tieneDocumentosAdicionales: true,
+        yaEnGrupo: true,
+        grupoExistente: grupoExistente,
+        documentosEnGrupo: grupoExistente?.documentos || [],
+        documentosDisponibles: documentosDisponibles,
+        puedeModificarGrupo: grupoExistente?.puedeModificarse() || false
+      };
+    }
+    
+    return {
+      tieneDocumentosAdicionales: documentosDisponibles.length > 0,
+      yaEnGrupo: false,
+      documentosDisponibles: documentosDisponibles,
+      totalDisponibles: documentosDisponibles.length,
+      puedeCrearGrupo: documentosDisponibles.length > 0
+    };
+    
+  } catch (error) {
+    console.error('❌ Error detectando documentos para notificación grupal:', error);
+    return {
+      tieneDocumentosAdicionales: false,
+      yaEnGrupo: false,
+      documentosDisponibles: [],
+      totalDisponibles: 0,
+      puedeCrearGrupo: false,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * Crea un grupo de notificación con los documentos seleccionados
+ * @param {number} documentoLiderId - ID del documento líder del grupo
+ * @param {Array} documentosIds - Array de IDs de documentos a incluir
+ * @param {number} matrizadorId - ID del matrizador
+ * @returns {Object} Resultado de la creación del grupo
+ */
+async function crearGrupoNotificacion(documentoLiderId, documentosIds, matrizadorId) {
+  const transaction = await sequelize.transaction();
+  
+  try {
+    console.log(`🎯 [CREAR GRUPO] Creando grupo con líder ${documentoLiderId} y documentos: [${documentosIds.join(', ')}]`);
+    
+    // Obtener el documento líder para información del cliente
+    const documentoLider = await Documento.findByPk(documentoLiderId, { transaction });
+    
+    if (!documentoLider) {
+      throw new Error(`Documento líder ${documentoLiderId} no encontrado`);
+    }
+    
+    // Verificar que el documento líder pertenezca al matrizador
+    if (documentoLider.idMatrizador !== matrizadorId) {
+      throw new Error('El documento líder no pertenece al matrizador especificado');
+    }
+    
+    // Verificar que todos los documentos existan y pertenezcan al mismo cliente y matrizador
+    const todosLosDocumentosIds = [documentoLiderId, ...documentosIds];
+    const documentos = await Documento.findAll({
+      where: {
+        id: { [Op.in]: todosLosDocumentosIds },
+        identificacionCliente: documentoLider.identificacionCliente,
+        idMatrizador: matrizadorId,
+        estado: 'en_proceso',
+        notificacionGrupalId: null // No deben estar ya en un grupo
+      },
+      transaction
+    });
+    
+    if (documentos.length !== todosLosDocumentosIds.length) {
+      throw new Error('Algunos documentos no cumplen las condiciones para agruparse');
+    }
+    
+    // Crear el grupo de notificación
+    const grupo = await NotificacionGrupal.crearGrupo({
+      clienteNombre: documentoLider.nombreCliente,
+      clienteIdentificacion: documentoLider.identificacionCliente,
+      clienteTelefono: documentoLider.telefonoCliente,
+      clienteEmail: documentoLider.emailCliente,
+      matrizadorId: matrizadorId,
+      totalDocumentos: documentos.length,
+      metadatos: {
+        tiposDocumentos: documentos.map(d => d.tipoDocumento),
+        fechaCreacion: new Date().toISOString(),
+        documentoLiderId: documentoLiderId
+      }
+    });
+    
+    console.log(`✅ [CREAR GRUPO] Grupo creado con ID: ${grupo.id}, Código: ${grupo.codigoVerificacion}`);
+    
+    // Asignar todos los documentos al grupo
+    for (const documento of documentos) {
+      const esLider = documento.id === documentoLiderId;
+      
+      await documento.update({
+        notificacionGrupalId: grupo.id,
+        esLiderGrupo: esLider
+      }, { transaction });
+      
+      // Registrar evento
+      await EventoDocumento.create({
+        documentoId: documento.id,
+        tipo: 'agrupacion',
+        categoria: 'notificacion',
+        titulo: esLider ? 'Documento líder de grupo' : 'Documento agregado a grupo',
+        descripcion: `Documento ${esLider ? 'designado como líder' : 'agregado'} al grupo de notificación ${grupo.id}`,
+        detalles: {
+          grupoId: grupo.id,
+          codigoGrupo: grupo.codigoVerificacion,
+          esLider: esLider,
+          totalDocumentosGrupo: documentos.length,
+          clienteIdentificacion: documentoLider.identificacionCliente
+        },
+        usuario: `Matrizador ID: ${matrizadorId}`,
+        metadatos: {
+          canal: 'sistema',
+          estado: 'creado',
+          tipo: 'agrupacion_notificacion',
+          timestamp: new Date().toISOString()
+        }
+      }, { transaction });
+    }
+    
+    await transaction.commit();
+    
+    console.log(`🎉 [CREAR GRUPO] Grupo ${grupo.id} creado exitosamente con ${documentos.length} documentos`);
+    
+    return {
+      exito: true,
+      grupo: grupo,
+      documentosAgrupados: documentos.length,
+      codigoVerificacion: grupo.codigoVerificacion
+    };
+    
+  } catch (error) {
+    await transaction.rollback();
+    console.error('❌ Error creando grupo de notificación:', error);
+    throw error;
+  }
+}
+
+/**
+ * Separar un documento de su grupo de notificación
+ * @param {number} documentoId - ID del documento a separar
+ * @param {number} matrizadorId - ID del matrizador
+ * @returns {Object} Resultado de la separación
+ */
+async function separarDeGrupoNotificacion(documentoId, matrizadorId) {
+  const transaction = await sequelize.transaction();
+  
+  try {
+    console.log(`🔄 [SEPARAR GRUPO] Separando documento ${documentoId} de su grupo`);
+    
+    // Obtener el documento con su grupo
+    const documento = await Documento.findByPk(documentoId, {
+      include: [{
+        model: NotificacionGrupal,
+        as: 'notificacionGrupal'
+      }],
+      transaction
+    });
+    
+    if (!documento) {
+      throw new Error('Documento no encontrado');
+    }
+    
+    if (documento.idMatrizador !== matrizadorId) {
+      throw new Error('No tiene permisos para modificar este documento');
+    }
+    
+    if (!documento.notificacionGrupalId) {
+      throw new Error('El documento no está en ningún grupo');
+    }
+    
+    const grupo = documento.notificacionGrupal;
+    
+    if (!grupo.puedeModificarse()) {
+      throw new Error('El grupo no puede modificarse porque ya fue enviado');
+    }
+    
+    // Verificar si es el líder del grupo
+    const esLider = documento.esLiderGrupo;
+    
+    // Separar el documento del grupo
+    await documento.update({
+      notificacionGrupalId: null,
+      esLiderGrupo: false
+    }, { transaction });
+    
+    // Actualizar contador del grupo
+    await grupo.update({
+      totalDocumentos: grupo.totalDocumentos - 1
+    }, { transaction });
+    
+    // Si era el líder y quedan documentos en el grupo, asignar nuevo líder
+    if (esLider && grupo.totalDocumentos > 1) {
+      const nuevoLider = await Documento.findOne({
+        where: {
+          notificacionGrupalId: grupo.id,
+          id: { [Op.ne]: documentoId }
+        },
+        order: [['created_at', 'ASC']],
+        transaction
+      });
+      
+      if (nuevoLider) {
+        await nuevoLider.update({ esLiderGrupo: true }, { transaction });
+        console.log(`👑 [SEPARAR GRUPO] Nuevo líder asignado: ${nuevoLider.id}`);
+      }
+    }
+    
+    // Si el grupo queda con menos de 2 documentos, cancelarlo
+    if (grupo.totalDocumentos <= 1) {
+      await grupo.cancelar();
+      
+      // Separar el último documento restante
+      const ultimoDocumento = await Documento.findOne({
+        where: { notificacionGrupalId: grupo.id },
+        transaction
+      });
+      
+      if (ultimoDocumento) {
+        await ultimoDocumento.update({
+          notificacionGrupalId: null,
+          esLiderGrupo: false
+        }, { transaction });
+      }
+      
+      console.log(`🗑️ [SEPARAR GRUPO] Grupo ${grupo.id} cancelado por quedar con menos de 2 documentos`);
+    }
+    
+    // Registrar evento
+    await EventoDocumento.create({
+      documentoId: documentoId,
+      tipo: 'separacion',
+      categoria: 'notificacion',
+      titulo: 'Documento separado de grupo',
+      descripcion: `Documento separado del grupo de notificación ${grupo.id}`,
+      detalles: {
+        grupoAnterior: grupo.id,
+        eraLider: esLider,
+        motivoSeparacion: 'solicitud_usuario'
+      },
+      usuario: `Matrizador ID: ${matrizadorId}`,
+      metadatos: {
+        canal: 'sistema',
+        estado: 'separado',
+        tipo: 'separacion_grupo',
+        timestamp: new Date().toISOString()
+      }
+    }, { transaction });
+    
+    await transaction.commit();
+    
+    console.log(`✅ [SEPARAR GRUPO] Documento ${documentoId} separado exitosamente`);
+    
+    return {
+      exito: true,
+      documentoSeparado: documentoId,
+      grupoAnterior: grupo.id,
+      grupoCancelado: grupo.totalDocumentos <= 1
+    };
+    
+  } catch (error) {
+    await transaction.rollback();
+    console.error('❌ Error separando documento del grupo:', error);
+    throw error;
+  }
+}
 
 /**
  * Guarda notificación grupal en el historial de la base de datos
@@ -1778,13 +2091,19 @@ const matrizadorController = {
       
       console.log(`Obteniendo detalle de documento ID: ${id} para matrizador: ${usuarioNombre}`);
       
-      // Buscar documento con sus relaciones
+      // Buscar documento con sus relaciones incluyendo notificación grupal
       const documento = await Documento.findByPk(id, {
         include: [
           {
             model: Matrizador,
             as: 'matrizador',
             attributes: ['id', 'nombre', 'email']
+          },
+          {
+            model: NotificacionGrupal,
+            as: 'notificacionGrupal',
+            required: false,
+            attributes: ['id', 'codigoVerificacion', 'estado', 'totalDocumentos', 'fechaEnvio']
           }
         ]
       });
@@ -1815,6 +2134,48 @@ const matrizadorController = {
         // Solo actualizamos el campo para control interno
       }
       
+      // ============== NUEVA FUNCIONALIDAD: INFORMACIÓN DE NOTIFICACIÓN GRUPAL ==============
+      let informacionGrupal = null;
+      
+      // Si el documento está en un grupo, obtener información adicional
+      if (documento.notificacionGrupalId) {
+        // Obtener todos los documentos del mismo grupo
+        const documentosDelGrupo = await Documento.findAll({
+          where: {
+            notificacionGrupalId: documento.notificacionGrupalId,
+            id: { [Op.ne]: documento.id } // Excluir el documento actual
+          },
+          attributes: ['id', 'codigoBarras', 'tipoDocumento', 'estado', 'esLiderGrupo'],
+          order: [['created_at', 'ASC']]
+        });
+        
+        informacionGrupal = {
+          grupo: documento.notificacionGrupal,
+          documentosDelGrupo: documentosDelGrupo,
+          esLiderDelGrupo: documento.esLiderGrupo,
+          totalDocumentosGrupo: documento.notificacionGrupal?.totalDocumentos || 0,
+          puedeModificarGrupo: documento.notificacionGrupal?.puedeModificarse() || false
+        };
+        
+        console.log(`📱 [DETALLE] Documento está en grupo ${documento.notificacionGrupalId} con ${documentosDelGrupo.length} documentos adicionales`);
+      } else {
+        // Si no está en grupo, detectar documentos agrupables
+        const deteccionGrupal = await detectarDocumentosParaNotificacionGrupal(
+          documento.identificacionCliente,
+          documento.id,
+          usuarioId
+        );
+        
+        informacionGrupal = {
+          grupo: null,
+          documentosAgrupables: deteccionGrupal.documentosDisponibles || [],
+          puedeCrearGrupo: deteccionGrupal.puedeCrearGrupo || false,
+          totalAgrupables: deteccionGrupal.totalDisponibles || 0
+        };
+        
+        console.log(`📱 [DETALLE] Documento no está en grupo, ${deteccionGrupal.totalDisponibles || 0} documentos agrupables encontrados`);
+      }
+      
       // Obtener lista de matrizadores para posibles reasignaciones
       const matrizadores = await Matrizador.findAll({
         where: { activo: true },
@@ -1826,6 +2187,7 @@ const matrizadorController = {
         documento,
         eventos: historialEventos, // 🆕 Historial universal
         matrizadores,
+        informacionGrupal, // 🆕 Información de notificación grupal
         usuario: req.matrizador || req.user,
         layout: 'matrizador' // CORREGIDO: quitar 'layouts/'
       });
@@ -1913,7 +2275,10 @@ const matrizadorController = {
         justificacion_entrega_sin_pago: documento.justificacion_entrega_sin_pago || null,
         fecha_autorizacion_entrega: documento.fecha_autorizacion_entrega || null,
         matrizador_nombre: documento.matrizador?.nombre || 'Sin asignar',
-        estado: documento.estado
+        estado: documento.estado,
+        // ✅ NUEVO: Incluir estado de pago para el modal
+        estadoPago: documento.estadoPago,
+        estado_pago: documento.estadoPago // Alias para compatibilidad
       });
       
     } catch (error) {
@@ -1938,7 +2303,8 @@ const matrizadorController = {
       const { 
         entrega_sin_verificar_pago, 
         justificacion_entrega_sin_pago,
-        accion_autorizacion 
+        accion_autorizacion,
+        marcarTodoElGrupo // 🆕 NUEVO: Para detectar marcado grupal
       } = req.body;
       
       const usuarioId = req.matrizador?.id || req.user?.id;
@@ -1948,12 +2314,16 @@ const matrizadorController = {
         entrega_sin_verificar_pago,
         justificacion_entrega_sin_pago,
         accion_autorizacion,
+        marcarTodoElGrupo,
         usuario: usuarioNombre
       });
       
-      // Buscar el documento
+      // Buscar el documento con información de grupo
       const documento = await Documento.findByPk(id, { 
-        include: [{ model: Matrizador, as: 'matrizador', attributes: ['id', 'nombre'] }],
+        include: [
+          { model: Matrizador, as: 'matrizador', attributes: ['id', 'nombre'] },
+          { model: NotificacionGrupal, as: 'notificacionGrupal', required: false }
+        ],
         transaction 
       });
       
@@ -1982,6 +2352,54 @@ const matrizadorController = {
           message: `El documento está en estado "${documento.estado}" y no puede marcarse como listo` 
         });
       }
+      
+      // ============== NUEVA LÓGICA: DETECCIÓN Y MANEJO DE GRUPOS ==============
+      
+      const documentoEstaEnGrupo = documento.notificacionGrupalId !== null;
+      
+      if (documentoEstaEnGrupo && marcarTodoElGrupo === true) {
+        // CASO 1: Marcar todo el grupo como listo
+        console.log(`📋 [GRUPO] Marcando todo el grupo ${documento.notificacionGrupalId} como listo`);
+        
+        const resultado = await module.exports.marcarGrupoCompletoComoListo(
+          documento.notificacionGrupalId,
+          usuarioId,
+          usuarioNombre,
+          {
+            entrega_sin_verificar_pago,
+            justificacion_entrega_sin_pago,
+            accion_autorizacion
+          },
+          transaction
+        );
+        
+        await transaction.commit();
+        
+        return res.json({
+          success: true,
+          message: `¡Todo el grupo marcado como listo! ${resultado.documentosActualizados} documentos procesados. Notificación consolidada enviada.`,
+          tipoOperacion: 'grupo_completo',
+          documento: {
+            id: documento.id,
+            codigoBarras: documento.codigoBarras,
+            estado: 'listo_para_entrega',
+            codigoVerificacionGrupal: resultado.codigoVerificacionGrupal,
+            documentosEnGrupo: resultado.documentosActualizados
+          }
+        });
+        
+      } else if (documentoEstaEnGrupo && marcarTodoElGrupo !== true) {
+        // CASO 2: Separar del grupo y marcar solo este documento
+        console.log(`🔗 [SEPARAR] Separando documento ${id} del grupo antes de marcar como listo`);
+        
+        // Separar del grupo primero
+        await separarDeGrupoNotificacion(parseInt(id), usuarioId);
+        
+        // Recargar documento después de separar
+        await documento.reload({ transaction });
+      }
+      
+      // CASO 3: Documento individual (o ya separado) - Proceder normalmente
       
       // Generar código de verificación de 4 dígitos ANTES de usarlo
       const codigoVerificacion = Math.floor(1000 + Math.random() * 9000).toString();
@@ -2022,7 +2440,8 @@ const matrizadorController = {
           entrega_sin_verificar_pago: tieneAutorizacionCredito,
           justificacion_entrega_sin_pago: justificacion_entrega_sin_pago,
           tipo_marcado: tieneAutorizacionCredito ? 'con_credito' : 'verificar_pago',
-          codigoVerificacion: codigoVerificacion
+          codigoVerificacion: codigoVerificacion,
+          separadoDeGrupo: documentoEstaEnGrupo && marcarTodoElGrupo !== true
         }
       }, { transaction });
       
@@ -2070,6 +2489,7 @@ const matrizadorController = {
       res.json({
         success: true,
         message: mensajeRespuesta,
+        tipoOperacion: 'individual',
         documento: {
           id: documento.id,
           codigoBarras: documento.codigoBarras,
@@ -2087,6 +2507,239 @@ const matrizadorController = {
       res.status(500).json({
         success: false,
         message: `Error al marcar documento como listo: ${error.message}`
+      });
+    }
+  },
+
+  /**
+   * 🆕 NUEVO: Marca un grupo completo de documentos como listo
+   * @param {number} grupoId - ID del grupo de notificación
+   * @param {number} usuarioId - ID del usuario que procesa
+   * @param {string} usuarioNombre - Nombre del usuario
+   * @param {Object} configuracion - Configuración de crédito
+   * @param {Object} transaction - Transacción de base de datos
+   * @returns {Object} Resultado del procesamiento
+   */
+  marcarGrupoCompletoComoListo: async function(grupoId, usuarioId, usuarioNombre, configuracion, transaction) {
+    try {
+      console.log(`📋 [GRUPO COMPLETO] Procesando grupo ${grupoId}`);
+      
+      // Obtener el grupo con todos sus documentos
+      const grupo = await NotificacionGrupal.findByPk(grupoId, {
+        include: [{
+          model: Documento,
+          as: 'documentos',
+          where: { 
+            estado: 'en_proceso',
+            idMatrizador: usuarioId // Solo documentos del matrizador actual
+          }
+        }],
+        transaction
+      });
+      
+      if (!grupo) {
+        throw new Error('Grupo de notificación no encontrado');
+      }
+      
+      if (!grupo.puedeModificarse()) {
+        throw new Error('El grupo no puede modificarse porque ya fue enviado');
+      }
+      
+      const documentos = grupo.documentos;
+      
+      if (documentos.length === 0) {
+        throw new Error('No hay documentos válidos en el grupo para procesar');
+      }
+      
+      // Generar UN SOLO código de verificación para todo el grupo
+      const codigoVerificacionGrupal = Math.floor(1000 + Math.random() * 9000).toString();
+      
+      console.log(`🔑 [GRUPO] Código único generado: ${codigoVerificacionGrupal} para ${documentos.length} documentos`);
+      
+      // Preparar datos de actualización
+      const tieneAutorizacionCredito = configuracion.entrega_sin_verificar_pago === true || 
+                                      configuracion.entrega_sin_verificar_pago === 'true';
+      
+      const datosActualizacion = {
+        estado: 'listo_para_entrega',
+        entrega_sin_verificar_pago: tieneAutorizacionCredito,
+        justificacion_entrega_sin_pago: tieneAutorizacionCredito ? configuracion.justificacion_entrega_sin_pago : null,
+        fecha_autorizacion_entrega: tieneAutorizacionCredito ? new Date() : null,
+        autorizado_por_matrizador_id: tieneAutorizacionCredito ? usuarioId : null,
+        codigoVerificacion: codigoVerificacionGrupal // MISMO CÓDIGO PARA TODOS
+      };
+      
+      // Actualizar todos los documentos del grupo
+      let documentosActualizados = 0;
+      
+      for (const documento of documentos) {
+        await documento.update(datosActualizacion, { transaction });
+        
+        // Crear evento para cada documento
+        const detalleEvento = tieneAutorizacionCredito 
+          ? `Documento marcado como listo en grupo ${grupoId}. ✅ CRÉDITO AUTORIZADO. Código grupal: ${codigoVerificacionGrupal}`
+          : `Documento marcado como listo en grupo ${grupoId}. ⚠️ VERIFICAR PAGO. Código grupal: ${codigoVerificacionGrupal}`;
+        
+        await EventoDocumento.create({
+          documentoId: documento.id,
+          tipo: 'documento_listo',
+          detalles: detalleEvento,
+          usuario: usuarioNombre,
+          metadatos: {
+            idUsuario: usuarioId,
+            procesamiento: 'grupal',
+            grupoId: grupoId,
+            codigoVerificacionGrupal: codigoVerificacionGrupal,
+            totalDocumentosGrupo: documentos.length,
+            entrega_sin_verificar_pago: tieneAutorizacionCredito,
+            justificacion_entrega_sin_pago: configuracion.justificacion_entrega_sin_pago,
+            tipo_marcado: tieneAutorizacionCredito ? 'grupo_con_credito' : 'grupo_verificar_pago'
+          }
+        }, { transaction });
+        
+        documentosActualizados++;
+      }
+      
+      // Actualizar estado del grupo
+      await grupo.update({
+        estado: 'enviada',
+        fechaEnvio: new Date(),
+        codigoVerificacion: codigoVerificacionGrupal // Actualizar código del grupo
+      }, { transaction });
+      
+      console.log(`✅ [GRUPO COMPLETO] ${documentosActualizados} documentos marcados como listos`);
+      
+      // 📱 ENVIAR NOTIFICACIÓN CONSOLIDADA DESPUÉS DEL COMMIT
+      // Esto se manejará después de que se confirme la transacción
+      setImmediate(async () => {
+        try {
+          console.log(`📱 [GRUPO] Enviando notificación consolidada para grupo ${grupoId}`);
+          
+          // Obtener datos actualizados del grupo
+          const grupoActualizado = await NotificacionGrupal.findByPk(grupoId, {
+            include: [{
+              model: Documento,
+              as: 'documentos',
+              where: { estado: 'listo_para_entrega' }
+            }]
+          });
+          
+          if (grupoActualizado && grupoActualizado.documentos.length > 0) {
+            const documentoPrincipal = grupoActualizado.documentos[0];
+            
+            if (documentoPrincipal.telefonoCliente && !documentoPrincipal.omitirNotificacion) {
+                        // Usar servicio de notificación para generar mensaje grupal
+          await module.exports.enviarNotificacionGrupalConsolidada(grupoActualizado, documentoPrincipal.telefonoCliente);
+            }
+          }
+          
+        } catch (notifError) {
+          console.error('❌ [GRUPO] Error enviando notificación consolidada:', notifError);
+        }
+      });
+      
+      return {
+        documentosActualizados,
+        codigoVerificacionGrupal,
+        grupoId
+      };
+      
+    } catch (error) {
+      console.error('❌ [GRUPO COMPLETO] Error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * 🆕 NUEVO: Envía notificación consolidada para grupo de documentos
+   * @param {Object} grupo - Grupo de notificación con documentos
+   * @param {string} telefono - Número de teléfono del cliente
+   */
+  enviarNotificacionGrupalConsolidada: async function(grupo, telefono) {
+    try {
+      console.log(`📱 [NOTIFICACIÓN GRUPAL] Enviando notificación consolidada para grupo ${grupo.id}`);
+      
+      // Construir mensaje consolidado usando el servicio de WhatsApp
+      const documentos = grupo.documentos;
+      const codigoUnico = grupo.codigoVerificacion;
+      
+      // Usar el servicio de WhatsApp para generar el mensaje
+      const WhatsAppService = require('../services/whatsappService');
+      const mensaje = WhatsAppService.generarMensajeNotificacionGrupal(documentos, codigoUnico);
+      
+      console.log(`📱 [GRUPAL] Enviando mensaje consolidado a ${telefono}`);
+      console.log(`📝 [GRUPAL] Mensaje generado: ${mensaje.substring(0, 100)}...`);
+      
+      // Enviar mensaje usando el servicio
+      const resultadoEnvio = await WhatsAppService.enviarNotificacionGrupal(telefono, documentos, codigoUnico);
+      
+      if (resultadoEnvio.exito) {
+        console.log(`✅ [GRUPAL] Notificación consolidada enviada exitosamente`);
+        
+        // Registrar en historial usando el servicio de notificaciones
+        for (const documento of documentos) {
+          try {
+            await NotificationService.registrarIntento(
+              documento.id,
+              'documento_listo',
+              'whatsapp',
+              {
+                exito: true,
+                telefono: telefono,
+                mensaje: mensaje,
+                grupoId: grupo.id,
+                codigoVerificacionGrupal: codigoUnico,
+                totalDocumentos: documentos.length
+              }
+            );
+          } catch (historialError) {
+            console.error(`⚠️ Error registrando historial para documento ${documento.id}:`, historialError);
+          }
+        }
+        
+      } else {
+        console.error(`❌ [GRUPAL] Error enviando notificación:`, resultadoEnvio.error);
+        throw new Error(resultadoEnvio.error);
+      }
+      
+    } catch (error) {
+      console.error('❌ [GRUPAL] Error enviando notificación consolidada:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * 🆕 NUEVO: API específica para marcar grupo como listo
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  marcarGrupoComoListo: async (req, res) => {
+    const transaction = await sequelize.transaction();
+    
+    try {
+      const { id } = req.params;
+      const { marcarTodoElGrupo } = req.body;
+      
+      if (marcarTodoElGrupo !== true) {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          message: 'Esta operación requiere confirmación explícita para marcar todo el grupo'
+        });
+      }
+      
+      // Redirigir al método principal con el flag de grupo
+      req.body.marcarTodoElGrupo = true;
+      
+      // Llamar al método principal que ya maneja grupos
+      return await this.marcarComoListo(req, res);
+      
+    } catch (error) {
+      await transaction.rollback();
+      console.error('❌ [API GRUPO] Error:', error);
+      res.status(500).json({
+        success: false,
+        message: `Error al marcar grupo como listo: ${error.message}`
       });
     }
   },
@@ -2128,7 +2781,9 @@ const matrizadorController = {
         attributes: [
           'id', 'codigoBarras', 'estado', 
           'entrega_sin_verificar_pago', 'justificacion_entrega_sin_pago',
-          'fecha_autorizacion_entrega', 'autorizado_por_matrizador_id'
+          'fecha_autorizacion_entrega', 'autorizado_por_matrizador_id',
+          // ✅ NUEVO: Incluir estado de pago para el modal
+          'estadoPago', 'valorFactura', 'valorPagado', 'valorPendiente'
         ]
       });
       
@@ -2151,7 +2806,12 @@ const matrizadorController = {
         es_false_bd: documento.entrega_sin_verificar_pago === false,
         justificacion_bd: documento.justificacion_entrega_sin_pago,
         fecha_autorizacion_bd: documento.fecha_autorizacion_entrega,
-        autorizado_por_id_bd: documento.autorizado_por_matrizador_id
+        autorizado_por_id_bd: documento.autorizado_por_matrizador_id,
+        // ✅ NUEVO: Debug del estado de pago
+        estado_pago_bd: documento.estadoPago,
+        valor_factura_bd: documento.valorFactura,
+        valor_pagado_bd: documento.valorPagado,
+        valor_pendiente_bd: documento.valorPendiente
       });
       
       const respuesta = {
@@ -2163,7 +2823,13 @@ const matrizadorController = {
           entrega_sin_verificar_pago: documento.entrega_sin_verificar_pago,
           justificacion_entrega_sin_pago: documento.justificacion_entrega_sin_pago,
           fecha_autorizacion_entrega: documento.fecha_autorizacion_entrega,
-          autorizado_por_matrizador_id: documento.autorizado_por_matrizador_id
+          autorizado_por_matrizador_id: documento.autorizado_por_matrizador_id,
+          // ✅ NUEVO: Incluir estado de pago en la respuesta
+          estadoPago: documento.estadoPago,
+          estado_pago: documento.estadoPago, // Alias para compatibilidad
+          valorFactura: documento.valorFactura,
+          valorPagado: documento.valorPagado,
+          valorPendiente: documento.valorPendiente
         }
       };
 
@@ -2319,101 +2985,7 @@ const matrizadorController = {
    * @param {Object} req - Objeto de solicitud Express
    * @param {Object} res - Objeto de respuesta Express
    */
-  obtenerDetalleNotificacion: async (req, res) => {
-    try {
-      const { id } = req.params;
-      
-      if (!id) {
-        return res.status(400).json({
-          exito: false,
-          mensaje: 'ID de notificación no proporcionado'
-        });
-      }
-      
-      // ============== CORRECCIÓN: BUSCAR EN TABLA CORRECTA ==============
-      // Cambiar de EventoDocumento a NotificacionEnviada
-      const notificacion = await NotificacionEnviada.findOne({
-        where: {
-          id: id
-        },
-        include: [{
-          model: Documento,
-          as: 'documento',
-          attributes: ['codigoBarras', 'tipoDocumento', 'nombreCliente', 'emailCliente', 'telefonoCliente', 'notas'],
-          where: {
-            idMatrizador: req.matrizador.id
-          },
-          required: false // Para notificaciones grupales
-        }]
-      });
-      
-      if (!notificacion) {
-        return res.status(404).json({
-          exito: false,
-          mensaje: 'Notificación no encontrada o no tienes permisos para verla'
-        });
-      }
-      
-      // ============== OBTENER MENSAJE ENVIADO ==============
-      // En NotificacionEnviada ya tenemos el mensaje guardado
-      let mensajeEnviado = notificacion.mensajeEnviado || 'Mensaje no disponible';
-      
-      // Si no hay mensaje guardado, usar el tipo de evento para mostrar información básica
-      if (!mensajeEnviado || mensajeEnviado === 'Notificación enviada') {
-        if (notificacion.tipoEvento === 'documento_listo') {
-          mensajeEnviado = `📋 Notificación de documento listo para entrega`;
-        } else if (notificacion.tipoEvento === 'entrega_confirmada') {
-          mensajeEnviado = `✅ Confirmación de entrega de documento`;
-        } else if (notificacion.tipoEvento === 'entrega_grupal') {
-          const totalDocs = notificacion.metadatos?.totalDocumentos || 'varios';
-          mensajeEnviado = `📦 Confirmación de entrega grupal (${totalDocs} documentos)`;
-        } else {
-          mensajeEnviado = `📱 Notificación de ${notificacion.tipoEvento}`;
-        }
-      }
-      
-      // Preparar datos detallados
-      const detalles = {
-        id: notificacion.id,
-        tipo: notificacion.tipoEvento,
-        fecha: notificacion.created_at ? new Date(notificacion.created_at).toISOString() : null,
-        detalles: notificacion.mensajeEnviado || 'Notificación enviada',
-        usuario: notificacion.metadatos?.entregadoPor || 'Sistema',
-        documento: notificacion.documento ? {
-          codigo: notificacion.documento.codigoBarras,
-          tipo: notificacion.documento.tipoDocumento,
-          cliente: notificacion.documento.nombreCliente
-        } : {
-          // Para notificaciones grupales sin documento específico
-          codigo: 'Entrega Grupal',
-          tipo: 'Múltiples documentos',
-          cliente: notificacion.metadatos?.nombreCliente || 'Cliente no especificado'
-        },
-        metadatos: notificacion.metadatos || {},
-        canales: {
-          email: notificacion.documento?.emailCliente || notificacion.metadatos?.emailCliente,
-          telefono: notificacion.documento?.telefonoCliente || notificacion.metadatos?.telefonoCliente
-        },
-        canal: notificacion.canal,
-        estado: notificacion.estado,
-        destinatario: notificacion.destinatario,
-        mensajeEnviado: mensajeEnviado // ← NUEVO: Mensaje completo enviado
-      };
-      
-      return res.status(200).json({
-        exito: true,
-        datos: detalles,
-        mensaje: 'Detalles de notificación obtenidos correctamente'
-      });
-    } catch (error) {
-      console.error('Error al obtener detalles de notificación:', error);
-      return res.status(500).json({
-        exito: false,
-        mensaje: 'Error al obtener los detalles de la notificación',
-        error: error.message
-      });
-    }
-  },
+  obtenerDetalleNotificacion: notificacionController.obtenerDetalleNotificacion,
 
   // Nueva función para marcar documentos como listos para entrega
   marcarDocumentoListo: async (req, res) => {
@@ -3265,6 +3837,142 @@ const matrizadorController = {
       res.status(500).render('error', {
         message: 'Error interno del servidor',
         layout: 'main'
+      });
+    }
+  },
+
+  // ============== NUEVAS FUNCIONES PARA NOTIFICACIONES GRUPALES ==============
+
+  /**
+   * API: Detectar documentos del mismo cliente para agrupar en notificación
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  detectarDocumentosParaNotificacion: async (req, res) => {
+    try {
+      const { documentoId } = req.params;
+      const matrizadorId = req.matrizador?.id;
+
+      if (!documentoId) {
+        return res.status(400).json({
+          exito: false,
+          mensaje: 'ID de documento requerido'
+        });
+      }
+
+      // Obtener el documento actual
+      const documento = await Documento.findOne({
+        where: {
+          id: documentoId,
+          idMatrizador: matrizadorId
+        }
+      });
+
+      if (!documento) {
+        return res.status(404).json({
+          exito: false,
+          mensaje: 'Documento no encontrado o no tiene permisos'
+        });
+      }
+
+      // Detectar documentos agrupables
+      const deteccion = await detectarDocumentosParaNotificacionGrupal(
+        documento.identificacionCliente,
+        parseInt(documentoId),
+        matrizadorId
+      );
+
+      return res.status(200).json({
+        exito: true,
+        datos: deteccion,
+        mensaje: deteccion.tieneDocumentosAdicionales 
+          ? `Se encontraron ${deteccion.totalDisponibles || deteccion.documentosEnGrupo?.length || 0} documentos adicionales`
+          : 'No se encontraron documentos adicionales para agrupar'
+      });
+
+    } catch (error) {
+      console.error('Error detectando documentos para notificación grupal:', error);
+      return res.status(500).json({
+        exito: false,
+        mensaje: 'Error interno del servidor',
+        error: error.message
+      });
+    }
+  },
+
+  /**
+   * API: Crear grupo de notificación con documentos seleccionados
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  crearGrupoNotificacion: async (req, res) => {
+    try {
+      const { documentoLiderId, documentosIds } = req.body;
+      const matrizadorId = req.matrizador?.id;
+
+      if (!documentoLiderId || !Array.isArray(documentosIds)) {
+        return res.status(400).json({
+          exito: false,
+          mensaje: 'Parámetros requeridos: documentoLiderId y array documentosIds'
+        });
+      }
+
+      const resultado = await crearGrupoNotificacion(
+        parseInt(documentoLiderId),
+        documentosIds.map(id => parseInt(id)),
+        matrizadorId
+      );
+
+      return res.status(200).json({
+        exito: true,
+        datos: resultado,
+        mensaje: `Grupo de notificación creado exitosamente con ${resultado.documentosAgrupados} documentos`
+      });
+
+    } catch (error) {
+      console.error('Error creando grupo de notificación:', error);
+      return res.status(500).json({
+        exito: false,
+        mensaje: 'Error creando grupo de notificación',
+        error: error.message
+      });
+    }
+  },
+
+  /**
+   * API: Separar documento de su grupo de notificación
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  separarDeGrupoNotificacion: async (req, res) => {
+    try {
+      const { documentoId } = req.params;
+      const matrizadorId = req.matrizador?.id;
+
+      if (!documentoId) {
+        return res.status(400).json({
+          exito: false,
+          mensaje: 'ID de documento requerido'
+        });
+      }
+
+      const resultado = await separarDeGrupoNotificacion(
+        parseInt(documentoId),
+        matrizadorId
+      );
+
+      return res.status(200).json({
+        exito: true,
+        datos: resultado,
+        mensaje: 'Documento separado del grupo exitosamente'
+      });
+
+    } catch (error) {
+      console.error('Error separando documento del grupo:', error);
+      return res.status(500).json({
+        exito: false,
+        mensaje: 'Error separando documento del grupo',
+        error: error.message
       });
     }
   },

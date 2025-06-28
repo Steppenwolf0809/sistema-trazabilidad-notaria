@@ -22,6 +22,11 @@ router.get('/', archivoController.dashboard);
 
 // ============== RUTAS DE DOCUMENTOS ==============
 
+// Ruta por defecto para documentos - redirige a todos los documentos
+router.get('/documentos', (req, res) => {
+  res.redirect('/archivo/documentos/todos');
+});
+
 // Listar TODOS los documentos del sistema (solo lectura para ajenos)
 router.get('/documentos/todos', archivoController.listarTodosDocumentos);
 
@@ -41,6 +46,26 @@ router.get('/notificaciones/historial', archivoController.historialNotificacione
 
 // Detalle de notificación específica
 router.get('/notificaciones/detalle/:id', archivoController.obtenerDetalleNotificacion);
+
+// ============== RUTAS DE NOTIFICACIONES GRUPALES ==============
+
+// API: Detectar documentos del mismo cliente para agrupar en notificación
+router.get('/api/documentos/:documentoId/detectar-notificacion', archivoController.detectarDocumentosParaNotificacion);
+
+// API: Crear grupo de notificación con documentos seleccionados
+router.post('/api/grupos-notificacion/crear', archivoController.crearGrupoNotificacion);
+
+// API: Separar documento de su grupo de notificación
+router.post('/api/grupos-notificacion/:documentoId/separar', archivoController.separarDeGrupoNotificacion);
+
+// API: Detectar documentos grupales del mismo cliente
+router.get('/api/documentos-grupales/:identificacion/:documentoId', archivoController.detectarDocumentosGrupales);
+
+// API: Procesar entrega grupal (solo documentos propios del archivo)
+router.post('/api/documentos/:id/entrega-grupal', archivoController.procesarEntregaGrupal);
+
+// API: Marcar documento como listo con detección de grupo
+router.post('/api/documentos/:id/marcar-listo-grupo', archivoController.marcarComoListo);
 
 // ============== RUTAS DE GESTIÓN DE DOCUMENTOS PROPIOS ==============
 

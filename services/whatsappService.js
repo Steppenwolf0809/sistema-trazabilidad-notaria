@@ -250,6 +250,142 @@ Su opinión nos ayuda a mejorar cada día.`;
 };
 
 /**
+ * 🆕 NUEVO: Genera mensaje consolidado para notificación grupal
+ * @param {Array} documentos - Array de documentos del grupo
+ * @param {string} codigoVerificacionGrupal - Código único para todo el grupo
+ * @returns {string} Mensaje formateado consolidado
+ */
+const generarMensajeNotificacionGrupal = (documentos, codigoVerificacionGrupal) => {
+  if (!documentos || documentos.length === 0) {
+    throw new Error('Se requiere al menos un documento para generar notificación grupal');
+  }
+  
+  const documentoPrincipal = documentos[0];
+  const totalDocumentos = documentos.length;
+  
+  // Construir encabezado
+  let mensaje = `🏛️ *NOTARÍA DÉCIMA OCTAVA*\n\n`;
+  mensaje += `Sus documentos están listos para retiro:\n\n`;
+  
+  // Listar todos los documentos del grupo
+  documentos.forEach((documento, index) => {
+    // Contexto del trámite si existe
+    let contextoTramite = '';
+    if (documento.notas && typeof documento.notas === 'string' && documento.notas.trim().length > 0) {
+      contextoTramite = ` - ${documento.notas.trim()}`;
+    }
+    
+    mensaje += `📄 *${documento.tipoDocumento.toUpperCase()}*${contextoTramite}\n`;
+    mensaje += `   Código: ${documento.codigoBarras}\n`;
+    
+    // Agregar separación entre documentos (excepto el último)
+    if (index < documentos.length - 1) {
+      mensaje += `\n`;
+    }
+  });
+  
+  // Código de verificación único
+  mensaje += `\n🔢 *Código de verificación:* ${codigoVerificacionGrupal}\n`;
+  mensaje += `(Un solo código válido para todos los documentos)\n\n`;
+  
+  // Información de la notaría
+  mensaje += `👤 *Cliente:* ${documentoPrincipal.nombreCliente}\n`;
+  mensaje += `📋 *Total de documentos:* ${totalDocumentos}\n\n`;
+  
+  // Información de contacto y ubicación
+  if (process.env.NOTARIA_DIRECCION) {
+    mensaje += `📍 *Dirección:* ${process.env.NOTARIA_DIRECCION}\n`;
+  }
+  if (process.env.NOTARIA_TELEFONO) {
+    mensaje += `📞 *Teléfono:* ${process.env.NOTARIA_TELEFONO}\n`;
+  }
+  if (process.env.NOTARIA_HORARIO) {
+    mensaje += `🕒 *Horarios:* ${process.env.NOTARIA_HORARIO}\n`;
+  }
+  
+  mensaje += `\nPresente este código al retirar todos sus documentos.`;
+  
+  return mensaje;
+};
+
+/**
+ * 🆕 NUEVO: Genera mensaje consolidado para entrega grupal
+ * @param {Array} documentos - Array de documentos entregados
+ * @param {Object} datosEntrega - Información de la entrega
+ * @returns {string} Mensaje formateado consolidado
+ */
+const generarMensajeEntregaGrupalConfirmada = (documentos, datosEntrega) => {
+  if (!documentos || documentos.length === 0) {
+    throw new Error('Se requiere al menos un documento para generar confirmación de entrega grupal');
+  }
+  
+  // Importar función de censura
+  const { censurarIdentificacion } = require('../utils/documentoUtils');
+  
+  const documentoPrincipal = documentos[0];
+  const totalDocumentos = documentos.length;
+  
+  // Formatear fecha y hora
+  const fechaEntrega = new Date(datosEntrega.fechaEntrega || new Date()).toLocaleDateString('es-EC', {
+    day: '2-digit', 
+    month: '2-digit', 
+    year: 'numeric'
+  });
+  
+  const horaEntrega = new Date(datosEntrega.fechaEntrega || new Date()).toLocaleTimeString('es-EC', { 
+    hour: '2-digit', 
+    minute: '2-digit',
+    hour12: false
+  });
+  
+  // Aplicar censura a la identificación
+  const identificacionCensurada = censurarIdentificacion(datosEntrega.identificacionReceptor);
+  
+  // Construir mensaje
+  let mensaje = `🏛️ *NOTARÍA DÉCIMA OCTAVA*\n\n`;
+  mensaje += `✅ *DOCUMENTOS ENTREGADOS*\n\n`;
+  
+  // Información del cliente
+  mensaje += `👤 *Cliente:* ${documentoPrincipal.nombreCliente}\n`;
+  mensaje += `📋 *Total entregado:* ${totalDocumentos} documento${totalDocumentos > 1 ? 's' : ''}\n\n`;
+  
+  // Listar documentos entregados
+  mensaje += `📄 *Documentos entregados:*\n`;
+  documentos.forEach((documento, index) => {
+    // Contexto del trámite si existe
+    let contextoTramite = '';
+    if (documento.notas && typeof documento.notas === 'string' && documento.notas.trim().length > 0) {
+      contextoTramite = ` - ${documento.notas.trim()}`;
+    }
+    
+    mensaje += `${index + 1}. ${documento.tipoDocumento.toUpperCase()}${contextoTramite}\n`;
+    mensaje += `   Código: ${documento.codigoBarras}\n`;
+    
+    if (index < documentos.length - 1) {
+      mensaje += `\n`;
+    }
+  });
+  
+  // Información de la entrega
+  mensaje += `\n📤 *Entregado a:* ${datosEntrega.nombreReceptor}\n`;
+  mensaje += `🆔 *Identificación:* ${identificacionCensurada}\n`;
+  mensaje += `🔗 *Relación:* ${datosEntrega.relacionReceptor || 'Autorizado'}\n\n`;
+  
+  mensaje += `📅 *Fecha:* ${fechaEntrega}\n`;
+  mensaje += `⏰ *Hora:* ${horaEntrega}\n\n`;
+  
+  mensaje += `Gracias por confiar en nuestros servicios.\n\n`;
+  
+  mensaje += `⭐ *¿Quedó satisfecho con nuestro servicio?*\n`;
+  mensaje += `Comparta su experiencia en Google:\n`;
+  mensaje += `https://g.page/r/CYfAY05X_ylIEBM/review?utm_source=gbp&utm_medium=reviews&utm_campaign=qr\n\n`;
+  
+  mensaje += `Su opinión nos ayuda a mejorar cada día.`;
+  
+  return mensaje;
+};
+
+/**
  * Envía un mensaje de WhatsApp usando Twilio
  * @param {string} telefono - Número de teléfono del destinatario
  * @param {string} mensaje - Mensaje a enviar
@@ -401,6 +537,66 @@ const enviarConfirmacionEntrega = async (telefono, documento, datosEntrega) => {
 };
 
 /**
+ * 🆕 NUEVO: Envía notificación consolidada para grupo de documentos
+ * @param {string} telefono - Número de teléfono del cliente
+ * @param {Array} documentos - Array de documentos del grupo
+ * @param {string} codigoVerificacionGrupal - Código único para todo el grupo
+ * @returns {Promise<Object>} Resultado del envío
+ */
+const enviarNotificacionGrupal = async (telefono, documentos, codigoVerificacionGrupal) => {
+  try {
+    console.log(`📱 [NOTIFICACIÓN GRUPAL] Enviando a ${telefono} para ${documentos.length} documentos`);
+    
+    const mensaje = generarMensajeNotificacionGrupal(documentos, codigoVerificacionGrupal);
+    const resultado = await enviarMensaje(telefono, mensaje);
+    
+    if (resultado.exito) {
+      console.log(`✅ [NOTIFICACIÓN GRUPAL] Enviada exitosamente - Código: ${codigoVerificacionGrupal}`);
+    }
+    
+    return resultado;
+  } catch (error) {
+    console.error('❌ Error al enviar notificación grupal:', error);
+    return {
+      exito: false,
+      error: error.message,
+      destinatario: telefono,
+      grupoDocumentos: documentos.length
+    };
+  }
+};
+
+/**
+ * 🆕 NUEVO: Envía confirmación de entrega grupal
+ * @param {string} telefono - Número de teléfono del cliente
+ * @param {Array} documentos - Array de documentos entregados
+ * @param {Object} datosEntrega - Información de la entrega
+ * @returns {Promise<Object>} Resultado del envío
+ */
+const enviarConfirmacionEntregaGrupal = async (telefono, documentos, datosEntrega) => {
+  try {
+    console.log(`📱 [ENTREGA GRUPAL] Enviando confirmación a ${telefono} para ${documentos.length} documentos`);
+    
+    const mensaje = generarMensajeEntregaGrupalConfirmada(documentos, datosEntrega);
+    const resultado = await enviarMensaje(telefono, mensaje);
+    
+    if (resultado.exito) {
+      console.log(`✅ [ENTREGA GRUPAL] Confirmación enviada exitosamente`);
+    }
+    
+    return resultado;
+  } catch (error) {
+    console.error('❌ Error al enviar confirmación de entrega grupal:', error);
+    return {
+      exito: false,
+      error: error.message,
+      destinatario: telefono,
+      grupoDocumentos: documentos.length
+    };
+  }
+};
+
+/**
  * Obtiene la configuración actual del servicio
  * @returns {Object} Configuración actual (sin credenciales sensibles)
  */
@@ -471,9 +667,13 @@ module.exports = {
   generarCodigoVerificacion,
   generarMensajeDocumentoListo,
   generarMensajeEntregaConfirmada,
+  generarMensajeNotificacionGrupal,
+  generarMensajeEntregaGrupalConfirmada,
   enviarMensaje,
   enviarNotificacionDocumentoListo,
   enviarConfirmacionEntrega,
+  enviarNotificacionGrupal,
+  enviarConfirmacionEntregaGrupal,
   obtenerConfiguracion,
   actualizarConfiguracion,
   probarConectividad

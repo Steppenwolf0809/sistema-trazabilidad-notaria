@@ -781,6 +781,27 @@ const helpers = {
     if (!this._sections) this._sections = {};
     this._sections[name] = options.fn(this);
     return '';
+  },
+
+  // ===============================================
+  // == HELPER PARA SISTEMA DE ARCHIVO ==
+  // ===============================================
+
+  /**
+   * ✨ CRÍTICO: Verificar si un documento es ajeno al usuario actual (para vista archivo)
+   * Usado en vistas de archivo para identificar documentos de otros matrizadores
+   */
+  esDocumentoAjeno: (usuario, documento) => {
+    if (!usuario || !documento) return false;
+    
+    // Si el usuario es admin, ningún documento es ajeno
+    if (usuario.rol === 'admin') return false;
+    
+    // Si el documento no tiene matrizador asignado, no es ajeno
+    if (!documento.idMatrizador) return false;
+    
+    // Es ajeno si el documento pertenece a otro matrizador
+    return documento.idMatrizador !== usuario.id;
   }
 };
 

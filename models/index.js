@@ -13,6 +13,7 @@ const DocumentosRelacionados = require('./DocumentosRelacionados');
 const AuditoriaEliminacion = require('./AuditoriaEliminacion');
 const NotificacionEnviada = require('./NotificacionEnviada');
 const AutorizacionUrgente = require('./AutorizacionUrgente');
+const NotificacionGrupal = require('./NotificacionGrupal');
 
 // Relaciones entre modelos
 
@@ -198,6 +199,28 @@ NotificacionEnviada.belongsTo(Documento, {
   as: 'documento'
 });
 
+// ============== RELACIONES PARA NOTIFICACIONES GRUPALES ==============
+
+// Relación NotificacionGrupal - Documento (Un grupo tiene muchos documentos)
+NotificacionGrupal.hasMany(Documento, {
+  foreignKey: 'notificacionGrupalId',
+  as: 'documentos'
+});
+Documento.belongsTo(NotificacionGrupal, {
+  foreignKey: 'notificacionGrupalId',
+  as: 'notificacionGrupal'
+});
+
+// Relación Matrizador - NotificacionGrupal (Un matrizador puede crear muchos grupos)
+Matrizador.hasMany(NotificacionGrupal, {
+  foreignKey: 'matrizadorId',
+  as: 'gruposNotificacion'
+});
+NotificacionGrupal.belongsTo(Matrizador, {
+  foreignKey: 'matrizadorId',
+  as: 'matrizador'
+});
+
 // ============== RELACIONES PARA AUTORIZACIONES URGENTES ==============
 
 // Relación Documento - AutorizacionUrgente
@@ -264,5 +287,6 @@ module.exports = {
   DocumentosRelacionados,
   AuditoriaEliminacion,
   NotificacionEnviada,
-  AutorizacionUrgente
+  AutorizacionUrgente,
+  NotificacionGrupal
 }; 

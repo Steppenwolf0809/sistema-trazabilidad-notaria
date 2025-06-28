@@ -783,3 +783,17 @@ if (document.readyState === 'loading') {
 }
 
 console.log('ðŸ“š [ORDENAMIENTO v2.0] Sistema universal cargado y listo');
+
+// ============== SISTEMA DE NOTIFICACIONES GRUPALES - SPRINT 3 ==============
+
+// ============== SISTEMA DE NOTIFICACIONES GRUPALES - SPRINT 3 ==============
+
+/**
+ * NOTIFICACIONES GRUPALES MOVIDAS A ARCHIVO SEPARADO
+ * Ver: /public/js/notificaciones-grupales.js
+ *
+ * Esta secciÃ³n fue eliminada para evitar conflictos con el archivo dedicado.
+ * El sistema de notificaciones grupales ahora se maneja completamente en su propio archivo.
+ */
+
+console.log('í³š [MAIN.JS] Sistema principal cargado correctamente');

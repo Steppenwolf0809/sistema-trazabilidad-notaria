@@ -171,31 +171,11 @@
                     </div>
                     
                     <div class="col-md-6">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="esHabilitante" name="esHabilitante" value="true" 
-                                   {{#if documento.documentoPrincipalId}}checked{{/if}}>
-                            <label class="form-check-label" for="esHabilitante">
-                                <i class="fas fa-link text-info me-1"></i>
-                                <strong>🔗 Documento habilitante</strong>
-                                <small class="text-muted d-block">Este documento es parte de otro documento principal</small>
-                            </label>
-                        </div>
+                        <!-- Documento habilitante eliminado para archivo -->
                     </div>
                 </div>
                 
-                <!-- Búsqueda de documento principal (solo visible si es habilitante) -->
-                <div id="busquedaDocumentoPrincipal" class="mt-3" style="display: none;">
-                    <label for="documentoPrincipalId" class="form-label">
-                        <i class="fas fa-file-alt me-1"></i> Documento Principal: <span class="text-danger">*</span>
-                    </label>
-                    <select class="form-select" id="documentoPrincipalId" name="documentoPrincipalId">
-                        <option value="">Seleccione el documento principal...</option>
-                        <!-- Las opciones se cargarán dinámicamente -->
-                    </select>
-                    <div class="form-text text-muted">
-                        Las notificaciones se enviarán solo para el documento principal.
-                    </div>
-                </div>
+                <!-- Búsqueda de documento principal eliminada para archivo -->
                 
                 <!-- Información de contacto requerida -->
                 <div class="alert alert-warning mt-3">
@@ -222,7 +202,29 @@
     </form>
 </div>
 
+<!-- Incluir sistema de notificaciones grupales para archivo -->
+<script src="/js/notificaciones-grupales.js"></script>
 <script>
+// Configuración específica para archivo - vista editar
+window.NOTIFICACIONES_GRUPALES_CONFIG = {
+  documentoId: {{documento.id}},
+  documentoCodigoBarras: '{{documento.codigoBarras}}',
+  clienteIdentificacion: '{{documento.identificacionCliente}}',
+  esDocumentoPropio: true, // Siempre true en editar
+  perteneceAGrupo: {{#if documento.notificacionGrupal}}true{{else}}false{{/if}},
+  esLiderGrupo: {{#if documento.esLiderGrupo}}true{{else}}false{{/if}},
+  endpoints: {
+    detectar: '/archivo/api/documentos/{{documento.id}}/detectar-notificacion',
+    crear: '/archivo/api/grupos-notificacion/crear',
+    separar: '/archivo/api/grupos-notificacion/{{documento.id}}/separar',
+    marcarListo: '/archivo/api/documentos/{{documento.id}}/marcar-listo-grupo'
+  },
+  interfaz: {
+    contenedorInfo: '#infoGrupoActual',
+    botonMarcarListo: 'button[onclick*="marcarListo"]'
+  }
+};
+
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('editarDocumentoForm');
     
@@ -231,8 +233,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const canalesGroup = document.getElementById('canalesGroup');
     const razonGroup = document.getElementById('razonGroup');
     const razonTextarea = document.getElementById('razonSinNotificar');
-    const esHabilitanteCheck = document.getElementById('esHabilitante');
-    const busquedaDocumentoPrincipal = document.getElementById('busquedaDocumentoPrincipal');
     
     // Manejar cambios en política de notificación
     politicaRadios.forEach(radio => {
@@ -249,74 +249,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Manejar checkbox de documento habilitante
-    esHabilitanteCheck.addEventListener('change', function() {
-        if (this.checked) {
-            busquedaDocumentoPrincipal.style.display = 'block';
-            cargarDocumentosPrincipales();
-        } else {
-            busquedaDocumentoPrincipal.style.display = 'none';
-            document.getElementById('documentoPrincipalId').value = '';
-        }
-    });
-    
     // Función para llenar razón rápida
     window.llenarRazonRapida = function(razon) {
         razonTextarea.value = razon;
     };
     
-    // Función para cargar documentos principales disponibles
-    function cargarDocumentosPrincipales() {
-        const select = document.getElementById('documentoPrincipalId');
-        const clienteId = document.getElementById('identificacionCliente').value;
-        
-        if (!clienteId) {
-            alert('Primero debe ingresar la identificación del cliente');
-            esHabilitanteCheck.checked = false;
-            busquedaDocumentoPrincipal.style.display = 'none';
-            return;
-        }
-        
-        // Limpiar opciones existentes
-        select.innerHTML = '<option value="">Cargando documentos...</option>';
-        
-        // Llamada AJAX para buscar documentos del mismo cliente
-        fetch(`/archivo/api/documentos/mismo-cliente?identificacionCliente=${encodeURIComponent(clienteId)}&documentoActualId={{documento.id}}`)
-            .then(response => response.json())
-            .then(data => {
-                select.innerHTML = '<option value="">Seleccione el documento principal...</option>';
-                
-                if (data.error) {
-                    console.error('Error:', data.error);
-                    select.innerHTML = '<option value="">Error al cargar documentos</option>';
-                    return;
-                }
-                
-                if (data.documentos && data.documentos.length > 0) {
-                    data.documentos.forEach(doc => {
-                        const option = document.createElement('option');
-                        option.value = doc.id;
-                        option.textContent = `${doc.codigoBarras} - ${doc.tipoDocumento} (${doc.estado})`;
-                        select.appendChild(option);
-                    });
-                } else {
-                    select.innerHTML = '<option value="">No hay otros documentos de este cliente</option>';
-                }
-            })
-            .catch(error => {
-                console.error('Error al cargar documentos:', error);
-                select.innerHTML = '<option value="">Error al cargar documentos</option>';
-            });
-    }
-    
     // Inicializar estado al cargar
     const politicaActual = document.querySelector('input[name="politicaNotificacion"]:checked');
     if (politicaActual) {
         politicaActual.dispatchEvent(new Event('change'));
-    }
-    
-    if (esHabilitanteCheck.checked) {
-        busquedaDocumentoPrincipal.style.display = 'block';
     }
     
     // Validaciones del formulario
@@ -342,16 +283,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 return false;
             }
         }
-        
-        // Validar documento principal si es habilitante
-        if (esHabilitanteCheck.checked) {
-            const docPrincipal = document.getElementById('documentoPrincipalId').value;
-            if (!docPrincipal) {
-                e.preventDefault();
-                alert('Debe seleccionar el documento principal');
-                return false;
-            }
-        }
     });
     
     // Limpiar errores al escribir
@@ -359,6 +290,12 @@ document.addEventListener('DOMContentLoaded', function() {
         this.classList.remove('is-invalid');
         document.getElementById('razonSinNotificarError').style.display = 'none';
     });
+
+    // Inicializar sistema de notificaciones grupales
+    if (window.NotificacionesGrupales) {
+        window.notificacionesGrupales = new NotificacionesGrupales(window.NOTIFICACIONES_GRUPALES_CONFIG);
+        console.log('✅ Sistema de notificaciones grupales inicializado para archivo - editar');
+    }
 });
 </script>
 
