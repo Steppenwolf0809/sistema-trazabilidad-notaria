@@ -598,6 +598,7 @@ function validarDocumentosParaEntrega(documentos) {
 
 /**
  * Detecta documentos adicionales del mismo cliente para entrega grupal (RECEPCIÓN - SIN RESTRICCIONES)
+ * CORREGIDO: Mejorar manejo de documentos parcialmente entregados
  * @param {string} identificacionCliente - Identificación del cliente
  * @param {number} documentoActualId - ID del documento actual para excluir
  * @returns {Object} Información sobre documentos adicionales
@@ -646,7 +647,8 @@ async function detectarDocumentosGrupalesRecepcion(identificacionCliente, docume
         {
           model: Matrizador,
           as: 'matrizador',
-          attributes: ['id', 'nombre', 'email']
+          attributes: ['id', 'nombre', 'email'],
+          required: false // LEFT JOIN para incluir documentos sin matrizador
         }
       ],
       order: [['created_at', 'ASC']]
@@ -692,6 +694,26 @@ async function detectarDocumentosGrupalesRecepcion(identificacionCliente, docume
     
     console.log(`📄 [RECEPCIÓN] Documentos realmente disponibles: ${documentosDisponibles.length} de ${documentosListos.length} iniciales`);
     
+    // NUEVA FUNCIONALIDAD: Detectar documentos del mismo cliente que ya fueron entregados
+    const documentosEntregados = await Documento.findAll({
+      where: {
+        identificacionCliente: identificacionCliente,
+        estado: 'entregado',
+        fechaEntrega: { [Op.ne]: null },
+        motivoEliminacion: null
+      },
+      attributes: ['id', 'codigoBarras', 'tipoDocumento', 'fechaEntrega', 'nombreReceptor'],
+      order: [['fechaEntrega', 'DESC']],
+      limit: 5 // Solo los 5 más recientes
+    });
+    
+    if (documentosEntregados.length > 0) {
+      console.log(`📦 [RECEPCIÓN] Documentos ya entregados del mismo cliente: ${documentosEntregados.length}`);
+      documentosEntregados.forEach(doc => {
+        console.log(`   - ${doc.codigoBarras} (${doc.tipoDocumento}) entregado el ${doc.fechaEntrega}`);
+      });
+    }
+    
     // SEPARAR documentos disponibles por estado de pago
     const documentosPagados = documentosDisponibles.filter(doc => 
       ['pagado_completo', 'pagado_con_retencion'].includes(doc.estadoPago)
@@ -713,7 +735,6 @@ async function detectarDocumentosGrupalesRecepcion(identificacionCliente, docume
         'id', 'codigoBarras', 'tipoDocumento', 'nombreCliente', 'identificacionCliente',
         'estado', 'estadoPago', 'valorFactura', 'numeroFactura', 'fechaFactura',
         'fechaEntrega', 'esDocumentoPrincipal', 'documentoPrincipalId',
-        // CRÍTICO: Incluir campos de autorización de crédito
         'entrega_sin_verificar_pago', 'justificacion_entrega_sin_pago', 
         'fecha_autorizacion_entrega', 'autorizado_por_matrizador_id',
         'created_at', 'motivoEliminacion'
@@ -722,41 +743,61 @@ async function detectarDocumentosGrupalesRecepcion(identificacionCliente, docume
         {
           model: Matrizador,
           as: 'matrizador',
-          attributes: ['id', 'nombre', 'email']
+          attributes: ['id', 'nombre', 'email'],
+          required: false
         }
       ]
     });
     
     // Crear lista completa incluyendo el documento actual
-    const todosLosDocumentos = documentoActual ? [documentoActual, ...documentosDisponibles] : documentosDisponibles;
+    let todosLosDocumentos = documentosDisponibles;
+    if (documentoActual && documentoActual.estado === 'listo_para_entrega' && !documentoActual.fechaEntrega) {
+      todosLosDocumentos = [documentoActual, ...documentosDisponibles];
+      console.log(`🔧 [RECEPCIÓN] Incluyendo documento actual en estructuración: ${documentoActual.codigoBarras}`);
+    } else if (documentoActual) {
+      console.log(`⚠️ [RECEPCIÓN] Documento actual no disponible para entrega: estado="${documentoActual.estado}", fechaEntrega=${documentoActual.fechaEntrega ? 'SI' : 'NO'}`);
+    }
     
-    console.log(`🔧 [RECEPCIÓN] Estructurando ${todosLosDocumentos.length} documentos (incluyendo actual)`);
+    console.log(`🔧 [RECEPCIÓN] Estructurando ${todosLosDocumentos.length} documentos totales`);
     todosLosDocumentos.forEach(doc => {
       console.log(`   - ${doc.codigoBarras} (ID: ${doc.id}, Principal: ${doc.esDocumentoPrincipal}, PrincipalID: ${doc.documentoPrincipalId || 'null'})`);
     });
     
     const documentosEstructurados = estructurarDocumentosJerarquicamente(todosLosDocumentos);
     
-    // ============== VALIDACIÓN Y ALERTAS ==============
-    const validacion = validarDocumentosParaEntrega(documentosDisponibles);
+    // NUEVA INFORMACIÓN: Incluir documentos ya entregados para contexto
+    const informacionEntregados = documentosEntregados.map(doc => ({
+      codigo: doc.codigoBarras,
+      tipo: doc.tipoDocumento,
+      fechaEntrega: doc.fechaEntrega,
+      receptor: doc.nombreReceptor
+    }));
     
     return {
       tieneDocumentosAdicionales: documentosDisponibles.length > 0,
       cantidad: documentosDisponibles.length,
-      documentos: documentosDisponibles, // Mantener para compatibilidad
-      documentosPagados: documentosPagados,
-      documentosPendientes: documentosPendientes,
-      tipoDeteccion: 'recepcion_completa_corregida',
-      // Nueva información de validación
-      validacion: validacion,
-      requiereAutorizacion: validacion.requiereAutorizacion,
-      alertas: validacion.alertas,
-      advertencias: validacion.advertencias,
+      documentos: documentosDisponibles,
+      tipoDeteccion: 'recepcion_completa',
+      permisoTotal: true,
+      
+      // Información de documentos ya entregados para contexto
+      documentosEntregados: informacionEntregados,
+      tieneDocumentosEntregados: documentosEntregados.length > 0,
+      
       // ============== NUEVA ESTRUCTURA JERÁRQUICA ==============
       gruposRelacionados: documentosEstructurados.gruposRelacionados,
       documentosIndependientes: documentosEstructurados.documentosIndependientes,
       tieneGruposRelacionados: documentosEstructurados.gruposRelacionados.length > 0,
-      tieneDocumentosIndependientes: documentosEstructurados.documentosIndependientes.length > 0
+      tieneDocumentosIndependientes: documentosEstructurados.documentosIndependientes.length > 0,
+      
+      // Información adicional para debugging
+      estadisticas: {
+        totalEncontrados: documentosListos.length,
+        totalDisponibles: documentosDisponibles.length,
+        totalEntregados: documentosEntregados.length,
+        documentosPagados: documentosPagados.length,
+        documentosPendientes: documentosPendientes.length
+      }
     };
   } catch (error) {
     console.error('❌ Error detectando documentos grupales para recepción:', error);
@@ -764,13 +805,21 @@ async function detectarDocumentosGrupalesRecepcion(identificacionCliente, docume
       tieneDocumentosAdicionales: false, 
       cantidad: 0, 
       documentos: [],
-      documentosPagados: [],
-      documentosPendientes: [],
       tipoDeteccion: 'recepcion_completa',
-      validacion: { puedeEntregar: false, requiereAutorizacion: false, alertas: [] },
-      requiereAutorizacion: false,
-      alertas: [],
-      advertencias: []
+      permisoTotal: true,
+      documentosEntregados: [],
+      tieneDocumentosEntregados: false,
+      gruposRelacionados: [],
+      documentosIndependientes: [],
+      tieneGruposRelacionados: false,
+      tieneDocumentosIndependientes: false,
+      estadisticas: {
+        totalEncontrados: 0,
+        totalDisponibles: 0,
+        totalEntregados: 0,
+        documentosPagados: 0,
+        documentosPendientes: 0
+      }
     };
   }
 }
@@ -822,6 +871,8 @@ async function procesarEntregaGrupalRecepcion(documentosIds, datosEntrega, usuar
     }
     
     // ============== PASO 2: VALIDACIÓN ESPECÍFICA PARA HABILITANTES ==============
+    const documentosValidosParaProcesar = [];
+    
     for (const documento of documentosParaValidar) {
       try {
         // VALIDACIÓN ESPECÍFICA PARA DOCUMENTOS HABILITANTES
@@ -855,9 +906,21 @@ async function procesarEntregaGrupalRecepcion(documentosIds, datosEntrega, usuar
           continue;
         }
         
-        // Validación de estado (LA LÍNEA 541 ORIGINAL - AHORA CON MEJOR LOGGING)
+        // ============== FIX CRÍTICO: VALIDACIÓN MEJORADA DE ESTADO ==============
         if (documento.estado !== 'listo_para_entrega') {
-          const error = `Documento ${documento.codigoBarras} no está listo para entrega`;
+          // NUEVO: Si el documento ya está entregado, verificar si es parte del mismo grupo
+          if (documento.estado === 'entregado' && documento.fechaEntrega) {
+            console.log(`⚠️ [RECEPCIÓN] ADVERTENCIA: Documento ${documento.codigoBarras} ya entregado el ${documento.fechaEntrega}`);
+            console.log(`   Receptor previo: ${documento.nombreReceptor || 'N/A'}`);
+            
+            // Si es del mismo receptor, omitir silenciosamente (evita error)
+            if (documento.nombreReceptor === datosEntrega.nombreReceptor) {
+              console.log(`✅ [RECEPCIÓN] Documento ${documento.codigoBarras} ya entregado al mismo receptor, omitiendo`);
+              continue;
+            }
+          }
+          
+          const error = `Documento ${documento.codigoBarras} no está listo para entrega (estado: ${documento.estado})`;
           erroresValidacion.push(error);
           console.log(`❌ [RECEPCIÓN] ERROR: ${error}`);
           console.log(`   Estado encontrado: "${documento.estado}" (length: ${documento.estado.length})`);
@@ -866,6 +929,14 @@ async function procesarEntregaGrupalRecepcion(documentosIds, datosEntrega, usuar
         }
         
         if (documento.fechaEntrega !== null) {
+          console.log(`⚠️ [RECEPCIÓN] ADVERTENCIA: Documento ${documento.codigoBarras} tiene fecha de entrega pero estado '${documento.estado}'`);
+          
+          // Si es del mismo receptor, omitir silenciosamente
+          if (documento.nombreReceptor === datosEntrega.nombreReceptor) {
+            console.log(`✅ [RECEPCIÓN] Documento ${documento.codigoBarras} ya entregado al mismo receptor, omitiendo`);
+            continue;
+          }
+          
           erroresValidacion.push(`Documento ${documento.codigoBarras} ya fue entregado`);
           continue;
         }
@@ -876,6 +947,7 @@ async function procesarEntregaGrupalRecepcion(documentosIds, datosEntrega, usuar
         }
         
         console.log(`✅ [RECEPCIÓN] Documento ${documento.codigoBarras} pasa todas las validaciones`);
+        documentosValidosParaProcesar.push(documento);
         
       } catch (validationError) {
         console.error(`❌ [RECEPCIÓN] Error validando documento ${documento.codigoBarras}:`, validationError);
@@ -886,13 +958,21 @@ async function procesarEntregaGrupalRecepcion(documentosIds, datosEntrega, usuar
     // ============== VERIFICAR ERRORES ANTES DE PROCEDER ==============
     if (erroresValidacion.length > 0) {
       console.log(`❌ [RECEPCIÓN] Se encontraron ${erroresValidacion.length} errores de validación`);
-      throw new Error(`Errores de validación: ${erroresValidacion.join('; ')}`);
+      console.log(`📊 [RECEPCIÓN] Documentos válidos encontrados: ${documentosValidosParaProcesar.length}`);
+      
+      // NUEVO: Si hay documentos válidos, continuar con esos (no fallar completamente)
+      if (documentosValidosParaProcesar.length === 0) {
+        throw new Error(`Errores de validación: ${erroresValidacion.join('; ')}`);
+      } else {
+        console.log(`⚠️ [RECEPCIÓN] ADVERTENCIA: Continuando con ${documentosValidosParaProcesar.length} documentos válidos`);
+        console.log(`   Errores ignorados: ${erroresValidacion.join('; ')}`);
+      }
     }
     
-    // ============== PROCESAR ENTREGA (SOLO SI NO HAY ERRORES) ==============
-    console.log('✅ [RECEPCIÓN] Todas las validaciones pasaron, procesando entrega...');
+    // ============== PROCESAR ENTREGA (SOLO SI HAY DOCUMENTOS VÁLIDOS) ==============
+    console.log(`✅ [RECEPCIÓN] Procesando entrega de ${documentosValidosParaProcesar.length} documentos válidos...`);
     
-    for (const documento of documentosParaValidar) {
+    for (const documento of documentosValidosParaProcesar) {
       try {
         // NUEVA LÓGICA: Registrar estado de pago pero no bloquear entrega
         const tienePagoPendiente = !['pagado_completo', 'pagado_con_retencion'].includes(documento.estadoPago);
@@ -900,26 +980,63 @@ async function procesarEntregaGrupalRecepcion(documentosIds, datosEntrega, usuar
           console.log(`⚠️ [RECEPCIÓN] Documento ${documento.codigoBarras} tiene pago pendiente: ${documento.estadoPago}`);
         }
         
-        // ACTUALIZAR DOCUMENTO
-        await documento.update({
-          estado: 'entregado',
-          fechaEntrega: new Date(),
-          nombreReceptor: datosEntrega.nombreReceptor,
-          identificacionReceptor: datosEntrega.identificacionReceptor,
-          relacionReceptor: datosEntrega.relacionReceptor
-        }, { transaction });
+        // ============== FIX CRÍTICO: ACTUALIZACIÓN ATÓMICA CON VERIFICACIÓN ==============
+        console.log(`🔄 [RECEPCIÓN] Actualizando documento ${documento.codigoBarras}...`);
+        
+        const [filasActualizadas] = await sequelize.query(`
+          UPDATE documentos 
+          SET 
+            estado = 'entregado',
+            fecha_entrega = NOW(),
+            nombre_receptor = :nombreReceptor,
+            identificacion_receptor = :identificacionReceptor,
+            relacion_receptor = :relacionReceptor,
+            updated_at = NOW()
+          WHERE 
+            id = :documentoId 
+            AND estado = 'listo_para_entrega'
+            AND fecha_entrega IS NULL
+        `, {
+          replacements: {
+            documentoId: documento.id,
+            nombreReceptor: datosEntrega.nombreReceptor,
+            identificacionReceptor: datosEntrega.identificacionReceptor,
+            relacionReceptor: datosEntrega.relacionReceptor
+          },
+          type: sequelize.QueryTypes.UPDATE,
+          transaction
+        });
+        
+        if (filasActualizadas === 0) {
+          console.log(`⚠️ [RECEPCIÓN] ADVERTENCIA: No se pudo actualizar documento ${documento.codigoBarras} - posiblemente ya procesado`);
+          
+          // Verificar estado actual
+          const documentoActual = await Documento.findByPk(documento.id, { transaction });
+          console.log(`   Estado actual: ${documentoActual?.estado}, Fecha entrega: ${documentoActual?.fechaEntrega}`);
+          
+          // Si ya está entregado al mismo receptor, no es error
+          if (documentoActual?.estado === 'entregado' && documentoActual?.nombreReceptor === datosEntrega.nombreReceptor) {
+            console.log(`✅ [RECEPCIÓN] Documento ${documento.codigoBarras} ya entregado al mismo receptor, continuando`);
+          } else {
+            erroresValidacion.push(`No se pudo actualizar documento ${documento.codigoBarras} - estado inesperado`);
+            continue;
+          }
+        } else {
+          console.log(`✅ [RECEPCIÓN] Documento ${documento.codigoBarras} actualizado exitosamente`);
+        }
         
         // REGISTRAR EVENTO DE ENTREGA GRUPAL CON ESTADO DE PAGO
         await EventoDocumento.create({
           documentoId: documento.id,
           tipo: 'entrega_grupal',
           categoria: 'entrega',
-          titulo: 'Entrega Grupal - Recepción (Mejorada)',
+          titulo: 'Entrega Grupal - Recepción (Corregida)',
           descripcion: `Documento entregado en entrega grupal por recepción a ${datosEntrega.nombreReceptor}`,
           detalles: {
             entregaGrupal: true,
             totalDocumentosGrupo: documentosIds.length,
-            tipoEntregaGrupal: 'recepcion_completa_mejorada',
+            documentosValidosProcesados: documentosValidosParaProcesar.length,
+            tipoEntregaGrupal: 'recepcion_completa_corregida',
             rolProcesador: 'recepcion',
             nombreReceptor: datosEntrega.nombreReceptor,
             identificacionReceptor: datosEntrega.identificacionReceptor,
@@ -932,29 +1049,34 @@ async function procesarEntregaGrupalRecepcion(documentosIds, datosEntrega, usuar
             entregaConPendientes: datosEntrega.confirmarEntregaPendiente === 'true',
             validacionesAplicadas: [
               'refresh_documento',
-              'validacion_habilitante',
-              'estado_verificado',
-              'no_entregado_previamente',
-              'pertenencia_cliente_confirmada'
+              'validacion_habilitante_mejorada',
+              'estado_verificado_robusto',
+              'no_entregado_previamente_verificado',
+              'pertenencia_cliente_confirmada',
+              'actualizacion_atomica'
             ],
             metodoVerificacion: datosEntrega.tipoVerificacion,
             observaciones: datosEntrega.observaciones,
             // Info de corrección
-            versionProcesamiento: 'mejorada_v1.0'
+            versionProcesamiento: 'corregida_v2.0',
+            erroresIgnorados: erroresValidacion.length,
+            documentosOriginalesSolicitados: documentosIds.length,
+            documentosValidosProcesados: documentosValidosParaProcesar.length
           },
           usuario: usuario.nombre,
           metadatos: {
             canal: 'sistema',
             estado: 'procesada',
-            tipo: 'entrega_grupal_mejorada',
+            tipo: 'entrega_grupal_corregida',
             idUsuario: usuario.id,
             rolUsuario: usuario.rol,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            fixVersion: '2.0'
           }
         }, { transaction });
         
         documentosActualizados.push(documento);
-        console.log(`✅ [RECEPCIÓN] Documento ${documento.codigoBarras} entregado grupalmente (mejorado)`);
+        console.log(`✅ [RECEPCIÓN] Documento ${documento.codigoBarras} entregado grupalmente (corregido v2.0)`);
         
       } catch (updateError) {
         console.error(`❌ [RECEPCIÓN] Error actualizando documento ${documento.codigoBarras}:`, updateError);
@@ -962,9 +1084,20 @@ async function procesarEntregaGrupalRecepcion(documentosIds, datosEntrega, usuar
       }
     }
     
-    // Verificar errores finales
+    // ============== VERIFICACIÓN FINAL ==============
+    if (documentosActualizados.length === 0) {
+      throw new Error(`No se pudo procesar ningún documento. Errores: ${erroresValidacion.join('; ')}`);
+    }
+    
+    // NUEVO: Log de resumen detallado
+    console.log(`📊 [RECEPCIÓN] RESUMEN FINAL:`);
+    console.log(`   Documentos solicitados: ${documentosIds.length}`);
+    console.log(`   Documentos válidos encontrados: ${documentosValidosParaProcesar.length}`);
+    console.log(`   Documentos exitosamente procesados: ${documentosActualizados.length}`);
+    console.log(`   Errores encontrados: ${erroresValidacion.length}`);
+    
     if (erroresValidacion.length > 0) {
-      throw new Error(`Errores en actualización: ${erroresValidacion.join('; ')}`);
+      console.log(`⚠️ [RECEPCIÓN] Errores no críticos: ${erroresValidacion.join('; ')}`);
     }
     
     console.log(`✅ [RECEPCIÓN] Entrega grupal completada exitosamente: ${documentosActualizados.length} documentos`);
@@ -973,11 +1106,15 @@ async function procesarEntregaGrupalRecepcion(documentosIds, datosEntrega, usuar
       exito: true,
       documentosActualizados: documentosActualizados.length,
       documentos: documentosActualizados,
-      version: 'mejorada_v1.0'
+      version: 'corregida_v2.0',
+      documentosSolicitados: documentosIds.length,
+      documentosValidosEncontrados: documentosValidosParaProcesar.length,
+      erroresEncontrados: erroresValidacion.length,
+      erroresDetalle: erroresValidacion
     };
     
   } catch (error) {
-    console.error('❌ Error en procesamiento grupal recepción (mejorado):', error);
+    console.error('❌ Error en procesamiento grupal recepción (corregido v2.0):', error);
     throw error;
   }
 }
