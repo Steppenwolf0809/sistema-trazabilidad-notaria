@@ -199,6 +199,14 @@
         </a>
       </li>
       
+      <div class="sidebar-heading">Auditoría</div>
+      
+      <li class="nav-item">
+        <a class="nav-link {{#if activeEliminados}}active{{/if}}" href="/caja/documentos/eliminados">
+          <i class="fas fa-trash-restore text-warning"></i> Documentos Eliminados
+        </a>
+      </li>
+      
       {{! ============== NAVEGACIÓN HÍBRIDA PARA CAJA_ARCHIVO ============== }}
       {{#if (eq userRole 'caja_archivo')}}
         <div class="sidebar-heading">

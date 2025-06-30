@@ -6,6 +6,7 @@
 const { sequelize } = require('../config/database');
 const Documento = require('../models/Documento');
 const Matrizador = require('../models/Matrizador');
+const EventoDocumento = require('../models/EventoDocumento');
 const { Op } = require('sequelize');
 const moment = require('moment');
 const { 
@@ -1217,7 +1218,6 @@ const cajaController = {
         });
 
         // NUEVO: Crear evento mejorado del pago
-        const EventoDocumento = require('../models/EventoDocumento');
         
         // Preparar información detallada del evento
         let tituloEvento = '💰 Pago Registrado';
@@ -2376,9 +2376,8 @@ const cajaController = {
             pendiente: valorPendiente
           });
           
-          // Crear evento del pago
-          const EventoDocumento = require('../models/EventoDocumento');
-          await EventoDocumento.create({
+                  // Crear evento del pago
+        await EventoDocumento.create({
             documentoId: nuevoDocumento.id,
             usuarioId: req.matrizador?.id || null,
             tipo: 'pago',
@@ -2515,6 +2514,373 @@ const cajaController = {
         layout: 'caja',
         title: 'Error',
         message: 'Error al cargar el listado de pagos',
+        error
+      });
+    }
+  },
+
+  /**
+   * NUEVO: Eliminar documento con justificación (Sistema simplificado para Caja)
+   * No requiere autorización de administrador, pero con auditoría completa
+   */
+  eliminarDocumento: async (req, res) => {
+    try {
+      console.log('🗑️ Iniciando eliminación de documento por caja...');
+      console.log('📋 Datos recibidos:', req.body);
+      console.log('👤 Usuario:', req.matrizador);
+
+      const { id } = req.params;
+      const { 
+        motivo, 
+        justificacion, 
+        manejosPago, 
+        confirmarEliminacion 
+      } = req.body;
+
+      // ============== VALIDACIONES DE SEGURIDAD ==============
+      
+      // Validar que el usuario sea caja o caja_archivo
+      if (!req.matrizador || !['caja', 'caja_archivo'].includes(req.matrizador.rol)) {
+        console.error('❌ Usuario no autorizado para eliminar documentos:', req.matrizador?.rol);
+        return res.status(403).json({
+          success: false,
+          message: 'Solo usuarios de Caja pueden eliminar documentos'
+        });
+      }
+
+      // Validar datos requeridos
+      if (!motivo || !justificacion || !confirmarEliminacion) {
+        return res.status(400).json({
+          success: false,
+          message: 'Faltan datos requeridos: motivo, justificación y confirmación'
+        });
+      }
+
+      // Validar longitud mínima de justificación
+      if (justificacion.trim().length < 20) {
+        return res.status(400).json({
+          success: false,
+          message: 'La justificación debe tener al menos 20 caracteres'
+        });
+      }
+
+      // ============== OBTENER Y VALIDAR DOCUMENTO ==============
+      
+      const documento = await Documento.findByPk(id, {
+        include: [{
+          model: Matrizador,
+          as: 'matrizador',
+          attributes: ['id', 'nombre']
+        }],
+        // No incluir documentos ya eliminados
+        where: {
+          deleted_at: null
+        }
+      });
+
+      if (!documento) {
+        return res.status(404).json({
+          success: false,
+          message: 'Documento no encontrado o ya fue eliminado'
+        });
+      }
+
+      // NUEVO: Permitir eliminar documentos entregados para generar notas de crédito
+      // Solo mostrar advertencia adicional en el log
+      if (documento.estado === 'entregado') {
+        console.log('⚠️ Eliminando documento ya entregado - se generará nota de crédito si tiene pago');
+      }
+
+      // Validar que el documento no esté ya marcado como eliminado o nota de crédito
+      if (['eliminado', 'nota_credito'].includes(documento.estado)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Este documento ya está eliminado o es una nota de crédito'
+        });
+      }
+
+      console.log('✅ Documento encontrado y validado:', {
+        id: documento.id,
+        codigo: documento.codigoBarras,
+        estado: documento.estado,
+        estadoPago: documento.estadoPago,
+        valorFactura: documento.valorFactura,
+        valorPagado: documento.valorPagado
+      });
+
+      // ============== DETERMINAR MANEJO DE PAGO ==============
+      
+      let paymentHandling = 'sin_pago_registrado';
+      
+      const tienePago = documento.valorPagado > 0 || 
+                       ['pagado_completo', 'pagado_con_retencion', 'pago_parcial'].includes(documento.estadoPago);
+
+      if (tienePago) {
+        console.log('💰 Documento tiene pago registrado, registrando eliminación...');
+        paymentHandling = 'pago_registrado_en_reportes';
+        console.log('📊 El pago aparecerá en reportes financieros y será manejado apropiadamente');
+      }
+
+      // ============== OPERACIÓN ATÓMICA CON TRANSACCIÓN ==============
+      
+      const transaction = await sequelize.transaction();
+      
+      try {
+        console.log('🔄 Iniciando transacción de eliminación...');
+
+        // 1. Marcar documento como eliminado (SOFT DELETE)
+        await documento.update({
+          // Soft delete principal
+          deletedAt: new Date(),
+          deletedBy: req.matrizador.id,
+          deletionReason: motivo,
+          deletionJustification: justificacion.trim(),
+          paymentHandling: paymentHandling,
+          
+          // También actualizar campos legacy para compatibilidad
+          estado: 'eliminado',
+          motivoEliminacion: 'otro', // Mapear a enum legacy
+          eliminadoPor: req.matrizador.id,
+          justificacionEliminacion: justificacion.trim()
+        }, { transaction });
+
+        console.log('✅ Documento marcado como eliminado');
+
+        // 2. Registro financiero simplificado
+        if (tienePago) {
+          console.log('📊 Registrando información financiera para reportes...');
+          
+          // Solo registrar información básica para reportes financieros
+          await EventoDocumento.create({
+            documentoId: documento.id,
+            usuarioId: req.matrizador.id,
+            tipo: 'eliminacion',
+            categoria: 'financiero',
+            titulo: '💰 Pago Registrado en Eliminación',
+            descripcion: `Documento eliminado tenía pago de $${(documento.valorPagado || 0).toFixed(2)} que aparecerá en reportes financieros`,
+            detalles: JSON.stringify({
+              valorPagado: documento.valorPagado || 0,
+              metodoPago: documento.metodoPago,
+              estadoPago: documento.estadoPago,
+              motivoEliminacion: motivo,
+              documentoOriginal: documento.codigoBarras,
+              manejoSimplificado: true
+            }),
+            usuario: req.matrizador.nombre,
+            metadatos: JSON.stringify({
+              tipoOperacion: 'eliminacion_con_pago',
+              montoOriginal: documento.valorFactura,
+              montoPagado: documento.valorPagado,
+              metodoPagoOriginal: documento.metodoPago,
+              fechaEliminacion: new Date().toISOString(),
+              apareceEnReportes: true
+            })
+          }, { transaction });
+          
+          console.log('✅ Información financiera registrada para reportes');
+        }
+
+        // 3. Crear evento detallado de eliminación para auditoría
+        await EventoDocumento.create({
+          documentoId: documento.id,
+          usuarioId: req.matrizador.id,
+          tipo: 'eliminacion',
+          categoria: 'eliminacion',
+          titulo: '🗑️ Documento Eliminado por Caja',
+          descripcion: `Documento eliminado por ${req.matrizador.nombre}. Motivo: ${motivo}`,
+          detalles: JSON.stringify({
+            motivoDetallado: motivo,
+            justificacion: justificacion.trim(),
+            paymentHandling: paymentHandling,
+            
+            // Snapshot del documento antes de eliminar
+            documentoSnapshot: {
+              codigoBarras: documento.codigoBarras,
+              tipoDocumento: documento.tipoDocumento,
+              nombreCliente: documento.nombreCliente,
+              identificacionCliente: documento.identificacionCliente,
+              valorFactura: documento.valorFactura,
+              valorPagado: documento.valorPagado,
+              estadoPago: documento.estadoPago,
+              metodoPago: documento.metodoPago,
+              numeroFactura: documento.numeroFactura,
+              fechaFactura: documento.fechaFactura,
+              estado: documento.estado,
+              matrizador: documento.matrizador?.nombre
+            },
+            
+            // Información del usuario y contexto
+            usuarioEliminacion: {
+              id: req.matrizador.id,
+              nombre: req.matrizador.nombre,
+              rol: req.matrizador.rol,
+              ip: req.ip,
+              userAgent: req.get('User-Agent')
+            }
+          }),
+          usuario: req.matrizador.nombre,
+          metadatos: JSON.stringify({
+            tipoOperacion: 'eliminacion_caja',
+            requiereRevisionAdmin: false,
+            impactoFinanciero: {
+              valorFacturaEliminado: documento.valorFactura || 0,
+              valorPagadoAfectado: documento.valorPagado || 0,
+              requiereNotaCredito: paymentHandling === 'nota_credito_automatica'
+            },
+            fechaEliminacion: new Date().toISOString(),
+            irreversible: true
+          })
+        }, { transaction });
+
+        console.log('✅ Evento de auditoría creado');
+
+        // 4. Confirmar transacción
+        await transaction.commit();
+        console.log('✅ Transacción completada exitosamente');
+
+        // ============== RESPUESTA EXITOSA ==============
+        
+        const mensajeExito = tienePago ? 
+          'Documento eliminado exitosamente. El pago registrado aparecerá en los reportes financieros.' :
+          'Documento eliminado exitosamente.';
+        
+        res.json({
+          success: true,
+          message: mensajeExito,
+          data: {
+            documentoId: documento.id,
+            codigoBarras: documento.codigoBarras,
+            fechaEliminacion: new Date(),
+            motivo: motivo,
+            paymentHandling: paymentHandling,
+            auditoriaCompleta: true,
+            teniaPago: tienePago,
+            valorEliminado: tienePago ? documento.valorPagado : 0
+          }
+        });
+
+      } catch (transactionError) {
+        // Rollback en caso de error
+        await transaction.rollback();
+        console.error('❌ Error en transacción, rollback ejecutado:', transactionError);
+        throw transactionError;
+      }
+
+    } catch (error) {
+      console.error('❌ Error eliminando documento:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error interno del servidor al eliminar el documento',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  },
+
+  /**
+   * NUEVO: Listar documentos eliminados (para auditoría de caja)
+   */
+  listarDocumentosEliminados: async (req, res) => {
+    try {
+      // Solo usuarios de caja pueden ver esta vista
+      if (!req.matrizador || !['caja', 'caja_archivo'].includes(req.matrizador.rol)) {
+        return res.status(403).render('error', {
+          layout: 'caja',
+          title: 'Acceso Denegado',
+          message: 'No tiene permisos para ver documentos eliminados'
+        });
+      }
+
+      // Parámetros de paginación
+      const page = parseInt(req.query.page) || 1;
+      const limit = 20;
+      const offset = (page - 1) * limit;
+
+      // Filtros
+      const motivo = req.query.motivo || '';
+      const fechaDesde = req.query.fechaDesde || '';
+      const fechaHasta = req.query.fechaHasta || '';
+
+      // Construir condiciones WHERE
+      const whereConditions = {
+        deleted_at: { [Op.not]: null } // Solo documentos eliminados
+      };
+
+      if (motivo) {
+        whereConditions.deletion_reason = motivo;
+      }
+
+      if (fechaDesde && fechaHasta) {
+        whereConditions.deleted_at = {
+          [Op.between]: [
+            moment(fechaDesde).startOf('day').toDate(),
+            moment(fechaHasta).endOf('day').toDate()
+          ]
+        };
+      }
+
+      // Obtener documentos eliminados
+      const { count, rows: documentosEliminados } = await Documento.findAndCountAll({
+        where: whereConditions,
+        include: [
+          {
+            model: Matrizador,
+            as: 'matrizador',
+            attributes: ['id', 'nombre']
+          },
+          {
+            model: Matrizador,
+            as: 'deletedByUser',
+            foreignKey: 'deletedBy',
+            attributes: ['id', 'nombre', 'rol']
+          }
+        ],
+        order: [['deleted_at', 'DESC']],
+        limit,
+        offset
+      });
+
+      // Calcular estadísticas
+      const stats = await Documento.findAll({
+        where: { deleted_at: { [Op.not]: null } },
+        attributes: [
+          'deletion_reason',
+          [sequelize.fn('COUNT', sequelize.col('id')), 'total'],
+          [sequelize.fn('SUM', sequelize.col('valor_factura')), 'valorTotal']
+        ],
+        group: ['deletion_reason'],
+        raw: true
+      });
+
+      // Preparar datos para paginación
+      const totalPages = Math.ceil(count / limit);
+
+      res.render('caja/documentos/eliminados', {
+        layout: 'caja',
+        title: 'Documentos Eliminados',
+        documentosEliminados,
+        stats,
+        pagination: {
+          currentPage: page,
+          totalPages: totalPages,
+          hasNext: page < totalPages,
+          hasPrev: page > 1,
+          totalCount: count
+        },
+        filtros: {
+          motivo,
+          fechaDesde,
+          fechaHasta
+        },
+        userRole: req.matrizador?.rol,
+        userName: req.matrizador?.nombre
+      });
+
+    } catch (error) {
+      console.error('Error al listar documentos eliminados:', error);
+      return res.status(500).render('error', {
+        layout: 'caja',
+        title: 'Error',
+        message: 'Error al cargar documentos eliminados',
         error
       });
     }

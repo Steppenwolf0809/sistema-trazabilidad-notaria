@@ -464,6 +464,66 @@ const Documento = sequelize.define('Documento', {
     allowNull: true
   },
   
+  // ============== CAMPOS DE SOFT DELETE PARA CAJA ==============
+  
+  // Soft delete - marca el documento como eliminado sin borrarlo físicamente
+  deletedAt: {
+    type: DataTypes.DATE,
+    field: 'deleted_at',
+    allowNull: true,
+    comment: 'Timestamp de soft delete - si está presente, el documento fue eliminado'
+  },
+  
+  // Usuario de caja que realizó la eliminación
+  deletedBy: {
+    type: DataTypes.INTEGER,
+    field: 'deleted_by',
+    allowNull: true,
+    references: {
+      model: 'matrizadores',
+      key: 'id'
+    },
+    comment: 'ID del usuario de caja que eliminó el documento'
+  },
+  
+  // Motivo específico de eliminación para caja (más opciones que admin)
+  deletionReason: {
+    type: DataTypes.ENUM(
+      'error_xml_importado', 
+      'error_creacion_documento', 
+      'solicitud_nota_credito', 
+      'documento_duplicado', 
+      'datos_incorrectos',
+      'cliente_cancelo_tramite',
+      'error_sistema',
+      'otro'
+    ),
+    field: 'deletion_reason',
+    allowNull: true,
+    comment: 'Motivo específico de eliminación para operaciones de caja'
+  },
+  
+  // Justificación detallada obligatoria para caja
+  deletionJustification: {
+    type: DataTypes.TEXT,
+    field: 'deletion_justification',
+    allowNull: true,
+    comment: 'Justificación detallada de la eliminación (mínimo 20 caracteres)'
+  },
+  
+  // Manejo de pago al momento de eliminación
+  paymentHandling: {
+    type: DataTypes.ENUM(
+      'sin_pago_registrado',
+      'nota_credito_automatica', 
+      'reembolso_manual_procesado',
+      'pago_revertido'
+    ),
+    field: 'payment_handling',
+    allowNull: true,
+    comment: 'Cómo se manejó el pago existente al eliminar'
+  },
+  
   // ============== CAMPOS LEGACY MANTENIDOS PARA COMPATIBILIDAD ==============
   
   metodoPago: {
@@ -550,22 +610,8 @@ Documento.hasMany(Documento, {
   constraints: false
 });
 
-// ============== RELACIONES PARA NOTIFICACIONES GRUPALES ==============
-
-// Configurar relaciones después de la definición del modelo
-Documento.associate = function(models) {
-  // Un documento pertenece a una notificación grupal (opcional)
-  Documento.belongsTo(models.NotificacionGrupal, {
-    foreignKey: 'notificacionGrupalId',
-    as: 'notificacionGrupal'
-  });
-  
-  // Un documento pertenece a un matrizador
-  Documento.belongsTo(models.Matrizador, {
-    foreignKey: 'idMatrizador',
-    as: 'matrizador'
-  });
-};
+// NOTA: Las relaciones están definidas en models/index.js 
+// para evitar problemas de referencias circulares
 
 // ============== FUNCIÓN AUXILIAR PARA CÁLCULO AUTOMÁTICO ==============
 

@@ -98,6 +98,17 @@ router.get('/reportes/documentos', cajaController.reporteDocumentos);
 router.get('/reportes/pendientes', cajaController.reportePendientes);
 router.get('/reportes/cobros-matrizador', cajaController.reporteCobrosMatrizador);
 
+// ============== NUEVAS RUTAS: SISTEMA DE ELIMINACIÓN ==============
+
+// Eliminar documento con justificación (solo POST - operación crítica)
+router.post('/documentos/eliminar/:id', cajaController.eliminarDocumento);
+
+// NUEVO: Ruta DELETE para AJAX (misma función, diferente método HTTP)
+router.delete('/documentos/:id/eliminar', cajaController.eliminarDocumento);
+
+// Vista de documentos eliminados para auditoría
+router.get('/documentos/eliminados', cajaController.listarDocumentosEliminados);
+
 // ============== RUTAS TEMPORALMENTE DESHABILITADAS ==============
 // TODO: Implementar estas funciones en el controlador cuando sea necesario
 

@@ -133,6 +133,15 @@ const moment = require('moment');
      categoriaTexto: 'Autorización',
      mostrarEn: ['admin', 'caja', 'archivo', 'matrizador', 'recepcion'],
      prioridad: 'alta'
+   },
+   'documento_eliminado': {
+     icono: '<i class="fas fa-trash"></i>',
+     titulo: 'Documento eliminado',
+     color: 'danger',
+     categoria: 'eliminacion',
+     categoriaTexto: 'Eliminación',
+     mostrarEn: ['admin', 'caja', 'archivo'],
+     prioridad: 'muy_alta'
    }
 };
 
@@ -320,7 +329,8 @@ function determinarTipoEspecifico(eventoDB, documento) {
     'notificacion_enviada': 'notificacion_enviada',
     'documento_listo': 'marcado_listo',
     'creacion': 'documento_creado',
-    'registro': 'documento_creado'
+    'registro': 'documento_creado',
+    'eliminacion': 'documento_eliminado'
   };
   
   return mapeoTipos[eventoDB.tipo] || eventoDB.tipo;
@@ -414,6 +424,40 @@ function construirDescripcionEspecifica(tipoEvento, eventoDB, documento, detalle
       const rechazadoVerbalPor = detalles.rechazado_por_nombre || eventoDB.usuario || 'Matrizador';
       const motivoRechazoVerbal = detalles.motivo_rechazo || 'Ratificación denegada';
       return `${rechazadoVerbalPor} rechazó la ratificación de la autorización verbal. ${motivoRechazoVerbal}`;
+    
+    case 'documento_eliminado':
+      const eliminadoPor = eventoDB.usuario || 'Usuario';
+      
+      // Mapear motivos técnicos a texto legible
+      const motivosMap = {
+        'error_xml': 'Error en XML',
+        'error_ingreso': 'Error de ingreso',
+        'nota_credito': 'Requiere nota de crédito',
+        'cliente_cancelo_tramite': 'Cliente canceló el trámite',
+        'documento_duplicado': 'Documento duplicado',
+        'error_sistema': 'Error del sistema',
+        'orden_superior': 'Orden superior',
+        'otro': 'Otro motivo'
+      };
+      
+      const motivoEliminacion = motivosMap[detalles.motivoDetallado] || detalles.motivoDetallado || 'Motivo no especificado';
+      const justificacionEliminacion = detalles.justificacion || '';
+      
+      let descripcionEliminacion = `Documento eliminado por ${eliminadoPor}. Motivo: ${motivoEliminacion}`;
+      
+      if (justificacionEliminacion && justificacionEliminacion.length > 0) {
+        const justificacionCorta = justificacionEliminacion.length > 50 ? 
+          justificacionEliminacion.substring(0, 50) + '...' : 
+          justificacionEliminacion;
+        descripcionEliminacion += ` - ${justificacionCorta}`;
+      }
+      
+      // Agregar información sobre pago si había
+      if (detalles.documentoSnapshot && detalles.documentoSnapshot.valorPagado > 0) {
+        descripcionEliminacion += ` (Tenía pago de $${detalles.documentoSnapshot.valorPagado})`;
+      }
+      
+      return descripcionEliminacion;
     
     default:
       return eventoDB.descripcion || eventoDB.titulo || 'Evento del sistema';

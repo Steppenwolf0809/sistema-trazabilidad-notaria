@@ -229,6 +229,89 @@
       </div>
     </div>
     
+    <!-- ============== SECCIÓN DE ACCIONES CRÍTICAS ============== -->
+    {{#if (and (neq documento.estado "eliminado") (neq documento.estado "nota_credito"))}}
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card border-warning">
+          <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0">
+              <i class="fas fa-exclamation-triangle me-2"></i>Acciones Críticas
+            </h5>
+          </div>
+          <div class="card-body">
+            {{#if (eq documento.estado "entregado")}}
+            <div class="alert alert-danger mb-3">
+              <div class="d-flex align-items-center">
+                <i class="fas fa-exclamation-circle me-3 fa-lg"></i>
+                <div>
+                  <h6 class="mb-1">🚨 Documento Ya Entregado</h6>
+                  <small class="mb-0">Este documento ya fue entregado al cliente. La eliminación generará automáticamente una nota de crédito si tiene pago registrado.</small>
+                </div>
+              </div>
+            </div>
+            {{else}}
+            <div class="alert alert-warning mb-3">
+              <div class="d-flex align-items-center">
+                <i class="fas fa-info-circle me-3 fa-lg"></i>
+                <div>
+                  <h6 class="mb-1">⚠️ Zona de Acciones Irreversibles</h6>
+                  <small class="mb-0">Las siguientes acciones requieren justificación y no se pueden deshacer.</small>
+                </div>
+              </div>
+            </div>
+            {{/if}}
+            
+            <div class="row">
+              <div class="col-md-8">
+                <div class="d-flex align-items-center">
+                  <div class="me-3">
+                    <i class="fas fa-trash-alt fa-2x text-danger"></i>
+                  </div>
+                  <div>
+                    <h6 class="mb-1 text-danger">Eliminar Documento</h6>
+                    <p class="mb-0 small text-muted">
+                      {{#if (eq documento.estado "entregado")}}
+                      <strong>Nota de crédito:</strong> Error de XML, datos incorrectos, cliente solicita devolución.
+                      <br><strong>⚠️ Se generará nota de crédito automática si tiene pago registrado.</strong>
+                      {{else}}
+                      Usar solo en casos de error de XML, datos incorrectos, o solicitud de nota de crédito.
+                      <br><strong>⚠️ Esta acción es irreversible y requiere justificación detallada.</strong>
+                      {{/if}}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4 text-end">
+                <button 
+                  type="button" 
+                  class="btn btn-lg {{#if (eq documento.estado "entregado")}}btn-warning text-dark fw-bold{{else}}btn-danger{{/if}}"
+                  id="btn-eliminar-documento"
+                  data-bs-toggle="modal" 
+                  data-bs-target="#eliminarDocumentoModal"
+                  data-documento-id="{{documento.id}}"
+                  data-codigo-barras="{{documento.codigoBarras}}"
+                  data-nombre-cliente="{{documento.nombreCliente}}"
+                  data-estado="{{documento.estado}}"
+                  data-valor-factura="{{documento.valorFactura}}"
+                  data-valor-pagado="{{documento.valorPagado}}"
+                  data-documento-tiene-pago="{{#if (or (gt documento.valorPagado 0) (neq documento.estadoPago "pendiente"))}}true{{else}}false{{/if}}">
+                  {{#if (eq documento.estado "entregado")}}
+                  <i class="fas fa-file-invoice me-2"></i>
+                  📄 Generar Nota de Crédito
+                  {{else}}
+                  <i class="fas fa-trash-alt me-2"></i>
+                  🗑️ Eliminar Documento
+                  {{/if}}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {{/if}}
+    
     <!-- Notas -->
     {{#if documento.notas}}
     <div class="row mb-4">
@@ -752,7 +835,198 @@
   </div>
 </div>
 
-<!-- CSS eliminado - Ahora usa el sistema universal -->
+<!-- NUEVO: Modal para eliminar documento con justificación obligatoria -->
+<div class="modal fade" id="eliminarDocumentoModal" tabindex="-1" aria-labelledby="eliminarDocumentoModalLabel">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="eliminarDocumentoModalLabel">
+          <i class="fas fa-trash-alt me-2"></i>🗑️ Eliminar Documento - Justificación Requerida
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      
+      <form id="formEliminarDocumento">
+        <div class="modal-body">
+          <!-- Información del documento a eliminar -->
+          <div class="alert alert-danger mb-4">
+            <div class="d-flex align-items-center mb-3">
+              <i class="fas fa-exclamation-triangle fa-2x text-danger me-3"></i>
+              <div>
+                <h6 class="mb-1">⚠️ ACCIÓN IRREVERSIBLE</h6>
+                <p class="mb-0">Esta acción eliminará permanentemente el documento del sistema y no se puede deshacer.</p>
+              </div>
+            </div>
+            
+            <div class="row mt-3">
+              <div class="col-md-6">
+                <p class="mb-1"><strong>📄 Código:</strong> <span id="modal-codigo-documento" class="text-danger"></span></p>
+                <p class="mb-1"><strong>👤 Cliente:</strong> <span id="modal-cliente-documento"></span></p>
+                <p class="mb-0"><strong>📊 Estado:</strong> <span id="modal-estado-documento" class="badge bg-secondary"></span></p>
+              </div>
+              <div class="col-md-6">
+                <p class="mb-1"><strong>💰 Valor:</strong> $<span id="modal-valor-documento">0.00</span></p>
+                <p class="mb-1"><strong>💳 Pagado:</strong> $<span id="modal-pagado-documento">0.00</span></p>
+                <p class="mb-0" id="info-pago-documento" style="display: none;"><strong>⚠️ TIENE PAGO REGISTRADO</strong></p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Motivo de eliminación (OBLIGATORIO) -->
+          <div class="mb-4">
+            <label class="form-label">
+              <i class="fas fa-clipboard-list text-danger"></i> 
+              <strong>Motivo de Eliminación (Obligatorio)</strong>
+            </label>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="form-check mb-2">
+                  <input class="form-check-input" type="radio" name="motivo" id="motivo-xml" value="error_xml_importado" required>
+                  <label class="form-check-label" for="motivo-xml">
+                    <strong>🔍 Error en XML importado</strong><br>
+                    <small class="text-muted">XML tenía datos incorrectos o incompletos</small>
+                  </label>
+                </div>
+                <div class="form-check mb-2">
+                  <input class="form-check-input" type="radio" name="motivo" id="motivo-creacion" value="error_creacion_documento" required>
+                  <label class="form-check-label" for="motivo-creacion">
+                    <strong>✏️ Error al crear documento</strong><br>
+                    <small class="text-muted">Error humano durante el registro</small>
+                  </label>
+                </div>
+                <div class="form-check mb-2">
+                  <input class="form-check-input" type="radio" name="motivo" id="motivo-credito" value="solicitud_nota_credito" required>
+                  <label class="form-check-label" for="motivo-credito">
+                    <strong>📄 Solicitud de nota de crédito</strong><br>
+                    <small class="text-muted">Cliente solicita anulación y devolución</small>
+                  </label>
+                </div>
+                <div class="form-check mb-2">
+                  <input class="form-check-input" type="radio" name="motivo" id="motivo-duplicado" value="documento_duplicado" required>
+                  <label class="form-check-label" for="motivo-duplicado">
+                    <strong>📋 Documento duplicado</strong><br>
+                    <small class="text-muted">Ya existe otro documento para el mismo trámite</small>
+                  </label>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-check mb-2">
+                  <input class="form-check-input" type="radio" name="motivo" id="motivo-datos" value="datos_incorrectos" required>
+                  <label class="form-check-label" for="motivo-datos">
+                    <strong>🔧 Datos incorrectos</strong><br>
+                    <small class="text-muted">Información del cliente o documento errónea</small>
+                  </label>
+                </div>
+                <div class="form-check mb-2">
+                  <input class="form-check-input" type="radio" name="motivo" id="motivo-cancelo" value="cliente_cancelo_tramite" required>
+                  <label class="form-check-label" for="motivo-cancelo">
+                    <strong>❌ Cliente canceló trámite</strong><br>
+                    <small class="text-muted">Cliente decidió no continuar con el proceso</small>
+                  </label>
+                </div>
+                <div class="form-check mb-2">
+                  <input class="form-check-input" type="radio" name="motivo" id="motivo-sistema" value="error_sistema" required>
+                  <label class="form-check-label" for="motivo-sistema">
+                    <strong>⚙️ Error del sistema</strong><br>
+                    <small class="text-muted">Fallo técnico o problema de software</small>
+                  </label>
+                </div>
+                <div class="form-check mb-2">
+                  <input class="form-check-input" type="radio" name="motivo" id="motivo-otro" value="otro" required>
+                  <label class="form-check-label" for="motivo-otro">
+                    <strong>📝 Otro motivo</strong><br>
+                    <small class="text-muted">Especificar en justificación</small>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Justificación detallada (OBLIGATORIA) -->
+          <div class="mb-4">
+            <label for="justificacion" class="form-label">
+              <i class="fas fa-edit text-danger"></i> 
+              <strong>Justificación Detallada (Obligatorio - Mínimo 20 caracteres)</strong>
+            </label>
+            <textarea 
+              class="form-control" 
+              id="justificacion" 
+              name="justificacion" 
+              rows="4" 
+              required 
+              minlength="20"
+              aria-describedby="contador-caracteres"
+              placeholder="Explique detalladamente el motivo de la eliminación. Esta información será registrada permanentemente para auditoría."
+            ></textarea>
+            <div class="form-text" id="contador-caracteres-wrapper">
+              <span id="contador-caracteres" aria-live="polite">0</span>/20 caracteres mínimos requeridos
+            </div>
+          </div>
+
+          <!-- Manejo de pago si existe -->
+          <div id="seccion-manejo-pago" class="mb-4" style="display: none;">
+            <div class="card border-warning">
+              <div class="card-header bg-warning text-dark">
+                <h6 class="mb-0">
+                  <i class="fas fa-credit-card me-2"></i>💳 Manejo de Pago Existente
+                </h6>
+              </div>
+              <div class="card-body">
+                <p class="text-warning mb-3">
+                  <i class="fas fa-exclamation-triangle me-2"></i>
+                  <strong>Este documento tiene pago registrado.</strong> Seleccione cómo manejar la situación financiera:
+                </p>
+                
+                <div class="form-check mb-2">
+                  <input class="form-check-input" type="radio" name="manejosPago" id="manejo-procesado" value="pago_sera_manejado" required checked>
+                  <label class="form-check-label" for="manejo-procesado">
+                    <strong>💰 El pago será manejado adecuadamente</strong><br>
+                    <small class="text-muted">Confirmo que el valor pagado aparecerá correctamente en los reportes financieros y se manejará según corresponda (reembolso, aplicación a otro trámite, etc.)</small>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Confirmación doble OBLIGATORIA -->
+          <div class="mb-4">
+            <div class="card border-danger">
+              <div class="card-body">
+                <div class="form-check">
+                  <input 
+                    class="form-check-input" 
+                    type="checkbox" 
+                    id="confirmarEliminacion" 
+                    name="confirmarEliminacion" 
+                    required
+                  >
+                  <label class="form-check-label text-danger fw-bold" for="confirmarEliminacion">
+                    ✓ <strong>CONFIRMO que entiendo las consecuencias de esta acción:</strong>
+                  </label>
+                </div>
+                <ul class="list-unstyled mt-2 small text-danger">
+                  <li>• El documento será eliminado PERMANENTEMENTE del sistema</li>
+                  <li>• Esta acción NO se puede deshacer</li>
+                  <li>• Toda la información será registrada para auditoría</li>
+                  <li>• Asumo total responsabilidad por esta decisión</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-lg" data-bs-dismiss="modal">
+            <i class="fas fa-times me-2"></i>Cancelar
+          </button>
+          <button type="submit" class="btn btn-danger btn-lg" id="btn-confirmar-eliminacion" disabled>
+            <i class="fas fa-trash-alt me-2"></i>🗑️ Confirmar Eliminación
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -1593,6 +1867,639 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 100);
   }
   
+  console.log('📖 Vista caja con modal de pago completo cargada para documento {{documento.codigoBarras}}');
+
+  // ============== MODAL DE ELIMINACIÓN - JAVASCRIPT COMPLETO ==============
+  
+  // ============== FUNCIÓN PRINCIPAL DE ELIMINACIÓN ==============
+  
+  /**
+   * Función principal para confirmar y ejecutar la eliminación del documento
+   */
+  function confirmarEliminacionDocumento() {
+    console.log('🚀 Iniciando proceso de eliminación...');
+    
+    try {
+      // Recopilar datos del formulario
+      const motivoSeleccionado = document.querySelector('input[name="motivo"]:checked');
+      const justificacion = justificacionInput.value.trim();
+      const confirmado = confirmarCheckbox.checked;
+      const manejosPago = document.querySelector('input[name="manejosPago"]:checked');
+      
+      // Validación final
+      if (!motivoSeleccionado) {
+        console.error('❌ No hay motivo seleccionado');
+        alert('Por favor, seleccione un motivo de eliminación');
+        return;
+      }
+      
+      if (!justificacion || justificacion.length < 20) {
+        console.error('❌ Justificación insuficiente');
+        alert('La justificación debe tener al menos 20 caracteres');
+        return;
+      }
+      
+      if (!confirmado) {
+        console.error('❌ No confirmado');
+        alert('Debe confirmar que entiende las consecuencias de la eliminación');
+        return;
+      }
+      
+      // Verificar si hay pago y manejo está seleccionado
+      const documentoTienePago = {{#if (or (gt documento.valorPagado 0) (neq documento.estadoPago "pendiente"))}}true{{else}}false{{/if}};
+      if (documentoTienePago && !manejosPago) {
+        console.error('❌ Falta seleccionar manejo de pago');
+        alert('Este documento tiene pago registrado. Debe seleccionar cómo manejar el pago.');
+        return;
+      }
+      
+      // Preparar datos para enviar
+      const datosEliminacion = {
+        motivo: motivoSeleccionado.value,
+        justificacion: justificacion,
+        confirmarEliminacion: confirmado
+      };
+      
+      // Agregar manejo de pago si aplica
+      if (documentoTienePago && manejosPago) {
+        datosEliminacion.manejosPago = manejosPago.value;
+      }
+      
+      console.log('📦 Datos preparados para eliminación:', datosEliminacion);
+      
+      // Mostrar loading en el botón
+      const textoOriginal = btnConfirmarEliminacion.innerHTML;
+      btnConfirmarEliminacion.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Eliminando...';
+      btnConfirmarEliminacion.disabled = true;
+      
+      // Enviar petición AJAX
+      fetch(`/caja/documentos/{{documento.id}}/eliminar`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify(datosEliminacion)
+      })
+      .then(response => {
+        console.log('📡 Respuesta recibida:', response.status);
+        return response.json();
+      })
+      .then(data => {
+        console.log('📋 Datos de respuesta:', data);
+        
+        if (data.success) {
+          console.log('✅ Eliminación exitosa');
+          
+          // Mostrar mensaje de éxito
+          alert(`✅ Documento eliminado exitosamente!\n\nCódigo: ${data.data.codigoBarras}\nMotivo: ${data.data.motivo}\nFecha: ${new Date(data.data.fechaEliminacion).toLocaleString()}`);
+          
+          // Cerrar modal
+          const modalBootstrap = bootstrap.Modal.getInstance(modalEliminar);
+          if (modalBootstrap) {
+            modalBootstrap.hide();
+          }
+          
+          // Redirigir después de un breve delay
+          setTimeout(() => {
+            window.location.href = '/caja/documentos';
+          }, 1500);
+          
+        } else {
+          console.error('❌ Error en eliminación:', data.message);
+          alert(`❌ Error al eliminar documento:\n\n${data.message}`);
+          
+          // Restaurar botón
+          btnConfirmarEliminacion.innerHTML = textoOriginal;
+          btnConfirmarEliminacion.disabled = false;
+        }
+      })
+      .catch(error => {
+        console.error('❌ Error en petición:', error);
+        alert(`❌ Error de conexión:\n\n${error.message}`);
+        
+        // Restaurar botón
+        btnConfirmarEliminacion.innerHTML = textoOriginal;
+        btnConfirmarEliminacion.disabled = false;
+      });
+      
+    } catch (error) {
+      console.error('❌ Error crítico en eliminación:', error);
+      alert(`❌ Error crítico:\n\n${error.message}`);
+    }
+  }
+  
+  // 🔍 DEBUG: Verificar elementos del DOM
+  console.log('🔍 Verificando elementos del modal de eliminación...');
+  
+  // Variables del modal de eliminación
+  console.log('🔍 DIAGNÓSTICO INICIAL DEL DOM:');
+  console.log('1. Total elementos con ID justificacion:', document.querySelectorAll('#justificacion').length);
+  console.log('2. Total elementos con ID eliminarDocumentoModal:', document.querySelectorAll('#eliminarDocumentoModal').length);
+  console.log('3. Total elementos con ID contador-caracteres:', document.querySelectorAll('#contador-caracteres').length);
+  
+  const modalEliminar = document.getElementById('eliminarDocumentoModal');
+  const formEliminar = document.getElementById('formEliminarDocumento');
+  const btnConfirmarEliminacion = document.getElementById('btn-confirmar-eliminacion');
+  
+  // 🔧 CORRECCIÓN CRÍTICA: Buscar textarea específicamente en el modal de eliminación
+  const justificacionInput = modalEliminar.querySelector('textarea[name="justificacion"]');
+  const contadorCaracteres = modalEliminar.querySelector('#contador-caracteres');
+  const confirmarCheckbox = modalEliminar.querySelector('#confirmarEliminacion');
+  
+  console.log('🔍 ELEMENTOS ENCONTRADOS:');
+  console.log('- modalEliminar:', !!modalEliminar, modalEliminar?.id);
+  console.log('- formEliminar:', !!formEliminar, formEliminar?.id);
+  console.log('- justificacionInput:', !!justificacionInput, justificacionInput?.id, justificacionInput?.tagName);
+  console.log('- contadorCaracteres:', !!contadorCaracteres, contadorCaracteres?.id);
+  console.log('- btnConfirmarEliminacion:', !!btnConfirmarEliminacion, btnConfirmarEliminacion?.id);
+  console.log('- confirmarCheckbox:', !!confirmarCheckbox, confirmarCheckbox?.id);
+  
+  // 🔬 DIAGNÓSTICO ESPECÍFICO DEL TEXTAREA
+  if (justificacionInput) {
+    console.log('🔍 ANÁLISIS DETALLADO DEL TEXTAREA:');
+    console.log('- Está en el DOM:', document.contains(justificacionInput));
+    console.log('- Padre inmediato:', justificacionInput.parentElement?.className);
+    console.log('- Modal contenedor:', justificacionInput.closest('.modal')?.id);
+    console.log('- Todos los textareas en el documento:', Array.from(document.querySelectorAll('textarea')).map(t => ({id: t.id, name: t.name, inModal: !!t.closest('.modal')})));
+  } else {
+    console.error('❌ TEXTAREA NO ENCONTRADO - Buscando alternativas...');
+    const todosLosTextareas = document.querySelectorAll('textarea');
+    console.log('Todos los textareas:', Array.from(todosLosTextareas).map(t => ({id: t.id, name: t.name, placeholder: t.placeholder?.substring(0, 50)})));
+    
+    const textareaEnModal = document.querySelector('#eliminarDocumentoModal textarea[name="justificacion"]');
+    console.log('Textarea en modal por name:', !!textareaEnModal, textareaEnModal?.id);
+  }
+  
+  // 🐛 DEBUG: Log elementos encontrados
+  console.log('📋 Elementos del modal:', {
+    modalEliminar: !!modalEliminar,
+    formEliminar: !!formEliminar,
+    btnConfirmarEliminacion: !!btnConfirmarEliminacion,
+    justificacionInput: !!justificacionInput,
+    contadorCaracteres: !!contadorCaracteres,
+    confirmarCheckbox: !!confirmarCheckbox
+  });
+  
+  if (!modalEliminar) {
+    console.error('❌ Modal de eliminación no encontrado');
+    return;
+  }
+  if (!justificacionInput) {
+    console.error('❌ Input de justificación no encontrado');
+    return;
+  }
+  if (!contadorCaracteres) {
+    console.error('❌ Contador de caracteres no encontrado');
+    return;
+  }
+  
+  // Configurar modal de eliminación
+  if (modalEliminar) {
+    modalEliminar.addEventListener('show.bs.modal', function(event) {
+      const button = event.relatedTarget;
+      
+      // Obtener datos del botón
+      const documentoId = button.getAttribute('data-documento-id');
+      const codigoBarras = button.getAttribute('data-codigo-barras');
+      const nombreCliente = button.getAttribute('data-nombre-cliente');
+      const estado = button.getAttribute('data-estado');
+      const valorFactura = parseFloat(button.getAttribute('data-valor-factura')) || 0;
+      const valorPagado = parseFloat(button.getAttribute('data-valor-pagado')) || 0;
+      
+      // Llenar información del documento
+      document.getElementById('modal-codigo-documento').textContent = codigoBarras;
+      document.getElementById('modal-cliente-documento').textContent = nombreCliente;
+      document.getElementById('modal-estado-documento').textContent = estado;
+      document.getElementById('modal-valor-documento').textContent = valorFactura.toFixed(2);
+      document.getElementById('modal-pagado-documento').textContent = valorPagado.toFixed(2);
+      
+      // Mostrar/ocultar sección de manejo de pago
+      const seccionPago = document.getElementById('seccion-manejo-pago');
+      const infoPago = document.getElementById('info-pago-documento');
+      
+      if (valorPagado > 0) {
+        seccionPago.style.display = 'block';
+        infoPago.style.display = 'block';
+        infoPago.className = 'mb-0 text-warning fw-bold';
+      } else {
+        seccionPago.style.display = 'none';
+        infoPago.style.display = 'none';
+      }
+      
+      // Resetear formulario
+      resetearFormularioEliminacion();
+    });
+    
+    // Validación en tiempo real con múltiples eventos
+    if (justificacionInput) {
+      console.log('✅ Configurando event listeners para justificación...');
+      console.log('🔍 INFO TEXTAREA:', {
+        id: justificacionInput.id,
+        tagName: justificacionInput.tagName,
+        type: justificacionInput.type,
+        value: justificacionInput.value,
+        placeholder: justificacionInput.placeholder,
+        disabled: justificacionInput.disabled,
+        readOnly: justificacionInput.readOnly
+      });
+      
+      justificacionInput.addEventListener('input', function(e) {
+        console.log('🚨 ¡EVENT INPUT DISPARADO! 🚨', {
+          timestamp: new Date().toISOString(),
+          eventType: 'input',
+          targetValue: e.target.value,
+          targetValueLength: e.target.value.length,
+          targetIsCorrect: e.target === justificacionInput,
+          directAccessValue: justificacionInput.value,
+          directAccessLength: justificacionInput.value.length,
+          elementId: e.target.id,
+          elementMatches: e.target.id === 'justificacion'
+        });
+        validarFormularioEliminacion();
+      });
+      
+      justificacionInput.addEventListener('keyup', function(e) {
+        console.log('🔍 Event keyup disparado:', {
+          eventType: 'keyup',
+          key: e.key,
+          targetValue: e.target.value,
+          targetValueLength: e.target.value.length,
+          directAccessValue: justificacionInput.value,
+          directAccessLength: justificacionInput.value.length
+        });
+        validarFormularioEliminacion();
+      });
+      
+      justificacionInput.addEventListener('paste', function(e) {
+        console.log('🔍 Event paste disparado');
+        setTimeout(() => {
+          console.log('🔍 Después de paste:', {
+            value: justificacionInput.value,
+            length: justificacionInput.value.length
+          });
+          validarFormularioEliminacion();
+        }, 50); // Delay más largo para asegurar que el paste se procese
+      });
+      
+      // 🆘 NUEVO: Agregar evento change para mayor compatibilidad
+      justificacionInput.addEventListener('change', function(e) {
+        console.log('🔍 Event change disparado:', {
+          eventType: 'change',
+          value: e.target.value,
+          length: e.target.value.length
+        });
+        validarFormularioEliminacion();
+      });
+      
+      // 🆘 NUEVO: Agregar evento blur para detectar cuando sale del campo
+      justificacionInput.addEventListener('blur', function(e) {
+        console.log('🔍 Event blur disparado:', {
+          eventType: 'blur',
+          value: e.target.value,
+          length: e.target.value.length
+        });
+        validarFormularioEliminacion();
+      });
+      
+      // 🆘 PRUEBA INMEDIATA: Disparar validación inicial
+      console.log('🧪 Ejecutando validación inicial...');
+      setTimeout(() => {
+        validarFormularioEliminacion();
+      }, 100);
+      
+      // 🆘 FUNCIÓN DE EMERGENCIA: Validación forzada cada 2 segundos mientras el modal esté abierto
+      window.debugValidacionInterval = setInterval(() => {
+        if (modalEliminar && modalEliminar.classList.contains('show')) {
+          console.log('🔄 Validación automática de emergencia...');
+          
+          // 🔬 DIAGNÓSTICO EN TIEMPO REAL
+          const textareaActual = modalEliminar.querySelector('textarea[name="justificacion"]');
+          const textareaEnModal = justificacionInput;
+          
+          console.log('🔬 DIAGNÓSTICO EN TIEMPO REAL:', {
+            textareaActualExists: !!textareaActual,
+            textareaEnModalExists: !!textareaEnModal,
+            sonElMismo: textareaActual === textareaEnModal,
+            valorTextareaActual: textareaActual?.value || 'N/A',
+            valorTextareaEnModal: textareaEnModal?.value || 'N/A',
+            textareaActualEnDOM: textareaActual ? document.contains(textareaActual) : false,
+            textareaEnModalEnDOM: textareaEnModal ? document.contains(textareaEnModal) : false
+          });
+          
+          validarFormularioEliminacion();
+        }
+      }, 2000);
+      
+      // 🧪 FUNCIÓN DE PRUEBA: Simular escritura para verificar funcionamiento
+      window.testearTextarea = function() {
+        console.log('🧪 INICIANDO PRUEBA DE TEXTAREA...');
+        if (justificacionInput) {
+          justificacionInput.value = 'Texto de prueba para verificar funcionamiento del contador de caracteres';
+          justificacionInput.dispatchEvent(new Event('input', { bubbles: true }));
+          console.log('✅ Valor asignado manualmente:', justificacionInput.value.length, 'caracteres');
+        } else {
+          console.error('❌ No se puede probar - textarea no encontrado');
+        }
+      };
+    } else {
+      console.error('❌ No se pudo configurar event listeners - textarea no encontrado');
+    }
+    
+    if (confirmarCheckbox) {
+      confirmarCheckbox.addEventListener('change', validarFormularioEliminacion);
+    }
+    
+    // Validar cuando se selecciona un motivo
+    const motivosRadios = document.querySelectorAll('input[name="motivo"]');
+    motivosRadios.forEach(radio => {
+      radio.addEventListener('change', validarFormularioEliminacion);
+    });
+    
+    // Validar cuando se selecciona manejo de pago
+    const manejosPagoRadios = document.querySelectorAll('input[name="manejosPago"]');
+    manejosPagoRadios.forEach(radio => {
+      radio.addEventListener('change', validarFormularioEliminacion);
+    });
+    
+    // ✨ NUEVO: Validación inicial cuando se abre el modal
+    modalEliminar.addEventListener('shown.bs.modal', function() {
+      console.log('🔍 Modal eliminación abierto - inicializando validación');
+      validarFormularioEliminacion();
+    });
+    
+          // 🆘 LIMPIAR interval cuando se cierre el modal
+      modalEliminar.addEventListener('hidden.bs.modal', function() {
+        console.log('🔍 Modal eliminación cerrado - limpiando interval');
+        if (window.debugValidacionInterval) {
+          clearInterval(window.debugValidacionInterval);
+          window.debugValidacionInterval = null;
+        }
+      });
+
+      // ✨ NUEVO: Event listener para el botón de eliminación
+      if (btnConfirmarEliminacion) {
+        btnConfirmarEliminacion.addEventListener('click', function(e) {
+          e.preventDefault();
+          
+          console.log('🚨 ¡BOTÓN DE ELIMINAR CLICKEADO!');
+          console.log('📋 Estado del formulario antes de enviar:', {
+            botonHabilitado: !btnConfirmarEliminacion.disabled,
+            motivoSeleccionado: document.querySelector('input[name="motivo"]:checked')?.value,
+            justificacion: justificacionInput.value.trim(),
+            confirmado: confirmarCheckbox.checked,
+            manejosPago: document.querySelector('input[name="manejosPago"]:checked')?.value
+          });
+          
+          // Validar una vez más antes de enviar
+          if (btnConfirmarEliminacion.disabled) {
+            console.error('❌ Botón deshabilitado - no se puede enviar');
+            return;
+          }
+          
+          // Ejecutar eliminación
+          confirmarEliminacionDocumento();
+        });
+        
+        console.log('✅ Event listener del botón configurado');
+      } else {
+        console.error('❌ Botón de confirmación no encontrado');
+      }
+
+      // ✨ NUEVO: Event listener para el formulario (envío con Enter)
+      if (formEliminar) {
+        formEliminar.addEventListener('submit', function(e) {
+          e.preventDefault();
+          console.log('📝 Formulario enviado via submit');
+          confirmarEliminacionDocumento();
+        });
+        
+        console.log('✅ Event listener del formulario configurado');
+      }
+    
+    // Envío del formulario
+    if (formEliminar) {
+      formEliminar.addEventListener('submit', function(e) {
+        e.preventDefault();
+        procesarEliminacionDocumento();
+      });
+    }
+  }
+  
+  function resetearFormularioEliminacion() {
+    // Limpiar formulario
+    if (formEliminar) {
+      formEliminar.reset();
+    }
+    
+    // Resetear contador
+    if (contadorCaracteres) {
+      contadorCaracteres.textContent = '0';
+      contadorCaracteres.className = '';
+    }
+    
+    // Deshabilitar botón
+    if (btnConfirmarEliminacion) {
+      btnConfirmarEliminacion.disabled = true;
+      btnConfirmarEliminacion.innerHTML = '<i class="fas fa-trash-alt me-2"></i>🗑️ Confirmar Eliminación';
+    }
+  }
+  
+  function validarFormularioEliminacion() {
+    // 🔧 CORRECCIÓN: Obtener valor sin trim() para el contador, con trim() para validación
+    const valorBruto = justificacionInput ? justificacionInput.value : '';
+    const justificacion = valorBruto.trim();
+    const motivoSeleccionado = document.querySelector('input[name="motivo"]:checked');
+    const confirmado = confirmarCheckbox ? confirmarCheckbox.checked : false;
+    
+    // 🐛 DEBUG: Log para debugging
+    console.log('🔍 Validando formulario eliminación:', {
+      valorBruto: valorBruto,
+      valorBrutoLength: valorBruto.length,
+      justificacion: justificacion,
+      justificacionLength: justificacion.length,
+      motivoSeleccionado: motivoSeleccionado?.value || 'ninguno',
+      confirmado: confirmado,
+      contadorElement: !!contadorCaracteres,
+      botonElement: !!btnConfirmarEliminacion,
+      textareaValue: justificacionInput?.value,
+      textareaExists: !!justificacionInput
+    });
+    
+    // Actualizar contador de caracteres (usar valor bruto para mostrar caracteres reales)
+    if (contadorCaracteres) {
+      contadorCaracteres.textContent = valorBruto.length;
+      
+      if (justificacion.length >= 20) {
+        contadorCaracteres.className = 'text-success fw-bold';
+        console.log('✅ Justificación válida:', justificacion.length, 'caracteres (limpio)');
+      } else {
+        contadorCaracteres.className = 'text-danger';
+        console.log('❌ Justificación insuficiente:', justificacion.length, 'caracteres (limpio), mínimo 20');
+      }
+      
+      console.log('📊 Contador actualizado:', {
+        caracteresReales: valorBruto.length,
+        caracteresLimpios: justificacion.length,
+        contadorMuestra: contadorCaracteres.textContent
+      });
+    } else {
+      console.warn('⚠️ Elemento contador de caracteres no encontrado');
+    }
+    
+    // Validar si hay pago registrado y se necesita seleccionar manejo
+    const seccionPago = document.getElementById('seccion-manejo-pago');
+    let manejosPagoValido = true;
+    
+    if (seccionPago && seccionPago.style.display !== 'none') {
+      const manejoSeleccionado = document.querySelector('input[name="manejosPago"]:checked');
+      manejosPagoValido = !!manejoSeleccionado;
+    }
+    
+    // Habilitar/deshabilitar botón
+    const esValido = motivoSeleccionado && 
+                     justificacion.length >= 20 && 
+                     confirmado && 
+                     manejosPagoValido;
+    
+    // 🐛 DEBUG: Log del estado final de validación
+    console.log('📊 Estado de validación final:', {
+      esValido: esValido,
+      motivoSeleccionado: !!motivoSeleccionado,
+      justificacionValida: justificacion.length >= 20,
+      confirmado: confirmado,
+      manejosPagoValido: manejosPagoValido
+    });
+    
+    if (btnConfirmarEliminacion) {
+      btnConfirmarEliminacion.disabled = !esValido;
+      
+      if (esValido) {
+        btnConfirmarEliminacion.className = 'btn btn-danger btn-lg';
+        btnConfirmarEliminacion.innerHTML = '<i class="fas fa-trash-alt me-2"></i>🗑️ ELIMINAR DOCUMENTO';
+        console.log('✅ Botón habilitado - formulario válido');
+      } else {
+        btnConfirmarEliminacion.className = 'btn btn-secondary btn-lg';
+        btnConfirmarEliminacion.innerHTML = '<i class="fas fa-trash-alt me-2"></i>Complete todos los campos';
+        console.log('❌ Botón deshabilitado - formulario incompleto');
+      }
+    } else {
+      console.warn('⚠️ Elemento botón de confirmación no encontrado');
+    }
+  }
+  
+  function procesarEliminacionDocumento() {
+    const formData = new FormData(formEliminar);
+    
+    // Obtener datos del documento desde el modal
+    const documentoId = modalEliminar.querySelector('[data-documento-id]')?.getAttribute('data-documento-id');
+    const codigoBarras = document.getElementById('modal-codigo-documento').textContent;
+    
+    if (!documentoId) {
+      mostrarNotificacion('❌ Error: No se pudo identificar el documento', 'error');
+      return;
+    }
+    
+    // Mostrar confirmación final
+    const motivo = formData.get('motivo');
+    const justificacion = formData.get('justificacion');
+    const manejosPago = formData.get('manejosPago');
+    
+    let mensaje = `⚠️ ¿CONFIRMAR ELIMINACIÓN PERMANENTE?
+
+📄 Documento: ${codigoBarras}
+🔍 Motivo: ${getTextoMotivo(motivo)}
+📝 Justificación: ${justificacion.substring(0, 100)}${justificacion.length > 100 ? '...' : ''}`;
+
+    if (manejosPago) {
+      mensaje += `\n💳 Manejo de pago: ${getTextoManejosPago(manejosPago)}`;
+    }
+
+    mensaje += `\n\n⚠️ ESTA ACCIÓN NO SE PUEDE DESHACER`;
+    
+    if (!confirm(mensaje)) {
+      return;
+    }
+    
+    // Deshabilitar botón y mostrar loading
+    btnConfirmarEliminacion.disabled = true;
+    btnConfirmarEliminacion.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Eliminando...';
+    
+    // Preparar datos para envío
+    const datosEnvio = {
+      motivo: motivo,
+      justificacion: justificacion,
+      confirmarEliminacion: true
+    };
+    
+    if (manejosPago) {
+      datosEnvio.manejosPago = manejosPago;
+    }
+    
+    // Enviar petición AJAX
+    fetch(`/caja/documentos/eliminar/${documentoId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: JSON.stringify(datosEnvio)
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Éxito
+        mostrarNotificacion(`✅ ${data.message}`, 'success', 5000);
+        
+        // Cerrar modal
+        const modalInstance = bootstrap.Modal.getInstance(modalEliminar);
+        modalInstance.hide();
+        
+        // Recargar página después de un momento
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+        
+      } else {
+        // Error del servidor
+        mostrarNotificacion(`❌ ${data.message}`, 'error', 6000);
+        
+        // Rehabilitar botón
+        btnConfirmarEliminacion.disabled = false;
+        btnConfirmarEliminacion.innerHTML = '<i class="fas fa-trash-alt me-2"></i>🗑️ Reintentar Eliminación';
+      }
+    })
+    .catch(error => {
+      console.error('Error eliminando documento:', error);
+      mostrarNotificacion('❌ Error de conexión al eliminar documento', 'error', 6000);
+      
+      // Rehabilitar botón
+      btnConfirmarEliminacion.disabled = false;
+      btnConfirmarEliminacion.innerHTML = '<i class="fas fa-trash-alt me-2"></i>🗑️ Reintentar Eliminación';
+    });
+  }
+  
+  function getTextoMotivo(motivo) {
+    const textos = {
+      'error_xml_importado': 'Error en XML importado',
+      'error_creacion_documento': 'Error al crear documento',
+      'solicitud_nota_credito': 'Solicitud de nota de crédito',
+      'documento_duplicado': 'Documento duplicado',
+      'datos_incorrectos': 'Datos incorrectos',
+      'cliente_cancelo_tramite': 'Cliente canceló trámite',
+      'error_sistema': 'Error del sistema',
+      'otro': 'Otro motivo'
+    };
+    return textos[motivo] || motivo;
+  }
+  
+  function getTextoManejosPago(manejo) {
+    const textos = {
+      'pago_sera_manejado': 'El pago será manejado adecuadamente'
+    };
+    return textos[manejo] || manejo;
+  }
+
   console.log('📖 Vista caja con modal de pago completo cargada para documento {{documento.codigoBarras}}');
 });
 </script>

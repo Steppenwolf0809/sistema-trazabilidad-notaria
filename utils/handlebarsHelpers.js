@@ -802,6 +802,73 @@ const helpers = {
     
     // Es ajeno si el documento pertenece a otro matrizador
     return documento.idMatrizador !== usuario.id;
+  },
+
+  // ===============================================
+  // == HELPERS PARA SISTEMA DE ELIMINACIÓN ==
+  // ===============================================
+
+  /**
+   * ✨ NUEVO: Helper para traducir motivos de eliminación
+   * Usado en vista de documentos eliminados
+   */
+  getTextoMotivo: (motivo) => {
+    if (!motivo) return 'Sin motivo';
+    
+    const textos = {
+      'error_xml_importado': '🔍 Error en XML importado',
+      'error_creacion_documento': '✏️ Error al crear documento',
+      'solicitud_nota_credito': '📄 Solicitud de nota de crédito',
+      'documento_duplicado': '📋 Documento duplicado',
+      'datos_incorrectos': '🔧 Datos incorrectos',
+      'cliente_cancelo_tramite': '❌ Cliente canceló trámite',
+      'error_sistema': '⚙️ Error del sistema',
+      'otro': '📝 Otro motivo'
+    };
+    
+    return textos[motivo] || motivo;
+  },
+
+  /**
+   * ✨ NUEVO: Helper para traducir manejo de pagos en eliminación
+   * Usado en vista de documentos eliminados
+   */
+  getTextoManejosPago: (manejo) => {
+    if (!manejo) return '';
+    
+    const textos = {
+      'sin_pago_registrado': 'Sin pago',
+      'nota_credito_automatica': '📄 Nota de crédito automática',
+      'reembolso_manual_procesado': '💳 Reembolso manual procesado',
+      'pago_revertido': '↩️ Pago revertido'
+    };
+    
+    return textos[manejo] || manejo;
+  },
+
+  /**
+   * ✨ NUEVO: Helper para operaciones matemáticas - suma
+   */
+  add: (a, b) => {
+    return (parseFloat(a) || 0) + (parseFloat(b) || 0);
+  },
+
+  /**
+   * ✨ NUEVO: Helper para operaciones matemáticas - resta
+   */
+  sub: (a, b) => {
+    return (parseFloat(a) || 0) - (parseFloat(b) || 0);
+  },
+
+  /**
+   * ✨ NUEVO: Helper para generar rango de números para paginación
+   */
+  range: (start, end) => {
+    const result = [];
+    for (let i = start; i <= end; i++) {
+      result.push(i);
+    }
+    return result;
   }
 };
 

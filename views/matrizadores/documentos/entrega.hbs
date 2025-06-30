@@ -193,7 +193,7 @@
                     <div class="d-flex justify-content-between align-items-center">
                       <span>
                         <i class="fas fa-info-circle me-2 text-info"></i>
-                        <span id="contador-seleccion">1 documento(s) seleccionado(s)</span>
+                        <span id="contador-seleccion">0 documento(s) seleccionado(s)</span>
                       </span>
                       <div id="codigos-seleccionados" class="small text-muted"></div>
                     </div>
@@ -436,7 +436,7 @@
                       <tr>
                         <td><strong>{{this.codigoBarras}}</strong></td>
                         <td>
-                          <div>{{this.nombreCliente}}</div>
+                          <div class="nombre-cliente fw-semibold text-primary">{{this.nombreCliente}}</div>
                           <small class="text-muted">{{this.identificacionCliente}}</small>
                         </td>
                         <td>
@@ -502,12 +502,16 @@ document.addEventListener('DOMContentLoaded', function() {
   // ============== GESTIÓN DE SELECCIÓN DE DOCUMENTOS ==============
   function actualizarSeleccion() {
     const seleccionados = Array.from(documentoCheckboxes).filter(cb => cb.checked);
-    const total = seleccionados.length + 1; // +1 por el documento principal
+    const total = seleccionados.length; // ✅ CORREGIDO: Solo contar checkboxes marcados
     
     // Actualizar contador
     if (contadorSeleccion) {
       contadorSeleccion.textContent = `${total} documento(s) seleccionado(s)`;
     }
+    
+    // ✅ NUEVO: Logging para debug en matrizadores
+    console.log(`🔢 [CONTADOR-MATRIZADOR] Checkboxes marcados: ${seleccionados.length}`);
+    console.log(`🔢 [CONTADOR-MATRIZADOR] IDs seleccionados: [${seleccionados.map(cb => cb.value).join(', ')}]`);
     
     // Actualizar códigos válidos
     if (listaCodigosValidos && window.documentoPrincipal) {
@@ -686,8 +690,11 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  // Inicializar selección
-  actualizarSeleccion();
+  // ✅ CORRECCIÓN: Ejecutar actualización inicial para asegurar contador correcto
+  setTimeout(() => {
+    actualizarSeleccion();
+    console.log('🔢 [CONTADOR-MATRIZADOR] Inicialización del contador completada');
+  }, 100);
   
   // Funciones específicas para matrizador
   window.ocultarEntregaGrupal = function() {

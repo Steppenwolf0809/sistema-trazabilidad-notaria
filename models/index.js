@@ -187,6 +187,38 @@ AuditoriaEliminacion.belongsTo(Matrizador, {
   as: 'administrador'
 });
 
+// ============== RELACIONES PARA SISTEMA DE ELIMINACIÓN CAJA ==============
+
+// Relación Documento - Matrizador (Usuario que eliminó)
+Documento.belongsTo(Matrizador, {
+  foreignKey: 'deletedBy',
+  as: 'deletedByUser'
+});
+Matrizador.hasMany(Documento, {
+  foreignKey: 'deletedBy',
+  as: 'documentosEliminados'
+});
+
+// Relación Documento - Matrizador (Usuario que registró pago - legacy)
+Documento.belongsTo(Matrizador, {
+  foreignKey: 'registradoPor',
+  as: 'registradorPago'
+});
+Matrizador.hasMany(Documento, {
+  foreignKey: 'registradoPor',
+  as: 'pagosRegistrados'
+});
+
+// Relación Documento - Matrizador (Usuario que autorizó entrega sin pago)
+Documento.belongsTo(Matrizador, {
+  foreignKey: 'autorizado_por_matrizador_id',
+  as: 'autorizadorEntrega'
+});
+Matrizador.hasMany(Documento, {
+  foreignKey: 'autorizado_por_matrizador_id',
+  as: 'entregasAutorizadas'
+});
+
 // ============== RELACIONES PARA NOTIFICACIONES ==============
 
 // Relación Documento - NotificacionEnviada

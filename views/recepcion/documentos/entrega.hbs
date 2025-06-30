@@ -306,13 +306,17 @@
                           <div class="d-flex justify-content-between align-items-start">
                             <div class="flex-grow-1">
                               <div class="codigo-principal">{{this.principal.codigoBarras}}</div>
+                              <div class="mt-1">
+                                <div class="nombre-cliente-principal text-primary fw-semibold">{{this.principal.nombreCliente}}</div>
+                                <div class="small text-muted">{{this.principal.identificacionCliente}}</div>
+                              </div>
                               <div class="mt-2">
                                 <span class="tipo-principal">{{this.principal.tipoDocumento}}</span>
                                 <span class="badge-principal ms-2">PRINCIPAL</span>
                               </div>
                               <div class="mt-2 small text-muted">
                                 <i class="fas fa-user-tie me-1"></i>
-                                {{#if this.principal.matrizador}}{{this.principal.matrizador.nombre}}{{else}}Sin asignar{{/if}}
+                                Matrizador: {{#if this.principal.matrizador}}{{this.principal.matrizador.nombre}}{{else}}Sin asignar{{/if}}
                               </div>
                             </div>
                             <div class="text-end">
@@ -332,6 +336,9 @@
                                 <div class="d-flex justify-content-between align-items-start">
                                   <div class="flex-grow-1">
                                     <div class="codigo-habilitante">{{this.codigoBarras}}</div>
+                                    <div class="mt-1">
+                                      <div class="nombre-cliente-habilitante text-primary small">{{this.nombreCliente}}</div>
+                                    </div>
                                     <div class="mt-1">
                                       <span class="tipo-habilitante">{{this.tipoDocumento}}</span>
                                     </div>
@@ -386,12 +393,16 @@
                         <div class="d-flex justify-content-between align-items-start">
                           <div class="flex-grow-1" style="margin-left: 35px;">
                             <div class="codigo-individual">{{this.codigoBarras}}</div>
+                            <div class="mt-1">
+                              <div class="nombre-cliente-individual text-primary fw-semibold">{{this.nombreCliente}}</div>
+                              <div class="small text-muted">{{this.identificacionCliente}}</div>
+                            </div>
                             <div class="mt-2">
                               <span class="tipo-individual">{{this.tipoDocumento}}</span>
                             </div>
                             <div class="mt-2 small text-muted">
                               <i class="fas fa-user-tie me-1"></i>
-                              {{#if this.matrizador}}{{this.matrizador.nombre}}{{else}}Sin asignar{{/if}}
+                              Matrizador: {{#if this.matrizador}}{{this.matrizador.nombre}}{{else}}Sin asignar{{/if}}
                             </div>
                             {{#unless this.esHabilitanteHuerfano}}
                               <div class="entrega-individual-permitida">
@@ -424,7 +435,7 @@
                   <div class="d-flex justify-content-between align-items-center">
                     <span>
                       <i class="fas fa-info-circle me-2 text-info"></i>
-                      <span id="contador-seleccion">1 documento(s) seleccionado(s)</span>
+                      <span id="contador-seleccion">0 documento(s) seleccionado(s)</span>
                     </span>
                     <div id="codigos-seleccionados" class="small text-muted"></div>
                   </div>
@@ -896,7 +907,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function actualizarSeleccion() {
       const seleccionados = Array.from(documentoCheckboxes).filter(cb => cb.checked);
-      const totalSeleccionados = seleccionados.length + 1;
+      const totalSeleccionados = seleccionados.length; // ✅ CORREGIDO: Solo contar checkboxes marcados
       
       if (contadorSeleccion) {
         contadorSeleccion.textContent = `${totalSeleccionados} documento(s) seleccionado(s)`;
@@ -909,6 +920,10 @@ document.addEventListener('DOMContentLoaded', function() {
       document.getElementById('entrega_grupal').value = idsSeleccionados.length > 0 ? 'true' : 'false';
       
       aplicarEstilosSeleccion(seleccionados);
+      
+      // ✅ NUEVO: Logging para debug
+      console.log(`🔢 [CONTADOR] Checkboxes marcados: ${seleccionados.length}`);
+      console.log(`🔢 [CONTADOR] IDs seleccionados: [${idsSeleccionados.join(', ')}]`);
     }
     
     function actualizarCodigosValidos(seleccionados) {
@@ -1009,7 +1024,11 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     }
     
-    actualizarSeleccion();
+    // ✅ CORRECCIÓN: Ejecutar actualización inicial para asegurar contador correcto
+    setTimeout(() => {
+      actualizarSeleccion();
+      console.log('🔢 [CONTADOR] Inicialización del contador completada');
+    }, 100);
     
     window.ocultarEntregaGrupal = function() {
       document.getElementById('alerta-entrega-grupal').style.display = 'none';
@@ -1040,6 +1059,19 @@ document.addEventListener('DOMContentLoaded', function() {
      // ============== FUNCIÓN PRINCIPAL: SOLICITAR AUTORIZACIÓN URGENTE ==============
    
    window.solicitarAutorizacionUrgente = function() {
+     console.log('🔄 Iniciando solicitud de autorización urgente...');
+     
+     // ============== NUEVO: DETECTAR SI ES AUTORIZACIÓN GRUPAL ==============
+     const documentosSeleccionados = Array.from(document.querySelectorAll('.documento-checkbox:checked'));
+     const esAutorizacionGrupal = documentosSeleccionados.length > 0;
+     
+     if (esAutorizacionGrupal) {
+       console.log('📦 [GRUPAL] Solicitando autorización para múltiples documentos:', documentosSeleccionados.length);
+       solicitarAutorizacionGrupal(documentosSeleccionados);
+       return;
+     }
+     
+     console.log('📋 [INDIVIDUAL] Solicitando autorización para documento principal');
      // Poblar modal con datos del documento actual
      crearModalAutorizacion();
    }
@@ -1758,6 +1790,497 @@ function actualizarUIAutorizacionVerbal() {
   
   // Habilitar entrega
   habilitarEntregaFinal();
+}
+
+// ============== NUEVA FUNCIONALIDAD: AUTORIZACIÓN GRUPAL ==============
+
+/**
+ * Solicita autorización para múltiples documentos seleccionados
+ */
+function solicitarAutorizacionGrupal(documentosSeleccionados) {
+  console.log('📦 [GRUPAL] Iniciando autorización para', documentosSeleccionados.length, 'documentos');
+  
+  // Recopilar información de documentos pendientes
+  const documentosPendientes = [];
+  let valorTotalPendiente = 0;
+  
+  documentosSeleccionados.forEach(checkbox => {
+    const documentoId = checkbox.value;
+    const documentoData = obtenerDatosDocumento(documentoId);
+    
+    if (documentoData && documentoData.requiereAutorizacion) {
+      documentosPendientes.push(documentoData);
+      valorTotalPendiente += parseFloat(documentoData.valorFactura || 0);
+    }
+  });
+  
+  if (documentosPendientes.length === 0) {
+    console.log('✅ [GRUPAL] No hay documentos que requieran autorización');
+    return;
+  }
+  
+  console.log('💰 [GRUPAL] Documentos pendientes:', documentosPendientes.length, 'Total: $', valorTotalPendiente.toFixed(2));
+  
+  // Crear modal de autorización grupal
+  crearModalAutorizacionGrupal(documentosPendientes, valorTotalPendiente);
+}
+
+/**
+ * Obtiene datos de un documento específico desde las variables globales
+ */
+function obtenerDatosDocumento(documentoId) {
+  // Buscar en documentos independientes
+  if (window.documentosIndependientes) {
+    const docIndependiente = window.documentosIndependientes.find(doc => doc.id == documentoId);
+    if (docIndependiente) {
+      return {
+        id: docIndependiente.id,
+        codigoBarras: docIndependiente.codigoBarras,
+        tipoDocumento: docIndependiente.tipoDocumento,
+        nombreCliente: docIndependiente.nombreCliente,
+        valorFactura: docIndependiente.valorFactura,
+        estadoPago: docIndependiente.estadoPago,
+        matrizador: docIndependiente.matrizador,
+        requiereAutorizacion: !['pagado_completo', 'pagado_con_retencion'].includes(docIndependiente.estadoPago) && !docIndependiente.entrega_sin_verificar_pago
+      };
+    }
+  }
+  
+  // Buscar en grupos relacionados
+  if (window.gruposRelacionados) {
+    for (const grupo of window.gruposRelacionados) {
+      // Buscar en documento principal
+      if (grupo.principal && grupo.principal.id == documentoId) {
+        return {
+          id: grupo.principal.id,
+          codigoBarras: grupo.principal.codigoBarras,
+          tipoDocumento: grupo.principal.tipoDocumento,
+          nombreCliente: grupo.principal.nombreCliente,
+          valorFactura: grupo.principal.valorFactura,
+          estadoPago: grupo.principal.estadoPago,
+          matrizador: grupo.principal.matrizador,
+          requiereAutorizacion: !['pagado_completo', 'pagado_con_retencion'].includes(grupo.principal.estadoPago) && !grupo.principal.entrega_sin_verificar_pago
+        };
+      }
+      
+      // Buscar en habilitantes
+      if (grupo.habilitantes) {
+        const habilitante = grupo.habilitantes.find(hab => hab.id == documentoId);
+        if (habilitante) {
+          return {
+            id: habilitante.id,
+            codigoBarras: habilitante.codigoBarras,
+            tipoDocumento: habilitante.tipoDocumento,
+            nombreCliente: habilitante.nombreCliente,
+            valorFactura: habilitante.valorFactura,
+            estadoPago: habilitante.estadoPago,
+            matrizador: habilitante.matrizador,
+            requiereAutorizacion: !['pagado_completo', 'pagado_con_retencion'].includes(habilitante.estadoPago) && !habilitante.entrega_sin_verificar_pago
+          };
+        }
+      }
+    }
+  }
+  
+  // Si es el documento principal actual
+  if (window.documentoPrincipal && window.documentoPrincipal.id == documentoId) {
+    return {
+      id: window.documentoPrincipal.id,
+      codigoBarras: window.documentoPrincipal.codigoBarras,
+      tipoDocumento: window.documentoPrincipal.tipoDocumento,
+      nombreCliente: window.documentoPrincipal.nombreCliente,
+      valorFactura: window.documentoPrincipal.valorFactura,
+      estadoPago: window.documentoPrincipal.estadoPago,
+      matrizador: window.documentoPrincipal.matrizador,
+      requiereAutorizacion: !['pagado_completo', 'pagado_con_retencion'].includes(window.documentoPrincipal.estadoPago) && !window.documentoPrincipal.entrega_sin_verificar_pago
+    };
+  }
+  
+  return null;
+}
+
+/**
+ * Crea modal específico para autorización grupal
+ */
+function crearModalAutorizacionGrupal(documentosPendientes, valorTotal) {
+  const listaDocumentos = documentosPendientes.map(doc => 
+    `<li><strong>${doc.codigoBarras}</strong> - ${doc.tipoDocumento} ($${parseFloat(doc.valorFactura || 0).toFixed(2)})</li>`
+  ).join('');
+  
+  const modalHTML = `
+    <div class="modal fade" id="modalAutorizacionGrupal" tabindex="-1">
+      <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+          <div class="modal-header bg-warning text-dark">
+            <h5 class="modal-title">
+              <i class="fas fa-exclamation-triangle"></i> Autorización Urgente Grupal
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            
+            <!-- Resumen de la solicitud -->
+            <div class="alert alert-warning border-warning">
+              <h6><i class="fas fa-list-check"></i> Documentos que Requieren Autorización</h6>
+              <div class="row">
+                <div class="col-md-8">
+                  <ul class="mb-0">
+                    ${listaDocumentos}
+                  </ul>
+                </div>
+                <div class="col-md-4 text-end">
+                  <h5 class="text-warning mb-0">
+                    <strong>Total: $${valorTotal.toFixed(2)}</strong>
+                  </h5>
+                  <small class="text-muted">${documentosPendientes.length} documento(s)</small>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Información del cliente -->
+            <div class="alert alert-info">
+              <h6><i class="fas fa-user"></i> Cliente</h6>
+              <p class="mb-0"><strong>${documentosPendientes[0].nombreCliente}</strong></p>
+            </div>
+            
+            <!-- Justificación grupal -->
+            <div class="mb-4">
+              <label for="justificacionGrupal" class="form-label">
+                <i class="fas fa-comment"></i> Justificación para Autorización Grupal *
+              </label>
+              <textarea class="form-control" id="justificacionGrupal" rows="4" 
+                        placeholder="Explique por qué es necesario autorizar la entrega de TODOS estos documentos sin verificar pago..."></textarea>
+              <div class="form-text">
+                <strong>Ejemplo:</strong> "Cliente presente necesita todos los documentos para trámite urgente en banco. 
+                Historial de pagos excelente y matrizador informado telefónicamente."
+              </div>
+            </div>
+            
+            <!-- Método de autorización -->
+            <div class="mb-4">
+              <h6><i class="fas fa-route"></i> Método de Autorización</h6>
+              
+              <div class="form-check mb-2">
+                <input class="form-check-input" type="radio" name="metodoGrupal" 
+                       id="grupalDigital" value="digital" checked>
+                <label class="form-check-label" for="grupalDigital">
+                  <strong><i class="fas fa-desktop text-primary"></i> Notificación Digital Grupal</strong><br>
+                  <small class="text-muted">Se enviará UNA solicitud que incluye todos los documentos</small>
+                </label>
+              </div>
+              
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="metodoGrupal" 
+                       id="grupalVerbal" value="verbal">
+                <label class="form-check-label" for="grupalVerbal">
+                  <strong><i class="fas fa-phone text-warning"></i> Autorización Verbal Inmediata</strong><br>
+                  <small class="text-muted">Para autorizar TODOS los documentos vía telefónica</small>
+                </label>
+              </div>
+            </div>
+            
+            <!-- Confirmación especial para grupal -->
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="confirmoGrupal">
+              <label class="form-check-label" for="confirmoGrupal">
+                <strong>Confirmo que he verificado la necesidad de autorizar TODOS estos ${documentosPendientes.length} documentos simultáneamente</strong>
+              </label>
+            </div>
+            
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+              <i class="fas fa-times"></i> Cancelar
+            </button>
+            <button type="button" class="btn btn-warning btn-lg" id="btnEnviarGrupal" disabled>
+              <i class="fas fa-paper-plane"></i> <strong>AUTORIZAR ${documentosPendientes.length} DOCUMENTOS</strong>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // Remover modal existente
+  const modalExistente = document.getElementById('modalAutorizacionGrupal');
+  if (modalExistente) modalExistente.remove();
+  
+  // Añadir modal al DOM
+  document.body.insertAdjacentHTML('beforeend', modalHTML);
+  
+  // Configurar listeners específicos para autorización grupal
+  configurarModalGrupalListeners(documentosPendientes);
+  
+  // Mostrar modal
+  const modal = new bootstrap.Modal(document.getElementById('modalAutorizacionGrupal'));
+  modal.show();
+}
+
+/**
+ * Configura event listeners para el modal de autorización grupal
+ */
+function configurarModalGrupalListeners(documentosPendientes) {
+  const justificacionInput = document.getElementById('justificacionGrupal');
+  const confirmarCheckbox = document.getElementById('confirmoGrupal');
+  const btnEnviar = document.getElementById('btnEnviarGrupal');
+  
+  function validarFormularioGrupal() {
+    const justificacion = justificacionInput.value.trim();
+    const confirmado = confirmarCheckbox.checked;
+    
+    btnEnviar.disabled = !(justificacion.length >= 20 && confirmado);
+  }
+  
+  justificacionInput.addEventListener('input', validarFormularioGrupal);
+  confirmarCheckbox.addEventListener('change', validarFormularioGrupal);
+  
+  btnEnviar.addEventListener('click', function() {
+    procesarAutorizacionGrupal(documentosPendientes);
+  });
+}
+
+/**
+ * Procesa la autorización grupal enviando solicitudes para cada documento
+ */
+async function procesarAutorizacionGrupal(documentosPendientes) {
+  const metodo = document.querySelector('input[name="metodoGrupal"]:checked').value;
+  const justificacion = document.getElementById('justificacionGrupal').value.trim();
+  
+  // Cerrar modal
+  bootstrap.Modal.getInstance(document.getElementById('modalAutorizacionGrupal')).hide();
+  
+  // Mostrar indicador de progreso
+  mostrarProgresoAutorizacionGrupal(documentosPendientes.length);
+  
+  try {
+    if (metodo === 'digital') {
+      await procesarAutorizacionDigitalGrupal(documentosPendientes, justificacion);
+    } else {
+      await procesarAutorizacionVerbalGrupal(documentosPendientes, justificacion);
+    }
+  } catch (error) {
+    console.error('❌ Error en autorización grupal:', error);
+    mostrarErrorAutorizacionGrupal(error.message);
+  }
+}
+
+/**
+ * Procesa autorización digital para múltiples documentos
+ */
+async function procesarAutorizacionDigitalGrupal(documentosPendientes, justificacion) {
+  const resultados = [];
+  
+  for (let i = 0; i < documentosPendientes.length; i++) {
+    const documento = documentosPendientes[i];
+    
+    actualizarProgresoGrupal(i + 1, documentosPendientes.length, `Autorizando ${documento.codigoBarras}...`);
+    
+    try {
+      const response = await fetch('/api/autorizaciones-urgentes/solicitar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          documento_id: documento.id,
+          justificacion: `[GRUPAL] ${justificacion} - Documento: ${documento.codigoBarras}`,
+          urgencia: 'alta',
+          solicitado_desde: 'entrega_grupal'
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        resultados.push({
+          documento: documento,
+          autorizacionId: data.autorizacion_id,
+          exito: true
+        });
+      } else {
+        resultados.push({
+          documento: documento,
+          error: data.message,
+          exito: false
+        });
+      }
+    } catch (error) {
+      resultados.push({
+        documento: documento,
+        error: error.message,
+        exito: false
+      });
+    }
+    
+    // Pequeña pausa entre solicitudes
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+  
+  mostrarResultadosAutorizacionGrupal(resultados, 'digital');
+}
+
+/**
+ * Procesa autorización verbal para múltiples documentos
+ */
+async function procesarAutorizacionVerbalGrupal(documentosPendientes, justificacion) {
+  // Para autorización verbal, aplicar directamente a todos los documentos
+  try {
+    const idsDocumentos = documentosPendientes.map(doc => doc.id);
+    
+    const response = await fetch('/api/autorizaciones-urgentes/autorizar-grupal-verbal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        documentos_ids: idsDocumentos,
+        justificacion: justificacion,
+        quien_autorizo: 'matrizador_responsable'
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      mostrarExitoAutorizacionVerbalGrupal(documentosPendientes.length);
+      actualizarUIDocumentosAutorizados(idsDocumentos);
+    } else {
+      throw new Error(data.message || 'Error en autorización verbal grupal');
+    }
+  } catch (error) {
+    mostrarErrorAutorizacionGrupal(error.message);
+  }
+}
+
+/**
+ * Muestra indicador de progreso para autorización grupal
+ */
+function mostrarProgresoAutorizacionGrupal(totalDocumentos) {
+  const seccionAutorizacion = document.getElementById('seccion-autorizacion-urgente');
+  if (seccionAutorizacion) {
+    seccionAutorizacion.innerHTML = `
+      <div class="alert alert-info">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6><i class="fas fa-cogs"></i> Procesando Autorización Grupal</h6>
+            <p class="mb-1" id="mensaje-progreso">Iniciando proceso para ${totalDocumentos} documentos...</p>
+            <div class="progress" style="height: 6px;">
+              <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                   id="barra-progreso" style="width: 0%"></div>
+            </div>
+          </div>
+          <div class="spinner-border spinner-border-sm text-info" role="status"></div>
+        </div>
+      </div>
+    `;
+  }
+}
+
+/**
+ * Actualiza el progreso de autorización grupal
+ */
+function actualizarProgresoGrupal(actual, total, mensaje) {
+  const mensajeProgreso = document.getElementById('mensaje-progreso');
+  const barraProgreso = document.getElementById('barra-progreso');
+  
+  if (mensajeProgreso) {
+    mensajeProgreso.textContent = `${mensaje} (${actual}/${total})`;
+  }
+  
+  if (barraProgreso) {
+    const porcentaje = (actual / total) * 100;
+    barraProgreso.style.width = `${porcentaje}%`;
+  }
+}
+
+/**
+ * Muestra resultados de autorización grupal
+ */
+function mostrarResultadosAutorizacionGrupal(resultados, metodo) {
+  const exitosos = resultados.filter(r => r.exito);
+  const fallidos = resultados.filter(r => !r.exito);
+  
+  let mensaje = `<h6><i class="fas fa-check-circle text-success"></i> Autorización Grupal Completada</h6>`;
+  mensaje += `<p><strong>Exitosos:</strong> ${exitosos.length} documentos</p>`;
+  
+  if (fallidos.length > 0) {
+    mensaje += `<p><strong>Errores:</strong> ${fallidos.length} documentos</p>`;
+    mensaje += `<ul class="small text-danger">`;
+    fallidos.forEach(f => {
+      mensaje += `<li>${f.documento.codigoBarras}: ${f.error}</li>`;
+    });
+    mensaje += `</ul>`;
+  }
+  
+  if (metodo === 'digital') {
+    mensaje += `<p class="small text-info">Las solicitudes están siendo procesadas. Se notificará cuando sean autorizadas.</p>`;
+  }
+  
+  const seccionAutorizacion = document.getElementById('seccion-autorizacion-urgente');
+  if (seccionAutorizacion) {
+    seccionAutorizacion.innerHTML = `
+      <div class="alert alert-${fallidos.length === 0 ? 'success' : 'warning'}">
+        ${mensaje}
+      </div>
+    `;
+  }
+  
+  // Si todos fueron exitosos, permitir entrega
+  if (fallidos.length === 0 && metodo === 'verbal') {
+    habilitarEntregaFinal();
+  }
+}
+
+/**
+ * Muestra éxito de autorización verbal grupal
+ */
+function mostrarExitoAutorizacionVerbalGrupal(cantidad) {
+  const seccionAutorizacion = document.getElementById('seccion-autorizacion-urgente');
+  if (seccionAutorizacion) {
+    seccionAutorizacion.innerHTML = `
+      <div class="alert alert-success">
+        <h6><i class="fas fa-phone-check text-success"></i> Autorización Verbal Grupal Completada</h6>
+        <p><strong>${cantidad} documentos</strong> autorizados para entrega inmediata.</p>
+        <p class="mb-0 small">
+          <i class="fas fa-clock me-1"></i>
+          <strong>Recordatorio:</strong> El matrizador debe ratificar digitalmente en 24 horas.
+        </p>
+      </div>
+    `;
+  }
+}
+
+/**
+ * Muestra error en autorización grupal
+ */
+function mostrarErrorAutorizacionGrupal(mensaje) {
+  const seccionAutorizacion = document.getElementById('seccion-autorizacion-urgente');
+  if (seccionAutorizacion) {
+    seccionAutorizacion.innerHTML = `
+      <div class="alert alert-danger">
+        <h6><i class="fas fa-exclamation-triangle"></i> Error en Autorización Grupal</h6>
+        <p class="mb-0">${mensaje}</p>
+      </div>
+    `;
+  }
+}
+
+/**
+ * Actualiza UI para mostrar documentos como autorizados
+ */
+function actualizarUIDocumentosAutorizados(documentosIds) {
+  documentosIds.forEach(docId => {
+    const checkbox = document.querySelector(`input[value="${docId}"]`);
+    if (checkbox) {
+      const contenedor = checkbox.closest('.documento-individual, .documento-principal');
+      if (contenedor) {
+        // Agregar indicador visual de autorizado
+        const indicador = contenedor.querySelector('.indicador-autorizado');
+        if (!indicador) {
+          const badge = document.createElement('div');
+          badge.className = 'indicador-autorizado badge bg-success small mt-1';
+          badge.innerHTML = '<i class="fas fa-check-circle me-1"></i>AUTORIZADO';
+          contenedor.querySelector('.flex-grow-1').appendChild(badge);
+        }
+      }
+    }
+  });
 }
 
 </script> 

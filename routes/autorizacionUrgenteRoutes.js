@@ -7,7 +7,8 @@ const {
   autorizar,
   rechazar,
   marcarVerbal,
-  ratificarVerbal
+  ratificarVerbal,
+  autorizarGrupalVerbal
 } = require('../controllers/autorizacionUrgenteController');
 const { verificarToken } = require('../middlewares/auth');
 
@@ -61,5 +62,12 @@ router.post('/:id/verbal', verificarToken, marcarVerbal);
  * Acceso: Matrizador responsable (debe ratificar en 24h)
  */
 router.post('/:id/ratificar', verificarToken, ratificarVerbal);
+
+/**
+ * AUTORIZACIÓN VERBAL GRUPAL (NUEVA FUNCIONALIDAD)
+ * POST /api/autorizaciones-urgentes/autorizar-grupal-verbal
+ * Acceso: Recepción para autorizar múltiples documentos a la vez
+ */
+router.post('/autorizar-grupal-verbal', verificarToken, autorizarGrupalVerbal);
 
 module.exports = router; 

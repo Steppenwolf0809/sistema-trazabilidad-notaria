@@ -726,6 +726,142 @@ const ratificarVerbal = async (req, res) => {
   }
 };
 
+/**
+ * AUTORIZACIÓN VERBAL GRUPAL (NUEVA FUNCIONALIDAD)
+ * Endpoint: POST /api/autorizaciones-urgentes/autorizar-grupal-verbal
+ */
+const autorizarGrupalVerbal = async (req, res) => {
+  const { sequelize } = require('../config/database');
+  const transaction = await sequelize.transaction();
+  
+  try {
+    const { documentos_ids, justificacion, quien_autorizo } = req.body;
+    const usuario = req.matrizador;
+
+    if (!documentos_ids || !Array.isArray(documentos_ids) || documentos_ids.length === 0) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Se requiere un array de IDs de documentos'
+      });
+    }
+
+    if (!justificacion || justificacion.trim().length < 10) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Justificación requerida (mínimo 10 caracteres)'
+      });
+    }
+
+    console.log(`🔄 [GRUPAL VERBAL] Procesando autorización para ${documentos_ids.length} documentos`);
+
+    const resultados = [];
+    
+    for (const documentoId of documentos_ids) {
+      try {
+        // Obtener documento
+        const documento = await Documento.findByPk(documentoId, { transaction });
+        
+        if (!documento) {
+          resultados.push({
+            documentoId,
+            exito: false,
+            error: 'Documento no encontrado'
+          });
+          continue;
+        }
+
+        // Actualizar documento con autorización
+        await documento.update({
+          entrega_sin_verificar_pago: true,
+          justificacion_entrega_sin_pago: 'otro', // Mapeo para autorización grupal
+          fecha_autorizacion_entrega: new Date(),
+          autorizado_por_matrizador_id: usuario.id
+        }, { transaction });
+
+        // Crear registro de autorización urgente
+        const autorizacion = await AutorizacionUrgente.create({
+          documento_id: documentoId,
+          matrizador_responsable_id: documento.idMatrizador || usuario.id,
+          justificacion: `[GRUPAL VERBAL] ${justificacion}`,
+          urgencia: 'alta',
+          estado: 'verbal_pendiente',
+          solicitud_fecha: new Date(),
+          solicitado_por_id: usuario.id,
+          solicitado_por_nombre: usuario.nombre,
+          solicitado_desde: 'autorizacion_grupal_verbal',
+          // Campos específicos de verbal
+          verbal_fecha: new Date(),
+          verbal_quien_autorizo: quien_autorizo === 'matrizador_responsable' ? 
+            (documento.matrizador?.nombre || 'Matrizador responsable') : quien_autorizo,
+          verbal_justificacion: justificacion,
+          verbal_procesado_por_id: usuario.id,
+          verbal_procesado_por_nombre: usuario.nombre
+        }, { transaction });
+
+        // Registrar evento
+        await registrarEventoAutorizacion(
+          documentoId,
+          'autorizacion_grupal_verbal',
+          {
+            autorizado_por_nombre: usuario.nombre,
+            autorizado_por_rol: usuario.rol,
+            justificacion_autorizacion: justificacion,
+            tipo_autorizacion: 'grupal_verbal',
+            quien_autorizo_verbalmente: quien_autorizo,
+            total_documentos_grupo: documentos_ids.length
+          },
+          usuario
+        );
+
+        resultados.push({
+          documentoId,
+          exito: true,
+          autorizacionId: autorizacion.id,
+          codigo: documento.codigoBarras
+        });
+
+        console.log(`✅ [GRUPAL VERBAL] Documento ${documento.codigoBarras} autorizado`);
+
+      } catch (docError) {
+        console.error(`❌ [GRUPAL VERBAL] Error procesando documento ${documentoId}:`, docError);
+        resultados.push({
+          documentoId,
+          exito: false,
+          error: docError.message
+        });
+      }
+    }
+
+    await transaction.commit();
+
+    const exitosos = resultados.filter(r => r.exito);
+    const fallidos = resultados.filter(r => !r.exito);
+
+    console.log(`📊 [GRUPAL VERBAL] Resultado: ${exitosos.length} exitosos, ${fallidos.length} fallidos`);
+
+    res.json({
+      success: true,
+      message: `Autorización grupal verbal completada: ${exitosos.length}/${documentos_ids.length} documentos autorizados`,
+      datos: {
+        total_solicitados: documentos_ids.length,
+        total_exitosos: exitosos.length,
+        total_fallidos: fallidos.length,
+        resultados: resultados
+      }
+    });
+
+  } catch (error) {
+    await transaction.rollback();
+    console.error('❌ [GRUPAL VERBAL] Error general:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al procesar autorización grupal verbal: ' + error.message
+    });
+  }
+};
+
 module.exports = {
   solicitarAutorizacion,
   obtenerPendientes,
@@ -733,5 +869,6 @@ module.exports = {
   autorizar,
   rechazar,
   marcarVerbal,
-  ratificarVerbal
+  ratificarVerbal,
+  autorizarGrupalVerbal // ✅ NUEVA FUNCIÓN
 }; 

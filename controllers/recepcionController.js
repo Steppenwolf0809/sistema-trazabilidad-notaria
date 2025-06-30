@@ -2434,19 +2434,23 @@ const recepcionController = {
             todosLosDocumentosEntregados.push(...documentosAdicionalesEntregados);
           }
           
-          // ✅ CORRECCIÓN: Enviar notificación individual para cada documento usando servicio centralizado
-          for (const docEntregado of todosLosDocumentosEntregados) {
-            try {
-              await NotificationService.enviarNotificacionEntrega(docEntregado.id, {
-                nombreReceptor,
-                identificacionReceptor, 
-                relacionReceptor,
-                fechaEntrega: new Date(),
-                entregadoPor: req.matrizador.nombre
-              });
-            } catch (docError) {
-              console.error(`Error enviando notificación para documento ${docEntregado.id}:`, docError);
-            }
+          // ✅ CORRECCIÓN: Enviar UNA SOLA notificación grupal usando función especializada
+          console.log(`📧 [ENTREGA GRUPAL] Enviando notificación grupal única para ${todosLosDocumentosEntregados.length} documentos`);
+          
+          try {
+            await enviarNotificacionEntregaGrupal(todosLosDocumentosEntregados, {
+              nombreReceptor,
+              identificacionReceptor, 
+              relacionReceptor,
+              tipoVerificacion,
+              observaciones,
+              usuarioEntrega: req.matrizador.nombre
+            }, req.matrizador);
+            
+            console.log(`✅ [ENTREGA GRUPAL] Notificación única enviada exitosamente`);
+          } catch (grupalNotificationError) {
+            console.error(`❌ [ENTREGA GRUPAL] Error enviando notificación grupal:`, grupalNotificationError);
+            // Continuar sin detener el flujo
           }
           
         } else {
