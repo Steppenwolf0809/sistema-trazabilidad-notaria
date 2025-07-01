@@ -184,8 +184,8 @@
                     <thead>
                         <tr>
                             <th width="15%">📅 Fecha/Hora</th>
-                            <th width="25%">📄 Documento</th>
-                            <th width="30%">👤 Cliente</th>
+                            <th width="30%">📄 Documento</th>
+                            <th width="25%">👤 Cliente</th>
                             <th width="15%">📱 Enviado a</th>
                             <th width="10%">✅ Estado</th>
                             <th width="5%">👁️</th>
@@ -207,13 +207,13 @@
                                     </div>
                                 {{else}}
                                     <div class="codigo-documento">
-                                        <a href="/{{../userRole}}/documentos/detalle/{{this.documento.id}}" class="text-decoration-none">
-                                            {{formatearCodigoCompacto this.documento.codigoBarras}}
+                                        <a href="/{{../userRole}}/documentos/detalle/{{this.documento.id}}" class="text-decoration-none" title="{{this.documento.codigoBarras}}">
+                                            <code class="bg-light text-dark px-1 rounded" style="font-size: 0.8rem; word-break: break-all;">{{this.documento.codigoBarras}}</code>
                                         </a>
                                     </div>
                                     <div class="tipo-documento">
                                         <i class="{{iconoTipoDocumento this.documento.tipoDocumento}}"></i>
-                                        {{this.documento.tipoDocumento}}
+                                        {{abreviarTipoDocumento this.documento.tipoDocumento}}
                                     </div>
                                 {{/if}}
                             </td>

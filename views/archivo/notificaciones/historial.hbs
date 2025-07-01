@@ -160,88 +160,65 @@
         <div class="card-body p-0">
           {{#if notificaciones.length}}
             <div class="table-responsive">
-                <table class="table table-striped table-hover notificaciones-universal">
-                    <thead class="table-dark">
+                <table class="table table-sm notificaciones-historial-optimizado">
+                    <thead>
                         <tr>
-                            <th>Fecha/Hora</th>
-                            <th>Documento</th>
-                            <th>Cliente</th>
-                            <th>Matrizador</th>
-                            <th>Tipo</th>
-                            <th>Canal</th>
-                            <th>Destinatario</th>
-                            <th>Estado</th>
-                            <th>Acciones</th>
+                            <th width="15%">📅 Fecha/Hora</th>
+                            <th width="30%">📄 Documento</th>
+                            <th width="25%">👤 Cliente</th>
+                            <th width="15%">📱 Enviado a</th>
+                            <th width="10%">✅ Estado</th>
+                            <th width="5%">👁️</th>
                         </tr>
                     </thead>
                     <tbody>
                         {{#each notificaciones}}
-                        <tr>
-                            <td>
-                                <div class="d-flex flex-column">
-                                    <span class="fw-bold">{{formatDate this.created_at "DD/MM/YYYY"}}</span>
-                                    <small class="text-muted">{{formatDate this.created_at "HH:mm:ss"}}</small>
-                                </div>
+                        <tr class="fila-notificacion">
+                            <td class="fecha-celda">
+                                <div class="fecha-principal">{{formatearFechaSolo this.created_at}}</div>
+                                <div class="hora-secundaria">{{formatearHoraSolo this.created_at}}</div>
                             </td>
-                            <td>
+                            <td class="documento-celda">
                                 {{#if (esEntregaGrupal this.tipoEvento)}}
-                                    <div class="d-flex flex-column">
-                                        <span class="fw-bold text-success">📦 ENTREGA GRUPAL</span>
-                                        <small class="text-info">{{this.metadatos.totalDocumentos}} documentos</small>
+                                    <div class="codigo-documento text-success">📦 ENTREGA GRUPAL</div>
+                                    <div class="tipo-documento">
+                                        <i class="fas fa-boxes"></i>
+                                        {{this.metadatos.totalDocumentos}} documentos
                                     </div>
                                 {{else}}
-                                    <div class="d-flex flex-column">
-                                        <a href="/archivo/documentos/detalle/{{this.documento.id}}" class="fw-bold text-decoration-none">{{this.documento.codigoBarras}}</a>
-                                        <small class="text-muted">{{this.documento.tipoDocumento}}</small>
-                                        {{#if this.documento.numeroFactura}}
-                                        <small class="text-info">🧾 {{this.documento.numeroFactura}}</small>
-                                        {{/if}}
+                                    <div class="codigo-documento">
+                                        <a href="/archivo/documentos/detalle/{{this.documento.id}}" class="text-decoration-none" title="{{this.documento.codigoBarras}}">
+                                            <code class="bg-light text-dark px-1 rounded" style="font-size: 0.8rem; word-break: break-all;">{{this.documento.codigoBarras}}</code>
+                                        </a>
+                                    </div>
+                                    <div class="tipo-documento">
+                                        <i class="{{iconoTipoDocumento this.documento.tipoDocumento}}"></i>
+                                        {{abreviarTipoDocumento this.documento.tipoDocumento}}
                                     </div>
                                 {{/if}}
                             </td>
-                            <td>
+                            <td class="cliente-celda">
                                 {{#if (esEntregaGrupal this.tipoEvento)}}
-                                    {{this.metadatos.nombreCliente}}
+                                    <div class="nombre-cliente">{{this.metadatos.nombreCliente}}</div>
+                                    <div class="ci-cliente">Entrega grupal</div>
                                 {{else}}
-                                    {{this.documento.nombreCliente}}
+                                    <div class="nombre-cliente">{{this.documento.nombreCliente}}</div>
+                                    {{#if this.documento.identificacionCliente}}
+                                    <div class="ci-cliente">{{this.documento.identificacionCliente}}</div>
+                                    {{/if}}
                                 {{/if}}
                             </td>
-                            <td>
-                                {{#if (esEntregaGrupal this.tipoEvento)}}
-                                     <span class="badge bg-secondary">Múltiples</span>
-                                {{else if this.documento.matrizador}}
-                                    <span class="badge bg-info">{{this.documento.matrizador.nombre}}</span>
-                                {{else}}
-                                    <span class="badge bg-secondary">Sin Asignar</span>
-                                {{/if}}
-                            </td>
-                            <td>
-                                <span class="badge {{lookup @root.badgeClasses.tipo this.tipoEvento}}">
-                                    {{capitalizar this.tipoEvento}}
-                                </span>
-                            </td>
-                            <td>
-                                <span class="badge {{lookup @root.badgeClasses.canal this.canal}}">
-                                    <i class="{{lookup @root.iconClasses.canal this.canal}} me-1"></i> {{capitalizar this.canal}}
-                                </span>
-                            </td>
-                            <td>
-                                <div class="d-flex flex-column">
-                                    {{#if this.destinatarioEmail}}
-                                        <small>📧 {{this.destinatarioEmail}}</small>
-                                    {{/if}}
-                                    {{#if this.destinatarioTelefono}}
-                                        <small>📱 {{this.destinatarioTelefono}}</small>
-                                    {{/if}}
+                            <td class="telefono-celda">
+                                <div class="telefono-info">
+                                    <i class="fab fa-whatsapp"></i>
+                                    {{destinatarioCensurado this.destinatario}}
                                 </div>
                             </td>
-                            <td>
-                                <span class="badge {{lookup @root.badgeClasses.estado this.estado}}">
-                                    {{capitalizar this.estado}}
-                                </span>
+                            <td class="estado-celda">
+                                {{{estadoConColor this.estado}}}
                             </td>
-                            <td>
-                                <button class="btn btn-sm btn-outline-primary" onclick="verDetalleNotificacion({{this.id}})" title="Ver detalle">
+                            <td class="acciones-celda">
+                                <button class="btn btn-detalle" onclick="verDetalleNotificacion({{this.id}})" title="Ver detalle completo">
                                     <i class="fas fa-eye"></i>
                                 </button>
                             </td>
@@ -251,33 +228,29 @@
                 </table>
             </div>
 
-            <!-- Paginación Universal -->
-            <div class="d-flex justify-content-center mt-4">
-                <nav aria-label="Paginación de notificaciones">
-                    <ul class="pagination">
-                        {{#if (gt currentPage 1)}}
-                        <li class="page-item">
-                            <a class="page-link" href="{{buildPaginationUrl @root.userRole (subtract currentPage 1) filtros}}">Anterior</a>
-                        </li>
-                        {{/if}}
-
-                        {{#each (getPaginationItems currentPage totalPages) as |page|}}
-                            {{#if page.isEllipsis}}
-                                <li class="page-item disabled"><span class="page-link">...</span></li>
-                            {{else}}
-                                <li class="page-item {{#if page.isActive}}active{{/if}}">
-                                    <a class="page-link" href="{{buildPaginationUrl @root.userRole page.pageNumber ../filtros}}">{{page.pageNumber}}</a>
-                                </li>
-                            {{/if}}
-                        {{/each}}
-                        
-                        {{#if (lt currentPage totalPages)}}
-                        <li class="page-item">
-                            <a class="page-link" href="{{buildPaginationUrl @root.userRole (add currentPage 1) filtros}}">Siguiente</a>
-                        </li>
-                        {{/if}}
-                    </ul>
-                </nav>
+            <!-- Información de resultados mejorada -->
+            <div class="d-flex justify-content-between align-items-center mt-3 p-4 bg-gradient" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
+                <div>
+                    <strong class="text-primary">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Mostrando {{notificaciones.length}} de {{stats.total}} notificaciones
+                    </strong>
+                    <div class="small text-muted mt-1">
+                        Filtros aplicados: 
+                        {{#if filtros.fechaDesde}}📅 Desde {{filtros.fechaDesde}}{{/if}}
+                        {{#if filtros.estado}}✅ {{filtros.estado}}{{/if}}
+                        {{#if filtros.busqueda}}🔍 "{{filtros.busqueda}}"{{/if}}
+                    </div>
+                </div>
+                <div class="text-end">
+                    <div class="text-muted small">
+                        <i class="fas fa-clock me-1"></i>
+                        Actualizado: {{formatDateTime "now"}}
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary mt-1" onclick="location.reload()">
+                        <i class="fas fa-sync-alt me-1"></i>Actualizar
+                    </button>
+                </div>
             </div>
             {{else}}
                 <div class="alert alert-info text-center" role="alert">
@@ -299,6 +272,7 @@
 </div>
 
 <link rel="stylesheet" href="/css/notificaciones-optimizada.css">
+<link rel="stylesheet" href="/css/notificaciones-legible.css">
 
 
 <script>

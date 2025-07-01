@@ -1765,8 +1765,12 @@ const recepcionController = {
         }
       }
       
-      // Obtener lista de todos los matrizadores para el filtro desplegable
+      // Obtener lista de matrizadores y archivo para el filtro desplegable (excluir admin, caja, etc.)
       const matrizadores = await Matrizador.findAll({
+        where: {
+          rol: { [Op.in]: ['matrizador', 'caja_archivo', 'archivo'] },
+          activo: true
+        },
         attributes: ['id', 'nombre', 'rol'],
         order: [['nombre', 'ASC']]
       });

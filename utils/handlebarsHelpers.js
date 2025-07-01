@@ -98,6 +98,20 @@ const helpers = {
     const numB = parseInt(b) || 0;
     return numA - numB;
   },
+
+  // ============== HELPERS DE DOCUMENTOS ==============
+  
+  // Helper para abreviar tipos de documento
+  abreviarTipoDocumento: (tipoDocumento) => {
+    const abreviaciones = {
+      'Protocolo': 'PROT',
+      'Diligencias': 'DILI', 
+      'Certificaciones': 'CERT',
+      'Arrendamientos': 'ARRE',
+      'Otros': 'OTRO'
+    };
+    return abreviaciones[tipoDocumento] || 'N/A';
+  },
   
   // ============== HELPERS DE COMPARACIÓN ==============
   
