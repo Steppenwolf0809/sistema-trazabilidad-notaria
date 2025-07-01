@@ -1435,8 +1435,12 @@ const recepcionController = {
       
       const tiposDocumento = tiposDocumentoQuery.map(t => t.tipo).filter(Boolean);
       
-      // Obtener matrizadores para el filtro
+      // Obtener matrizadores para el filtro (solo roles específicos)
       const matrizadores = await Matrizador.findAll({
+        where: {
+          rol: { [Op.in]: ['matrizador', 'caja_archivo', 'archivo'] },
+          activo: true
+        },
         attributes: ['id', 'nombre'],
         order: [['nombre', 'ASC']],
         raw: true
@@ -2570,115 +2574,9 @@ const recepcionController = {
 
   /**
    * Obtiene los detalles de una notificación específica (API) para recepción
-   * @param {Object} req - Objeto de solicitud Express
-   * @param {Object} res - Objeto de respuesta Express
+   * Delega al notificacionController universal
    */
-  obtenerDetalleNotificacion: async (req, res) => {
-    try {
-      const { id } = req.params;
-      
-      if (!id) {
-        return res.status(400).json({
-          exito: false,
-          mensaje: 'ID de notificación no proporcionado'
-        });
-      }
-      
-      // ============== CORRECCIÓN: BUSCAR EN TABLA CORRECTA ==============
-      // Cambiar de EventoDocumento a NotificacionEnviada
-      const notificacion = await NotificacionEnviada.findOne({
-        where: {
-          id: id
-        },
-        include: [{
-          model: Documento,
-          as: 'documento',
-          attributes: ['codigoBarras', 'tipoDocumento', 'nombreCliente', 'emailCliente', 'telefonoCliente', 'notas', 'numeroFactura', 'estado'],
-          include: [{
-            model: Matrizador,
-            as: 'matrizador',
-            attributes: ['nombre'],
-            required: false
-          }],
-          required: false // Para notificaciones grupales
-        }]
-      });
-      
-      if (!notificacion) {
-        return res.status(404).json({
-          exito: false,
-          mensaje: 'Notificación no encontrada'
-        });
-      }
-      
-      // ============== OBTENER MENSAJE ENVIADO ==============
-      // En NotificacionEnviada ya tenemos el mensaje guardado
-      let mensajeEnviado = notificacion.mensajeEnviado || 'Mensaje no disponible';
-      
-      // Si no hay mensaje guardado, usar el tipo de evento para mostrar información básica
-      if (!mensajeEnviado || mensajeEnviado === 'Notificación enviada') {
-        if (notificacion.tipoEvento === 'documento_listo') {
-          mensajeEnviado = `📋 Notificación de documento listo para entrega`;
-        } else if (notificacion.tipoEvento === 'entrega_confirmada') {
-          mensajeEnviado = `✅ Confirmación de entrega de documento`;
-        } else if (notificacion.tipoEvento === 'entrega_grupal') {
-          const totalDocs = notificacion.metadatos?.totalDocumentos || 'varios';
-          mensajeEnviado = `📦 Confirmación de entrega grupal (${totalDocs} documentos)`;
-        } else {
-          mensajeEnviado = `📱 Notificación de ${notificacion.tipoEvento}`;
-        }
-      }
-      
-      // Preparar datos detallados
-      const detalles = {
-        id: notificacion.id,
-        tipo: notificacion.tipoEvento,
-        fecha: notificacion.created_at ? new Date(notificacion.created_at).toISOString() : null,
-        detalles: notificacion.mensajeEnviado || 'Notificación enviada',
-        usuario: notificacion.metadatos?.entregadoPor || 'Sistema',
-        documento: notificacion.documento ? {
-          id: notificacion.documento.id,
-          codigo: notificacion.documento.codigoBarras,
-          tipo: notificacion.documento.tipoDocumento,
-          cliente: notificacion.documento.nombreCliente,
-          numeroFactura: notificacion.documento.numeroFactura,
-          estado: notificacion.documento.estado,
-          matrizador: notificacion.documento.matrizador?.nombre || 'No asignado'
-        } : {
-          // Para notificaciones grupales sin documento específico
-          id: null,
-          codigo: 'Entrega Grupal',
-          tipo: 'Múltiples documentos',
-          cliente: notificacion.metadatos?.nombreCliente || 'Cliente no especificado',
-          numeroFactura: 'N/A',
-          estado: 'entregado',
-          matrizador: 'Varios'
-        },
-        metadatos: notificacion.metadatos || {},
-        canales: {
-          email: notificacion.documento?.emailCliente || notificacion.metadatos?.emailCliente,
-          telefono: notificacion.documento?.telefonoCliente || notificacion.metadatos?.telefonoCliente
-        },
-        canal: notificacion.canal,
-        estado: notificacion.estado,
-        destinatario: notificacion.destinatario,
-        mensajeEnviado: mensajeEnviado
-      };
-      
-      return res.status(200).json({
-        exito: true,
-        datos: detalles,
-        mensaje: 'Detalles de notificación obtenidos correctamente'
-      });
-    } catch (error) {
-      console.error('Error al obtener detalles de notificación:', error);
-      return res.status(500).json({
-        exito: false,
-        mensaje: 'Error al obtener los detalles de la notificación',
-        error: error.message
-      });
-    }
-  },
+  obtenerDetalleNotificacion: require('./notificacionController').obtenerDetalleNotificacion,
 
   // ============== NUEVOS MÉTODOS: ENTREGA GRUPAL API ==============
 
@@ -2862,8 +2760,12 @@ const recepcionController = {
       
       console.log(`📋 Encontrados ${documentos.length} documentos listos (filtrados: ${JSON.stringify(req.query)})`);
       
-      // Obtener lista de matrizadores para el filtro
+      // Obtener lista de matrizadores para el filtro (solo roles específicos)
       const matrizadores = await Matrizador.findAll({
+        where: {
+          rol: { [Op.in]: ['matrizador', 'caja_archivo', 'archivo'] },
+          activo: true
+        },
         attributes: ['id', 'nombre'],
         order: [['nombre', 'ASC']]
       });

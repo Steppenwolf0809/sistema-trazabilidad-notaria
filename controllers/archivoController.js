@@ -1315,63 +1315,9 @@ const archivoController = {
 
   /**
    * Obtener detalle completo de una notificación
+   * Delega al notificacionController universal
    */
-  obtenerDetalleNotificacion: async (req, res) => {
-    try {
-      const notificacionId = req.params.id;
-      
-      // Primero obtener la notificación
-      const notificacion = await NotificacionEnviada.findByPk(notificacionId);
-      
-      if (!notificacion || !notificacion.documentoId) {
-        return res.status(404).json({
-          error: 'Notificación no encontrada'
-        });
-      }
-      
-      // Luego verificar que el documento pertenece al usuario
-      const documento = await Documento.findOne({
-        where: {
-          id: notificacion.documentoId,
-          idMatrizador: req.matrizador.id // Solo documentos propios
-        },
-        attributes: ['id', 'codigoBarras', 'nombreCliente', 'tipoDocumento', 'codigoVerificacion']
-      });
-
-      if (!documento) {
-        return res.status(404).json({
-          error: 'Notificación no encontrada o no autorizada'
-        });
-      }
-
-      res.json({
-        id: notificacion.id,
-        documentoId: notificacion.documentoId,
-        documento: {
-          codigoBarras: documento.codigoBarras,
-          nombreCliente: documento.nombreCliente,
-          tipoDocumento: documento.tipoDocumento,
-          codigoVerificacion: documento.codigoVerificacion
-        },
-        tipoEvento: notificacion.tipoEvento,
-        canal: notificacion.canal,
-        destinatario: notificacion.destinatario,
-        estado: notificacion.estado,
-        mensajeEnviado: notificacion.mensajeEnviado,
-        intentos: notificacion.intentos,
-        ultimoError: notificacion.ultimoError,
-        metadatos: notificacion.metadatos,
-        fechaEnvio: notificacion.created_at,
-        proximoIntento: notificacion.proximoIntento
-      });
-
-    } catch (error) {
-      console.error('❌ Error al obtener detalle de notificación:', error);
-      res.status(500).json({
-        error: 'Error al obtener el detalle de la notificación'
-      });
-    }
-  },
+  obtenerDetalleNotificacion: require('./notificacionController').obtenerDetalleNotificacion,
 
   /**
    * Buscar documentos del mismo cliente para documentos habilitantes

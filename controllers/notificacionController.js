@@ -278,6 +278,7 @@ const notificacionController = {
       // Buscar el documento relacionado si existe
       let documento = null;
       if (notificacion.documentoId) {
+        console.log('📄 DEBUG: Buscando documento ID:', notificacion.documentoId);
         documento = await Documento.findByPk(notificacion.documentoId, {
           include: [
             {
@@ -290,12 +291,18 @@ const notificacionController = {
         });
         
         console.log('📄 DEBUG: Documento encontrado:', !!documento);
+        if (documento) {
+          console.log('📄 DEBUG: documento.idMatrizador:', documento.idMatrizador);
+          console.log('📄 DEBUG: usuario.id:', usuario.id);
+          console.log('📄 DEBUG: usuario.rol:', usuario.rol);
+        }
         
-        // CORREGIDO: Los matrizadores pueden ver todas las notificaciones para supervisión
-        // Solo restricción para archivo y caja_archivo (deben ser el matrizador asignado)
-        if (documento && (usuario.rol === 'archivo' || usuario.rol === 'caja_archivo')) {
-          if (documento.id_matrizador !== usuario.id) {
-            console.log('🚫 DEBUG: Sin permisos para ver este documento');
+        // CORREGIDO: Los roles archivo y admin pueden ver todas las notificaciones para supervisión
+        // Solo restricción para caja_archivo (deben ser el matrizador asignado)
+        if (documento && usuario.rol === 'caja_archivo') {
+          if (documento.idMatrizador !== usuario.id) {
+            console.log('🚫 DEBUG: Sin permisos para ver este documento (caja_archivo)');
+            console.log('🚫 DEBUG: documento.idMatrizador:', documento.idMatrizador, 'usuario.id:', usuario.id);
             return res.status(403).json({
               exito: false,
               mensaje: 'Sin permisos para ver esta notificación'

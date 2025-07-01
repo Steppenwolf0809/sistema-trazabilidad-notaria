@@ -305,7 +305,7 @@
         modalInstance.show();
         
         // Cargar contenido real
-        fetch(`/{{@root.userRole}}/notificaciones/detalle/${notificacionId}`, {
+        fetch(`/recepcion/notificaciones/detalle/${notificacionId}`, {
             headers: {
                 'Accept': 'text/html'
             }
@@ -357,7 +357,7 @@
         console.log(`📱 Reenviando notificación ID: ${notificacionId}`);
         
         // Implementar lógica de reenvío
-        fetch(`/{{@root.userRole}}/notificaciones/${notificacionId}/reenviar`, {
+        fetch(`/recepcion/notificaciones/${notificacionId}/reenviar`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
