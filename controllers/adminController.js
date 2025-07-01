@@ -3721,4 +3721,284 @@ exports.verDetalleDocumentoAdmin = async (req, res) => {
   }
 };
 
+// ============================================================================
+// SISTEMA DE REVERSIÓN DISTRIBUIDA - FUNCIONES PARA ADMIN
+// ============================================================================
+
+/**
+ * REVERTIR ESTADO DE DOCUMENTO - Solo para rol Admin
+ * Permite deshacer cambios de estado con justificación obligatoria
+ */
+exports.revertirEstadoDocumento = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { tipoReversion, motivoCategoria, justificacion } = req.body;
+    
+    // Validaciones iniciales
+    if (!['desmarcar_listo', 'deshacer_entrega', 'separar_grupo', 'reactivar_documento'].includes(tipoReversion)) {
+      return res.status(400).json({
+        error: 'Tipo de reversión no válido para Admin',
+        tiposPermitidos: ['desmarcar_listo', 'deshacer_entrega', 'separar_grupo', 'reactivar_documento']
+      });
+    }
+    
+    if (!justificacion || justificacion.length < 20) {
+      return res.status(400).json({
+        error: 'Justificación requerida',
+        mensaje: 'La justificación debe tener al menos 20 caracteres'
+      });
+    }
+    
+    // Obtener documento actual
+    const documento = await Documento.findByPk(id);
+    if (!documento) {
+      return res.status(404).json({
+        error: 'Documento no encontrado'
+      });
+    }
+    
+    // Validar que se puede realizar la reversión
+    const validacion = validarReversionAdmin(tipoReversion, documento);
+    if (!validacion.valida) {
+      return res.status(400).json({
+        error: validacion.mensaje
+      });
+    }
+    
+    // Ejecutar reversión en transacción
+    const resultado = await sequelize.transaction(async (t) => {
+      const estadoAnterior = documento.estado;
+      let estadoNuevo, datosAnteriores = {}, datosNuevos = {};
+      
+      // Ejecutar reversión específica
+      switch (tipoReversion) {
+        case 'desmarcar_listo':
+          estadoNuevo = 'en_proceso';
+          documento.estado = estadoNuevo;
+          documento.codigoVerificacion = null;
+          datosAnteriores = { codigoVerificacion: documento.codigoVerificacion };
+          datosNuevos = { codigoVerificacion: null };
+          break;
+          
+        case 'deshacer_entrega':
+          estadoNuevo = 'listo_para_entrega';
+          documento.estado = estadoNuevo;
+          datosAnteriores = {
+            fechaEntrega: documento.fechaEntrega,
+            nombreReceptor: documento.nombreReceptor,
+            identificacionReceptor: documento.identificacionReceptor,
+            relacionReceptor: documento.relacionReceptor
+          };
+          documento.fechaEntrega = null;
+          documento.nombreReceptor = null;
+          documento.identificacionReceptor = null;
+          documento.relacionReceptor = null;
+          datosNuevos = { datosEntregaLimpiados: true };
+          break;
+          
+        case 'separar_grupo':
+          datosAnteriores = { notificacionGrupalId: documento.notificacionGrupalId };
+          documento.notificacionGrupalId = null;
+          datosNuevos = { notificacionGrupalId: null };
+          estadoNuevo = documento.estado; // Mantiene el mismo estado
+          break;
+          
+        case 'reactivar_documento':
+          estadoNuevo = 'en_proceso';
+          documento.estado = estadoNuevo;
+          documento.eliminado = false;
+          datosAnteriores = { eliminado: true };
+          datosNuevos = { eliminado: false };
+          break;
+      }
+      
+      // Guardar cambios en documento
+      await documento.save({ transaction: t });
+      
+      // Registrar en auditoría de reversiones
+      const ReversionAuditoria = require('../models/ReversionAuditoria');
+      await ReversionAuditoria.create({
+        tipoReversion,
+        documentoId: id,
+        usuarioId: req.matrizador.id,
+        rolUsuario: req.matrizador.rol,
+        estadoAnterior,
+        estadoNuevo,
+        datosAnteriores,
+        datosNuevos,
+        motivoCategoria,
+        justificacion,
+        ipAddress: req.ip,
+        metadatos: {
+          userAgent: req.get('User-Agent'),
+          referrer: req.get('Referrer')
+        }
+      }, { transaction: t });
+      
+      // Registrar evento en historial del documento
+      const EventoDocumento = require('../models/EventoDocumento');
+      await EventoDocumento.create({
+        documentoId: id,
+        usuarioId: req.matrizador.id,
+        tipo: 'reversion_admin',
+        categoria: 'administracion',
+        titulo: `Reversión: ${tipoReversion.replace('_', ' ')}`,
+        descripcion: `Admin ${req.matrizador.nombre} ejecutó reversión: ${tipoReversion}. Motivo: ${motivoCategoria}`,
+        detalles: {
+          tipoReversion,
+          estadoAnterior,
+          estadoNuevo,
+          motivoCategoria,
+          justificacion: justificacion.substring(0, 100) + '...'
+        },
+        usuario: req.matrizador.nombre
+      }, { transaction: t });
+      
+      return {
+        documento,
+        estadoAnterior,
+        estadoNuevo
+      };
+    });
+    
+    res.json({
+      success: true,
+      mensaje: 'Reversión ejecutada exitosamente',
+      documento: resultado.documento,
+      cambios: {
+        estadoAnterior: resultado.estadoAnterior,
+        estadoNuevo: resultado.estadoNuevo
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error en reversión admin:', error);
+    res.status(500).json({
+      error: 'Error interno del sistema',
+      mensaje: 'No se pudo ejecutar la reversión'
+    });
+  }
+};
+
+/**
+ * VER AUDITORÍA DE REVERSIONES - Solo Admin
+ */
+exports.verAuditoriaReversiones = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = 50;
+    const offset = (page - 1) * limit;
+    
+    const filtros = {
+      tipoReversion: req.query.tipoReversion || '',
+      rolUsuario: req.query.rolUsuario || '',
+      fechaDesde: req.query.fechaDesde || '',
+      fechaHasta: req.query.fechaHasta || ''
+    };
+    
+    const where = {};
+    if (filtros.tipoReversion) where.tipoReversion = filtros.tipoReversion;
+    if (filtros.rolUsuario) where.rolUsuario = filtros.rolUsuario;
+    
+    if (filtros.fechaDesde && filtros.fechaHasta) {
+      where.fechaReversion = {
+        [Op.between]: [
+          moment(filtros.fechaDesde).startOf('day').toDate(),
+          moment(filtros.fechaHasta).endOf('day').toDate()
+        ]
+      };
+    }
+    
+    const ReversionAuditoria = require('../models/ReversionAuditoria');
+    const { count, rows: reversiones } = await ReversionAuditoria.findAndCountAll({
+      where,
+      include: [
+        {
+          model: Documento,
+          attributes: ['codigoBarras', 'nombreCliente', 'tipoDocumento']
+        },
+        {
+          model: Matrizador,
+          as: 'usuario',
+          attributes: ['nombre', 'email', 'rol']
+        }
+      ],
+      order: [['fechaReversion', 'DESC']],
+      limit,
+      offset
+    });
+    
+    const totalPages = Math.ceil(count / limit);
+    
+    res.render('admin/auditoria/reversiones', {
+      layout: 'admin',
+      title: 'Auditoría de Reversiones',
+      reversiones,
+      filtros,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1
+      },
+      userRole: req.matrizador?.rol,
+      userName: req.matrizador?.nombre
+    });
+    
+  } catch (error) {
+    console.error('❌ Error en auditoría reversiones:', error);
+    req.flash('error', 'Error al cargar auditoría de reversiones');
+    res.redirect('/admin');
+  }
+};
+
+/**
+ * FUNCIÓN AUXILIAR: Validar si se puede realizar una reversión de Admin
+ */
+function validarReversionAdmin(tipoReversion, documento) {
+  // NOTA: Se eliminaron las validaciones de tiempo para permitir reversiones en cualquier momento
+  // En la práctica, los errores pueden descubrirse días o semanas después
+  
+  // Validaciones específicas por tipo
+  switch (tipoReversion) {
+    case 'desmarcar_listo':
+      if (documento.estado !== 'listo_para_entrega') {
+        return {
+          valida: false,
+          mensaje: 'Solo se puede desmarcar documentos que estén "listo_para_entrega"'
+        };
+      }
+      break;
+      
+    case 'deshacer_entrega':
+      if (documento.estado !== 'entregado') {
+        return {
+          valida: false,
+          mensaje: 'Solo se puede deshacer la entrega de documentos "entregado"'
+        };
+      }
+      break;
+      
+    case 'separar_grupo':
+      if (!documento.notificacionGrupalId) {
+        return {
+          valida: false,
+          mensaje: 'El documento no está en un grupo de notificación'
+        };
+      }
+      break;
+      
+    case 'reactivar_documento':
+      if (!documento.eliminado) {
+        return {
+          valida: false,
+          mensaje: 'El documento no está eliminado'
+        };
+      }
+      break;
+  }
+  
+  return { valida: true };
+}
+
 module.exports = exports;

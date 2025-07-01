@@ -77,7 +77,16 @@ const EventoDocumento = sequelize.define('EventoDocumento', {
         'autorizacion_verbal_rechazada',
         // Nuevos tipos para sistema de notificaciones grupales
         'agrupacion',
-        'separacion'
+        'separacion',
+        // Nuevos tipos para sistema de reversiones
+        'reversion_admin',
+        'reversion_caja',
+        'reversion_pago',
+        'correccion_pago',
+        'reversion_retencion',
+        'reactivacion_documento',
+        'correccion_pago_virtual',
+        'reversion_pago_virtual'
       ]]
     }
   },

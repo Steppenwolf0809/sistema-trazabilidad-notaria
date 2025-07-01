@@ -195,6 +195,8 @@
                 </div>
                 
                 <!-- 🔐 SECCIÓN DE PRE-AUTORIZACIÓN DE CRÉDITO -->
+                <!-- 🔴 CORRECCIÓN: Solo mostrar si el documento NO está pagado completo -->
+                {{#unless (or (eq documento.estadoPago 'pagado_completo') (eq documento.estadoPago 'pagado_con_retencion'))}}
                 <div class="row mt-3">
                     <div class="col-md-12">
                         <div class="card border-warning">
@@ -243,6 +245,31 @@
                         </div>
                     </div>
                 </div>
+                {{else}}
+                <!-- 🔴 MENSAJE INFORMATIVO: Documento ya pagado -->
+                <div class="row mt-3">
+                    <div class="col-md-12">
+                        <div class="alert alert-success border-success">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-check-circle fa-2x text-success me-3"></i>
+                                <div>
+                                    <h6 class="mb-1 text-success">
+                                        <strong>✅ Documento Pagado Completo</strong>
+                                    </h6>
+                                    <p class="mb-1">
+                                        Este documento tiene el pago completo registrado.
+                                        <strong>No requiere autorización de crédito.</strong>
+                                    </p>
+                                    <small class="text-success">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Recepción entregará directamente al verificar la identidad del cliente.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {{/unless}}
                 
                 <!-- Búsqueda de documento principal eliminada para matrizadores -->
                 

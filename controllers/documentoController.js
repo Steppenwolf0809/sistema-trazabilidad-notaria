@@ -2173,19 +2173,46 @@ exports.actualizarDocumento = async (req, res) => {
       }
     }
 
-    // EVENTO GENERAL DE MODIFICACIÓN (solo si hubo otros cambios además del crédito)
-    await EventoDocumento.create({
-      documentoId: documento.id,
-      tipo: 'modificacion',
-      detalles: `Documento modificado por ${usuario.nombre || 'sistema'} (${usuario.rol || 'N/A'}).`,
-      usuario: usuario.nombre || 'sistema',
-      metadatos: {
-        idUsuario: usuario.id,
-        rolUsuario: usuario.rol,
-        campos_modificados: Object.keys(datosActualizar).filter(key => key !== 'entrega_sin_verificar_pago' && key !== 'justificacion_entrega_sin_pago'),
-        incluye_autorizacion_credito: tieneAutorizacionCredito !== documento.entrega_sin_verificar_pago
-      }
-    }, { transaction });
+    // EVENTO ESPECÍFICO PARA CAMBIO DE ESTADO
+    if (datosActualizar.estado && datosActualizar.estado !== documento.estado) {
+      await EventoDocumento.create({
+        documentoId: documento.id,
+        tipo: 'cambio_estado',
+        detalles: `Estado cambiado de "${documento.estado}" a "${datosActualizar.estado}" por ${usuario.nombre || 'sistema'} (${usuario.rol || 'N/A'})`,
+        usuario: usuario.nombre || 'sistema',
+        metadatos: {
+          idUsuario: usuario.id,
+          rolUsuario: usuario.rol,
+          estadoAnterior: documento.estado,
+          estadoNuevo: datosActualizar.estado,
+          tipo_cambio: 'estado_documento'
+        }
+      }, { transaction });
+      
+      console.log(`📝 EVENTO CREADO: Cambio de estado de "${documento.estado}" a "${datosActualizar.estado}" para documento ${documento.id}`);
+    }
+
+    // EVENTO GENERAL DE MODIFICACIÓN (solo si hubo otros cambios además del crédito y estado)
+    const camposModificados = Object.keys(datosActualizar).filter(key => 
+      key !== 'entrega_sin_verificar_pago' && 
+      key !== 'justificacion_entrega_sin_pago' && 
+      key !== 'estado'
+    );
+    
+    if (camposModificados.length > 0) {
+      await EventoDocumento.create({
+        documentoId: documento.id,
+        tipo: 'modificacion',
+        detalles: `Documento modificado por ${usuario.nombre || 'sistema'} (${usuario.rol || 'N/A'}). Campos: ${camposModificados.join(', ')}`,
+        usuario: usuario.nombre || 'sistema',
+        metadatos: {
+          idUsuario: usuario.id,
+          rolUsuario: usuario.rol,
+          campos_modificados: camposModificados,
+          incluye_autorizacion_credito: tieneAutorizacionCredito !== documento.entrega_sin_verificar_pago
+        }
+      }, { transaction });
+    }
     
     await RegistroAuditoria.create({
         accion: 'ACTUALIZACION_DOCUMENTO',

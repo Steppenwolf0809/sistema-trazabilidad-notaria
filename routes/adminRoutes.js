@@ -76,6 +76,13 @@ router.get('/documentos/detalle/:id', adminController.verDetalleDocumentoAdmin);
 router.get('/notificaciones/historial', adminController.historialNotificaciones);
 router.get('/notificaciones/detalle/:id', adminController.obtenerDetalleNotificacion);
 
+// =============== SISTEMA DE REVERSIÓN DISTRIBUIDA - ADMIN ===============
+// Solo Admin puede revertir estados de documentos
+router.post('/documentos/:id/revertir-estado', adminController.revertirEstadoDocumento);
+
+// Auditoría de reversiones - Solo Admin
+router.get('/reversiones/auditoria', adminController.verAuditoriaReversiones);
+
 // =============== ❌ FUNCIONES ELIMINADAS POR SEGREGACIÓN ===============
 // 
 // Las siguientes funciones han sido ELIMINADAS para fortalecer controles de auditoría:

@@ -229,6 +229,130 @@
       </div>
     </div>
     
+    <!-- ============================================================================ -->
+    <!-- PANEL DE REVERSIONES FINANCIERAS - SOLO CAJA -->
+    <!-- ============================================================================ -->
+    {{#if (and (or (eq userRole "caja") (eq userRole "caja_archivo")) pagos)}}
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card border-info">
+          <div class="card-header bg-info text-white">
+            <h5 class="mb-0">
+              <i class="fas fa-dollar-sign me-2"></i>CORRECCIONES FINANCIERAS - CAJA
+            </h5>
+            <small>Corrección de errores en pagos - Se registra en auditoría</small>
+          </div>
+          <div class="card-body">
+            <div class="alert alert-info">
+              <i class="fas fa-info-circle me-2"></i>
+              <strong>Nota:</strong> Las reversiones financieras requieren justificación y quedan registradas en auditoría. 
+                              Disponibles en cualquier momento para corrección de errores.
+            </div>
+            
+            <!-- Lista de pagos con opciones de reversión -->
+            <div class="pagos-registrados">
+              {{#each pagos}}
+              {{#unless this.revertido}}
+              <div class="card mb-3 border-{{#if (or this.esRetencion this.es_retencion)}}warning{{else}}success{{/if}}">
+                <div class="card-body">
+                  <div class="row align-items-center">
+                    <div class="col-md-8">
+                      <div class="d-flex align-items-center">
+                        <div class="me-3">
+                          {{#if (or this.esRetencion this.es_retencion)}}
+                          <i class="fas fa-receipt fa-2x text-warning"></i>
+                          {{else if this.esVirtual}}
+                          <i class="fas fa-hand-holding-usd fa-2x text-info"></i>
+                          {{else}}
+                          <i class="fas fa-credit-card fa-2x text-success"></i>
+                          {{/if}}
+                        </div>
+                        <div>
+                          <h6 class="mb-1">
+                            {{#if (or this.esRetencion this.es_retencion)}}
+                            <span class="badge bg-warning text-dark">Retención</span>
+                            {{else if this.esVirtual}}
+                            <span class="badge bg-info">Pago Original</span>
+                            {{else}}
+                            <span class="badge bg-success">Pago</span>
+                            {{/if}}
+                            <strong>${{formatMoney this.monto}}</strong>
+                          </h6>
+                          <p class="mb-1 small">
+                            <strong>Método:</strong> {{#if this.forma_pago}}{{this.forma_pago}}{{else}}{{this.formaPago}}{{/if}}
+                            {{#if (or this.numeroComprobante this.numero_comprobante)}}
+                            | <strong>Comprobante:</strong> {{#if this.numero_comprobante}}{{this.numero_comprobante}}{{else}}{{this.numeroComprobante}}{{/if}}
+                            {{/if}}
+                          </p>
+                          <p class="mb-0 small text-muted">
+                            <i class="fas fa-clock me-1"></i>{{formatDateTime (or this.fecha_pago this.fechaPago)}}
+                            {{#if this.observaciones}}
+                            | <strong>Obs:</strong> {{this.observaciones}}
+                            {{/if}}
+                            {{#if this.esVirtual}}
+                            | <span class="text-info"><i class="fas fa-info-circle"></i> Registrado al crear documento</span>
+                            {{/if}}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-4 text-end">
+                      {{#if (or this.esRetencion this.es_retencion)}}
+                      <!-- Botones para retenciones -->
+                      <button class="btn btn-warning btn-sm me-1" 
+                              onclick="deshacerRetencion('{{this.id}}', '{{this.monto}}', '{{#if this.forma_pago}}{{this.forma_pago}}{{else}}{{this.formaPago}}{{/if}}')">
+                        <i class="fas fa-times"></i> Deshacer Retención
+                      </button>
+                      {{else if this.esVirtual}}
+                      <!-- Botones para pagos virtuales (registrados al crear) -->
+                      <div class="btn-group" role="group">
+                        <button class="btn btn-outline-info btn-sm" 
+                                onclick="corregirPagoVirtual('{{this.id}}', '{{this.monto}}', '{{#if this.forma_pago}}{{this.forma_pago}}{{else}}{{this.formaPago}}{{/if}}')">
+                          <i class="fas fa-edit"></i> Corregir Datos
+                        </button>
+                        <button class="btn btn-warning btn-sm" 
+                                onclick="deshacerPagoVirtual('{{this.id}}', '{{this.monto}}', '{{#if this.forma_pago}}{{this.forma_pago}}{{else}}{{this.formaPago}}{{/if}}')">
+                          <i class="fas fa-undo"></i> Revertir Pago
+                        </button>
+                      </div>
+                      {{else}}
+                      <!-- Botones para pagos normales -->
+                      <div class="btn-group" role="group">
+                        <button class="btn btn-outline-primary btn-sm" 
+                                onclick="corregirPago('{{this.id}}', '{{this.monto}}', '{{#if this.forma_pago}}{{this.forma_pago}}{{else}}{{this.formaPago}}{{/if}}')">
+                          <i class="fas fa-edit"></i> Corregir
+                        </button>
+                        <button class="btn btn-warning btn-sm" 
+                                onclick="deshacerPago('{{this.id}}', '{{this.monto}}', '{{#if this.forma_pago}}{{this.forma_pago}}{{else}}{{this.formaPago}}{{/if}}')">
+                          <i class="fas fa-undo"></i> Deshacer
+                        </button>
+                      </div>
+                      {{/if}}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {{/unless}}
+              {{/each}}
+              
+              <!-- Si no hay pagos para revertir -->
+              {{#unless (hayPagosNoRevertidos pagos)}}
+              <div class="alert alert-info text-center">
+                <i class="fas fa-info-circle me-2"></i>
+                {{#if pagos.length}}
+                Todos los pagos han sido revertidos. No hay pagos disponibles para corrección.
+                {{else}}
+                No hay pagos registrados para este documento.
+                {{/if}}
+              </div>
+              {{/unless}}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {{/if}}
+    
     <!-- ============== SECCIÓN DE ACCIONES CRÍTICAS ============== -->
     {{#if (and (neq documento.estado "eliminado") (neq documento.estado "nota_credito"))}}
     <div class="row mb-4">
@@ -831,6 +955,138 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Reversión Financiera para Caja -->
+<div class="modal fade" id="modalReversionCaja" tabindex="-1" aria-labelledby="modalReversionCajaLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-warning text-dark">
+        <h5 class="modal-title" id="tituloReversionCaja">
+          <i class="fas fa-undo me-2"></i>Reversión Financiera
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      
+      <div class="modal-body">
+        <!-- Descripción de la acción -->
+        <div class="alert alert-warning mb-4">
+          <div class="d-flex align-items-center">
+            <i class="fas fa-exclamation-triangle fa-2x text-warning me-3"></i>
+            <div>
+              <h6 class="mb-1">⚠️ Reversión de Operación Financiera</h6>
+              <div id="descripcionReversionCaja">Esta acción modificará los registros financieros del documento.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Campos de corrección (solo para corrección de pagos) -->
+        <div id="camposCorreccion" style="display: none;">
+          <div class="card border-info mb-4">
+            <div class="card-header bg-info text-white py-2">
+              <h6 class="mb-0"><i class="fas fa-edit me-1"></i>Nuevos Datos</h6>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-6">
+                  <label for="nuevoMetodo" class="form-label">Nuevo Método de Pago</label>
+                  <select class="form-select" id="nuevoMetodo" name="nuevoMetodo">
+                    <option value="efectivo">💵 Efectivo</option>
+                    <option value="tarjeta_credito">💳 Tarjeta de Crédito</option>
+                    <option value="tarjeta_debito">💳 Tarjeta de Débito</option>
+                    <option value="transferencia">🏦 Transferencia Bancaria</option>
+                    <option value="cheque">📝 Cheque</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label for="nuevoMonto" class="form-label">Nuevo Monto ($)</label>
+                  <div class="input-group">
+                    <span class="input-group-text">$</span>
+                    <input type="number" class="form-control" id="nuevoMonto" name="nuevoMonto" 
+                           step="0.01" min="0" placeholder="0.00">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Motivo de la reversión (OBLIGATORIO) -->
+        <div class="mb-4">
+          <label for="motivoReversionCaja" class="form-label">
+            <i class="fas fa-clipboard-list text-danger"></i> 
+            <strong>Motivo de la Reversión (Obligatorio)</strong>
+          </label>
+          <select class="form-select" id="motivoReversionCaja" name="motivoReversionCaja" required>
+            <option value="">Seleccionar motivo...</option>
+            <option value="error_digitacion">🔢 Error en digitación de datos</option>
+            <option value="metodo_pago_incorrecto">💳 Método de pago registrado incorrectamente</option>
+            <option value="monto_incorrecto">💰 Monto incorrecto registrado</option>
+            <option value="retencion_aplicada_error">📋 Retención aplicada por error</option>
+            <option value="duplicacion_pago">🔄 Pago duplicado en el sistema</option>
+            <option value="cliente_solicito_correccion">👤 Cliente solicitó corrección</option>
+            <option value="error_sistema">⚙️ Error del sistema</option>
+          </select>
+        </div>
+
+        <!-- Justificación detallada (OBLIGATORIA) -->
+        <div class="mb-4">
+          <label for="justificacionReversionCaja" class="form-label">
+            <i class="fas fa-edit text-danger"></i> 
+            <strong>Justificación Detallada (Obligatorio - Mínimo 20 caracteres)</strong>
+          </label>
+          <textarea 
+            class="form-control" 
+            id="justificacionReversionCaja" 
+            name="justificacionReversionCaja" 
+            rows="4" 
+            required 
+            minlength="20"
+            maxlength="1000"
+            placeholder="Explique detalladamente el motivo de la reversión financiera. Esta información será registrada permanentemente para auditoría."
+          ></textarea>
+          <div class="form-text">
+            <span id="contadorCaracteresCaja" class="text-danger">0</span>/20 caracteres mínimos requeridos
+          </div>
+        </div>
+
+        <!-- Confirmación obligatoria -->
+        <div class="mb-4">
+          <div class="card border-danger">
+            <div class="card-body">
+              <div class="form-check">
+                <input 
+                  class="form-check-input" 
+                  type="checkbox" 
+                  id="confirmarReversionCaja" 
+                  name="confirmarReversionCaja" 
+                  required
+                >
+                <label class="form-check-label text-danger fw-bold" for="confirmarReversionCaja">
+                  ✓ <strong>CONFIRMO que entiendo las consecuencias de esta acción:</strong>
+                </label>
+              </div>
+              <ul class="list-unstyled mt-2 small text-danger">
+                <li>• Esta reversión modificará los registros financieros del documento</li>
+                <li>• Los balances y estados de pago serán recalculados automáticamente</li>
+                <li>• Esta acción será registrada permanentemente para auditoría</li>
+                <li>• Asumo total responsabilidad por esta decisión</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-lg" data-bs-dismiss="modal">
+          <i class="fas fa-times me-2"></i>Cancelar
+        </button>
+        <button type="button" class="btn btn-warning btn-lg" id="btnEjecutarReversionCaja" disabled onclick="ejecutarReversionCaja()">
+          <i class="fas fa-undo me-2"></i>Ejecutar Reversión
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -2500,7 +2756,360 @@ document.addEventListener('DOMContentLoaded', function() {
     return textos[manejo] || manejo;
   }
 
-  console.log('📖 Vista caja con modal de pago completo cargada para documento {{documento.codigoBarras}}');
+  // ============================================================================
+  // SISTEMA DE REVERSIONES FINANCIERAS - CAJA
+  // ============================================================================
+  
+  window.deshacerPago = function(pagoId, monto, metodo) {
+    window.currentPagoData = { id: pagoId, monto: monto, metodo: metodo, tipo: 'deshacer' };
+    
+    // Configurar modal
+    document.getElementById('tituloReversionCaja').textContent = 'Deshacer Pago';
+    document.getElementById('descripcionReversionCaja').innerHTML = 
+      `<strong>Pago a revertir:</strong> $${monto} (${metodo})<br>` +
+      `<small class="text-muted">El monto será devuelto al saldo pendiente del documento.</small>`;
+    
+    // Limpiar formulario Y ocultar campos de corrección
+    limpiarFormularioReversionCajaBase();
+    document.getElementById('camposCorreccion').style.display = 'none';
+    
+    console.log('✅ Configurado modal para DESHACER pago (sin campos de corrección)');
+    
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('modalReversionCaja'));
+    modal.show();
+  };
+  
+  window.corregirPago = function(pagoId, monto, metodo) {
+    window.currentPagoData = { id: pagoId, monto: monto, metodo: metodo, tipo: 'corregir' };
+    
+    // Configurar modal para corrección
+    document.getElementById('tituloReversionCaja').textContent = 'Corregir Pago';
+    document.getElementById('descripcionReversionCaja').innerHTML = 
+      `<strong>Pago a corregir:</strong> $${monto} (${metodo})<br>` +
+      `<small class="text-muted">Puede cambiar el método de pago o ajustar el monto.</small>`;
+    
+    // IMPORTANTE: Limpiar formulario ANTES de mostrar campos específicos
+    limpiarFormularioReversionCajaBase();
+    
+    // Mostrar campos de corrección DESPUÉS de limpiar
+    document.getElementById('camposCorreccion').style.display = 'block';
+    document.getElementById('nuevoMetodo').value = metodo;
+    document.getElementById('nuevoMonto').value = monto;
+    
+    console.log('✅ Mostrando campos de corrección para pago normal');
+    
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('modalReversionCaja'));
+    modal.show();
+  };
+  
+  window.deshacerRetencion = function(retencionId, monto, tipo) {
+    window.currentPagoData = { id: retencionId, monto: monto, tipo: 'retencion' };
+    
+    // Configurar modal
+    document.getElementById('tituloReversionCaja').textContent = 'Deshacer Retención';
+    document.getElementById('descripcionReversionCaja').innerHTML = 
+      `<strong>Retención a revertir:</strong> $${monto}<br>` +
+      `<small class="text-muted">La retención será eliminada y el monto agregado al saldo pendiente.</small>`;
+    
+    // Limpiar formulario Y ocultar campos de corrección
+    limpiarFormularioReversionCajaBase();
+    document.getElementById('camposCorreccion').style.display = 'none';
+    
+    console.log('✅ Configurado modal para DESHACER retención (sin campos de corrección)');
+    
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('modalReversionCaja'));
+    modal.show();
+  };
+
+  // ============================================================================
+  // FUNCIONES PARA PAGOS VIRTUALES (registrados al momento de creación)
+  // ============================================================================
+  
+  window.corregirPagoVirtual = function(pagoId, monto, metodo) {
+    window.currentPagoData = { id: pagoId, monto: monto, metodo: metodo, tipo: 'corregir_virtual' };
+    
+    // Configurar modal para corrección de pago virtual
+    document.getElementById('tituloReversionCaja').textContent = 'Corregir Pago Original';
+    document.getElementById('descripcionReversionCaja').innerHTML = 
+      `<strong>Pago original a corregir:</strong> $${monto} (${metodo})<br>` +
+      `<small class="text-warning"><i class="fas fa-info-circle"></i> Este pago fue registrado al crear el documento.</small><br>` +
+      `<small class="text-muted">Puede cambiar el método de pago o ajustar el monto.</small>`;
+    
+    // IMPORTANTE: Limpiar formulario ANTES de mostrar campos específicos
+    limpiarFormularioReversionCajaBase();
+    
+    // Mostrar campos de corrección DESPUÉS de limpiar
+    document.getElementById('camposCorreccion').style.display = 'block';
+    document.getElementById('nuevoMetodo').value = metodo;
+    document.getElementById('nuevoMonto').value = monto;
+    
+    console.log('✅ Mostrando campos de corrección para pago virtual');
+    
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('modalReversionCaja'));
+    modal.show();
+  };
+  
+  window.deshacerPagoVirtual = function(pagoId, monto, metodo) {
+    window.currentPagoData = { id: pagoId, monto: monto, metodo: metodo, tipo: 'deshacer_virtual' };
+    
+    // Configurar modal para deshacer pago virtual
+    document.getElementById('tituloReversionCaja').textContent = 'Revertir Pago Original';
+    document.getElementById('descripcionReversionCaja').innerHTML = 
+      `<strong>Pago original a revertir:</strong> $${monto} (${metodo})<br>` +
+      `<small class="text-warning"><i class="fas fa-info-circle"></i> Este pago fue registrado al crear el documento.</small><br>` +
+      `<small class="text-muted">El monto será devuelto al saldo pendiente del documento.</small>`;
+    
+    // Limpiar formulario Y ocultar campos de corrección
+    limpiarFormularioReversionCajaBase();
+    document.getElementById('camposCorreccion').style.display = 'none';
+    
+    console.log('✅ Configurado modal para REVERTIR pago virtual (sin campos de corrección)');
+    
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('modalReversionCaja'));
+    modal.show();
+  };
+  
+  function limpiarFormularioReversionCaja() {
+    document.getElementById('motivoReversionCaja').value = '';
+    document.getElementById('justificacionReversionCaja').value = '';
+    document.getElementById('confirmarReversionCaja').checked = false;
+    document.getElementById('btnEjecutarReversionCaja').disabled = true;
+    document.getElementById('camposCorreccion').style.display = 'none';
+    actualizarContadorCaja();
+  }
+
+  // Nueva función que NO oculta los campos de corrección
+  function limpiarFormularioReversionCajaBase() {
+    document.getElementById('motivoReversionCaja').value = '';
+    document.getElementById('justificacionReversionCaja').value = '';
+    document.getElementById('confirmarReversionCaja').checked = false;
+    document.getElementById('btnEjecutarReversionCaja').disabled = true;
+    // NO ocultar camposCorreccion - se manejará específicamente por cada función
+    actualizarContadorCaja();
+  }
+  
+  function actualizarContadorCaja() {
+    const textarea = document.getElementById('justificacionReversionCaja');
+    const contador = document.getElementById('contadorCaracteresCaja');
+    
+    if (!textarea || !contador) {
+      console.warn('❌ No se encontraron elementos del contador');
+      return;
+    }
+    
+    const longitud = textarea.value.length;
+    
+    console.log('📊 Actualizando contador:', { longitud, minimo: 20 });
+    
+    contador.textContent = longitud;
+    if (longitud >= 20) {
+      contador.className = 'text-success fw-bold';
+    } else {
+      contador.className = 'text-danger fw-bold';
+    }
+    
+    validarFormularioCaja();
+  }
+  
+  function validarFormularioCaja() {
+    const motivo = document.getElementById('motivoReversionCaja')?.value || '';
+    const justificacion = document.getElementById('justificacionReversionCaja')?.value || '';
+    const confirmacion = document.getElementById('confirmarReversionCaja')?.checked || false;
+    const btnEjecutar = document.getElementById('btnEjecutarReversionCaja');
+    
+    if (!btnEjecutar) {
+      console.warn('❌ No se encontró botón de ejecución');
+      return;
+    }
+    
+    const esValido = motivo && justificacion.length >= 20 && confirmacion;
+    
+    console.log('🔍 Validando formulario:', {
+      motivo: !!motivo,
+      justificacionLength: justificacion.length,
+      confirmacion: confirmacion,
+      esValido: esValido
+    });
+    
+    btnEjecutar.disabled = !esValido;
+    
+    if (esValido) {
+      btnEjecutar.className = 'btn btn-warning btn-lg';
+      btnEjecutar.innerHTML = '<i class="fas fa-undo me-2"></i>Ejecutar Reversión';
+      console.log('✅ Formulario válido - botón habilitado');
+    } else {
+      btnEjecutar.className = 'btn btn-secondary btn-lg';
+      btnEjecutar.innerHTML = '<i class="fas fa-times me-2"></i>Complete los campos requeridos';
+      console.log('❌ Formulario inválido - botón deshabilitado');
+    }
+  }
+  
+  function ejecutarReversionCaja() {
+    const motivo = document.getElementById('motivoReversionCaja').value;
+    const justificacion = document.getElementById('justificacionReversionCaja').value;
+    const pagoData = window.currentPagoData;
+    
+    if (!motivo || justificacion.length < 20 || !pagoData) {
+      alert('Por favor complete todos los campos requeridos');
+      return;
+    }
+    
+    // Deshabilitar botón
+    const btn = document.getElementById('btnEjecutarReversionCaja');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ejecutando...';
+    
+    let url, body;
+    
+    if (pagoData.tipo === 'corregir' || pagoData.tipo === 'corregir_virtual') {
+      // Corrección de pago (normal o virtual)
+      const nuevoMetodo = document.getElementById('nuevoMetodo').value;
+      const nuevoMonto = document.getElementById('nuevoMonto').value;
+      const tipoCorreccion = nuevoMonto !== pagoData.monto ? 'monto_pago' : 'metodo_pago';
+      
+      if (pagoData.tipo === 'corregir_virtual') {
+        // Para pagos virtuales, usar ruta especial que actualiza directamente el documento
+        url = `/caja/documentos/{{documento.id}}/corregir-pago-virtual`;
+        body = {
+          tipoCorreccion,
+          nuevoMetodo,
+          nuevoMonto: parseFloat(nuevoMonto),
+          montoAnterior: parseFloat(pagoData.monto),
+          metodoAnterior: pagoData.metodo,
+          motivoCategoria: motivo,
+          justificacion
+        };
+      } else {
+        // Pago normal
+        url = `/caja/pagos/${pagoData.id}/corregir`;
+        body = {
+          tipoCorreccion,
+          nuevoMetodo,
+          nuevoMonto,
+          motivoCategoria: motivo,
+          justificacion
+        };
+      }
+    } else if (pagoData.tipo === 'retencion') {
+      // Deshacer retención
+      url = `/caja/retenciones/${pagoData.id}/deshacer`;
+      body = {
+        motivoCategoria: motivo,
+        justificacion
+      };
+    } else if (pagoData.tipo === 'deshacer_virtual') {
+      // Deshacer pago virtual - actualiza directamente el documento
+      url = `/caja/documentos/{{documento.id}}/deshacer-pago-virtual`;
+      body = {
+        montoOriginal: parseFloat(pagoData.monto),
+        metodoOriginal: pagoData.metodo,
+        motivoCategoria: motivo,
+        justificacion
+      };
+    } else {
+      // Deshacer pago normal
+      url = `/caja/pagos/${pagoData.id}/deshacer`;
+      body = {
+        motivoCategoria: motivo,
+        justificacion
+      };
+    }
+    
+    // Hacer petición AJAX
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body)
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Cerrar modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('modalReversionCaja'));
+        modal.hide();
+        
+        // Mostrar mensaje de éxito
+        mostrarNotificacion('✅ Reversión financiera ejecutada exitosamente', 'success');
+        
+        // Recargar página
+        setTimeout(() => location.reload(), 1500);
+      } else {
+        alert('❌ Error: ' + (data.mensaje || data.error || 'No se pudo ejecutar la reversión'));
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-undo"></i> Ejecutar Reversión';
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('❌ Error de conexión. Intente nuevamente.');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-undo"></i> Ejecutar Reversión';
+    });
+  }
+  
+  // ============================================================================
+  // INICIALIZACIÓN DE EVENT LISTENERS PARA REVERSIONES FINANCIERAS
+  // ============================================================================
+  
+  // Agregar event listeners para el modal de reversiones al DOM principal
+  const justificacionTextarea = document.getElementById('justificacionReversionCaja');
+  const motivoSelect = document.getElementById('motivoReversionCaja');
+  const confirmarCheck = document.getElementById('confirmarReversionCaja');
+  const btnEjecutar = document.getElementById('btnEjecutarReversionCaja');
+  
+  console.log('🔧 Configurando event listeners para reversiones...');
+  console.log('Elementos encontrados:', {
+    justificacion: !!justificacionTextarea,
+    motivo: !!motivoSelect,
+    confirmar: !!confirmarCheck,
+    boton: !!btnEjecutar
+  });
+  
+  if (justificacionTextarea) {
+    justificacionTextarea.addEventListener('input', function() {
+      console.log('📝 Input en justificación, caracteres:', this.value.length);
+      actualizarContadorCaja();
+    });
+    console.log('✅ Event listener agregado a textarea de justificación');
+  } else {
+    console.warn('❌ No se encontró textarea de justificación');
+  }
+  
+  if (motivoSelect) {
+    motivoSelect.addEventListener('change', function() {
+      console.log('📋 Cambio en motivo:', this.value);
+      validarFormularioCaja();
+    });
+    console.log('✅ Event listener agregado a select de motivo');
+  } else {
+    console.warn('❌ No se encontró select de motivo');
+  }
+  
+  if (confirmarCheck) {
+    confirmarCheck.addEventListener('change', function() {
+      console.log('☑️ Cambio en confirmación:', this.checked);
+      validarFormularioCaja();
+    });
+    console.log('✅ Event listener agregado a checkbox de confirmación');
+  } else {
+    console.warn('❌ No se encontró checkbox de confirmación');
+  }
+  
+  if (btnEjecutar) {
+    btnEjecutar.addEventListener('click', ejecutarReversionCaja);
+    console.log('✅ Event listener agregado a botón de ejecución');
+  } else {
+    console.warn('❌ No se encontró botón de ejecución');
+  }
+
+  console.log('📖 Vista caja con modal de reversiones completo cargada para documento {{documento.codigoBarras}}');
 });
 </script>
 {{else}}

@@ -88,6 +88,40 @@ const Pago = sequelize.define('Pago', {
     allowNull: true,
     defaultValue: {},
     comment: 'Información adicional del pago en formato JSON'
+  },
+  
+  // ================ CAMPOS PARA SISTEMA DE REVERSIONES ================
+  
+  // Indica si este pago ha sido revertido
+  revertido: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    allowNull: false,
+    comment: 'Indica si este pago ha sido revertido por Caja'
+  },
+  
+  // Fecha de reversión
+  fechaReversion: {
+    type: DataTypes.DATE,
+    field: 'fecha_reversion',
+    allowNull: true,
+    comment: 'Fecha y hora cuando se revirtió el pago'
+  },
+  
+  // Motivo de la reversión
+  motivoReversion: {
+    type: DataTypes.STRING,
+    field: 'motivo_reversion',
+    allowNull: true,
+    comment: 'Categoría del motivo de reversión'
+  },
+  
+  // Justificación de la reversión
+  justificacionReversion: {
+    type: DataTypes.TEXT,
+    field: 'justificacion_reversion',
+    allowNull: true,
+    comment: 'Justificación detallada de la reversión'
   }
 }, {
   // Opciones del modelo

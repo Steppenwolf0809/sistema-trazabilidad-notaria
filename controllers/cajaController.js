@@ -866,6 +866,38 @@ const cajaController = {
         });
       }
 
+      // 🆕 NUEVO: Obtener pagos asociados al documento para las correcciones financieras
+      const Pago = require('../models/Pago');
+      const pagos = await Pago.findAll({
+        where: { 
+          documento_id: documentoId // Usar snake_case que es el formato real en PostgreSQL
+        },
+        order: [['created_at', 'DESC']]
+      });
+
+      // 🔧 CORECCIÓN: Si no hay pagos en tabla separada pero el documento está pagado,
+      // crear un pago virtual para mostrar las opciones de corrección
+      if (pagos.length === 0 && parseFloat(documento.valorPagado || 0) > 0) {
+        console.log(`📊 [CAJA-DETALLE] Documento ${documentoId}: Pago registrado al momento de creación, creando pago virtual`);
+        
+        // Crear objeto virtual que simula un pago para las correcciones
+        const pagoVirtual = {
+          id: `virtual_${documentoId}`,
+          documento_id: documentoId,
+          monto: documento.valorPagado,
+          forma_pago: 'efectivo', // Valor por defecto para pagos antiguos
+          fecha_pago: documento.created_at || documento.updatedAt,
+          es_retencion: false,
+          revertido: false,
+          esVirtual: true, // Flag para identificar que es virtual
+          observaciones: 'Pago registrado al momento de creación del documento'
+        };
+        
+        pagos.push(pagoVirtual);
+      }
+
+      console.log(`📊 [CAJA-DETALLE] Documento ${documentoId}: ${pagos.length} pagos encontrados para correcciones (incluyendo virtuales)`);
+
       // Obtener información del usuario que registró el pago
       let usuarioPago = null;
       if (documento.registradoPor) {
@@ -895,6 +927,7 @@ const cajaController = {
         title: 'Detalle del Documento',
         documento,
         eventos: eventosFormateados,
+        pagos, // ✅ CRÍTICO: Pasar los pagos para que aparezcan las correcciones
         usuarioPago,
         matrizadores,
         userRole: req.matrizador?.rol,
@@ -2241,9 +2274,28 @@ const cajaController = {
         });
       }
 
-      // Validar datos de pago si está activo
-      if (pagoInmediato && datosPago) {
-        console.log('💰 Pago inmediato activado, validando datos:', datosPago);
+      // 🔴 VALIDACIÓN BUG 1: Pago debe ser explícitamente activado
+      console.log('🔍 [BUG FIX] Validando estado de pago explícito:', {
+        pagoInmediato,
+        datosPago: !!datosPago,
+        tipoDato: typeof pagoInmediato
+      });
+      
+      // Validación estricta: pagoInmediato debe ser explícitamente true
+      if (pagoInmediato === true || pagoInmediato === 'true') {
+        if (!datosPago || Object.keys(datosPago).length === 0) {
+          console.log('❌ [BUG FIX] Pago activado pero sin datos válidos');
+          return res.status(400).json({
+            success: false,
+            message: 'El pago inmediato está activado pero faltan los datos del pago. Verifique el formulario.',
+            debug: {
+              pagoInmediato,
+              datosPago
+            }
+          });
+        }
+        
+        console.log('✅ [BUG FIX] Pago explícitamente activado con datos válidos');
         
         // NUEVO: Validación especial para facturas exentas
         const valorFacturaNum = parseFloat(valorFactura || 0);
@@ -2260,6 +2312,25 @@ const cajaController = {
             }
           });
         }
+      } else if (pagoInmediato && datosPago) {
+        // Caso donde hay datos de pago pero pagoInmediato no es explícitamente true
+        console.log('❌ [BUG FIX] Estado inconsistente detectado - posible persistencia de formulario');
+        return res.status(400).json({
+          success: false,
+          message: 'Estado inconsistente detectado. Por favor, verifique si desea registrar un pago y active explícitamente la opción.',
+          debug: {
+            mensaje: 'Esto puede ocurrir si el formulario no se resetó correctamente entre XMLs',
+            solucion: 'Actualice la página y vuelva a cargar el XML'
+          }
+        });
+      }
+
+      // Continuar validaciones si hay pago activo
+      if (pagoInmediato === true || pagoInmediato === 'true') {
+        console.log('💰 Pago inmediato explícitamente activado, validando datos:', datosPago);
+        
+        // 🔴 CORRECCIÓN: Definir valorFacturaNum en el contexto correcto
+        const valorFacturaNum = parseFloat(valorFactura || 0);
         
         // Validaciones específicas de pago
         if (!datosPago.monto || datosPago.monto <= 0) {
@@ -2481,24 +2552,114 @@ const cajaController = {
   /**
    * RESTAURADO: Listado de pagos
    */
+  // 🔴 CORRECCIÓN BUG 3: Listado de Pagos Vacío
   listarPagos: async (req, res) => {
     try {
-      // Obtener pagos recientes
-      const pagos = await Documento.findAll({
-        where: {
-          estado_pago: 'pagado', // CORREGIDO: usar camelCase
-          numero_factura: { [Op.not]: null }, // CORREGIDO: usar camelCase
-          estado: { [Op.notIn]: ['eliminado', 'nota_credito', 'cancelado'] }
+      console.log('📋 [BUG FIX] Cargando listado de pagos corregido...');
+      
+      // Parámetros de filtros y paginación
+      const { 
+        fechaInicio, 
+        fechaFin, 
+        metodoPago, 
+        busqueda,
+        page = 1,
+        limit = 50 
+      } = req.query;
+      
+      // Construir condiciones WHERE corregidas
+      const whereConditions = {
+        // 🔴 CORRECCIÓN: Incluir TODOS los estados de pago válidos
+        estadoPago: { 
+          [Op.in]: ['pagado_completo', 'pagado_con_retencion', 'pago_parcial'] 
         },
+        numeroFactura: { [Op.not]: null },
+        estado: { [Op.notIn]: ['eliminado', 'nota_credito', 'cancelado'] }
+      };
+      
+      // Filtros adicionales
+      if (fechaInicio && fechaFin) {
+        whereConditions.fechaUltimoPago = {
+          [Op.between]: [new Date(fechaInicio), new Date(fechaFin)]
+        };
+      }
+      
+      if (metodoPago && metodoPago !== '') {
+        whereConditions.metodoPago = metodoPago;
+      }
+      
+      if (busqueda && busqueda.trim() !== '') {
+        whereConditions[Op.or] = [
+          { nombreCliente: { [Op.iLike]: `%${busqueda.trim()}%` } },
+          { identificacionCliente: { [Op.iLike]: `%${busqueda.trim()}%` } },
+          { numeroFactura: { [Op.iLike]: `%${busqueda.trim()}%` } },
+          { codigoBarras: { [Op.iLike]: `%${busqueda.trim()}%` } }
+        ];
+      }
+      
+      console.log('🔍 [BUG FIX] Condiciones de búsqueda:', whereConditions);
+      
+      // Calcular offset para paginación
+      const offset = (parseInt(page) - 1) * parseInt(limit);
+      
+      // Obtener documentos con pagos
+      const { count, rows: pagos } = await Documento.findAndCountAll({
+        where: whereConditions,
         include: [
           {
             model: Matrizador,
             as: 'matrizador',
-            attributes: ['id', 'nombre', 'email']
+            attributes: ['id', 'nombre', 'email'],
+            required: false
           }
         ],
-        order: [['fecha_pago', 'DESC']], // CORREGIDO: usar camelCase
-        limit: 50
+        order: [['fechaUltimoPago', 'DESC']],
+        limit: parseInt(limit),
+        offset: offset,
+        distinct: true
+      });
+      
+      console.log(`✅ [BUG FIX] Encontrados ${count} pagos totales, mostrando ${pagos.length} en página ${page}`);
+      
+      // Calcular totales
+      const totalRecaudado = pagos.reduce((total, pago) => {
+        return total + (parseFloat(pago.valorPagado) || 0);
+      }, 0);
+      
+      // Configurar paginación
+      const totalPages = Math.ceil(count / parseInt(limit));
+      const pagination = {
+        current: parseInt(page),
+        total: totalPages,
+        limit: parseInt(limit),
+        count: count,
+        prev: parseInt(page) > 1 ? `/caja/pagos?page=${parseInt(page) - 1}` : null,
+        next: parseInt(page) < totalPages ? `/caja/pagos?page=${parseInt(page) + 1}` : null,
+        pages: []
+      };
+      
+      // Generar números de página
+      for (let i = 1; i <= totalPages; i++) {
+        pagination.pages.push({
+          num: i,
+          url: `/caja/pagos?page=${i}`,
+          active: i === parseInt(page)
+        });
+      }
+      
+      // Configurar filtros para la vista
+      const filtros = {
+        fechaInicio: fechaInicio || '',
+        fechaFin: fechaFin || '',
+        metodoPago: metodoPago || '',
+        busqueda: busqueda || ''
+      };
+      
+      console.log('📊 [BUG FIX] Datos para vista:', {
+        totalPagos: count,
+        totalRecaudado: totalRecaudado.toFixed(2),
+        paginaActual: page,
+        totalPaginas: totalPages
       });
 
       res.render('caja/pagos/listado', {
@@ -2506,15 +2667,19 @@ const cajaController = {
         title: 'Gestión de Pagos',
         userRole: req.matrizador?.rol,
         userName: req.matrizador?.nombre,
-        pagos
+        pagos,
+        totalRecaudado: totalRecaudado.toFixed(2),
+        pagination,
+        filtros
       });
+      
     } catch (error) {
-      console.error('Error al listar pagos:', error);
+      console.error('❌ [BUG FIX] Error al listar pagos:', error);
       return res.status(500).render('error', {
         layout: 'caja',
         title: 'Error',
         message: 'Error al cargar el listado de pagos',
-        error
+        error: process.env.NODE_ENV === 'development' ? error : {}
       });
     }
   },
@@ -3769,5 +3934,674 @@ function analizarTipoServicioNotarial(xmlString, datosExtraidos) {
 // Funciones auxiliares para extraer datos del XML
 
 
+
+// ============================================================================
+// SISTEMA DE REVERSIÓN DISTRIBUIDA - FUNCIONES PARA CAJA
+// ============================================================================
+
+/**
+ * DESHACER PAGO - Solo para rol Caja
+ * Marca un pago como revertido y recalcula estado financiero del documento
+ */
+cajaController.deshacerPago = async (req, res) => {
+  try {
+    const { id } = req.params; // ID del pago
+    const { motivoCategoria, justificacion } = req.body;
+    
+    // Validaciones iniciales
+    if (!justificacion || justificacion.length < 20) {
+      return res.status(400).json({
+        error: 'Justificación requerida',
+        mensaje: 'La justificación debe tener al menos 20 caracteres'
+      });
+    }
+    
+    // Obtener pago y documento
+    const Pago = require('../models/Pago');
+    const pago = await Pago.findByPk(id);
+    if (!pago) {
+      return res.status(404).json({
+        error: 'Pago no encontrado'
+      });
+    }
+    
+    // Verificar que el pago no esté ya revertido
+    if (pago.revertido) {
+      return res.status(400).json({
+        error: 'El pago ya está revertido'
+      });
+    }
+    
+    const documento = await Documento.findByPk(pago.documentoId);
+    if (!documento) {
+      return res.status(404).json({
+        error: 'Documento asociado no encontrado'
+      });
+    }
+    
+    // Validar si se puede revertir el pago (sin restricciones de tiempo)
+    const validacion = validarReversionPago(pago);
+    if (!validacion.valida) {
+      return res.status(400).json({
+        error: validacion.mensaje
+      });
+    }
+    
+    // Ejecutar reversión en transacción
+    const resultado = await sequelize.transaction(async (t) => {
+      const estadoPagoAnterior = documento.estadoPago;
+      const valorPagadoAnterior = parseFloat(documento.valorPagado) || 0;
+      const valorPendienteAnterior = parseFloat(documento.valorPendiente) || 0;
+      
+      // Marcar pago como revertido
+      pago.revertido = true;
+      pago.fechaReversion = new Date();
+      pago.motivoReversion = motivoCategoria;
+      pago.justificacionReversion = justificacion;
+      await pago.save({ transaction: t });
+      
+      // Recalcular valores del documento
+      const montoPago = parseFloat(pago.monto);
+      const nuevoValorPagado = valorPagadoAnterior - montoPago;
+      const nuevoValorPendiente = valorPendienteAnterior + montoPago;
+      
+      // Actualizar documento
+      documento.valorPagado = nuevoValorPagado;
+      documento.valorPendiente = nuevoValorPendiente;
+      
+      // Recalcular estado de pago
+      documento.estadoPago = calcularEstadoPago(documento);
+      await documento.save({ transaction: t });
+      
+      // Registrar en auditoría de reversiones
+      const ReversionAuditoria = require('../models/ReversionAuditoria');
+      await ReversionAuditoria.create({
+        tipoReversion: 'deshacer_pago',
+        documentoId: documento.id,
+        pagoId: pago.id,
+        usuarioId: req.matrizador.id,
+        rolUsuario: req.matrizador.rol,
+        estadoAnterior: estadoPagoAnterior,
+        estadoNuevo: documento.estadoPago,
+        datosAnteriores: {
+          valorPagado: valorPagadoAnterior,
+          valorPendiente: valorPendienteAnterior,
+          montoPago: montoPago,
+          metodoPago: pago.formaPago
+        },
+        datosNuevos: {
+          valorPagado: nuevoValorPagado,
+          valorPendiente: nuevoValorPendiente,
+          pagoRevertido: true
+        },
+        motivoCategoria,
+        justificacion,
+        ipAddress: req.ip
+      }, { transaction: t });
+      
+      // Registrar evento en historial
+      await EventoDocumento.create({
+        documentoId: documento.id,
+        usuarioId: req.matrizador.id,
+        tipo: 'reversion_pago',
+        categoria: 'financiero',
+        titulo: 'Pago revertido por Caja',
+        descripcion: `Pago de $${montoPago} revertido. Motivo: ${motivoCategoria}`,
+        detalles: {
+          pagoId: pago.id,
+          montoRevertido: montoPago,
+          metodoPago: pago.formaPago,
+          estadoPagoAnterior,
+          estadoPagoNuevo: documento.estadoPago
+        },
+        usuario: req.matrizador.nombre
+      }, { transaction: t });
+      
+      return {
+        documento,
+        pago,
+        cambiosFinancieros: {
+          valorPagadoAnterior,
+          valorPagadoNuevo: nuevoValorPagado,
+          valorPendienteAnterior,
+          valorPendienteNuevo: nuevoValorPendiente,
+          estadoPagoAnterior,
+          estadoPagoNuevo: documento.estadoPago
+        }
+      };
+    });
+    
+    res.json({
+      success: true,
+      mensaje: 'Pago revertido exitosamente',
+      cambios: resultado.cambiosFinancieros
+    });
+    
+  } catch (error) {
+    console.error('❌ Error en reversión de pago:', error);
+    res.status(500).json({
+      error: 'Error interno del sistema',
+      mensaje: 'No se pudo revertir el pago'
+    });
+  }
+};
+
+/**
+ * CORREGIR PAGO - Solo para rol Caja
+ * Permite cambiar método de pago o ajustar monto con justificación
+ */
+cajaController.corregirPago = async (req, res) => {
+  try {
+    const { id } = req.params; // ID del pago
+    const { tipoCorreccion, nuevoMetodo, nuevoMonto, motivoCategoria, justificacion } = req.body;
+    
+    // Validaciones iniciales
+    if (!justificacion || justificacion.length < 20) {
+      return res.status(400).json({
+        error: 'Justificación requerida',
+        mensaje: 'La justificación debe tener al menos 20 caracteres'
+      });
+    }
+    
+    if (!['metodo_pago', 'monto_pago'].includes(tipoCorreccion)) {
+      return res.status(400).json({
+        error: 'Tipo de corrección no válido',
+        tiposPermitidos: ['metodo_pago', 'monto_pago']
+      });
+    }
+    
+    // Obtener pago y documento
+    const Pago = require('../models/Pago');
+    const pago = await Pago.findByPk(id);
+    if (!pago) {
+      return res.status(404).json({
+        error: 'Pago no encontrado'
+      });
+    }
+    
+    const documento = await Documento.findByPk(pago.documentoId);
+    if (!documento) {
+      return res.status(404).json({
+        error: 'Documento asociado no encontrado'
+      });
+    }
+    
+    // Validaciones específicas por tipo de corrección
+    if (tipoCorreccion === 'metodo_pago') {
+      const metodosValidos = ['efectivo', 'transferencia', 'cheque', 'tarjeta_credito', 'tarjeta_debito', 'otros'];
+      if (!metodosValidos.includes(nuevoMetodo)) {
+        return res.status(400).json({
+          error: 'Método de pago no válido',
+          metodosPermitidos: metodosValidos
+        });
+      }
+    }
+    
+    if (tipoCorreccion === 'monto_pago') {
+      const montoNumerico = parseFloat(nuevoMonto);
+      if (isNaN(montoNumerico) || montoNumerico <= 0) {
+        return res.status(400).json({
+          error: 'El nuevo monto debe ser un número mayor a 0'
+        });
+      }
+      
+      // Validar que el nuevo monto no exceda el valor de la factura
+      const valorFactura = parseFloat(documento.valorFactura) || 0;
+      if (montoNumerico > valorFactura) {
+        return res.status(400).json({
+          error: `El monto no puede exceder el valor de la factura ($${valorFactura})`
+        });
+      }
+    }
+    
+    // Ejecutar corrección en transacción
+    const resultado = await sequelize.transaction(async (t) => {
+      const valoresAnteriores = {
+        formaPago: pago.formaPago,
+        monto: parseFloat(pago.monto),
+        estadoPago: documento.estadoPago,
+        valorPagado: parseFloat(documento.valorPagado),
+        valorPendiente: parseFloat(documento.valorPendiente)
+      };
+      
+      let valoresNuevos = { ...valoresAnteriores };
+      let tipoReversionAuditoria = '';
+      
+      // Aplicar corrección específica
+      if (tipoCorreccion === 'metodo_pago') {
+        pago.formaPago = nuevoMetodo;
+        valoresNuevos.formaPago = nuevoMetodo;
+        tipoReversionAuditoria = 'corregir_metodo_pago';
+      } else if (tipoCorreccion === 'monto_pago') {
+        const diferenciaMonto = parseFloat(nuevoMonto) - parseFloat(pago.monto);
+        
+        pago.monto = nuevoMonto;
+        valoresNuevos.monto = parseFloat(nuevoMonto);
+        
+        // Recalcular valores del documento
+        documento.valorPagado = parseFloat(documento.valorPagado) + diferenciaMonto;
+        documento.valorPendiente = parseFloat(documento.valorPendiente) - diferenciaMonto;
+        
+        valoresNuevos.valorPagado = parseFloat(documento.valorPagado);
+        valoresNuevos.valorPendiente = parseFloat(documento.valorPendiente);
+        
+        // Recalcular estado de pago
+        documento.estadoPago = calcularEstadoPago(documento);
+        valoresNuevos.estadoPago = documento.estadoPago;
+        
+        tipoReversionAuditoria = 'ajustar_monto_pago';
+      }
+      
+      await pago.save({ transaction: t });
+      if (tipoCorreccion === 'monto_pago') {
+        await documento.save({ transaction: t });
+      }
+      
+      // Registrar en auditoría
+      const ReversionAuditoria = require('../models/ReversionAuditoria');
+      await ReversionAuditoria.create({
+        tipoReversion: tipoReversionAuditoria,
+        documentoId: documento.id,
+        pagoId: pago.id,
+        usuarioId: req.matrizador.id,
+        rolUsuario: req.matrizador.rol,
+        estadoAnterior: valoresAnteriores.estadoPago,
+        estadoNuevo: valoresNuevos.estadoPago,
+        datosAnteriores: valoresAnteriores,
+        datosNuevos: valoresNuevos,
+        motivoCategoria,
+        justificacion,
+        ipAddress: req.ip
+      }, { transaction: t });
+      
+      // Registrar evento
+      await EventoDocumento.create({
+        documentoId: documento.id,
+        usuarioId: req.matrizador.id,
+        tipo: 'correccion_pago',
+        categoria: 'financiero',
+        titulo: `Corrección de pago: ${tipoCorreccion}`,
+        descripcion: `Caja ${req.matrizador.nombre} corrigió ${tipoCorreccion}. Motivo: ${motivoCategoria}`,
+        detalles: {
+          pagoId: pago.id,
+          tipoCorreccion,
+          valoresAnteriores,
+          valoresNuevos
+        },
+        usuario: req.matrizador.nombre
+      }, { transaction: t });
+      
+      return { valoresAnteriores, valoresNuevos };
+    });
+    
+    res.json({
+      success: true,
+      mensaje: 'Pago corregido exitosamente',
+      cambios: resultado
+    });
+    
+  } catch (error) {
+    console.error('❌ Error en corrección de pago:', error);
+    res.status(500).json({
+      error: 'Error interno del sistema',
+      mensaje: 'No se pudo corregir el pago'
+    });
+  }
+};
+
+/**
+ * DESHACER RETENCIÓN - Solo para rol Caja
+ * Remueve una retención aplicada incorrectamente
+ */
+cajaController.deshacerRetencion = async (req, res) => {
+  try {
+    const { id } = req.params; // ID de la retención
+    const { motivoCategoria, justificacion } = req.body;
+    
+    // Validaciones iniciales
+    if (!justificacion || justificacion.length < 20) {
+      return res.status(400).json({
+        error: 'Justificación requerida',
+        mensaje: 'La justificación debe tener al menos 20 caracteres'
+      });
+    }
+    
+    // Buscar retención (puede estar en Pago con esRetencion=true o en tabla separada)
+    const Pago = require('../models/Pago');
+    const retencion = await Pago.findOne({
+      where: {
+        id,
+        esRetencion: true
+      }
+    });
+    
+    if (!retencion) {
+      return res.status(404).json({
+        error: 'Retención no encontrada'
+      });
+    }
+    
+    const documento = await Documento.findByPk(retencion.documentoId);
+    if (!documento) {
+      return res.status(404).json({
+        error: 'Documento asociado no encontrado'
+      });
+    }
+    
+    // Ejecutar reversión de retención en transacción
+    const resultado = await sequelize.transaction(async (t) => {
+      const valoresAnteriores = {
+        valorRetenido: parseFloat(documento.valorRetenido) || 0,
+        valorPendiente: parseFloat(documento.valorPendiente) || 0,
+        estadoPago: documento.estadoPago,
+        montoRetencion: parseFloat(retencion.monto)
+      };
+      
+      // Eliminar retención (marcándola como revertida)
+      retencion.revertido = true;
+      retencion.fechaReversion = new Date();
+      await retencion.save({ transaction: t });
+      
+      // Recalcular valores del documento
+      const nuevoValorRetenido = Math.max(0, valoresAnteriores.valorRetenido - valoresAnteriores.montoRetencion);
+      const nuevoValorPendiente = valoresAnteriores.valorPendiente + valoresAnteriores.montoRetencion;
+      
+      documento.valorRetenido = nuevoValorRetenido;
+      documento.valorPendiente = nuevoValorPendiente;
+      documento.estadoPago = calcularEstadoPago(documento);
+      
+      await documento.save({ transaction: t });
+      
+      const valoresNuevos = {
+        valorRetenido: nuevoValorRetenido,
+        valorPendiente: nuevoValorPendiente,
+        estadoPago: documento.estadoPago
+      };
+      
+      // Registrar en auditoría
+      const ReversionAuditoria = require('../models/ReversionAuditoria');
+      await ReversionAuditoria.create({
+        tipoReversion: 'deshacer_retencion',
+        documentoId: documento.id,
+        pagoId: retencion.id,
+        usuarioId: req.matrizador.id,
+        rolUsuario: req.matrizador.rol,
+        estadoAnterior: valoresAnteriores.estadoPago,
+        estadoNuevo: valoresNuevos.estadoPago,
+        datosAnteriores: valoresAnteriores,
+        datosNuevos: valoresNuevos,
+        motivoCategoria,
+        justificacion,
+        ipAddress: req.ip
+      }, { transaction: t });
+      
+      // Registrar evento
+      await EventoDocumento.create({
+        documentoId: documento.id,
+        usuarioId: req.matrizador.id,
+        tipo: 'reversion_retencion',
+        categoria: 'financiero',
+        titulo: 'Retención revertida por Caja',
+        descripcion: `Retención de $${valoresAnteriores.montoRetencion} revertida. Motivo: ${motivoCategoria}`,
+        detalles: {
+          retencionId: retencion.id,
+          montoRevertido: valoresAnteriores.montoRetencion,
+          valoresAnteriores,
+          valoresNuevos
+        },
+        usuario: req.matrizador.nombre
+      }, { transaction: t });
+      
+      return { valoresAnteriores, valoresNuevos };
+    });
+    
+    res.json({
+      success: true,
+      mensaje: 'Retención revertida exitosamente',
+      cambios: resultado
+    });
+    
+  } catch (error) {
+    console.error('❌ Error en reversión de retención:', error);
+    res.status(500).json({
+      error: 'Error interno del sistema',
+      mensaje: 'No se pudo revertir la retención'
+    });
+  }
+};
+
+/**
+ * FUNCIÓN AUXILIAR: Validar si se puede revertir un pago
+ */
+function validarReversionPago(pago) {
+  // NOTA: Se eliminaron las validaciones de tiempo para permitir reversiones en cualquier momento
+  // En la práctica, los errores pueden descubrirse días o semanas después
+  
+  return { valida: true };
+}
+
+/**
+ * CORREGIR PAGO VIRTUAL - Actualiza pago registrado al crear el documento
+ */
+cajaController.corregirPagoVirtual = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { tipoCorreccion, nuevoMetodo, nuevoMonto, montoAnterior, metodoAnterior, motivoCategoria, justificacion } = req.body;
+    
+    // Validaciones iniciales
+    if (!justificacion || justificacion.length < 20) {
+      return res.status(400).json({
+        error: 'Justificación requerida',
+        mensaje: 'La justificación debe tener al menos 20 caracteres'
+      });
+    }
+    
+    const documento = await Documento.findByPk(id);
+    if (!documento) {
+      return res.status(404).json({
+        error: 'Documento no encontrado'
+      });
+    }
+    
+    // Ejecutar corrección en transacción
+    const resultado = await sequelize.transaction(async (t) => {
+      const valoresAnteriores = {
+        valorPagado: parseFloat(documento.valorPagado) || 0,
+        valorPendiente: parseFloat(documento.valorPendiente) || 0,
+        estadoPago: documento.estadoPago,
+        metodoPagoOriginal: metodoAnterior
+      };
+      
+      // Aplicar corrección según el tipo
+      if (tipoCorreccion === 'monto_pago') {
+        const diferencia = parseFloat(nuevoMonto) - montoAnterior;
+        documento.valorPagado = parseFloat(nuevoMonto);
+        documento.valorPendiente = Math.max(0, parseFloat(documento.valorPendiente) - diferencia);
+      }
+      
+      // CORRECCIÓN: También actualizar el método de pago en el documento
+      if (tipoCorreccion === 'metodo_pago' || nuevoMetodo !== metodoAnterior) {
+        documento.metodoPago = nuevoMetodo;
+        console.log(`✅ Actualizando método de pago: ${metodoAnterior} → ${nuevoMetodo}`);
+      }
+      
+      documento.estadoPago = calcularEstadoPago(documento);
+      await documento.save({ transaction: t });
+      
+      const valoresNuevos = {
+        valorPagado: parseFloat(documento.valorPagado) || 0,
+        valorPendiente: parseFloat(documento.valorPendiente) || 0,
+        estadoPago: documento.estadoPago,
+        metodoPagoNuevo: nuevoMetodo
+      };
+      
+      // Registrar en auditoría
+      const ReversionAuditoria = require('../models/ReversionAuditoria');
+      await ReversionAuditoria.create({
+        tipoReversion: 'correccion_pago_virtual',
+        documentoId: documento.id,
+        usuarioId: req.matrizador.id,
+        rolUsuario: req.matrizador.rol,
+        estadoAnterior: valoresAnteriores.estadoPago,
+        estadoNuevo: valoresNuevos.estadoPago,
+        datosAnteriores: valoresAnteriores,
+        datosNuevos: valoresNuevos,
+        motivoCategoria,
+        justificacion,
+        ipAddress: req.ip
+      }, { transaction: t });
+      
+      // Registrar evento
+      await EventoDocumento.create({
+        documentoId: documento.id,
+        usuarioId: req.matrizador.id,
+        tipo: 'correccion_pago_virtual',
+        categoria: 'financiero',
+        titulo: `Corrección de pago original: ${tipoCorreccion}`,
+        descripcion: `Caja ${req.matrizador.nombre} corrigió pago registrado al crear documento. Motivo: ${motivoCategoria}`,
+        detalles: {
+          tipoCorreccion,
+          valoresAnteriores,
+          valoresNuevos,
+          esVirtual: true
+        },
+        usuario: req.matrizador.nombre
+      }, { transaction: t });
+      
+      return { valoresAnteriores, valoresNuevos };
+    });
+    
+    res.json({
+      success: true,
+      mensaje: 'Pago original corregido exitosamente',
+      cambios: resultado
+    });
+    
+  } catch (error) {
+    console.error('❌ Error en corrección de pago virtual:', error);
+    res.status(500).json({
+      error: 'Error interno del sistema',
+      mensaje: 'No se pudo corregir el pago original'
+    });
+  }
+};
+
+/**
+ * DESHACER PAGO VIRTUAL - Revierte pago registrado al crear el documento
+ */
+cajaController.deshacerPagoVirtual = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { montoOriginal, metodoOriginal, motivoCategoria, justificacion } = req.body;
+    
+    // Validaciones iniciales
+    if (!justificacion || justificacion.length < 20) {
+      return res.status(400).json({
+        error: 'Justificación requerida',
+        mensaje: 'La justificación debe tener al menos 20 caracteres'
+      });
+    }
+    
+    const documento = await Documento.findByPk(id);
+    if (!documento) {
+      return res.status(404).json({
+        error: 'Documento no encontrado'
+      });
+    }
+    
+    // Ejecutar reversión en transacción
+    const resultado = await sequelize.transaction(async (t) => {
+      const valoresAnteriores = {
+        valorPagado: parseFloat(documento.valorPagado) || 0,
+        valorPendiente: parseFloat(documento.valorPendiente) || 0,
+        estadoPago: documento.estadoPago,
+        metodoPagoOriginal: metodoOriginal
+      };
+      
+      // Revertir pago virtual
+      documento.valorPagado = 0;
+      documento.valorPendiente = parseFloat(documento.valorFactura) || 0;
+      documento.estadoPago = 'pendiente';
+      await documento.save({ transaction: t });
+      
+      const valoresNuevos = {
+        valorPagado: 0,
+        valorPendiente: parseFloat(documento.valorFactura) || 0,
+        estadoPago: 'pendiente'
+      };
+      
+      // Registrar en auditoría
+      const ReversionAuditoria = require('../models/ReversionAuditoria');
+      await ReversionAuditoria.create({
+        tipoReversion: 'reversion_pago_virtual',
+        documentoId: documento.id,
+        usuarioId: req.matrizador.id,
+        rolUsuario: req.matrizador.rol,
+        estadoAnterior: valoresAnteriores.estadoPago,
+        estadoNuevo: valoresNuevos.estadoPago,
+        datosAnteriores: valoresAnteriores,
+        datosNuevos: valoresNuevos,
+        motivoCategoria,
+        justificacion,
+        ipAddress: req.ip
+      }, { transaction: t });
+      
+      // Registrar evento
+      await EventoDocumento.create({
+        documentoId: documento.id,
+        usuarioId: req.matrizador.id,
+        tipo: 'reversion_pago_virtual',
+        categoria: 'financiero',
+        titulo: 'Pago original revertido',
+        descripcion: `Caja ${req.matrizador.nombre} revirtió pago de $${montoOriginal} registrado al crear documento. Motivo: ${motivoCategoria}`,
+        detalles: {
+          montoRevertido: montoOriginal,
+          metodoOriginal,
+          valoresAnteriores,
+          valoresNuevos,
+          esVirtual: true
+        },
+        usuario: req.matrizador.nombre
+      }, { transaction: t });
+      
+      return { valoresAnteriores, valoresNuevos };
+    });
+    
+    res.json({
+      success: true,
+      mensaje: 'Pago original revertido exitosamente',
+      cambios: resultado
+    });
+    
+  } catch (error) {
+    console.error('❌ Error en reversión de pago virtual:', error);
+    res.status(500).json({
+      error: 'Error interno del sistema',
+      mensaje: 'No se pudo revertir el pago original'
+    });
+  }
+};
+
+/**
+ * FUNCIÓN AUXILIAR: Calcular estado de pago basado en valores actuales
+ */
+function calcularEstadoPago(documento) {
+  const valorFactura = parseFloat(documento.valorFactura) || 0;
+  const valorPagado = parseFloat(documento.valorPagado) || 0;
+  const valorRetenido = parseFloat(documento.valorRetenido) || 0;
+  const valorPendiente = parseFloat(documento.valorPendiente) || 0;
+  
+  if (valorPendiente <= 0.01) { // Tolerancia de 1 centavo
+    if (valorRetenido > 0) {
+      return 'pagado_con_retencion';
+    } else {
+      return 'pagado_completo';
+    }
+  } else if (valorPagado > 0) {
+    return 'pago_parcial';
+  } else {
+    return 'pendiente';
+  }
+}
 
 module.exports = cajaController;

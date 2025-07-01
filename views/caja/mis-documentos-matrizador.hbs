@@ -159,9 +159,7 @@
                         <a href="/caja/documentos/detalle/{{id}}" class="btn btn-sm btn-outline-primary" title="Ver detalle">
                           <i class="fas fa-eye"></i>
                         </a>
-                        <a href="/caja/documentos/editar/{{id}}" class="btn btn-sm btn-outline-warning" title="Editar">
-                          <i class="fas fa-edit"></i>
-                        </a>
+                                        {{!-- ELIMINADO: Botón de editar - Caja no puede editar documentos completos --}}
                         {{#if (eq estado 'en_proceso')}}
                           <button type="button" class="btn btn-sm btn-outline-success" 
                                   onclick="marcarListo({{id}})" title="Marcar como listo">

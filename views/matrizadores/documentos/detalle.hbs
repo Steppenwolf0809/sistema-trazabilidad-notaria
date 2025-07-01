@@ -708,7 +708,7 @@
         <div class="alert alert-success">
           <i class="fas fa-check-circle"></i>
           <strong>✅ Documento pagado</strong><br>
-          Estado de pago: <span class="badge bg-success">${estadoPago.replace('_', ' ').toUpperCase()}</span><br>
+          Estado de pago: <span class="badge bg-success text-white px-2 py-1 rounded">${estadoPago.replace('_', ' ').toUpperCase()}</span><br>
           <small class="text-success">El cliente ya completó el pago. Listo para entrega.</small>
         </div>
         <p>¿Confirma marcar como listo para entrega?</p>
@@ -724,7 +724,7 @@
         <div class="alert alert-warning">
           <i class="fas fa-shield-check"></i>
           <strong>Cliente con crédito autorizado</strong><br>
-          Estado de pago: <span class="badge bg-warning text-dark">${estadoPago.replace('_', ' ').toUpperCase()}</span><br>
+          Estado de pago: <span class="badge bg-warning text-dark px-2 py-1 rounded">${estadoPago.replace('_', ' ').toUpperCase()}</span><br>
           Justificación: ${formatearJustificacion(documento?.justificacion_entrega_sin_pago)}<br>
           ${fuenteTexto}
         </div>
@@ -749,7 +749,7 @@
         <div class="alert alert-info">
           <i class="fas fa-credit-card"></i>
           <strong>Entrega con verificación de pago</strong><br>
-          Estado de pago: <span class="badge bg-secondary">${estadoPago.replace('_', ' ').toUpperCase()}</span><br>
+          Estado de pago: <span class="badge bg-secondary text-white px-2 py-1 rounded">${estadoPago.replace('_', ' ').toUpperCase()}</span><br>
           Recepción verificará que el pago esté al día antes de entregar.<br>
           ${fuenteTexto}
         </div>

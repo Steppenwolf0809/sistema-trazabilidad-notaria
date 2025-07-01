@@ -869,6 +869,33 @@ const helpers = {
       result.push(i);
     }
     return result;
+  },
+
+  /**
+   * ✨ CRÍTICO: Helper esReciente para verificar si una fecha es reciente
+   * Usado en vista admin para determinar si se puede reactivar un documento eliminado
+   * ACTUALIZADO: Permite reactivación sin límite de tiempo para flexibilidad operativa
+   */
+  esReciente: (fecha) => {
+    if (!fecha) return false;
+    
+    const fechaEvento = new Date(fecha);
+    
+    // Verificar que la fecha sea válida
+    if (isNaN(fechaEvento.getTime())) return false;
+    
+    // CAMBIO: Siempre retorna true para permitir reactivación en cualquier momento
+    // En la práctica, los errores pueden descubrirse días o semanas después
+    return true;
+  },
+
+  /**
+   * ✨ CRÍTICO: Helper para verificar si hay pagos no revertidos
+   * Usado en vista de Caja para mostrar/ocultar la sección de correcciones de pagos
+   */
+  hayPagosNoRevertidos: (pagos) => {
+    if (!pagos || !Array.isArray(pagos)) return false;
+    return pagos.some(pago => !pago.revertido);
   }
 };
 

@@ -151,12 +151,12 @@
             <div class="d-flex align-items-center justify-content-between mb-3">
               <div>
                 <h6 class="mb-1">¿El cliente paga en este momento?</h6>
-                <small class="text-muted">Active esta opción si el cliente realiza el pago al crear el documento</small>
+                <small class="text-muted">Active esta opción para registrar el pago junto con el documento</small>
               </div>
               <div class="form-check form-switch">
                 <input class="form-check-input" type="checkbox" id="togglePagoInmediato" style="transform: scale(1.5);">
                 <label class="form-check-label fw-bold" for="togglePagoInmediato" id="labelTogglePago">
-                  <span class="text-danger">❌ No paga ahora</span>
+                  <span class="text-secondary">💳 Activar registro de pago</span>
                 </label>
               </div>
             </div>
@@ -429,7 +429,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (pagoInmediatoActivo) {
       // Activar pago inmediato
       formularioPago.style.display = 'block';
-      labelToggle.innerHTML = '<span class="text-success">✅ Paga ahora</span>';
+      labelToggle.innerHTML = '<span class="text-success">✅ Registrar pago ahora</span>';
       textoBoton.textContent = 'Guardar Documento + Pago';
       btnConfirmar.className = 'btn btn-primary';
       
@@ -445,7 +445,7 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
       // Desactivar pago inmediato
       formularioPago.style.display = 'none';
-      labelToggle.innerHTML = '<span class="text-danger">❌ No paga ahora</span>';
+      labelToggle.innerHTML = '<span class="text-secondary">💳 Activar registro de pago</span>';
       textoBoton.textContent = 'Confirmar y Registrar Documento';
       btnConfirmar.className = 'btn btn-success';
       
@@ -1089,11 +1089,90 @@ document.addEventListener('DOMContentLoaded', function() {
     ocultarTodasLasSecciones();
     formUpload.reset();
     datosDocumento = null;
+    
+    // 🔴 CORRECCIÓN BUG 1: RESETEAR FORMULARIO DE PAGO ENTRE XMLs
+    resetearFormularioPago();
   };
   
   window.limpiarTodo = function() {
     volverACarga();
   };
+  
+  // 🔴 NUEVA FUNCIÓN: Resetear formulario de pago a estado inicial
+  function resetearFormularioPago() {
+    console.log('🔄 [BUG FIX] Reseteando formulario de pago...');
+    
+    try {
+      // Resetear toggle principal a "NO PAGA"
+      const togglePago = document.getElementById('togglePagoInmediato');
+      const labelToggle = document.getElementById('labelTogglePago');
+      const formularioPago = document.getElementById('formulario-pago-inmediato');
+      
+      if (togglePago) {
+        togglePago.checked = false;
+        console.log('✅ Toggle pago reseteado a FALSE');
+      }
+      
+      if (labelToggle) {
+        labelToggle.innerHTML = '<span class="text-secondary">💳 Activar registro de pago</span>';
+        console.log('✅ Label actualizado a estado inicial');
+      }
+      
+      if (formularioPago) {
+        formularioPago.style.display = 'none';
+        console.log('✅ Formulario de pago ocultado');
+      }
+      
+      // Resetear todos los radio buttons de tipo de pago
+      const radioButtons = document.querySelectorAll('input[name="tipoPago"]');
+      radioButtons.forEach(radio => {
+        radio.checked = false;
+      });
+      
+      // Resetear campos específicos de pago
+      ['montoPagoParcial', 'metodoPagoParcial', 'metodoPagoCompleto', 
+       'numeroComprobante', 'montoPagoRetencion', 'metodoPagoRetencion', 
+       'montoRetencionEstimado', 'observacionesPago'].forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+          if (field.type === 'number') {
+            field.value = '';
+          } else if (field.tagName === 'SELECT') {
+            field.selectedIndex = 0;
+          } else {
+            field.value = '';
+          }
+        }
+      });
+      
+      // Ocultar secciones específicas de pago
+      ['campos-pago-parcial', 'campos-pago-completo', 'campos-pago-retencion'].forEach(sectionId => {
+        const section = document.getElementById(sectionId);
+        if (section) {
+          section.style.display = 'none';
+        }
+      });
+      
+      // Resetear estilos de cards de tipo de pago
+      document.querySelectorAll('.tipo-pago-card').forEach(card => {
+        card.classList.remove('border-primary');
+      });
+      
+      // Actualizar valor en pantalla
+      const valorFacturaPago = document.getElementById('valor-factura-pago');
+      if (valorFacturaPago) {
+        valorFacturaPago.textContent = '$0.00';
+      }
+      
+      // Marcar que el pago no está activo
+      pagoInmediatoActivo = false;
+      
+      console.log('✅ [BUG FIX] Formulario de pago completamente reseteado');
+      
+    } catch (error) {
+      console.error('❌ Error reseteando formulario de pago:', error);
+    }
+  }
   
   // ==================== FUNCIONES PARA VALIDACIÓN MANUAL ====================
   

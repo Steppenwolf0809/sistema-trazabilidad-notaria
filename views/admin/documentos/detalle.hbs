@@ -371,6 +371,110 @@
     </div>
     {{/if}}
     
+    <!-- ============================================================================ -->
+    <!-- PANEL DE REVERSIONES - SOLO ADMIN -->
+    <!-- ============================================================================ -->
+    {{#if (eq userRole "admin")}}
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card border-warning">
+          <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0">
+              <i class="fas fa-undo me-2"></i>REVERSIONES DE EMERGENCIA - ADMIN
+            </h5>
+            <small>Solo usar en casos confirmados de error - Se registra en auditoría</small>
+          </div>
+          <div class="card-body">
+            <div class="alert alert-warning">
+              <i class="fas fa-exclamation-triangle me-2"></i>
+              <strong>Importante:</strong> Las reversiones son operaciones críticas que modifican el estado del documento. 
+              Requieren justificación detallada y quedan registradas permanentemente en auditoría.
+            </div>
+            
+            <div class="row">
+              <!-- Reversiones de Estado disponibles según el estado actual -->
+              {{#if (eq documento.estado "listo_para_entrega")}}
+              <div class="col-md-6 mb-3">
+                <div class="card h-100 border-info">
+                  <div class="card-body text-center">
+                    <i class="fas fa-arrow-left fa-2x text-info mb-2"></i>
+                    <h6>Desmarcar como Listo</h6>
+                    <p class="small text-muted">Devolver a estado "en proceso"</p>
+                    <button class="btn btn-info btn-sm" onclick="abrirModalReversion('desmarcar_listo', '{{documento.id}}')">
+                      <i class="fas fa-undo"></i> Ejecutar
+                    </button>
+                  </div>
+                </div>
+              </div>
+              {{/if}}
+              
+              {{#if (eq documento.estado "entregado")}}
+              <div class="col-md-6 mb-3">
+                <div class="card h-100 border-danger">
+                  <div class="card-body text-center">
+                    <i class="fas fa-hand-paper fa-2x text-danger mb-2"></i>
+                    <h6>Deshacer Entrega</h6>
+                    <p class="small text-muted">Marcar como "listo para entrega"</p>
+                    <button class="btn btn-danger btn-sm" onclick="abrirModalReversion('deshacer_entrega', '{{documento.id}}')">
+                      <i class="fas fa-undo"></i> Ejecutar
+                    </button>
+                  </div>
+                </div>
+              </div>
+              {{/if}}
+              
+              {{#if documento.notificacionGrupalId}}
+              <div class="col-md-6 mb-3">
+                <div class="card h-100 border-primary">
+                  <div class="card-body text-center">
+                    <i class="fas fa-unlink fa-2x text-primary mb-2"></i>
+                    <h6>Separar de Grupo</h6>
+                    <p class="small text-muted">Remover de notificación grupal</p>
+                    <button class="btn btn-primary btn-sm" onclick="abrirModalReversion('separar_grupo', '{{documento.id}}')">
+                      <i class="fas fa-unlink"></i> Ejecutar
+                    </button>
+                  </div>
+                </div>
+              </div>
+              {{/if}}
+              
+              {{#if (and documento.eliminado (esReciente documento.fechaEliminacion))}}
+              <div class="col-md-6 mb-3">
+                <div class="card h-100 border-success">
+                  <div class="card-body text-center">
+                    <i class="fas fa-recycle fa-2x text-success mb-2"></i>
+                    <h6>Reactivar Documento</h6>
+                    <p class="small text-muted">Restaurar documento eliminado</p>
+                    <button class="btn btn-success btn-sm" onclick="abrirModalReversion('reactivar_documento', '{{documento.id}}')">
+                      <i class="fas fa-recycle"></i> Ejecutar
+                    </button>
+                  </div>
+                </div>
+              </div>
+              {{/if}}
+              
+              <!-- Si no hay reversiones disponibles -->
+              {{#unless (or (eq documento.estado "listo_para_entrega") (eq documento.estado "entregado") documento.notificacionGrupalId (and documento.eliminado (esReciente documento.fechaEliminacion)))}}
+              <div class="col-12">
+                <div class="alert alert-info text-center">
+                  <i class="fas fa-info-circle me-2"></i>
+                  No hay reversiones disponibles para el estado actual del documento.
+                </div>
+              </div>
+              {{/unless}}
+            </div>
+            
+            <div class="text-end mt-3">
+              <a href="/admin/reversiones/auditoria" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-history me-1"></i> Ver Auditoría de Reversiones
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {{/if}}
+    
     <!-- 🆕 HISTORIAL UNIVERSAL -->
     {{> historial-universal eventos=eventos esAdmin=true userRole="admin"}}
   </div>
@@ -399,16 +503,219 @@
   </div>
 </div>
 
-<!-- CSS eliminado - Ahora usa el sistema universal -->
+<!-- ============================================================================ -->
+<!-- MODAL DE JUSTIFICACIÓN PARA REVERSIONES - ADMIN -->
+<!-- ============================================================================ -->
+<div class="modal fade" id="modalReversionAdmin" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-warning text-dark">
+        <h5 class="modal-title">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          Confirmar Reversión de Emergencia
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-danger">
+          <strong>⚠️ OPERACIÓN CRÍTICA:</strong> <span id="descripcionAccion"></span>
+          <br><small>Esta acción será registrada en auditoría con su usuario y timestamp.</small>
+        </div>
+        
+        <div class="mb-3">
+          <label class="form-label fw-bold">Categoría del error: <span class="text-danger">*</span></label>
+          <select id="motivoReversionAdmin" class="form-select" required>
+            <option value="">Seleccione el motivo...</option>
+            <option value="error_humano">Error humano en proceso</option>
+            <option value="error_sistema">Error del sistema</option>
+            <option value="solicitud_cliente">Solicitud justificada del cliente</option>
+            <option value="corrección_datos">Corrección de datos incorrectos</option>
+            <option value="procedimiento_urgente">Procedimiento urgente autorizado</option>
+            <option value="orden_judicial">Orden judicial o legal</option>
+            <option value="otros">Otros (especificar en justificación)</option>
+          </select>
+        </div>
+        
+        <div class="mb-3">
+          <label class="form-label fw-bold">Justificación detallada: <span class="text-danger">*</span></label>
+          <textarea id="justificacionReversionAdmin" class="form-control" rows="4" 
+                    placeholder="Explique detalladamente por qué es necesaria esta reversión. Incluya contexto, responsable del error original y impacto. Mínimo 20 caracteres."
+                    minlength="20" maxlength="1000" required></textarea>
+          <div class="form-text">
+            <span id="contadorCaracteresAdmin">0</span>/20 caracteres mínimos (máximo 1000)
+          </div>
+        </div>
+        
+        <div class="mb-3">
+          <div class="form-check">
+            <input type="checkbox" id="confirmarReversionAdmin" class="form-check-input" required>
+            <label class="form-check-label" for="confirmarReversionAdmin">
+              <strong>Confirmo que:</strong>
+              <ul class="mt-1 mb-0">
+                <li>Entiendo las consecuencias de esta reversión</li>
+                <li>La justificación es veraz y completa</li>
+                <li>Esta acción será registrada permanentemente en auditoría</li>
+                <li>Acepto la responsabilidad de esta decisión</li>
+              </ul>
+            </label>
+          </div>
+        </div>
+        
+        <div class="alert alert-info">
+          <i class="fas fa-info-circle me-2"></i>
+          <strong>Registro de auditoría:</strong> Esta reversión será visible en el historial del documento 
+          y en la auditoría general del sistema. No se puede deshacer una vez ejecutada.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times"></i> Cancelar
+        </button>
+        <button type="button" id="btnEjecutarReversionAdmin" class="btn btn-warning" disabled>
+          <i class="fas fa-undo"></i> Ejecutar Reversión
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
-  function marcarListo(id) {
-    document.getElementById('documentoId').value = id;
-    const modal = new bootstrap.Modal(document.getElementById('marcarListoModal'));
-    modal.show();
-  }
+// ============================================================================
+// SISTEMA DE REVERSIONES - ADMIN
+// ============================================================================
 
-  console.log('📖 Vista admin limpia cargada para documento {{documento.codigoBarras}}');
+let tipoReversionActual = '';
+let documentoIdActual = '';
+
+function abrirModalReversion(tipoReversion, documentoId) {
+  tipoReversionActual = tipoReversion;
+  documentoIdActual = documentoId;
+  
+  // Configurar descripción según tipo de reversión
+  const descripciones = {
+    'desmarcar_listo': 'Cambiará el estado de "listo para entrega" a "en proceso" y eliminará el código de verificación.',
+    'deshacer_entrega': 'Cambiará el estado de "entregado" a "listo para entrega" y limpiará todos los datos de entrega.',
+    'separar_grupo': 'Removerá el documento del grupo de notificación, permitiendo notificación individual.',
+    'reactivar_documento': 'Restaurará el documento eliminado y lo marcará como "en proceso".'
+  };
+  
+  document.getElementById('descripcionAccion').textContent = descripciones[tipoReversion] || 'Operación de reversión crítica';
+  
+  // Limpiar formulario
+  document.getElementById('motivoReversionAdmin').value = '';
+  document.getElementById('justificacionReversionAdmin').value = '';
+  document.getElementById('confirmarReversionAdmin').checked = false;
+  document.getElementById('btnEjecutarReversionAdmin').disabled = true;
+  actualizarContadorAdmin();
+  
+  // Mostrar modal
+  const modal = new bootstrap.Modal(document.getElementById('modalReversionAdmin'));
+  modal.show();
+}
+
+function actualizarContadorAdmin() {
+  const textarea = document.getElementById('justificacionReversionAdmin');
+  const contador = document.getElementById('contadorCaracteresAdmin');
+  const longitud = textarea.value.length;
+  
+  contador.textContent = longitud;
+  contador.className = longitud >= 20 ? 'text-success' : 'text-danger';
+  
+  validarFormularioAdmin();
+}
+
+function validarFormularioAdmin() {
+  const motivo = document.getElementById('motivoReversionAdmin').value;
+  const justificacion = document.getElementById('justificacionReversionAdmin').value;
+  const confirmacion = document.getElementById('confirmarReversionAdmin').checked;
+  
+  const esValido = motivo && justificacion.length >= 20 && confirmacion;
+  document.getElementById('btnEjecutarReversionAdmin').disabled = !esValido;
+}
+
+function ejecutarReversionAdmin() {
+  const motivo = document.getElementById('motivoReversionAdmin').value;
+  const justificacion = document.getElementById('justificacionReversionAdmin').value;
+  
+  if (!motivo || justificacion.length < 20) {
+    alert('Por favor complete todos los campos requeridos');
+    return;
+  }
+  
+  // Deshabilitar botón para evitar doble clic
+  const btn = document.getElementById('btnEjecutarReversionAdmin');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ejecutando...';
+  
+  // Hacer petición AJAX
+  fetch(`/admin/documentos/${documentoIdActual}/revertir-estado`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      tipoReversion: tipoReversionActual,
+      motivoCategoria: motivo,
+      justificacion: justificacion
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // Cerrar modal
+      const modal = bootstrap.Modal.getInstance(document.getElementById('modalReversionAdmin'));
+      modal.hide();
+      
+      // Mostrar mensaje de éxito
+      alert('✅ Reversión ejecutada exitosamente. La página se recargará para mostrar los cambios.');
+      
+      // Recargar página
+      location.reload();
+    } else {
+      alert('❌ Error: ' + (data.mensaje || data.error || 'No se pudo ejecutar la reversión'));
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-undo"></i> Ejecutar Reversión';
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('❌ Error de conexión. Intente nuevamente.');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-undo"></i> Ejecutar Reversión';
+  });
+}
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', function() {
+  const justificacionTextarea = document.getElementById('justificacionReversionAdmin');
+  const motivoSelect = document.getElementById('motivoReversionAdmin');
+  const confirmarCheck = document.getElementById('confirmarReversionAdmin');
+  const btnEjecutar = document.getElementById('btnEjecutarReversionAdmin');
+  
+  if (justificacionTextarea) {
+    justificacionTextarea.addEventListener('input', actualizarContadorAdmin);
+  }
+  
+  if (motivoSelect) {
+    motivoSelect.addEventListener('change', validarFormularioAdmin);
+  }
+  
+  if (confirmarCheck) {
+    confirmarCheck.addEventListener('change', validarFormularioAdmin);
+  }
+  
+  if (btnEjecutar) {
+    btnEjecutar.addEventListener('click', ejecutarReversionAdmin);
+  }
+});
+
+function marcarListo(id) {
+  document.getElementById('documentoId').value = id;
+  const modal = new bootstrap.Modal(document.getElementById('marcarListoModal'));
+  modal.show();
+}
+
+console.log('📖 Vista admin limpia cargada para documento {{documento.codigoBarras}}');
 </script>
 {{else}}
 <div class="alert alert-warning">

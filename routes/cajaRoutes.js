@@ -51,6 +51,9 @@ router.get('/', cajaController.dashboard);
 router.get('/documentos', cajaController.listarDocumentos);
 router.get('/documentos/detalle/:id', cajaController.verDocumento);
 
+// ELIMINADO: Caja no tiene permisos para editar documentos completos
+// Solo puede manejar aspectos financieros a través de las funciones de reversión
+
 // RESTAURADO: Registro de pagos
 router.get('/documentos/detalle/:id/pago', cajaController.mostrarFormularioRegistrarPago);
 router.post('/registrar-pago', upload.none(), cajaController.registrarPago);
@@ -109,6 +112,27 @@ router.delete('/documentos/:id/eliminar', cajaController.eliminarDocumento);
 // Vista de documentos eliminados para auditoría
 router.get('/documentos/eliminados', cajaController.listarDocumentosEliminados);
 
+// ============== SISTEMA DE REVERSIÓN DISTRIBUIDA - CAJA ==============
+// Solo Caja puede realizar reversiones financieras
+
+// Deshacer pago específico
+router.post('/pagos/:id/deshacer', cajaController.deshacerPago);
+
+// Corregir pago (método o monto)
+router.post('/pagos/:id/corregir', cajaController.corregirPago);
+
+// Deshacer retención
+router.post('/retenciones/:id/deshacer', cajaController.deshacerRetencion);
+
+// ============== REVERSIONES PARA PAGOS VIRTUALES ==============
+// Pagos registrados directamente en el documento al momento de creación
+
+// Corregir pago virtual (actualiza campos del documento)
+router.post('/documentos/:id/corregir-pago-virtual', cajaController.corregirPagoVirtual);
+
+// Deshacer pago virtual (resetea campos de pago del documento)
+router.post('/documentos/:id/deshacer-pago-virtual', cajaController.deshacerPagoVirtual);
+
 // ============== RUTAS TEMPORALMENTE DESHABILITADAS ==============
 // TODO: Implementar estas funciones en el controlador cuando sea necesario
 
@@ -149,10 +173,9 @@ router.post('/marcar-pagado/:id', cajaController.marcarComoPagado);
 
 // ============== RUTAS PARA ROL HÍBRIDO CAJA_ARCHIVO ==============
 
-// Documentos asignados como matrizador
+// Documentos asignados como matrizador (solo para caja_archivo híbrido)
 router.get('/mis-documentos', cajaController.misDocumentosMatrizador);
-router.get('/mis-documentos/editar/:id', cajaController.editarDocumentoMatrizador);
-router.post('/mis-documentos/actualizar/:id', cajaController.actualizarDocumentoMatrizador);
+// ELIMINADO: Edición - Caja no puede editar documentos completos
 router.post('/mis-documentos/marcar-listo/:id', cajaController.marcarDocumentoListoMatrizador);
 
 // Entrega de documentos desde interfaz de caja
