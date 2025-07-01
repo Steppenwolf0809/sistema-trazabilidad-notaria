@@ -50,64 +50,205 @@
   </div>
 </div>
 
-<!-- Cards de estadísticas -->
+<!-- Cards de estadísticas rediseñadas para función de archivo -->
 <div class="row mb-4">
+  <!-- TARJETA 1: Matrizador con Más Carga -->
   <div class="col-lg-3 col-md-6 mb-3">
-    <div class="card text-white bg-primary">
+    <div class="card text-white bg-primary border-left-primary shadow h-100 py-2">
       <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <h6 class="text-white">Total Documentos</h6>
-            <h2 class="mb-0">{{estadisticas.totalDocumentos}}</h2>
+        <div class="row no-gutters align-items-center">
+          <div class="col mr-2">
+            <div class="text-xs font-weight-bold text-white text-uppercase mb-1">
+              Matrizador con Más Carga
+            </div>
+            <div class="h5 mb-0 font-weight-bold text-white">
+              {{estadisticas.matrizadorConMasCarga.nombre}}
+            </div>
+            <small class="text-white-50">
+              {{estadisticas.matrizadorConMasCarga.documentos}} documentos 
+              ({{estadisticas.matrizadorConMasCarga.diasPromedio}} días prom.)
+            </small>
           </div>
-          <i class="fas fa-archive fa-3x opacity-50"></i>
+          <div class="col-auto">
+            <i class="fas fa-users fa-2x text-white-50"></i>
+          </div>
         </div>
       </div>
     </div>
   </div>
   
+  <!-- TARJETA 2: Documentos Críticos por Antigüedad -->
   <div class="col-lg-3 col-md-6 mb-3">
-    <div class="card text-white bg-success">
+    <div class="card text-white bg-warning border-left-warning shadow h-100 py-2">
       <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <h6 class="text-white">Listos para Entrega</h6>
-            <h2 class="mb-0">{{estadisticas.documentosListos}}</h2>
+        <div class="row no-gutters align-items-center">
+          <div class="col mr-2">
+            <div class="text-xs font-weight-bold text-white text-uppercase mb-1">
+              Documentos Críticos
+            </div>
+            <div class="h5 mb-0 font-weight-bold text-white">
+              {{estadisticas.documentosPorAntiguedad.criticos}}
+            </div>
+            <small class="text-white-50">
+              Más de 15 días en proceso
+            </small>
           </div>
-          <i class="fas fa-check-circle fa-3x opacity-50"></i>
+          <div class="col-auto">
+            <i class="fas fa-clock fa-2x text-white-50"></i>
+          </div>
         </div>
       </div>
     </div>
   </div>
   
+  <!-- TARJETA 3: Documentos Esperando Pago -->
   <div class="col-lg-3 col-md-6 mb-3">
-    <div class="card text-white bg-warning">
+    <div class="card text-white bg-info border-left-info shadow h-100 py-2">
       <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <h6 class="text-white">En Proceso</h6>
-            <h2 class="mb-0">{{estadisticas.documentosPendientes}}</h2>
+        <div class="row no-gutters align-items-center">
+          <div class="col mr-2">
+            <div class="text-xs font-weight-bold text-white text-uppercase mb-1">
+              Esperando Pago
+            </div>
+            <div class="h5 mb-0 font-weight-bold text-white">
+              {{estadisticas.estadosSupervision.esperando_pago}}
+            </div>
+            <small class="text-white-50">
+              Listos sin pago
+            </small>
           </div>
-          <i class="fas fa-clock fa-3x opacity-50"></i>
+          <div class="col-auto">
+            <i class="fas fa-dollar-sign fa-2x text-white-50"></i>
+          </div>
         </div>
       </div>
     </div>
   </div>
   
+  <!-- TARJETA 4: Productividad Hoy -->
   <div class="col-lg-3 col-md-6 mb-3">
-    <div class="card text-white bg-info">
+    <div class="card text-white bg-success border-left-success shadow h-100 py-2">
       <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <h6 class="text-white">Entregados</h6>
-            <h2 class="mb-0">{{estadisticas.documentosEntregados}}</h2>
+        <div class="row no-gutters align-items-center">
+          <div class="col mr-2">
+            <div class="text-xs font-weight-bold text-white text-uppercase mb-1">
+              Entregados Hoy
+            </div>
+            <div class="h5 mb-0 font-weight-bold text-white">
+              {{estadisticas.productividadHoy.entregados_hoy}}
+            </div>
+            <small class="text-white-50">
+              {{estadisticas.productividadHoy.marcados_listos_hoy}} marcados listos
+            </small>
           </div>
-          <i class="fas fa-handshake fa-3x opacity-50"></i>
+          <div class="col-auto">
+            <i class="fas fa-check-circle fa-2x text-white-50"></i>
+          </div>
         </div>
       </div>
     </div>
   </div>
 </div>
+
+<!-- Métricas Adicionales de Supervisión -->
+<div class="row mb-4">
+  <div class="col-xl-4 col-md-6 mb-3">
+    <div class="card border-left-secondary shadow h-100 py-2">
+      <div class="card-body">
+        <div class="row no-gutters align-items-center">
+          <div class="col mr-2">
+            <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">
+              Sin Asignar
+            </div>
+            <div class="h4 mb-0 font-weight-bold text-gray-800">
+              {{estadisticas.estadosSupervision.sin_asignar}}
+            </div>
+            <small class="text-muted">Documentos sin matrizador</small>
+          </div>
+          <div class="col-auto">
+            <i class="fas fa-user-slash fa-2x text-gray-300"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-xl-4 col-md-6 mb-3">
+    <div class="card border-left-dark shadow h-100 py-2">
+      <div class="card-body">
+        <div class="row no-gutters align-items-center">
+          <div class="col mr-2">
+            <div class="text-xs font-weight-bold text-dark text-uppercase mb-1">
+              Facturados Pendientes
+            </div>
+            <div class="h4 mb-0 font-weight-bold text-gray-800">
+              {{estadisticas.estadosSupervision.facturados_pendientes}}
+            </div>
+            <small class="text-muted">Con factura sin pagar</small>
+          </div>
+          <div class="col-auto">
+            <i class="fas fa-file-invoice fa-2x text-gray-300"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-xl-4 col-md-6 mb-3">
+    <div class="card border-left-primary shadow h-100 py-2">
+      <div class="card-body">
+        <div class="row no-gutters align-items-center">
+          <div class="col mr-2">
+            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+              Total Matrizadores Activos
+            </div>
+            <div class="h4 mb-0 font-weight-bold text-gray-800">
+              {{estadisticas.totalMatrizadores}}
+            </div>
+            <small class="text-muted">{{estadisticas.totalDocumentosActivos}} documentos activos</small>
+          </div>
+          <div class="col-auto">
+            <i class="fas fa-users fa-2x text-gray-300"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Distribución de Carga por Matrizador -->
+{{#if estadisticas.distribucionMatrizadores.length}}
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card shadow">
+      <div class="card-header">
+        <h6 class="m-0 font-weight-bold text-primary">
+          <i class="fas fa-balance-scale me-2"></i>Distribución de Carga de Trabajo por Matrizador
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          {{#each estadisticas.distribucionMatrizadores}}
+          <div class="col-md-4 col-lg-2 mb-3">
+            <div class="card border-left-{{#if (gt documentos 10)}}warning{{else}}success{{/if}} h-100">
+              <div class="card-body py-2 px-3">
+                <div class="text-xs font-weight-bold text-{{#if (gt documentos 10)}}warning{{else}}success{{/if}} text-uppercase mb-1">
+                  {{nombre}}
+                </div>
+                <div class="h6 mb-0 font-weight-bold text-gray-800">
+                  {{documentos}} docs
+                </div>
+                <small class="text-muted">{{diasPromedio}} días prom.</small>
+              </div>
+            </div>
+          </div>
+          {{/each}}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{{/if}}
 
 <!-- Accesos Rápidos -->
 <div class="row mb-4">
@@ -132,21 +273,21 @@
   </div>
   
   <div class="col-md-3 mb-3">
-    <a href="/archivo/notificaciones/historial" class="card text-decoration-none">
+    <a href="/archivo/documentos/todos?estado=en_proceso&antiguedad=15plus" class="card text-decoration-none">
       <div class="card-body text-center">
-        <i class="fas fa-bell fa-3x text-info mb-2"></i>
-        <h6>Notificaciones</h6>
-        <small class="text-muted">Historial de envíos</small>
+        <i class="fas fa-clock fa-3x text-danger mb-2"></i>
+        <h6>Documentos Atrasados</h6>
+        <small class="text-muted">{{estadisticas.documentosPorAntiguedad.criticos}} críticos</small>
       </div>
     </a>
   </div>
   
   <div class="col-md-3 mb-3">
-    <a href="/archivo/documentos/todos?estado=listo" class="card text-decoration-none">
+    <a href="/archivo/notificaciones/historial" class="card text-decoration-none">
       <div class="card-body text-center">
-        <i class="fas fa-exclamation-triangle fa-3x text-warning mb-2"></i>
-        <h6>Pendientes Entrega</h6>
-        <small class="text-muted">Listos para recoger</small>
+        <i class="fas fa-bell fa-3x text-info mb-2"></i>
+        <h6>Notificaciones</h6>
+        <small class="text-muted">Historial de envíos</small>
       </div>
     </a>
   </div>

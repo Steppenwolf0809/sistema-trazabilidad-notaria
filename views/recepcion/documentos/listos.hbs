@@ -1,0 +1,322 @@
+<!-- VISTA: Documentos Listos para Entrega -->
+<div class="container-fluid">
+  <!-- Header con información -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card border-left-success shadow">
+        <div class="card-header bg-success text-white">
+          <h4 class="m-0 font-weight-bold">
+            <i class="fas fa-check-circle me-2"></i>
+            📋 Documentos Listos para Entrega
+          </h4>
+        </div>
+        <div class="card-body">
+          <div class="row align-items-center">
+            <div class="col-md-8">
+              <p class="mb-2 text-muted">
+                Todos los documentos que están preparados y listos para ser entregados a los clientes.
+              </p>
+              <div class="alert alert-info py-2 mb-3">
+                <i class="fas fa-info-circle me-1"></i>
+                <strong>Modo Control:</strong> Esta vista permite identificar documentos no retirados y consultar información de contacto. 
+                Las notificaciones automáticas están deshabilitadas para controlar costos.
+              </div>
+              <div class="d-flex align-items-center">
+                <span class="badge bg-success me-2">{{totalDocumentos}} documentos</span>
+                <span class="text-sm text-muted">Página {{currentPage}} de {{#if pagination.pages.length}}{{pagination.pages.length}}{{else}}1{{/if}}</span>
+              </div>
+            </div>
+            <div class="col-md-4 text-end">
+              <a href="/recepcion" class="btn btn-outline-primary">
+                <i class="fas fa-arrow-left"></i> Volver al Dashboard
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FILTROS Y BÚSQUEDA -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card shadow">
+        <div class="card-header bg-light">
+          <h6 class="m-0 font-weight-bold text-secondary">
+            <i class="fas fa-filter me-2"></i>
+            Filtros y Búsqueda
+          </h6>
+        </div>
+        <div class="card-body">
+          <form method="GET" action="/recepcion/documentos/listos" class="row g-3">
+            <div class="col-md-3">
+              <label class="form-label">🗓️ Filtro por Antigüedad</label>
+              <select name="diasFiltro" class="form-select form-select-sm">
+                <option value="">Todos los documentos</option>
+                <option value="3" {{#if (eq filtros.diasFiltro '3')}}selected{{/if}}>3+ días sin retirar</option>
+                <option value="7" {{#if (eq filtros.diasFiltro '7')}}selected{{/if}}>7+ días sin retirar</option>
+                <option value="15" {{#if (eq filtros.diasFiltro '15')}}selected{{/if}}>15+ días sin retirar ⚠️</option>
+                <option value="30" {{#if (eq filtros.diasFiltro '30')}}selected{{/if}}>30+ días sin retirar 🚨</option>
+              </select>
+            </div>
+            
+            <div class="col-md-3">
+              <label class="form-label">👤 Matrizador</label>
+              <select name="matrizadorId" class="form-select form-select-sm">
+                <option value="">Todos los matrizadores</option>
+                {{#each matrizadores}}
+                <option value="{{this.id}}" {{#if (eq this.id ../filtros.matrizadorId)}}selected{{/if}}>
+                  {{this.nombre}}
+                </option>
+                {{/each}}
+              </select>
+            </div>
+            
+            <div class="col-md-3">
+              <label class="form-label">📋 Ordenar por</label>
+              <select name="ordenPor" class="form-select form-select-sm">
+                <option value="updated_at" {{#if (eq filtros.ordenPor 'updated_at')}}selected{{/if}}>Fecha de finalización</option>
+                <option value="created_at" {{#if (eq filtros.ordenPor 'created_at')}}selected{{/if}}>Fecha de creación</option>
+                <option value="nombreCliente" {{#if (eq filtros.ordenPor 'nombreCliente')}}selected{{/if}}>Nombre del cliente</option>
+                <option value="valorFactura" {{#if (eq filtros.ordenPor 'valorFactura')}}selected{{/if}}>Valor de factura</option>
+              </select>
+            </div>
+            
+            <div class="col-md-2">
+              <label class="form-label">📈 Dirección</label>
+              <select name="direccion" class="form-select form-select-sm">
+                <option value="ASC" {{#if (eq filtros.direccion 'ASC')}}selected{{/if}}>Ascendente</option>
+                <option value="DESC" {{#if (eq filtros.direccion 'DESC')}}selected{{/if}}>Descendente</option>
+              </select>
+            </div>
+            
+            <div class="col-md-1">
+              <label class="form-label">&nbsp;</label>
+              <button type="submit" class="btn btn-primary btn-sm d-block w-100">
+                <i class="fas fa-filter"></i> Filtrar
+              </button>
+            </div>
+          </form>
+          
+          <!-- Información de filtros activos -->
+          {{#if filtros.activos}}
+          <div class="mt-3 d-flex align-items-center">
+            <span class="text-muted me-2">Filtros activos:</span>
+            {{#if filtros.diasFiltro}}
+              <span class="badge bg-warning me-1">{{filtros.diasFiltro}}+ días</span>
+            {{/if}}
+            {{#if filtros.matrizadorNombre}}
+              <span class="badge bg-info me-1">{{filtros.matrizadorNombre}}</span>
+            {{/if}}
+            <a href="/recepcion/documentos/listos" class="btn btn-outline-secondary btn-sm ms-2">
+              <i class="fas fa-times"></i> Limpiar
+            </a>
+          </div>
+          {{/if}}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabla de documentos -->
+  {{#if documentos.length}}
+  <div class="row">
+    <div class="col-12">
+      <div class="card shadow">
+        <div class="card-header">
+          <h6 class="m-0 font-weight-bold text-primary">
+            <i class="fas fa-list me-2"></i>
+            Lista de Documentos Listos
+            {{#if filtros.activos}}
+              <span class="badge bg-secondary ms-2">Filtrado</span>
+            {{/if}}
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Cliente</th>
+                  <th>Tipo Documento</th>
+                  <th>Matrizador</th>
+                  <th>Valor</th>
+                  <th>Estado Pago</th>
+                  <th>Días sin Retirar</th>
+                  <th>Fecha Finalización</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {{#each documentos}}
+                <tr>
+                  <td>
+                    <a href="/recepcion/documentos/detalle/{{this.id}}" class="text-primary">
+                      <strong>{{this.codigoBarras}}</strong>
+                    </a>
+                  </td>
+                  <td>{{this.nombreCliente}}</td>
+                  <td>
+                    <span class="badge bg-info">{{this.tipoDocumento}}</span>
+                  </td>
+                  <td>
+                    {{#if this.matrizador}}
+                      {{this.matrizador.nombre}}
+                    {{else}}
+                      <span class="text-muted">Sin asignar</span>
+                    {{/if}}
+                  </td>
+                  <td>
+                    <strong>${{this.valorFactura}}</strong>
+                  </td>
+                  <td>
+                    {{#if (eq this.estadoPago 'pagado_completo')}}
+                      <span class="badge bg-success">Pagado</span>
+                    {{else if (eq this.estadoPago 'pagado_con_retencion')}}
+                      <span class="badge bg-warning">Con Retención</span>
+                    {{else}}
+                      <span class="badge bg-danger">Pendiente</span>
+                    {{/if}}
+                  </td>
+                  <td>
+                    {{#if (gte (daysSince this.updated_at) 15)}}
+                      <span class="badge bg-danger">{{daysSince this.updated_at}} días 🚨</span>
+                    {{else if (gte (daysSince this.updated_at) 7)}}
+                      <span class="badge bg-warning">{{daysSince this.updated_at}} días ⚠️</span>
+                    {{else if (gte (daysSince this.updated_at) 3)}}
+                      <span class="badge bg-info">{{daysSince this.updated_at}} días</span>
+                    {{else}}
+                      <span class="badge bg-success">{{daysSince this.updated_at}} días</span>
+                    {{/if}}
+                  </td>
+                  <td>
+                    <small class="text-muted">
+                      {{formatDateEcuador this.updated_at}}
+                    </small>
+                  </td>
+                  <td>
+                                         <div class="btn-group btn-group-sm" role="group">
+                       <a href="/recepcion/documentos/detalle/{{this.id}}" 
+                          class="btn btn-outline-info" title="Ver Detalle">
+                         <i class="fas fa-eye"></i>
+                       </a>
+                       <a href="/recepcion/documentos/entrega/{{this.id}}" 
+                          class="btn btn-outline-success" title="Entregar">
+                         <i class="fas fa-hand-holding"></i>
+                       </a>
+                       <button class="btn btn-outline-secondary" 
+                               title="Información de Contacto"
+                               onclick="mostrarInfoContacto('{{this.nombreCliente}}', '{{this.telefonoCliente}}', '{{this.emailCliente}}')">
+                         <i class="fas fa-info-circle"></i>
+                       </button>
+                     </div>
+                  </td>
+                </tr>
+                {{/each}}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Paginación -->
+  {{#if pagination.pages.length}}
+  <div class="row mt-4">
+    <div class="col-12">
+      <nav aria-label="Paginación de documentos">
+        <ul class="pagination justify-content-center">
+          {{#if pagination.prev}}
+          <li class="page-item">
+            <a class="page-link" href="{{pagination.prev}}">
+              <i class="fas fa-chevron-left"></i> Anterior
+            </a>
+          </li>
+          {{/if}}
+          
+          {{#each pagination.pages}}
+          <li class="page-item {{#if this.active}}active{{/if}}">
+            <a class="page-link" href="{{this.url}}">{{this.num}}</a>
+          </li>
+          {{/each}}
+          
+          {{#if pagination.next}}
+          <li class="page-item">
+            <a class="page-link" href="{{pagination.next}}">
+              Siguiente <i class="fas fa-chevron-right"></i>
+            </a>
+          </li>
+          {{/if}}
+        </ul>
+      </nav>
+    </div>
+  </div>
+  {{/if}}
+
+  {{else}}
+  <!-- Estado vacío -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card border-left-info shadow">
+        <div class="card-body text-center py-5">
+          <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+          <h5 class="text-muted">No hay documentos listos para entrega</h5>
+          <p class="text-muted">
+            Actualmente no hay documentos en estado "listo para entrega".
+          </p>
+          <a href="/recepcion" class="btn btn-primary">
+            <i class="fas fa-arrow-left"></i> Volver al Dashboard
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  {{/if}}
+</div>
+
+<style>
+.border-left-success {
+  border-left: 0.25rem solid #1cc88a !important;
+}
+.border-left-info {
+  border-left: 0.25rem solid #36b9cc !important;
+}
+.table th {
+  background-color: #f8f9fc;
+  border-top: none;
+}
+.btn-group-sm > .btn {
+  padding: 0.25rem 0.5rem;
+}
+</style>
+
+<script>
+// Función para mostrar información de contacto del cliente (sin envío)
+function mostrarInfoContacto(nombreCliente, telefono, email) {
+  const infoContacto = [];
+  
+  if (telefono && telefono.trim() !== '') {
+    infoContacto.push(`📱 Teléfono: ${telefono}`);
+  }
+  
+  if (email && email.trim() !== '') {
+    infoContacto.push(`📧 Email: ${email}`);
+  }
+  
+  if (infoContacto.length === 0) {
+    infoContacto.push('❌ No hay información de contacto disponible');
+  }
+  
+  const mensaje = `👤 Información de Contacto\n\n` +
+                 `Cliente: ${nombreCliente}\n\n` +
+                 infoContacto.join('\n') + '\n\n' +
+                 `💡 Nota: Para contactar al cliente manualmente,\n` +
+                 `puede usar la información mostrada arriba.\n\n` +
+                 `⚠️ Las notificaciones automáticas están deshabilitadas\n` +
+                 `para controlar costos de mensajería.`;
+  
+  alert(mensaje);
+}
+</script> 

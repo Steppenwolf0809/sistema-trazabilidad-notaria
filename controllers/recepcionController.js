@@ -8,6 +8,7 @@ const moment = require('moment');
 const NotificationService = require('../services/notificationService');
 const NotificacionEnviada = require('../models/NotificacionEnviada');
 const configNotaria = require('../config/notaria');
+
 const { construirListaDocumentosDetallada, construirInformacionEntregaCensurada } = require('../utils/documentoUtils');
 const { obtenerHistorialUniversal } = require('../utils/historialUniversal');
 const notificacionController = require('./notificacionController');
@@ -1126,256 +1127,140 @@ const recepcionController = {
    * @param {Object} res - Objeto de respuesta Express
    */
   dashboard: async (req, res) => {
-    console.log("Accediendo al dashboard de recepción");
-    console.log("Usuario:", req.matrizador?.nombre, "Rol:", req.matrizador?.rol);
-    console.log("Ruta solicitada:", req.originalUrl);
+    console.log("🏪 Acceso al dashboard de recepción:", req.matrizador?.nombre);
     
     try {
-      // Procesar parámetros de período
-      const tipoPeriodo = req.query.tipoPeriodo || 'mes';
-      let fechaInicio, fechaFin;
-      const hoy = moment().startOf('day');
+      // DATOS SIMPLIFICADOS PARA DASHBOARD LIMPIO
       
-      // Establecer fechas según el período seleccionado
-      switch (tipoPeriodo) {
-        case 'hoy':
-          fechaInicio = hoy.clone();
-          fechaFin = moment().endOf('day');
-          break;
-        case 'semana':
-          fechaInicio = hoy.clone().startOf('week');
-          fechaFin = moment().endOf('day');
-          break;
-        case 'mes':
-          fechaInicio = hoy.clone().startOf('month');
-          fechaFin = moment().endOf('day');
-          break;
-        case 'ultimo_mes':
-          fechaInicio = hoy.clone().subtract(30, 'days');
-          fechaFin = moment().endOf('day');
-          break;
-        case 'personalizado':
-          fechaInicio = req.query.fechaInicio ? moment(req.query.fechaInicio) : hoy.clone().startOf('month');
-          fechaFin = req.query.fechaFin ? moment(req.query.fechaFin).endOf('day') : moment().endOf('day');
-          break;
-        default:
-          fechaInicio = hoy.clone().startOf('month');
-          fechaFin = moment().endOf('day');
-      }
-      
-      // Formatear fechas para las consultas
-      const fechaInicioSQL = fechaInicio.format('YYYY-MM-DD HH:mm:ss');
-      const fechaFinSQL = fechaFin.format('YYYY-MM-DD HH:mm:ss');
-      
-      // Número total de documentos listos para entrega
-      const [documentosListos] = await sequelize.query(`
-        SELECT COUNT(*) as total
-        FROM documentos
-        WHERE estado = 'listo_para_entrega'
-      `, {
-        type: sequelize.QueryTypes.SELECT
-      });
-      
-      // Número de documentos entregados hoy
-      const [entregadosHoy] = await sequelize.query(`
-        SELECT COUNT(*) as total
-        FROM documentos
-        WHERE estado = 'entregado'
-        AND DATE(fecha_entrega) = CURRENT_DATE
-      `, {
-        type: sequelize.QueryTypes.SELECT
-      });
-      
-      // Total de documentos entregados en el período
-      const [entregadosPeriodo] = await sequelize.query(`
-        SELECT COUNT(*) as total
-        FROM documentos
-        WHERE estado = 'entregado'
-        AND fecha_entrega BETWEEN :fechaInicio AND :fechaFin
-      `, {
-        replacements: {
-          fechaInicio: fechaInicioSQL,
-          fechaFin: fechaFinSQL
-        },
-        type: sequelize.QueryTypes.SELECT
-      });
-      
-      // Tiempo promedio que tarda un documento en ser retirado desde que está listo
-      const [tiempoRetiro] = await sequelize.query(`
-        SELECT AVG(EXTRACT(EPOCH FROM (fecha_entrega - updated_at))/86400) as promedio
-        FROM documentos
-        WHERE estado = 'entregado'
-        AND fecha_entrega BETWEEN :fechaInicio AND :fechaFin
-      `, {
-        replacements: {
-          fechaInicio: fechaInicioSQL,
-          fechaFin: fechaFinSQL
-        },
-        type: sequelize.QueryTypes.SELECT
-      });
-      
-      // Documentos pendientes de retiro con más de 7 días
-      const [pendientesUrgentes] = await sequelize.query(`
-        SELECT COUNT(*) as total
-        FROM documentos
-        WHERE estado = 'listo_para_entrega'
-        AND EXTRACT(EPOCH FROM (NOW() - updated_at))/86400 > 7
-      `, {
-        type: sequelize.QueryTypes.SELECT
-      });
-      
-      // Obtener documentos pendientes de retiro con detalles
-      const docsSinRetirar = await Documento.findAll({
+      // 1. INFORMACIÓN PRINCIPAL (datos grandes y claros)
+      const documentos_listos_hoy = await Documento.count({
         where: {
           estado: 'listo_para_entrega',
-          [Op.and]: [
-            sequelize.literal(`EXTRACT(EPOCH FROM (NOW() - "Documento"."updated_at"))/86400 >= 5`)
-          ]
-        },
-        include: [
-          {
-            model: Matrizador,
-            as: 'matrizador',
-            attributes: ['id', 'nombre']
+          updated_at: {
+            [Op.gte]: moment().startOf('day').toDate()
           }
-        ],
-        order: [
-          [sequelize.literal(`EXTRACT(EPOCH FROM (NOW() - "Documento"."updated_at"))/86400`), 'DESC']
-        ],
+        }
+      });
+      
+      const documentos_con_codigo = await Documento.count({
+        where: {
+          estado: 'listo_para_entrega',
+          codigoVerificacion: { [Op.ne]: null }
+        }
+      });
+      
+      const documentos_sin_codigo = await Documento.count({
+        where: {
+          estado: 'listo_para_entrega',
+          codigoVerificacion: null
+        }
+      });
+      
+      const entregas_hoy = await Documento.count({
+        where: {
+          estado: 'entregado',
+          fechaEntrega: {
+            [Op.gte]: moment().startOf('day').toDate()
+          }
+        }
+      });
+      
+      // 2. ALERTAS (solo si existen problemas)
+      const { AutorizacionUrgente } = require('../models');
+      const autorizaciones_pendientes = await AutorizacionUrgente?.count({
+        where: { estado: 'pendiente' }
+      }) || 0;
+      
+      const documentos_sin_pago = await Documento.count({
+        where: {
+          estado: 'listo_para_entrega',
+          estadoPago: 'pendiente'
+        }
+      });
+      
+      // 3. ESTADÍSTICAS MENSUALES (colapsibles)
+      const entregas_mes = await Documento.count({
+        where: {
+          estado: 'entregado',
+          fechaEntrega: {
+            [Op.gte]: moment().startOf('month').toDate()
+          }
+        }
+      });
+      
+      const promedio_diario = entregas_mes > 0 ? Math.round(entregas_mes / moment().date()) : 0;
+      
+      const entregas_sin_codigo_mes = await Documento.count({
+        where: {
+          estado: 'entregado',
+          codigoVerificacion: null,
+          fechaEntrega: {
+            [Op.gte]: moment().startOf('month').toDate()
+          }
+        }
+      });
+      
+      // 4. DOCUMENTOS PENDIENTES DE RETIRO (para alertas)
+      const documentos_pendientes_7dias = await Documento.findAll({
+        where: {
+          estado: 'listo_para_entrega',
+          updated_at: {
+            [Op.lt]: moment().subtract(7, 'days').toDate()
+          }
+        },
+        include: [{
+          model: Matrizador,
+          as: 'matrizador',
+          attributes: ['id', 'nombre'],
+          required: false
+        }],
+        order: [['updated_at', 'ASC']],
         limit: 10
       });
       
-      // Procesar documentos sin retirar para añadir métricas
-      const documentosSinRetirar = docsSinRetirar.map(doc => {
+      // Procesar documentos pendientes con días de retraso
+      const documentos_con_retraso = documentos_pendientes_7dias.map(doc => {
         const diasPendiente = moment().diff(moment(doc.updated_at), 'days');
         return {
           ...doc.toJSON(),
           diasPendiente,
-          porcentajeDemora: Math.min(diasPendiente * 5, 100) // Escala de 0-100 para barra de progreso
+          prioridad: diasPendiente > 15 ? 'Alta' : diasPendiente > 10 ? 'Media' : 'Baja',
+          clasePrioridad: diasPendiente > 15 ? 'danger' : diasPendiente > 10 ? 'warning' : 'info'
         };
       });
       
-      // Obtener documentos listos para entrega
-      const docsListos = await Documento.findAll({
-        where: {
-          estado: 'listo_para_entrega'
-        },
-        include: [
-          {
-            model: Matrizador,
-            as: 'matrizador',
-            attributes: ['id', 'nombre']
-          }
-        ],
-        order: [['created_at', 'DESC']],
-        limit: 10
-      });
-      
-      // Obtener últimos documentos entregados
-      const ultimasEntregas = await Documento.findAll({
-        where: {
-          estado: 'entregado'
-        },
-        order: [['created_at', 'DESC']],
-        limit: 10
-      });
-      
-      // Datos para gráfico de entregas por día
-      const datosEntregas = await sequelize.query(`
-        SELECT 
-          TO_CHAR(fecha_entrega, 'YYYY-MM-DD') as fecha,
-          COUNT(*) as total
-        FROM documentos
-        WHERE estado = 'entregado'
-        AND fecha_entrega BETWEEN :fechaInicio AND :fechaFin
-        GROUP BY TO_CHAR(fecha_entrega, 'YYYY-MM-DD')
-        ORDER BY fecha
-      `, {
-        replacements: {
-          fechaInicio: fechaInicioSQL,
-          fechaFin: fechaFinSQL
-        },
-        type: sequelize.QueryTypes.SELECT
-      });
-      
-      // Datos para gráfico de tiempo promedio de retiro por tipo de documento
-      const datosTiempos = await sequelize.query(`
-        SELECT 
-          tipo_documento,
-          AVG(EXTRACT(EPOCH FROM (fecha_entrega - updated_at))/86400) as promedio
-        FROM documentos
-        WHERE estado = 'entregado'
-        AND fecha_entrega BETWEEN :fechaInicio AND :fechaFin
-        GROUP BY tipo_documento
-        ORDER BY promedio DESC
-      `, {
-        replacements: {
-          fechaInicio: fechaInicioSQL,
-          fechaFin: fechaFinSQL
-        },
-        type: sequelize.QueryTypes.SELECT
-      });
-      
-      // Datos para gráfico de documentos entregados por matrizador
-      const datosMatrizadores = await sequelize.query(`
-        SELECT 
-          m.nombre as matrizador,
-          COUNT(d.id) as total
-        FROM documentos d
-        JOIN matrizadores m ON d.id_matrizador = m.id
-        WHERE d.estado = 'entregado'
-        AND d.fecha_entrega BETWEEN :fechaInicio AND :fechaFin
-        GROUP BY m.id, m.nombre
-        ORDER BY total DESC
-        LIMIT 10
-      `, {
-        replacements: {
-          fechaInicio: fechaInicioSQL,
-          fechaFin: fechaFinSQL
-        },
-        type: sequelize.QueryTypes.SELECT
-      });
-      
-      // Preparar datos para los gráficos
-      const datosGraficos = {
-        entregas: {
-          labels: datosEntregas.map(d => d.fecha),
-          datos: datosEntregas.map(d => d.total)
-        },
-        tiempos: {
-          labels: datosTiempos.map(d => d.tipo_documento),
-          datos: datosTiempos.map(d => parseFloat(d.promedio).toFixed(1))
-        },
-        matrizadores: {
-          labels: datosMatrizadores.map(d => d.matrizador),
-          datos: datosMatrizadores.map(d => d.total)
-        }
+      // PREPARAR DATOS PARA VISTA
+      const dashboardData = {
+        // Información principal
+        documentos_listos_hoy,
+        documentos_con_codigo,
+        documentos_sin_codigo,
+        entregas_hoy,
+        
+        // Alertas
+        autorizaciones_pendientes,
+        documentos_sin_pago,
+        documentos_pendientes_urgentes: documentos_con_retraso.length,
+        
+        // Estadísticas mensuales
+        entregas_mes,
+        promedio_diario,
+        entregas_sin_codigo_mes,
+        
+        // Documentos con problema
+        documentos_con_retraso
       };
-      
-      // Preparar datos de período para la plantilla
-      const periodoData = {
-        esHoy: tipoPeriodo === 'hoy',
-        esSemana: tipoPeriodo === 'semana',
-        esMes: tipoPeriodo === 'mes',
-        esUltimoMes: tipoPeriodo === 'ultimo_mes',
-        esPersonalizado: tipoPeriodo === 'personalizado',
-        fechaInicio: fechaInicio.format('YYYY-MM-DD'),
-        fechaFin: fechaFin.format('YYYY-MM-DD')
-      };
-      
-      // Preparar estadísticas para la plantilla
-      const stats = {
-        listos: documentosListos.total || 0,
-        entregadosHoy: entregadosHoy.total || 0,
-        totalEntregados: entregadosPeriodo.total || 0,
-        tiempoRetiro: tiempoRetiro.promedio ? parseFloat(tiempoRetiro.promedio).toFixed(1) : "0.0",
-        pendientesUrgentes: pendientesUrgentes.total || 0,
-        docsSinRetirar: documentosSinRetirar
-      };
+
+      console.log('📊 [RECEPCION] Dashboard simplificado calculado:', {
+        listosHoy: dashboardData.documentos_listos_hoy,
+        entregadosHoy: dashboardData.entregas_hoy,
+        alertas: dashboardData.autorizaciones_pendientes + dashboardData.documentos_sin_pago,
+        pendientesUrgentes: dashboardData.documentos_pendientes_urgentes
+      });
       
       res.render('recepcion/dashboard', { 
         layout: 'recepcion', 
-        title: 'Panel de Recepción', 
+        title: 'Dashboard de Recepción - Gestión de Entregas', 
         userRole: req.matrizador?.rol, 
         userName: req.matrizador?.nombre,
         usuario: {
@@ -1383,14 +1268,13 @@ const recepcionController = {
           rol: req.matrizador?.rol,
           nombre: req.matrizador?.nombre
         },
-        stats,
-        periodo: periodoData,
-        documentosListos: docsListos,
-        ultimasEntregas,
-        datosGraficos
+        // Datos rediseñados
+        stats: dashboardData,
+        // Fecha actual para el header
+        now: new Date()
       });
     } catch (error) {
-      console.error("Error al cargar el dashboard de recepción:", error);
+      console.error("❌ Error al cargar el dashboard de recepción:", error);
       res.status(500).render('error', {
         layout: 'recepcion',
         title: 'Error',
@@ -2907,6 +2791,283 @@ const recepcionController = {
       });
     }
   },
+
+  // ============== NUEVOS MÉTODOS: FILTROS ESPECÍFICOS DEL DASHBOARD ==============
+
+  /**
+   * Lista documentos listos para entrega
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  documentosListos: async (req, res) => {
+    console.log("📋 Acceso a documentos listos para entrega - Usuario:", req.matrizador?.nombre);
+    
+    try {
+      // Parámetros de paginación
+      const page = parseInt(req.query.page) || 1;
+      const limit = 15;
+      const offset = (page - 1) * limit;
+      
+      // Parámetros de filtros
+      const diasFiltro = req.query.diasFiltro ? parseInt(req.query.diasFiltro) : null;
+      const matrizadorId = req.query.matrizadorId || null;
+      const ordenPor = req.query.ordenPor || 'updated_at';
+      const direccion = req.query.direccion || 'DESC';
+      
+      // Construir condiciones WHERE
+      const whereCondition = {
+        estado: 'listo_para_entrega'
+      };
+      
+      // Aplicar filtro por días sin retirar
+      if (diasFiltro) {
+        const fechaLimite = new Date();
+        fechaLimite.setDate(fechaLimite.getDate() - diasFiltro);
+        whereCondition.updated_at = {
+          [Op.lte]: fechaLimite
+        };
+      }
+      
+      // Construir condiciones INCLUDE
+      const includeCondition = [{
+        model: Matrizador,
+        as: 'matrizador',
+        attributes: ['id', 'nombre'],
+        required: false
+      }];
+      
+      // Aplicar filtro por matrizador
+      if (matrizadorId) {
+        includeCondition[0].where = { id: matrizadorId };
+        includeCondition[0].required = true;
+      }
+      
+      // Validar campo de ordenamiento
+      const camposValidos = ['updated_at', 'created_at', 'nombreCliente', 'valorFactura'];
+      const ordenCampo = camposValidos.includes(ordenPor) ? ordenPor : 'updated_at';
+      const ordenDireccion = direccion.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+      
+      // Buscar documentos listos para entrega con filtros
+      const { count, rows: documentos } = await Documento.findAndCountAll({
+        where: whereCondition,
+        include: includeCondition,
+        order: [[ordenCampo, ordenDireccion]],
+        limit,
+        offset
+      });
+      
+      console.log(`📋 Encontrados ${documentos.length} documentos listos (filtrados: ${JSON.stringify(req.query)})`);
+      
+      // Obtener lista de matrizadores para el filtro
+      const matrizadores = await Matrizador.findAll({
+        attributes: ['id', 'nombre'],
+        order: [['nombre', 'ASC']]
+      });
+      
+      // Preparar información de filtros activos
+      const filtros = {
+        diasFiltro,
+        matrizadorId,
+        ordenPor: ordenCampo,
+        direccion: ordenDireccion,
+        activos: diasFiltro || matrizadorId
+      };
+      
+      // Agregar nombre del matrizador seleccionado
+      if (matrizadorId) {
+        const matrizadorSeleccionado = matrizadores.find(m => m.id.toString() === matrizadorId);
+        filtros.matrizadorNombre = matrizadorSeleccionado?.nombre;
+      }
+      
+      // Preparar datos para la paginación (preservando filtros)
+      const totalPages = Math.ceil(count / limit);
+      const pagination = { pages: [] };
+      const queryParams = new URLSearchParams(req.query);
+      
+      for (let i = 1; i <= totalPages; i++) {
+        queryParams.set('page', i);
+        pagination.pages.push({
+          num: i,
+          url: `/recepcion/documentos/listos?${queryParams.toString()}`,
+          active: i === page
+        });
+      }
+      
+      if (page > 1) {
+        queryParams.set('page', page - 1);
+        pagination.prev = `/recepcion/documentos/listos?${queryParams.toString()}`;
+      }
+      if (page < totalPages) {
+        queryParams.set('page', page + 1);
+        pagination.next = `/recepcion/documentos/listos?${queryParams.toString()}`;
+      }
+      
+      res.render('recepcion/documentos/listos', {
+        layout: 'recepcion',
+        title: 'Documentos Listos para Entrega',
+        userRole: req.matrizador?.rol,
+        userName: req.matrizador?.nombre,
+        documentos,
+        matrizadores,
+        filtros,
+        pagination,
+        totalDocumentos: count,
+        currentPage: page
+      });
+    } catch (error) {
+      console.error("❌ Error al cargar documentos listos:", error);
+      res.status(500).render('error', {
+        layout: 'recepcion',
+        title: 'Error',
+        message: 'Error al cargar los documentos listos',
+        error
+      });
+    }
+  },
+
+  /**
+   * Lista entregas del día
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  entregasHoy: async (req, res) => {
+    console.log("📦 Acceso a entregas del día - Usuario:", req.matrizador?.nombre);
+    
+    try {
+      // Parámetros de paginación
+      const page = parseInt(req.query.page) || 1;
+      const limit = 15;
+      const offset = (page - 1) * limit;
+      
+      // Buscar entregas del día actual
+      const { count, rows: documentos } = await Documento.findAndCountAll({
+        where: {
+          estado: 'entregado',
+          fechaEntrega: {
+            [Op.gte]: moment().startOf('day').toDate(),
+            [Op.lte]: moment().endOf('day').toDate()
+          }
+        },
+        include: [{
+          model: Matrizador,
+          as: 'matrizador',
+          attributes: ['id', 'nombre'],
+          required: false
+        }],
+        order: [['fechaEntrega', 'DESC']],
+        limit,
+        offset
+      });
+      
+      console.log(`📦 Encontradas ${documentos.length} entregas del día`);
+      
+      // Preparar datos para la paginación
+      const totalPages = Math.ceil(count / limit);
+      const pagination = { pages: [] };
+      
+      for (let i = 1; i <= totalPages; i++) {
+        pagination.pages.push({
+          num: i,
+          url: `/recepcion/entregas/hoy?page=${i}`,
+          active: i === page
+        });
+      }
+      
+      if (page > 1) pagination.prev = `/recepcion/entregas/hoy?page=${page - 1}`;
+      if (page < totalPages) pagination.next = `/recepcion/entregas/hoy?page=${page + 1}`;
+      
+      res.render('recepcion/entregas/hoy', {
+        layout: 'recepcion',
+        title: 'Entregas del Día',
+        userRole: req.matrizador?.rol,
+        userName: req.matrizador?.nombre,
+        documentos,
+        pagination,
+        totalDocumentos: count,
+        currentPage: page,
+        fechaHoy: moment().format('DD/MM/YYYY')
+      });
+    } catch (error) {
+      console.error("❌ Error al cargar entregas del día:", error);
+      res.status(500).render('error', {
+        layout: 'recepcion',
+        title: 'Error',
+        message: 'Error al cargar las entregas del día',
+        error
+      });
+    }
+  },
+
+  /**
+   * Lista documentos sin pago confirmado
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  documentosSinPago: async (req, res) => {
+    console.log("💰 Acceso a documentos sin pago - Usuario:", req.matrizador?.nombre);
+    
+    try {
+      // Parámetros de paginación
+      const page = parseInt(req.query.page) || 1;
+      const limit = 15;
+      const offset = (page - 1) * limit;
+      
+      // Buscar documentos listos pero sin pago confirmado
+      const { count, rows: documentos } = await Documento.findAndCountAll({
+        where: {
+          estado: 'listo_para_entrega',
+          estadoPago: 'pendiente'
+        },
+        include: [{
+          model: Matrizador,
+          as: 'matrizador',
+          attributes: ['id', 'nombre'],
+          required: false
+        }],
+        order: [['updated_at', 'ASC']], // Los más antiguos primero
+        limit,
+        offset
+      });
+      
+      console.log(`💰 Encontrados ${documentos.length} documentos sin pago`);
+      
+      // Preparar datos para la paginación
+      const totalPages = Math.ceil(count / limit);
+      const pagination = { pages: [] };
+      
+      for (let i = 1; i <= totalPages; i++) {
+        pagination.pages.push({
+          num: i,
+          url: `/recepcion/documentos/sin-pago?page=${i}`,
+          active: i === page
+        });
+      }
+      
+      if (page > 1) pagination.prev = `/recepcion/documentos/sin-pago?page=${page - 1}`;
+      if (page < totalPages) pagination.next = `/recepcion/documentos/sin-pago?page=${page + 1}`;
+      
+      res.render('recepcion/documentos/sin-pago', {
+        layout: 'recepcion',
+        title: 'Documentos Sin Pago Confirmado',
+        userRole: req.matrizador?.rol,
+        userName: req.matrizador?.nombre,
+        documentos,
+        pagination,
+        totalDocumentos: count,
+        currentPage: page
+      });
+    } catch (error) {
+      console.error("❌ Error al cargar documentos sin pago:", error);
+      res.status(500).render('error', {
+        layout: 'recepcion',
+        title: 'Error',
+        message: 'Error al cargar los documentos sin pago',
+        error
+      });
+    }
+  },
+
+
 };
 
 // Exportar también las funciones para uso en otros controladores

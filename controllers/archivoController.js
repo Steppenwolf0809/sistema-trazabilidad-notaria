@@ -32,19 +32,134 @@ const archivoController = {
     try {
       console.log('🗂️ Acceso al dashboard de archivo:', req.matrizador?.nombre);
       
-      // 1. OBTENER ESTADÍSTICAS GLOBALES DEL SISTEMA (para rol archivo)
-      const estadisticas = await obtenerEstadisticasGlobalesArchivo();
+      // 1. CONSULTAS REDISEÑADAS PARA FUNCIÓN DE SUPERVISIÓN
       
-      // 2. CONSULTA PRINCIPAL: Documentos atrasados (más de 15 días en proceso)
-      // Archivo puede ver TODOS los documentos del sistema como supervisor
-      const fechaLimite = new Date();
-      fechaLimite.setDate(fechaLimite.getDate() - 15);
-      
+      // TARJETA 1: Distribución por Matrizador (carga de trabajo)
+      const documentosPorMatrizador = await Documento.findAll({
+        attributes: [
+          'idMatrizador',
+          [sequelize.fn('COUNT', sequelize.col('Documento.id')), 'total'],
+          [sequelize.literal(`AVG(EXTRACT(EPOCH FROM (NOW() - "Documento"."created_at"))/86400)`), 'dias_promedio']
+        ],
+        where: {
+          estado: {
+            [Op.in]: ['en_proceso', 'listo_para_entrega']
+          }
+        },
+        include: [{
+          model: Matrizador,
+          as: 'matrizador',
+          attributes: ['nombre'],
+          required: false
+        }],
+        group: ['idMatrizador', 'matrizador.id', 'matrizador.nombre'],
+        order: [[sequelize.literal('total'), 'DESC']],
+        raw: true
+      });
+
+      // Encontrar matrizador con más carga
+      const matrizadorConMasCarga = documentosPorMatrizador.length > 0 ? {
+        nombre: documentosPorMatrizador[0]['matrizador.nombre'] || 'Sin asignar',
+        documentos: parseInt(documentosPorMatrizador[0].total) || 0,
+        diasPromedio: Math.round(parseFloat(documentosPorMatrizador[0].dias_promedio) || 0)
+      } : { nombre: 'N/A', documentos: 0, diasPromedio: 0 };
+
+      // TARJETA 2: Documentos por Antigüedad (críticos, medios, nuevos)
+      const fechaLimite15 = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
+      const fechaLimite7 = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const fechaLimite14 = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+
+      const documentosPorAntiguedad = {
+        criticos: await Documento.count({
+          where: {
+            estado: {
+              [Op.in]: ['en_proceso', 'listo_para_entrega']
+            },
+            created_at: { 
+              [Op.lt]: fechaLimite15 // Más de 15 días
+            }
+          }
+        }),
+        medios: await Documento.count({
+          where: {
+            estado: {
+              [Op.in]: ['en_proceso', 'listo_para_entrega']
+            },
+            created_at: { 
+              [Op.between]: [fechaLimite14, fechaLimite7] // Entre 7 y 14 días
+            }
+          }
+        }),
+        nuevos: await Documento.count({
+          where: {
+            estado: {
+              [Op.in]: ['en_proceso', 'listo_para_entrega']
+            },
+            created_at: { 
+              [Op.gte]: fechaLimite7 // Últimos 7 días
+            }
+          }
+        })
+      };
+
+      // TARJETA 3: Estados que Requieren Supervisión
+      const estadosSupervision = {
+        esperando_pago: await Documento.count({
+          where: {
+            estado: 'listo_para_entrega',
+            estadoPago: 'pendiente'
+          }
+        }),
+        sin_asignar: await Documento.count({
+          where: {
+            estado: 'en_proceso',
+            idMatrizador: null
+          }
+        }),
+        facturados_pendientes: await Documento.count({
+          where: {
+            numeroFactura: { [Op.not]: null },
+            estadoPago: 'pendiente',
+            estado: { [Op.notIn]: ['eliminado', 'nota_credito'] }
+          }
+        })
+      };
+
+      // TARJETA 4: Productividad Diaria
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+      const mañana = new Date(hoy);
+      mañana.setDate(mañana.getDate() + 1);
+
+      const productividadHoy = {
+        marcados_listos_hoy: await Documento.count({
+          where: {
+            estado: 'listo_para_entrega',
+            updated_at: {
+              [Op.gte]: hoy,
+              [Op.lt]: mañana
+            }
+          }
+        }),
+        entregados_hoy: await Documento.count({
+          where: {
+            estado: 'entregado',
+            fechaEntrega: {
+              [Op.gte]: hoy,
+              [Op.lt]: mañana
+            }
+          }
+        })
+      };
+
+      // 2. CONSULTA CORREGIDA DE DOCUMENTOS ATRASADOS (EXHAUSTIVA)
       const documentosAtrasados = await Documento.findAll({
         where: {
-          estado: 'en_proceso', // Solo documentos en proceso
+          estado: {
+            [Op.in]: ['en_proceso', 'listo_para_entrega'] // Incluir ambos estados
+          },
           created_at: {
-            [Op.lt]: fechaLimite  // Más de 15 días desde creación
+            [Op.lt]: fechaLimite15  // Más de 15 días
           }
         },
         include: [
@@ -52,26 +167,19 @@ const archivoController = {
             model: Matrizador,
             as: 'matrizador',
             attributes: ['id', 'nombre'],
-            required: false // LEFT JOIN para incluir documentos sin matrizador
+            required: false
           }
         ],
         order: [['created_at', 'ASC']], // Más antiguos primero
-        limit: 50, // Límite para rendimiento
-        attributes: [
-          'id', 'codigoBarras', 'tipoDocumento', 'nombreCliente', 
-          'created_at', 'idMatrizador', 'fechaFactura'
-        ]
+        limit: 100 // Aumentar límite para ver más documentos
       });
 
-      // 3. PROCESAR DATOS PARA VISTA
+      // 3. PROCESAR DATOS PARA VISTA CON CÁLCULOS MEJORADOS
       const documentosConDias = documentosAtrasados.map(doc => {
         const fechaCreacion = new Date(doc.created_at);
         const hoy = new Date();
         const diasTranscurridos = Math.floor((hoy - fechaCreacion) / (1000 * 60 * 60 * 24));
         
-        // Extraer número de libro del código de barras
-        // Formato ejemplo: 20251701018D00531
-        // Año: 2025, Libro: 701018 (posiciones 4-10)
         let numeroLibro = 'N/A';
         if (doc.codigoBarras && doc.codigoBarras.length >= 10) {
           numeroLibro = doc.codigoBarras.substring(4, 10);
@@ -85,11 +193,11 @@ const archivoController = {
           fechaCreacion: doc.created_at,
           diasTranscurridos,
           numeroLibro,
+          estado: doc.estado,
           matrizador: {
             nombre: doc.matrizador ? doc.matrizador.nombre : 'Sin asignar',
             id: doc.matrizador ? doc.matrizador.id : null
           },
-          // Clasificación de prioridad según días
           prioridad: diasTranscurridos > 30 ? 'Crítica' : 
                     diasTranscurridos > 20 ? 'Alta' : 'Media',
           clasePrioridad: diasTranscurridos > 30 ? 'danger' : 
@@ -97,14 +205,36 @@ const archivoController = {
         };
       });
 
-      // 4. ESTADÍSTICAS ADICIONALES PARA ARCHIVO
+      // 4. ESTADÍSTICAS ADICIONALES MEJORADAS
       const estadisticasAdicionales = await calcularEstadisticasAdicionales(documentosConDias);
+
+      // 5. PREPARAR DATOS REDISEÑADOS PARA VISTA
+      const estadisticasSupervision = {
+        matrizadorConMasCarga,
+        documentosPorAntiguedad,
+        estadosSupervision,
+        productividadHoy,
+        totalMatrizadores: documentosPorMatrizador.length,
+        totalDocumentosActivos: documentosPorAntiguedad.criticos + documentosPorAntiguedad.medios + documentosPorAntiguedad.nuevos,
+        distribucionMatrizadores: documentosPorMatrizador.slice(0, 5).map(item => ({
+          nombre: item['matrizador.nombre'] || 'Sin asignar',
+          documentos: parseInt(item.total) || 0,
+          diasPromedio: Math.round(parseFloat(item.dias_promedio) || 0)
+        }))
+      };
+
+      console.log('📊 [ARCHIVO] Estadísticas de supervisión calculadas:', {
+        matrizadorConMasCarga: estadisticasSupervision.matrizadorConMasCarga,
+        documentosCriticos: estadisticasSupervision.documentosPorAntiguedad.criticos,
+        documentosAtrasados: documentosConDias.length,
+        entregadosHoy: estadisticasSupervision.productividadHoy.entregados_hoy
+      });
 
       res.render('archivo/dashboard', {
         layout: 'archivo',
-        title: 'Dashboard de Archivo',
-        estadisticas,
-        alertasDocumentos: documentosConDias, // Cambiar nombre para compatibilidad
+        title: 'Dashboard de Archivo - Supervisión',
+        estadisticas: estadisticasSupervision, // Estadísticas rediseñadas
+        alertasDocumentos: documentosConDias,
         documentosAtrasados: documentosConDias,
         totalAtrasados: documentosConDias.length,
         estadisticasAdicionales,

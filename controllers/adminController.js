@@ -536,51 +536,72 @@ exports.dashboard = async (req, res) => {
     const fechaFinSQL = fechaFin.format('YYYY-MM-DD HH:mm:ss');
     const hoySQL = hoy.format('YYYY-MM-DD');
     
-    // ============== ALERTAS CRÍTICAS EJECUTIVAS ==============
+    // ============== ALERTAS CRÍTICAS EJECUTIVAS MEJORADAS ==============
     const alertasCriticas = [];
     
-    // Documentos atrasados más de 30 días sin pagar
-    const documentosAtrasados = await Documento.count({
+    // ALERTA 1: Documentos en proceso atrasados más de 15 días (CRÍTICO)
+    const documentosEnProcesoAtrasados = await Documento.count({
       where: {
-        estado_pago: 'pendiente',
-        numero_factura: { [Op.not]: null },
+        estado: 'en_proceso',
+        created_at: { [Op.lt]: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000) }
+      }
+    });
+    
+    if (documentosEnProcesoAtrasados > 0) {
+      alertasCriticas.push({
+        tipo: 'danger',
+        icono: 'fas fa-clock',
+        titulo: `${documentosEnProcesoAtrasados} documentos atrasados en proceso`,
+        descripcion: 'Más de 15 días en proceso - Requieren supervisión urgente',
+        accion: '/admin/documentos/listado?estado=en_proceso&orden=antiguedad',
+        prioridad: 1
+      });
+    }
+    
+    // ALERTA 2: Documentos sin pagar más de 30 días (CRÍTICO FINANCIERO)
+    const documentosAtrasadosPago = await Documento.count({
+      where: {
+        estadoPago: 'pendiente',
+        numeroFactura: { [Op.not]: null },
         estado: { [Op.notIn]: ['eliminado', 'nota_credito'] },
         created_at: { [Op.lt]: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
       }
     });
     
-    if (documentosAtrasados > 0) {
+    if (documentosAtrasadosPago > 0) {
       alertasCriticas.push({
         tipo: 'danger',
         icono: 'fas fa-exclamation-triangle',
-        titulo: `${documentosAtrasados} documentos atrasados +30 días`,
+        titulo: `${documentosAtrasadosPago} documentos atrasados +30 días sin pago`,
         descripcion: 'Requieren gestión de cobranza urgente',
-        accion: '/admin/reportes/pendientes?antiguedad=30%2B'
+        accion: '/admin/reportes/pendientes?antiguedad=30%2B',
+        prioridad: 2
       });
     }
     
-    // Documentos listos para entrega hace más de 3 días
+    // ALERTA 3: Documentos listos para entrega hace más de 7 días (SUPERVISIÓN)
     const documentosListosViejos = await Documento.count({
       where: {
         estado: 'listo_para_entrega',
-        updated_at: { [Op.lt]: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) }
+        updated_at: { [Op.lt]: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
       }
     });
     
     if (documentosListosViejos > 0) {
       alertasCriticas.push({
         tipo: 'warning',
-        icono: 'fas fa-clock',
+        icono: 'fas fa-hand-holding',
         titulo: `${documentosListosViejos} documentos listos sin entregar`,
-        descripcion: 'Más de 3 días esperando entrega',
-        accion: '/admin/documentos/listado?estado=listo_para_entrega'
+        descripcion: 'Más de 7 días esperando entrega - Contactar clientes',
+        accion: '/admin/documentos/listado?estado=listo_para_entrega',
+        prioridad: 3
       });
     }
     
-    // Documentos sin matrizador asignado
+    // ALERTA 4: Documentos sin matrizador asignado (ASIGNACIÓN)
     const documentosSinMatrizador = await Documento.count({
       where: {
-        id_matrizador: null,
+        idMatrizador: null,
         estado: { [Op.in]: ['en_proceso', 'listo_para_entrega'] }
       }
     });
@@ -590,10 +611,31 @@ exports.dashboard = async (req, res) => {
         tipo: 'info',
         icono: 'fas fa-user-slash',
         titulo: `${documentosSinMatrizador} documentos sin asignar`,
-        descripcion: 'Necesitan matrizador responsable',
-        accion: '/admin/documentos/listado?idMatrizador='
+        descripcion: 'Necesitan matrizador responsable para procesar',
+        accion: '/admin/documentos/listado?idMatrizador=',
+        prioridad: 4
       });
     }
+    
+    // ALERTA 5: Autorizaciones urgentes pendientes (OPERATIVO)
+    const { AutorizacionUrgente } = require('../models');
+    const autorizacionesPendientes = await AutorizacionUrgente?.count({
+      where: { estado: 'pendiente' }
+    }) || 0;
+    
+    if (autorizacionesPendientes > 0) {
+      alertasCriticas.push({
+        tipo: 'warning',
+        icono: 'fas fa-user-check',
+        titulo: `${autorizacionesPendientes} autorizaciones urgentes pendientes`,
+        descripcion: 'Requieren aprobación administrativa',
+        accion: '/admin/autorizaciones/pendientes',
+        prioridad: 5
+      });
+    }
+    
+    // Ordenar alertas por prioridad
+    alertasCriticas.sort((a, b) => (a.prioridad || 999) - (b.prioridad || 999));
     
     // ============== MÉTRICAS EJECUTIVAS PRINCIPALES CON FILTROS ==============
     
@@ -626,7 +668,7 @@ exports.dashboard = async (req, res) => {
     const entregadosHoy = await Documento.count({
       where: {
         estado: 'entregado',
-        fecha_entrega: {
+        fechaEntrega: {
           [Op.gte]: hoy.toDate(),
           [Op.lt]: moment().endOf('day').toDate()
         }
@@ -667,15 +709,15 @@ exports.dashboard = async (req, res) => {
     const documentosCobradosPeriodo = await Documento.count({
       where: {
         ...whereBasePeriodo,
-        estado_pago: { [Op.in]: ['pagado_completo', 'pagado_con_retencion', 'pago_parcial'] }
+        estadoPago: { [Op.in]: ['pagado_completo', 'pagado_con_retencion', 'pago_parcial'] }
       }
     });
 
     // CORREGIDO: Documentos cobrados hoy (incluir pago_parcial)
     const documentosCobradosHoy = await Documento.count({
       where: {
-        estado_pago: { [Op.in]: ['pagado_completo', 'pagado_con_retencion', 'pago_parcial'] },
-        fecha_ultimo_pago: {
+        estadoPago: { [Op.in]: ['pagado_completo', 'pagado_con_retencion', 'pago_parcial'] },
+        fechaUltimoPago: {
           [Op.gte]: hoy.toDate(),
           [Op.lt]: moment().endOf('day').toDate()
         }
@@ -865,6 +907,14 @@ exports.dashboard = async (req, res) => {
       }],
       order: [['created_at', 'ASC']],
       limit: 5
+    });
+    
+    // ============== CONTEO DE DOCUMENTOS ATRASADOS ==============
+    const documentosAtrasados = await Documento.count({
+      where: {
+        estado: 'en_proceso',
+        created_at: { [Op.lt]: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000) }
+      }
     });
     
     // ============== VALIDAR Y FORMATEAR MÉTRICAS ==============

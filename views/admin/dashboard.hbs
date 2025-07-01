@@ -46,6 +46,70 @@
   </div>
 </div>
 
+{{#unless modoComparativo}}
+{{!-- SECCIÓN DE ALERTAS CRÍTICAS PROMINENTE --}}
+{{#if alertasCriticas.length}}
+<div class="row mb-4" id="alertas-section">
+  <div class="col-12">
+    <div class="card border-danger shadow">
+      <div class="card-header bg-danger text-white">
+        <div class="d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            Alertas del Sistema - Atención Requerida
+          </h5>
+          <span class="badge bg-warning text-dark fs-6">{{alertasCriticas.length}} alertas</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          {{#each alertasCriticas}}
+          <div class="col-lg-6 col-xl-4 mb-3">
+            <div class="card border-{{tipo}} shadow-sm h-100">
+              <div class="card-body">
+                <div class="d-flex align-items-start justify-content-between mb-3">
+                  <div class="flex-grow-1">
+                    <div class="d-flex align-items-center mb-2">
+                      <i class="{{icono}} text-{{tipo}} me-2"></i>
+                      <h6 class="mb-0 text-{{tipo}} fw-bold">{{titulo}}</h6>
+                    </div>
+                    <p class="text-muted mb-2 small">{{descripcion}}</p>
+                  </div>
+                  <span class="badge bg-{{tipo}}">{{prioridad}}</span>
+                </div>
+                <div class="d-grid">
+                  <a href="{{accion}}" class="btn btn-{{tipo}} btn-sm">
+                    <i class="fas fa-eye me-1"></i> Revisar
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+          {{/each}}
+        </div>
+        
+        <!-- Información explicativa -->
+        <div class="alert alert-info mt-3 mb-0">
+          <div class="row align-items-center">
+            <div class="col-md-8">
+              <i class="fas fa-info-circle me-2"></i>
+              <strong>Sistema de Alertas Ejecutivo:</strong> 
+              Estas alertas se actualizan en tiempo real y requieren atención administrativa inmediata.
+            </div>
+            <div class="col-md-4 text-md-end">
+              <button type="button" class="btn btn-outline-info btn-sm" onclick="location.reload()">
+                <i class="fas fa-sync-alt me-1"></i> Actualizar Alertas
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{{/if}}
+{{/unless}}
+
 {{!-- 2. FILTROS DINÁMICOS SEGÚN MODO --}}
 <div class="row mb-3">
   {{!-- FILTROS NORMALES O COMPARATIVOS (8 columnas) --}}
@@ -563,43 +627,7 @@
   </div>
 </div>
 
-{{!-- 🚨 ALERTAS CRÍTICAS DESTACADAS --}}
-{{#if alertasCriticas}}
-<div class="row mb-4">
-  <div class="col-12">
-    <div class="card border-left-danger shadow-sm">
-      <div class="card-header bg-transparent border-0">
-        <h6 class="mb-0 text-danger">
-          <i class="fas fa-exclamation-triangle me-2"></i>
-          Situaciones que Requieren Atención Inmediata
-        </h6>
-      </div>
-      <div class="card-body">
-        <div class="row">
-          {{#each alertasCriticas}}
-          <div class="col-md-6 col-xl-3 mb-3">
-            <div class="alert alert-{{tipo}} border-left-{{tipo}} mb-0">
-              <div class="d-flex align-items-center">
-                <i class="{{icono}} fa-2x me-3"></i>
-                <div>
-                  <div class="font-weight-bold">{{titulo}}</div>
-                  <small>{{descripcion}}</small>
-                  <div class="mt-2">
-                    <a href="{{accion}}" class="btn btn-{{tipo}} btn-sm">
-                      <i class="fas fa-arrow-right me-1"></i>Gestionar
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          {{/each}}
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-{{/if}}
+
 
 {{!-- 🔄 ACTIVIDAD RECIENTE Y RENDIMIENTO DEL EQUIPO --}}
 <div class="row mb-4">
@@ -727,43 +755,7 @@
   </div>
 </div>
 
-{{!-- 🚨 SECCIÓN DE ALERTAS DETALLADAS --}}
-{{#if alertasCriticas}}
-<div id="alertas-section" class="row mb-4">
-  <div class="col-12">
-    <div class="card border-left-danger shadow-sm">
-      <div class="card-header bg-transparent border-0">
-        <h6 class="mb-0 text-danger">
-          <i class="fas fa-exclamation-triangle me-2"></i>
-          Situaciones que Requieren Atención Inmediata
-        </h6>
-      </div>
-      <div class="card-body">
-        <div class="row">
-          {{#each alertasCriticas}}
-          <div class="col-md-6 col-xl-3 mb-3">
-            <div class="alert alert-{{tipo}} border-left-{{tipo}} mb-0">
-              <div class="d-flex align-items-center">
-                <i class="{{icono}} fa-2x me-3"></i>
-                <div>
-                  <div class="font-weight-bold">{{titulo}}</div>
-                  <small>{{descripcion}}</small>
-                  <div class="mt-2">
-                    <a href="{{accion}}" class="btn btn-{{tipo}} btn-sm">
-                      <i class="fas fa-arrow-right me-1"></i>Gestionar
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          {{/each}}
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-{{/if}}
+
 
 {{!-- 📋 ÚLTIMAS ENTREGAS Y DOCUMENTOS CRÍTICOS --}}
 <div class="row mb-4">

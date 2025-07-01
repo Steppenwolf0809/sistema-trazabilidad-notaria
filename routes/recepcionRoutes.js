@@ -12,6 +12,17 @@ router.get('/', validarAccesoConAuditoria(['recepcion']), recepcionController.da
 // Listado de documentos - ESTRICTO: solo recepción
 router.get('/documentos', validarAccesoConAuditoria(['recepcion']), recepcionController.listarDocumentos);
 
+// ============== NUEVAS RUTAS: FILTROS ESPECÍFICOS DEL DASHBOARD ==============
+
+// Lista de documentos listos para entrega - ESTRICTO: solo recepción
+router.get('/documentos/listos', validarAccesoConAuditoria(['recepcion']), recepcionController.documentosListos);
+
+// Lista de entregas del día - ESTRICTO: solo recepción  
+router.get('/entregas/hoy', validarAccesoConAuditoria(['recepcion']), recepcionController.entregasHoy);
+
+// Lista de documentos sin pago confirmado - ESTRICTO: solo recepción
+router.get('/documentos/sin-pago', validarAccesoConAuditoria(['recepcion']), recepcionController.documentosSinPago);
+
 // Detalle de documento - ESTRICTO: solo recepción
 router.get('/documentos/detalle/:id', validarAccesoConAuditoria(['recepcion']), recepcionController.detalleDocumento);
 

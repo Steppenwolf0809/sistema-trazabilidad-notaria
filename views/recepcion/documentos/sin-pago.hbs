@@ -1,0 +1,352 @@
+<!-- VISTA: Documentos Sin Pago Confirmado -->
+<div class="container-fluid">
+  <!-- Header con información -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card border-left-warning shadow">
+        <div class="card-header bg-warning text-white">
+          <h4 class="m-0 font-weight-bold">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            💰 Documentos Sin Pago Confirmado
+          </h4>
+        </div>
+        <div class="card-body">
+          <div class="row align-items-center">
+            <div class="col-md-8">
+              <p class="mb-2 text-muted">
+                Documentos que están listos para entrega pero requieren confirmación de pago antes de proceder.
+                <br>
+                <strong>Nota:</strong> Solo el área de <strong>Caja</strong> puede confirmar pagos. Desde aquí puedes ver el detalle y contactar a los clientes.
+              </p>
+              <div class="d-flex align-items-center">
+                <span class="badge bg-warning me-2">{{totalDocumentos}} pendientes</span>
+                <span class="text-sm text-muted">Página {{currentPage}} de {{#if pagination.pages.length}}{{pagination.pages.length}}{{else}}1{{/if}}</span>
+              </div>
+            </div>
+            <div class="col-md-4 text-end">
+              <a href="/recepcion" class="btn btn-outline-primary">
+                <i class="fas fa-arrow-left"></i> Volver al Dashboard
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Acciones disponibles para Recepción -->
+  {{#if documentos.length}}
+  <div class="row mb-3">
+    <div class="col-12">
+      <div class="alert alert-info">
+        <div class="row align-items-center">
+          <div class="col-md-8">
+            <h6 class="alert-heading mb-2">
+              <i class="fas fa-info-circle"></i> Acciones Disponibles para Recepción
+            </h6>
+            <p class="mb-0">
+              • <strong>Ver Detalle:</strong> Revisar información completa del documento<br>
+              • <strong>Contactar Cliente:</strong> Comunicarse para solicitar el pago pendiente<br>
+              • <strong>Monitorear:</strong> Seguimiento de documentos con alta prioridad
+            </p>
+          </div>
+          <div class="col-md-4 text-end">
+            <span class="badge bg-primary p-2">
+              <i class="fas fa-users"></i> Área: Recepción
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabla de documentos sin pago -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card shadow">
+        <div class="card-header">
+          <h6 class="m-0 font-weight-bold text-warning">
+            Lista de Documentos Pendientes de Pago
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Cliente</th>
+                  <th>Tipo Documento</th>
+                  <th>Matrizador</th>
+                  <th>Valor Factura</th>
+                  <th>Días Pendiente</th>
+                  <th>Fecha Creación</th>
+                  <th>Prioridad</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {{#each documentos}}
+                <tr>
+                  <td>
+                    <a href="/recepcion/documentos/detalle/{{this.id}}" class="text-primary">
+                      <strong>{{this.codigoBarras}}</strong>
+                    </a>
+                  </td>
+                  <td>{{this.nombreCliente}}</td>
+                  <td>
+                    <span class="badge bg-info">{{this.tipoDocumento}}</span>
+                  </td>
+                  <td>
+                    {{#if this.matrizador}}
+                      {{this.matrizador.nombre}}
+                    {{else}}
+                      <span class="text-muted">Sin asignar</span>
+                    {{/if}}
+                  </td>
+                  <td>
+                    <strong class="text-success">${{this.valorFactura}}</strong>
+                  </td>
+                  <td>
+                    {{#if (gte (daysSince this.updated_at) 7)}}
+                      <span class="badge bg-danger">{{daysSince this.updated_at}} días</span>
+                    {{else if (gte (daysSince this.updated_at) 3)}}
+                      <span class="badge bg-warning">{{daysSince this.updated_at}} días</span>
+                    {{else}}
+                      <span class="badge bg-info">{{daysSince this.updated_at}} días</span>
+                    {{/if}}
+                  </td>
+                  <td>
+                    <small class="text-muted">
+                      {{formatDateEcuador this.created_at}}
+                    </small>
+                  </td>
+                  <td>
+                    {{#if (gte (daysSince this.updated_at) 7)}}
+                      <span class="badge bg-danger">
+                        <i class="fas fa-exclamation-triangle"></i> Alta
+                      </span>
+                    {{else if (gte (daysSince this.updated_at) 3)}}
+                      <span class="badge bg-warning">
+                        <i class="fas fa-clock"></i> Media
+                      </span>
+                    {{else}}
+                      <span class="badge bg-success">
+                        <i class="fas fa-check"></i> Normal
+                      </span>
+                    {{/if}}
+                  </td>
+                  <td>
+                    <div class="btn-group btn-group-sm" role="group">
+                      <a href="/recepcion/documentos/detalle/{{this.id}}" 
+                         class="btn btn-outline-info" title="Ver Detalle">
+                        <i class="fas fa-eye"></i>
+                      </a>
+                      <button class="btn btn-outline-warning" 
+                              title="Información de Contacto"
+                              onclick="mostrarInfoContacto('{{this.nombreCliente}}', '{{this.telefonoCliente}}', '{{this.emailCliente}}')">
+                        <i class="fas fa-info-circle"></i>
+                      </button>
+                      <span class="badge bg-secondary ms-2" title="Solo Caja puede confirmar pagos">
+                        <i class="fas fa-lock"></i> Pago: Solo Caja
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+                {{/each}}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Resumen financiero -->
+  <div class="row mt-4">
+    <div class="col-md-4">
+      <div class="card bg-warning text-white shadow">
+        <div class="card-body">
+          <div class="row no-gutters align-items-center">
+            <div class="col mr-2">
+              <div class="text-xs font-weight-bold text-uppercase mb-1">
+                Total Pendiente
+              </div>
+              <div class="h5 mb-0">
+                ${{sum documentos 'valorFactura'}}
+              </div>
+            </div>
+            <div class="col-auto">
+              <i class="fas fa-dollar-sign fa-2x"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card bg-danger text-white shadow">
+        <div class="card-body">
+          <div class="row no-gutters align-items-center">
+            <div class="col mr-2">
+              <div class="text-xs font-weight-bold text-uppercase mb-1">
+                Prioridad Alta (+7 días)
+              </div>
+              <div class="h5 mb-0" id="prioridad-alta-count">
+                0
+              </div>
+            </div>
+            <div class="col-auto">
+              <i class="fas fa-exclamation-triangle fa-2x"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card bg-info text-white shadow">
+        <div class="card-body">
+          <div class="row no-gutters align-items-center">
+            <div class="col mr-2">
+              <div class="text-xs font-weight-bold text-uppercase mb-1">
+                Documento Más Antiguo
+              </div>
+              <div class="h5 mb-0">
+                {{#if documentos.length}}
+                  {{#each documentos}}
+                    {{#if @first}}
+                      {{daysSince this.updated_at}} días
+                    {{/if}}
+                  {{/each}}
+                {{else}}
+                  0 días
+                {{/if}}
+              </div>
+            </div>
+            <div class="col-auto">
+              <i class="fas fa-clock fa-2x"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Paginación -->
+  {{#if pagination.pages.length}}
+  <div class="row mt-4">
+    <div class="col-12">
+      <nav aria-label="Paginación de documentos">
+        <ul class="pagination justify-content-center">
+          {{#if pagination.prev}}
+          <li class="page-item">
+            <a class="page-link" href="{{pagination.prev}}">
+              <i class="fas fa-chevron-left"></i> Anterior
+            </a>
+          </li>
+          {{/if}}
+          
+          {{#each pagination.pages}}
+          <li class="page-item {{#if this.active}}active{{/if}}">
+            <a class="page-link" href="{{this.url}}">{{this.num}}</a>
+          </li>
+          {{/each}}
+          
+          {{#if pagination.next}}
+          <li class="page-item">
+            <a class="page-link" href="{{pagination.next}}">
+              Siguiente <i class="fas fa-chevron-right"></i>
+            </a>
+          </li>
+          {{/if}}
+        </ul>
+      </nav>
+    </div>
+  </div>
+  {{/if}}
+
+  {{else}}
+  <!-- Estado vacío -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card border-left-success shadow">
+        <div class="card-body text-center py-5">
+          <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+          <h5 class="text-success">¡Excelente! No hay documentos sin pago</h5>
+          <p class="text-muted">
+            Todos los documentos listos para entrega tienen el pago confirmado.
+          </p>
+          <a href="/recepcion" class="btn btn-primary">
+            <i class="fas fa-arrow-left"></i> Volver al Dashboard
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  {{/if}}
+</div>
+
+<style>
+.border-left-warning {
+  border-left: 0.25rem solid #f6c23e !important;
+}
+.border-left-success {
+  border-left: 0.25rem solid #1cc88a !important;
+}
+.table th {
+  background-color: #f8f9fc;
+  border-top: none;
+}
+.btn-group-sm > .btn {
+  padding: 0.25rem 0.5rem;
+}
+.text-xs {
+  font-size: 0.7rem;
+}
+</style>
+
+<script>
+// Función para mostrar información de contacto del cliente
+function mostrarInfoContacto(nombreCliente, telefono, email) {
+  const infoContacto = [];
+  
+  if (telefono && telefono.trim() !== '') {
+    infoContacto.push(`📱 Teléfono: ${telefono}`);
+  }
+  
+  if (email && email.trim() !== '') {
+    infoContacto.push(`📧 Email: ${email}`);
+  }
+  
+  if (infoContacto.length === 0) {
+    infoContacto.push('❌ No hay información de contacto disponible');
+  }
+  
+  const mensaje = `👤 Información de Contacto\n\n` +
+                 `Cliente: ${nombreCliente}\n\n` +
+                 infoContacto.join('\n') + '\n\n' +
+                 `⚠️ Recordatorio: Solo el área de Caja puede confirmar pagos.\n` +
+                 `Para gestionar el pago, derive al cliente al área correspondiente.`;
+  
+  alert(mensaje);
+}
+
+// Calcular estadísticas dinámicamente
+document.addEventListener('DOMContentLoaded', function() {
+  // Contar documentos con prioridad alta (más de 7 días)
+  let prioridadAltaCount = 0;
+  const filas = document.querySelectorAll('tbody tr');
+  
+  filas.forEach(fila => {
+    const badgeDias = fila.querySelector('td:nth-child(6) .badge');
+    if (badgeDias && badgeDias.classList.contains('bg-danger')) {
+      prioridadAltaCount++;
+    }
+  });
+  
+  // Actualizar contador
+  const contadorElement = document.getElementById('prioridad-alta-count');
+  if (contadorElement) {
+    contadorElement.textContent = prioridadAltaCount;
+  }
+});
+</script> 

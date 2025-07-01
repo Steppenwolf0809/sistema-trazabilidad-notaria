@@ -63,6 +63,42 @@ const helpers = {
     return moment(date).format('HH:mm');
   },
   
+  daysSince: (date) => {
+    if (!date) return 0;
+    return moment().diff(moment(date), 'days');
+  },
+  
+  // Helper para sumar valores de un array
+  sum: (array, property) => {
+    if (!Array.isArray(array)) return 0;
+    return array.reduce((total, item) => {
+      const value = parseFloat(item[property]) || 0;
+      return total + value;
+    }, 0).toFixed(2);
+  },
+  
+  // Helper para contar elementos que cumplen una condición
+  count: (array, property, threshold) => {
+    if (!Array.isArray(array)) return 0;
+    if (threshold === undefined) {
+      // Contar elementos que tienen la propiedad
+      return array.filter(item => item[property]).length;
+    } else {
+      // Contar elementos que superan el threshold
+      return array.filter(item => {
+        const value = parseInt(item[property]) || 0;
+        return value >= threshold;
+      }).length;
+    }
+  },
+  
+  // Helper para restar dos números
+  subtract: (a, b) => {
+    const numA = parseInt(a) || 0;
+    const numB = parseInt(b) || 0;
+    return numA - numB;
+  },
+  
   // ============== HELPERS DE COMPARACIÓN ==============
   
   eq: (a, b) => a === b,
@@ -71,6 +107,152 @@ const helpers = {
   gte: (a, b) => a >= b,
   lt: (a, b) => a < b,
   lte: (a, b) => a <= b,
+
+  // ============== HELPERS DE TEXTO ==============
+  
+  capitalizar: (texto) => {
+    if (!texto) return '';
+    if (typeof texto !== 'string') return texto;
+    
+    // Capitalizar primera letra de cada palabra
+    return texto.toLowerCase().split(' ').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
+  },
+
+  mayuscula: (texto) => {
+    if (!texto) return '';
+    if (typeof texto !== 'string') return texto;
+    return texto.toUpperCase();
+  },
+
+  minuscula: (texto) => {
+    if (!texto) return '';
+    if (typeof texto !== 'string') return texto;
+    return texto.toLowerCase();
+  },
+
+  // ============== HELPERS DE PAGINACIÓN ==============
+  
+  getPaginationItems: (currentPage, totalPages) => {
+    if (!currentPage || !totalPages || totalPages <= 1) return [];
+    
+    currentPage = parseInt(currentPage);
+    totalPages = parseInt(totalPages);
+    
+    const items = [];
+    const maxVisiblePages = 7; // Número máximo de páginas visibles
+    
+    if (totalPages <= maxVisiblePages) {
+      // Si hay pocas páginas, mostrar todas
+      for (let i = 1; i <= totalPages; i++) {
+        items.push({
+          pageNumber: i,
+          isActive: i === currentPage,
+          isEllipsis: false
+        });
+      }
+    } else {
+      // Para muchas páginas, usar lógica de elipsis
+      
+      // Siempre mostrar la primera página
+      items.push({
+        pageNumber: 1,
+        isActive: currentPage === 1,
+        isEllipsis: false
+      });
+      
+      // Calcular rango alrededor de la página actual
+      let startPage = Math.max(2, currentPage - 2);
+      let endPage = Math.min(totalPages - 1, currentPage + 2);
+      
+      // Ajustar si estamos cerca del inicio
+      if (currentPage <= 4) {
+        startPage = 2;
+        endPage = Math.min(6, totalPages - 1);
+      }
+      
+      // Ajustar si estamos cerca del final
+      if (currentPage >= totalPages - 3) {
+        startPage = Math.max(totalPages - 5, 2);
+        endPage = totalPages - 1;
+      }
+      
+      // Agregar elipsis al inicio si es necesario
+      if (startPage > 2) {
+        items.push({
+          pageNumber: null,
+          isActive: false,
+          isEllipsis: true
+        });
+      }
+      
+      // Agregar páginas del rango
+      for (let i = startPage; i <= endPage; i++) {
+        items.push({
+          pageNumber: i,
+          isActive: i === currentPage,
+          isEllipsis: false
+        });
+      }
+      
+      // Agregar elipsis al final si es necesario
+      if (endPage < totalPages - 1) {
+        items.push({
+          pageNumber: null,
+          isActive: false,
+          isEllipsis: true
+        });
+      }
+      
+      // Siempre mostrar la última página
+      items.push({
+        pageNumber: totalPages,
+        isActive: currentPage === totalPages,
+        isEllipsis: false
+      });
+    }
+    
+    return items;
+  },
+
+  buildPaginationUrl: (userRole, page, filtros = {}) => {
+    if (!userRole || !page) return '#';
+    
+    // Construir URL base según el rol
+    let baseUrl = '';
+    switch (userRole) {
+      case 'admin':
+        baseUrl = '/admin/notificaciones/historial';
+        break;
+      case 'archivo':
+        baseUrl = '/archivo/notificaciones/historial';
+        break;
+      case 'recepcion':
+        baseUrl = '/recepcion/notificaciones/historial';
+        break;
+      case 'matrizador':
+        baseUrl = '/matrizadores/notificaciones/historial';
+        break;
+      default:
+        baseUrl = '/notificaciones/historial';
+    }
+    
+    // Construir parámetros de consulta
+    const params = new URLSearchParams();
+    params.set('page', page);
+    
+    // Agregar filtros si existen
+    if (filtros) {
+      Object.keys(filtros).forEach(key => {
+        if (filtros[key] && filtros[key] !== '') {
+          params.set(key, filtros[key]);
+        }
+      });
+    }
+    
+    return `${baseUrl}?${params.toString()}`;
+  },
   
   and: function() {
     const args = Array.prototype.slice.call(arguments, 0, -1);
