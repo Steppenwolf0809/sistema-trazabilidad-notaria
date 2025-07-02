@@ -2,64 +2,167 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>{{title}} | Recepción</title>
-  <meta name="description" content="Dashboard para Recepción del Sistema de Notaría.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{title}} - Recepción</title>
+  
+  <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <!-- Link a main.css removido - archivo no existe -->
-  <link rel="stylesheet" href="/css/tabla-documentos-mejorada.css">
+  
+  <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="/css/style.css">
+  
+  <!-- CSS Universal para Tablas -->
   <link rel="stylesheet" href="/css/table-universal.css">
-  <link rel="stylesheet" href="/css/entrega-grupal-jerarquica.css">
+  
+  <!-- Sidebar Colapsible CSS -->
+  <link rel="stylesheet" href="/css/sidebar-collapsible.css">
+  
+  <!-- Estilos personalizados -->
   <style>
-    .sidebar {
-      width: 250px;
-      min-height: 100vh;
+    :root {
+      --sidebar-width: 250px;
     }
-    .nav-link {
-      padding: 8px 16px;
-      margin-bottom: 5px;
-      border-radius: 4px;
+    
+    body {
+      font-family: 'Roboto', sans-serif;
+      background-color: #f5f5f5;
+      color: #333;
     }
-    .nav-link:hover {
-      background-color: rgba(255, 255, 255, 0.1);
+    
+    .topbar {
+      background-color: white;
+      padding: 15px 20px;
+      margin-bottom: 25px;
+      border-radius: 5px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
-    main {
-      flex: 1;
-      padding: 20px;
+    
+    .card {
+      border: none;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      margin-bottom: 25px;
+    }
+    
+    .card-header {
+      background-color: white;
+      border-bottom: 1px solid #eee;
+      padding: 15px 20px;
+      font-weight: 600;
     }
   </style>
+  <link rel="stylesheet" href="/css/tabla-documentos-mejorada.css">
+  <link rel="stylesheet" href="/css/entrega-grupal-jerarquica.css">
 </head>
 <body>
-  <div class="d-flex">
-    <nav class="sidebar bg-dark text-white p-3">
-      <h3 class="mb-4">Recepción</h3>
-      <ul class="nav flex-column">
-        <li class="nav-item"><a class="nav-link text-white" href="/recepcion">Dashboard</a></li>
-        <li class="nav-item"><a class="nav-link text-white" href="/recepcion/documentos">Listado de Documentos</a></li>
-        <li class="nav-item"><a class="nav-link text-white" href="/recepcion/documentos/entrega">Entrega de Documentos</a></li>
-        <li class="nav-item"><a class="nav-link text-white" href="/recepcion/notificaciones/historial"><i class="fas fa-bell"></i> Control Notificaciones</a></li>
-        <li class="nav-item mt-4"><span class="text-muted">Usuario: {{userName}} ({{userRole}})</span></li>
-        <li class="nav-item"><a class="nav-link text-danger" href="/logout">Cerrar sesión</a></li>
-      </ul>
-    </nav>
-    <main class="flex-fill">
-      {{{body}}}
-    </main>
+  <!-- Contenedor principal del layout -->
+  <div class="app-container">
+    <!-- Barra lateral -->
+    <div class="sidebar">
+      <!-- Botón toggle del sidebar -->
+      <button class="sidebar-toggle" aria-label="Toggle sidebar" title="Colapsar/Expandir sidebar">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+    <div class="logo">
+      <i class="fas fa-door-open logo-icon"></i>
+      <span class="logo-text">Notaría Digital</span>
+    </div>
+    
+    <ul class="nav flex-column">
+      <li class="nav-item">
+        <a class="nav-link {{#if activeDashboard}}active{{/if}}" href="/recepcion" data-tooltip="Dashboard">
+          <i class="fas fa-tachometer-alt"></i>
+          <span class="nav-text">Dashboard</span>
+        </a>
+      </li>
+      
+      <div class="sidebar-heading">Documentos</div>
+      
+      <li class="nav-item">
+        <a class="nav-link {{#if activeListado}}active{{/if}}" href="/recepcion/documentos" data-tooltip="Listado">
+          <i class="fas fa-list"></i>
+          <span class="nav-text">Listado</span>
+        </a>
+      </li>
+      
+      <li class="nav-item">
+        <a class="nav-link {{#if activeEntrega}}active{{/if}}" href="/recepcion/documentos/entrega" data-tooltip="Entrega">
+          <i class="fas fa-hand-holding"></i>
+          <span class="nav-text">Entrega</span>
+        </a>
+      </li>
+      
+      <div class="sidebar-heading">Notificaciones</div>
+      
+      <li class="nav-item">
+        <a class="nav-link {{#if activeNotificaciones}}active{{/if}}" href="/recepcion/notificaciones/historial" data-tooltip="Historial">
+          <i class="fas fa-bell"></i>
+          <span class="nav-text">Historial</span>
+        </a>
+      </li>
+    </ul>
+    
+    <!-- Footer de la sidebar -->
+    <div class="sidebar-footer">
+      <a href="/logout" class="logout-link" data-tooltip="Cerrar sesión">
+        <i class="fas fa-sign-out-alt"></i>
+        <span>Cerrar sesión</span>
+      </a>
+    </div>
   </div>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="/js/table-universal.js"></script>
-  <script src="/js/main.js"></script>
-  <script src="/js/fix-badges.js"></script>
+
+  <!-- Contenido principal -->
+  <div class="main-content">
+    <div class="topbar">
+      <h4 class="mb-0">{{title}}</h4>
+      <div class="user-info">
+        <!-- Si hay usuario autenticado mostramos su nombre y rol -->
+        {{#if userName}}
+          <span class="user-name">{{userName}}</span>
+          <span class="user-role">{{userRole}}</span>
+        {{else}}
+          <!-- Si no hay usuario autenticado mostramos enlace de login -->
+          <a href="/login" class="btn btn-sm btn-primary">
+            <i class="fas fa-sign-in-alt"></i> Iniciar sesión
+          </a>
+        {{/if}}
+      </div>
+    </div>
+    
+    {{#if error}}
+    <div class="alert alert-danger mb-4">
+      <i class="fas fa-exclamation-triangle me-2"></i> {{error}}
+    </div>
+    {{/if}}
+    
+    {{#if success}}
+    <div class="alert alert-success mb-4">
+      <i class="fas fa-check-circle me-2"></i> {{success}}
+    </div>
+    {{/if}}
+    
+    {{{body}}}
+    </div>
+  </div>
+  
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
   <script>
     document.addEventListener('DOMContentLoaded', function() {
       // Detectar el rol actual basado en la URL
-      const currentRole = window.location.pathname.split('/')[1]; // 'matrizador', 'recepcion', etc.
+      const currentRole = window.location.pathname.split('/')[1]; // 'recepcion', etc.
       
       // Corregir cualquier enlace que apunte a /admin
       if (currentRole !== 'admin') {
         document.querySelectorAll('a[href^="/admin"]').forEach(link => {
-          link.href = link.href.replace('/admin', '/' + currentRole);
+          const newHref = link.href.replace('/admin', '/' + currentRole);
+          console.log('Corrigiendo enlace:', link.href, '→', newHref);
+          link.href = newHref;
         });
       }
       
@@ -77,11 +180,59 @@
             
             // Redirigir a la ruta equivalente en el rol actual
             const newPath = path.replace('/admin', '/' + currentRole);
+            console.log('Redirigiendo a:', newPath);
             window.location.href = newPath;
           }
         }
       });
     });
+  </script>
+
+  <!-- JavaScript Universal para Tablas -->
+  <script src="/js/table-universal.js"></script>
+  
+  <!-- Sidebar Colapsible JavaScript -->
+  <script src="/js/sidebar-collapsible.js"></script>
+  
+  <!-- Script principal de la aplicación -->
+  <script src="/js/main.js"></script>
+  <script src="/js/fix-badges.js"></script>
+  
+  <!-- Script de optimización del botón toggle -->
+  <script>
+    // Optimizar botón toggle después de cargar
+    setTimeout(() => {
+      const toggleBtn = document.querySelector('.sidebar-toggle');
+      if (toggleBtn) {
+        console.log('✅ Botón toggle encontrado');
+        // Optimizar estilos del botón toggle para máxima visibilidad
+        toggleBtn.style.cssText = `
+          position: absolute !important;
+          top: 15px !important;
+          right: 15px !important;
+          width: 32px !important;
+          height: 32px !important;
+          background: rgba(255, 255, 255, 0.25) !important;
+          border: 1px solid rgba(255, 255, 255, 0.5) !important;
+          border-radius: 8px !important;
+          color: white !important;
+          cursor: pointer !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          font-size: 14px !important;
+          z-index: 1001 !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+          pointer-events: auto !important;
+          box-shadow: 0 3px 12px rgba(0, 0, 0, 0.3) !important;
+          backdrop-filter: blur(10px) !important;
+        `;
+        console.log('✅ Botón toggle optimizado y visible');
+      } else {
+        console.error('❌ Botón toggle no encontrado');
+      }
+    }, 1000);
   </script>
 </body>
 </html> 

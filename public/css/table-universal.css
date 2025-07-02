@@ -1,84 +1,233 @@
-/* ===== SISTEMA UNIVERSAL DE TABLAS ===== */
-/* 🎯 Sistema Universal de Tablas v3.0 - CSS MEJORADO */
+/* ===== SISTEMA UNIVERSAL DE TABLAS - TEMA MODERNO ===== */
+/* 🎯 Sistema Universal de Tablas v4.0 - TEMA AZUL PROFESIONAL */
 /* Autor: Sistema Notarial Unificado */
-/* Objetivo: Estilos consistentes, legibles y profesionales en todos los roles */
-/* Última actualización: Mejoras de tipografía, colores y UX */
+/* Objetivo: Estilos consistentes con nuevo tema moderno */
+/* Última actualización: Tema azul profesional con iconos modernos */
 
 /* ====================================================
-   🎯 TABLA UNIVERSAL - BASE OPTIMIZADA
+   🎨 VARIABLES DEL NUEVO TEMA
    ==================================================== */
 
+:root {
+  /* Colores principales del tema */
+  --primary: #4f46e5;
+  --primary-gradient-start: #4f46e5;
+  --primary-gradient-end: #3b82f6;
+  --background: linear-gradient(135deg, #f8faff 0%, #f1f5ff 100%);
+  --success: #059669;
+  --success-light: #10b981;
+  --warning: #d97706;
+  --danger: #dc2626;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --border-light: #e0e7ff;
+  
+  /* Variables de tabla */
+  --table-bg: white;
+  --table-border: var(--border-light);
+  --table-hover: #f8faff;
+  --table-header-bg: linear-gradient(135deg, #f1f5ff 0%, #e0e7ff 100%);
+  --table-header-color: var(--primary);
+  --table-shadow: 0 1px 3px rgba(79, 70, 229, 0.1);
+}
+
 /* ====================================================
-   ✨ MEJORAS DE TIPOGRAFÍA Y LEGIBILIDAD v3.0
+   ✨ TIPOGRAFÍA MEJORADA v4.0
    ==================================================== */
 
 /* Títulos principales */
 .page-title {
-  font-size: 24px;
-  font-weight: 600;
-  color: #1f2937;
-  margin-bottom: 1.5rem;
+  font-size: 28px !important;
+  font-weight: 600 !important;
+  color: var(--text-primary) !important;
+  margin-bottom: 24px !important;
 }
 
 /* Headers de tabla */
 .table-header {
-  font-size: 16px;
-  font-weight: 600;
-  color: white;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  background: var(--table-header-bg) !important;
+  color: var(--table-header-color) !important;
+  padding: 18px 24px !important;
 }
 
 /* Contenido de tabla */
 .table-content {
-  font-size: 14px;
-  font-weight: 400;
-  color: #374151;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  color: var(--text-primary) !important;
 }
 
 /* Nombres de clientes */
 .client-name {
-  font-size: 14px;
-  font-weight: 500;
-  color: #1f2937;
+  font-size: 15px !important;
+  font-weight: 500 !important;
+  color: var(--text-primary) !important;
 }
 
 /* Identificaciones de clientes */
 .client-id {
-  font-size: 12px;
-  color: #6b7280;
+  font-size: 13px !important;
+  color: var(--text-secondary) !important;
+}
+
+/* Textos de fecha corregidos */
+.date-text {
+  color: #374151 !important;
+  font-weight: 400 !important;
+}
+
+/* Textos de valor corregidos */
+.value-text {
+  color: #1f2937 !important;
+  font-weight: 500 !important;
+}
+
+/* ====================================================
+   🎯 ICONOS DE ESTADO MODERNOS
+   ==================================================== */
+
+.status-icon {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: white !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  transition: all 0.2s ease !important;
+  margin: 0 auto !important;
+}
+
+.status-icon:hover {
+  transform: scale(1.05) !important;
+}
+
+/* Estados de entrega */
+.status-delivered { 
+  background: var(--success) !important; 
+}
+
+.status-ready { 
+  background: var(--success-light) !important; 
+}
+
+.status-process { 
+  background: var(--primary) !important; 
+}
+
+/* Estados de pago */
+.payment-paid { 
+  background: #16a34a !important; 
+}
+
+.payment-partial { 
+  background: var(--warning) !important; 
+}
+
+.payment-unpaid { 
+  background: var(--danger) !important; 
+}
+
+/* ====================================================
+   📊 TABLA MEJORADA CON NUEVO TEMA
+   ==================================================== */
+
+.table-container {
+  background: var(--table-bg) !important;
+  border-radius: 12px !important;
+  box-shadow: var(--table-shadow) !important;
+  border: 1px solid var(--table-border) !important;
+  overflow: hidden !important;
+  margin-bottom: 24px !important;
+}
+
+.table-row {
+  padding: 18px 24px !important;
+  border-bottom: 1px solid #f1f5ff !important;
+  transition: background 0.2s ease !important;
+}
+
+.table-row:hover {
+  background: var(--table-hover) !important;
+}
+
+.table-row:nth-child(even) {
+  background: #fdfdff !important;
+}
+
+.table-row:nth-child(even):hover {
+  background: var(--table-hover) !important;
+}
+
+/* Grid layout para columnas */
+.table-header, .table-row {
+  display: grid !important;
+  grid-template-columns: 90px 1fr 110px 130px 130px 110px 130px !important;
+  gap: 24px !important;
+  align-items: center !important;
 }
 
 .tabla-notaria,
 .tabla-ordenable {
-  font-size: 14px; /* Aumentado de 0.875rem (14px) para mejor legibilidad */
-  line-height: 1.4; /* Aumentado para mejor espaciado */
+  font-size: 15px !important; /* Aumentado para mejor legibilidad */
+  line-height: 1.5 !important; /* Mejorado espaciado */
   width: 100%;
   margin-bottom: 0;
-  table-layout: auto; /* Cambiado de fixed a auto para mejor alineamiento */
+  table-layout: auto;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   border-collapse: separate;
   border-spacing: 0;
+  background: var(--table-bg);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--table-shadow);
 }
 
-/* ✅ REGLA CRÍTICA PARA EVITAR SUPERPOSICIÓN */
-.table-responsive .table {
-  margin-bottom: 0 !important;
+/* ====================================================
+   🎯 HEADERS DE TABLA MODERNOS
+   ==================================================== */
+
+.tabla-notaria th,
+.tabla-ordenable th {
+  background: var(--table-header-bg) !important;
+  color: var(--table-header-color) !important;
+  font-weight: 600 !important;
+  font-size: 16px !important;
+  padding: 18px 20px !important;
+  border: none !important;
+  text-align: left !important;
+  vertical-align: middle !important;
 }
 
-.table-responsive {
-  overflow-x: auto !important;
-  -webkit-overflow-scrolling: touch !important;
+.tabla-notaria th:hover {
+  background: linear-gradient(135deg, #e0e7ff 0%, #ddd6fe 100%) !important;
 }
 
-/* ✅ ASEGURAR QUE TODAS LAS TABLAS USEN EL SISTEMA UNIVERSAL */
-#tablaDocumentosAdmin,
-#tablaDocumentosCaja,
-#tablaDocumentosMatrizadores,
-#tablaDocumentosArchivo,
-#tablaDocumentosRecepcion {
-  table-layout: auto !important;
-  width: 100% !important;
-  border-collapse: separate !important;
-  border-spacing: 0 !important;
+/* ====================================================
+   📱 CELDAS DE TABLA MEJORADAS
+   ==================================================== */
+
+.tabla-notaria td,
+.tabla-ordenable td {
+  padding: 18px 20px !important;
+  border-bottom: 1px solid #f1f5ff !important;
+  vertical-align: middle !important;
+  font-size: 14px !important;
+  color: var(--text-primary) !important;
+}
+
+.tabla-notaria tbody tr:nth-child(even) {
+  background: #fdfdff !important;
+}
+
+.tabla-notaria tbody tr:hover {
+  background: var(--table-hover) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.08);
 }
 
 /* ====================================================

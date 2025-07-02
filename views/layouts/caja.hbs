@@ -14,6 +14,9 @@
   <!-- CSS Universal para Tablas -->
   <link rel="stylesheet" href="/css/table-universal.css">
   
+  <!-- Sidebar Colapsible CSS -->
+  <link rel="stylesheet" href="/css/sidebar-collapsible.css">
+  
   <!-- Estilos personalizados -->
   <style>
     :root {
@@ -24,66 +27,6 @@
       font-family: 'Roboto', sans-serif;
       background-color: #f5f5f5;
       color: #333;
-    }
-    
-    .sidebar {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: var(--sidebar-width);
-      height: 100vh;
-      background-color: #2c3e50;
-      color: #ecf0f1;
-      padding-top: 20px;
-      overflow-y: auto;
-      z-index: 999;
-      transition: all 0.3s;
-    }
-    
-    .sidebar .logo {
-      padding: 0 15px 20px;
-      border-bottom: 1px solid #3c546c;
-      margin-bottom: 15px;
-    }
-    
-    .sidebar .nav-link {
-      color: #ecf0f1;
-      padding: 12px 20px;
-      transition: all 0.2s;
-      font-size: 15px;
-      border-left: 3px solid transparent;
-    }
-    
-    .sidebar .nav-link:hover {
-      background-color: #34495e;
-      border-left: 3px solid #f1c40f;
-    }
-    
-    .sidebar .nav-link.active {
-      background-color: #34495e;
-      border-left: 3px solid #f1c40f;
-    }
-    
-    .sidebar .nav-link i {
-      margin-right: 10px;
-      width: 20px;
-      text-align: center;
-    }
-    
-    .sidebar-heading {
-      font-size: 12px;
-      text-transform: uppercase;
-      padding: 10px 20px;
-      color: #95a5a6;
-      font-weight: 700;
-      margin-top: 15px;
-    }
-    
-    .main-content {
-      margin-left: var(--sidebar-width);
-      padding: 20px;
-      min-height: 100vh;
-      transition: all 0.3s;
     }
     
     .topbar {
@@ -110,144 +53,119 @@
       padding: 15px 20px;
       font-weight: 600;
     }
-    
-    @media (max-width: 768px) {
-      .sidebar {
-        width: 0;
-        padding: 0;
-      }
-      
-      .sidebar.active {
-        width: var(--sidebar-width);
-        padding-top: 20px;
-      }
-      
-      .main-content {
-        margin-left: 0;
-      }
-      
-      .main-content.sidebar-active {
-        margin-left: var(--sidebar-width);
-      }
-      
-      .sidebar-toggle {
-        display: block !important;
-      }
-    }
-    
-    .sidebar-toggle {
-      display: none;
-      cursor: pointer;
-      font-size: 20px;
-    }
   </style>
   <!-- Link a main.css removido - archivo no existe -->
   <link rel="stylesheet" href="/css/entrega-grupal-jerarquica.css">
   <link rel="stylesheet" href="/css/tabla-documentos-mejorada.css">
 </head>
 <body>
-  <!-- Barra lateral -->
-  <div class="sidebar">
-    <div class="logo text-center">
-      <h4><i class="fas fa-cash-register me-2"></i> Notaría Digital</h4>
-    </div>
+  <!-- Contenedor principal del layout -->
+  <div class="app-container">
+        <!-- Barra lateral -->
+    <div class="sidebar">
+      <!-- Botón toggle del sidebar -->
+      <button class="sidebar-toggle" aria-label="Toggle sidebar" title="Colapsar/Expandir sidebar">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+      
+      <div class="logo">
+        <i class="fas fa-cash-register logo-icon"></i>
+        <span class="logo-text">Notaría Digital</span>
+      </div>
     
     <ul class="nav flex-column">
       <li class="nav-item">
-        <a class="nav-link {{#if activeDashboard}}active{{/if}}" href="/caja">
-          <i class="fas fa-tachometer-alt"></i> Dashboard
+        <a class="nav-link {{#if activeDashboard}}active{{/if}}" href="/caja" data-tooltip="Dashboard">
+          <i class="fas fa-tachometer-alt"></i>
+          <span class="nav-text">Dashboard</span>
         </a>
       </li>
       
       <div class="sidebar-heading">Documentos</div>
       
-      {{!-- <li class="nav-item">
-        <a class="nav-link {{#if activeRegistro}}active{{/if}}" href="/caja/documentos/registro">
-          <i class="fas fa-file-alt"></i> Registrar Documento
-        </a>
-      </li> --}}
-      
       <li class="nav-item">
-        <a class="nav-link {{#if activeXML}}active{{/if}}" href="/caja/documentos/nuevo-xml">
-          <i class="fas fa-file-code"></i> Cargar XML
+        <a class="nav-link {{#if activeXML}}active{{/if}}" href="/caja/documentos/nuevo-xml" data-tooltip="Cargar XML">
+          <i class="fas fa-file-code"></i>
+          <span class="nav-text">Cargar XML</span>
         </a>
       </li>
       
       <li class="nav-item">
-        <a class="nav-link {{#if activeListado}}active{{/if}}" href="/caja/documentos">
-          <i class="fas fa-list"></i> Listado de Documentos
+        <a class="nav-link {{#if activeListado}}active{{/if}}" href="/caja/documentos" data-tooltip="Listado">
+          <i class="fas fa-list"></i>
+          <span class="nav-text">Listado</span>
         </a>
       </li>
       
       <div class="sidebar-heading">Gestión</div>
       
       <li class="nav-item">
-        <a class="nav-link {{#if activeRegistrarPago}}active{{/if}}" href="/caja/documentos?estadoPago=pendiente">
-          <i class="fas fa-credit-card"></i> Registrar Pago
+        <a class="nav-link {{#if activeRegistrarPago}}active{{/if}}" href="/caja/documentos?estadoPago=pendiente" data-tooltip="Registrar Pago">
+          <i class="fas fa-credit-card"></i>
+          <span class="nav-text">Registrar Pago</span>
         </a>
       </li>
       
       <li class="nav-item">
-        <a class="nav-link {{#if activePagos}}active{{/if}}" href="/caja/pagos">
-          <i class="fas fa-money-bill-wave"></i> Pagos
+        <a class="nav-link {{#if activePagos}}active{{/if}}" href="/caja/pagos" data-tooltip="Pagos">
+          <i class="fas fa-money-bill-wave"></i>
+          <span class="nav-text">Pagos</span>
         </a>
       </li>
       
       <li class="nav-item">
-        <a class="nav-link {{#if activeReportes}}active{{/if}}" href="/caja/reportes">
-          <i class="fas fa-chart-pie"></i> Reportes y Estadísticas
+        <a class="nav-link {{#if activeReportes}}active{{/if}}" href="/caja/reportes" data-tooltip="Reportes">
+          <i class="fas fa-chart-pie"></i>
+          <span class="nav-text">Reportes</span>
         </a>
       </li>
       
       <div class="sidebar-heading">Auditoría</div>
       
       <li class="nav-item">
-        <a class="nav-link {{#if activeEliminados}}active{{/if}}" href="/caja/documentos/eliminados">
-          <i class="fas fa-trash-restore text-warning"></i> Documentos Eliminados
+        <a class="nav-link {{#if activeEliminados}}active{{/if}}" href="/caja/documentos/eliminados" data-tooltip="Eliminados">
+          <i class="fas fa-trash-restore text-warning"></i>
+          <span class="nav-text">Eliminados</span>
         </a>
       </li>
       
-      {{! ============== NAVEGACIÓN HÍBRIDA PARA CAJA_ARCHIVO ============== }}
       {{#if (eq userRole 'caja_archivo')}}
-        <div class="sidebar-heading">
-          <i class="fas fa-user-edit me-1"></i> Funciones de Matrizador
-        </div>
+        <div class="sidebar-heading">Matrizador</div>
         
         <li class="nav-item">
-          <a class="nav-link {{#if activeMisDocumentos}}active{{/if}}" href="/caja/mis-documentos">
-            <i class="fas fa-file-edit"></i> Mis Documentos
+          <a class="nav-link {{#if activeMisDocumentos}}active{{/if}}" href="/caja/mis-documentos" data-tooltip="Mis Documentos">
+            <i class="fas fa-file-edit"></i>
+            <span class="nav-text">Mis Documentos</span>
           </a>
         </li>
         
         <li class="nav-item">
-          <a class="nav-link {{#if activeEntregaDocumentos}}active{{/if}}" href="/caja/entrega-documentos">
-            <i class="fas fa-hand-holding"></i> Entrega de Documentos
+          <a class="nav-link {{#if activeEntregaDocumentos}}active{{/if}}" href="/caja/entrega-documentos" data-tooltip="Entrega">
+            <i class="fas fa-hand-holding"></i>
+            <span class="nav-text">Entrega</span>
           </a>
         </li>
-        
-        <div class="sidebar-heading">
-          <small class="text-muted">
-            <i class="fas fa-info-circle me-1"></i> Acceso Híbrido Activo
-          </small>
-        </div>
       {{/if}}
     </ul>
+    
+    <!-- Footer de la sidebar -->
+    <div class="sidebar-footer">
+      <a href="/logout" class="logout-link" data-tooltip="Cerrar sesión">
+        <i class="fas fa-sign-out-alt"></i>
+        <span>Cerrar sesión</span>
+      </a>
+    </div>
   </div>
 
   <!-- Contenido principal -->
   <div class="main-content">
     <div class="topbar">
-      <div class="sidebar-toggle">
-        <i class="fas fa-bars"></i>
-      </div>
       <h4 class="mb-0">{{title}}</h4>
-      <div>
+      <div class="user-info">
         <!-- Si hay usuario autenticado mostramos su nombre y rol -->
         {{#if userName}}
-          <span class="me-3">{{userName}} ({{userRole}})</span>
-          <a href="/logout" class="btn btn-sm btn-outline-secondary">
-            <i class="fas fa-sign-out-alt"></i> Salir
-          </a>
+          <span class="user-name">{{userName}}</span>
+          <span class="user-role">{{userRole}}</span>
         {{else}}
           <!-- Si no hay usuario autenticado mostramos enlace de login -->
           <a href="/login" class="btn btn-sm btn-primary">
@@ -259,17 +177,20 @@
     
     {{#if error}}
     <div class="alert alert-danger mb-4">
-      <i class="fas fa-exclamation-triangle me-2"></i> {{error}}
+      <i class="fas fa-exclamation-triangle me-2"></i>
+          <span class="nav-text">{{error}}</span>
     </div>
     {{/if}}
     
     {{#if success}}
     <div class="alert alert-success mb-4">
-      <i class="fas fa-check-circle me-2"></i> {{success}}
+      <i class="fas fa-check-circle me-2"></i>
+          <span class="nav-text">{{success}}</span>
     </div>
     {{/if}}
     
     {{{body}}}
+    </div>
   </div>
   
   <!-- Scripts -->
@@ -279,55 +200,49 @@
   <!-- JavaScript Universal para Tablas -->
   <script src="/js/table-universal.js"></script>
   
-  <!-- IMPORTAR: JavaScript principal del sistema -->
-  <script src="/js/main.js"></script>
+  <!-- Sidebar Colapsible JavaScript -->
+  <script src="/js/sidebar-collapsible.js"></script>
   
-  <!-- IMPORTAR: Script de optimización de badges -->
+  <!-- Script principal de la aplicación -->
+  <script src="/js/main.js"></script>
   <script src="/js/fix-badges.js"></script>
   
+  <!-- Script de optimización del botón toggle -->
   <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // Manejar barra lateral móvil
-      const sidebarToggle = document.querySelector('.sidebar-toggle');
-      if (sidebarToggle) {
-        sidebarToggle.addEventListener('click', function() {
-          document.querySelector('.sidebar').classList.toggle('active');
-          document.querySelector('.main-content').classList.toggle('sidebar-active');
-        });
+    // Optimizar botón toggle después de cargar
+    setTimeout(() => {
+      const toggleBtn = document.querySelector('.sidebar-toggle');
+      if (toggleBtn) {
+        console.log('✅ Botón toggle encontrado');
+        // Optimizar estilos del botón toggle para máxima visibilidad
+        toggleBtn.style.cssText = `
+          position: absolute !important;
+          top: 15px !important;
+          right: 15px !important;
+          width: 32px !important;
+          height: 32px !important;
+          background: rgba(255, 255, 255, 0.25) !important;
+          border: 1px solid rgba(255, 255, 255, 0.5) !important;
+          border-radius: 8px !important;
+          color: white !important;
+          cursor: pointer !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          font-size: 14px !important;
+          z-index: 1001 !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+          pointer-events: auto !important;
+          box-shadow: 0 3px 12px rgba(0, 0, 0, 0.3) !important;
+          backdrop-filter: blur(10px) !important;
+        `;
+        console.log('✅ Botón toggle optimizado y visible');
+      } else {
+        console.error('❌ Botón toggle no encontrado');
       }
-      
-      // Detectar el rol actual basado en la URL
-      const currentRole = window.location.pathname.split('/')[1]; // 'caja', 'recepcion', etc.
-      
-      // Corregir cualquier enlace que apunte a /admin
-      if (currentRole !== 'admin') {
-        document.querySelectorAll('a[href^="/admin"]').forEach(link => {
-          const newHref = link.href.replace('/admin', '/' + currentRole);
-          console.log('Corrigiendo enlace:', link.href, '→', newHref);
-          link.href = newHref;
-        });
-      }
-      
-      // Prevenir navegación no deseada
-      document.addEventListener('click', function(e) {
-        const target = e.target.closest('a');
-        if (target && target.href) {
-          const url = new URL(target.href);
-          const path = url.pathname;
-          
-          // Si el enlace apunta a /admin y no somos admin, prevenir la navegación
-          if (path.startsWith('/admin') && currentRole !== 'admin') {
-            e.preventDefault();
-            console.log('Prevenida navegación a:', path);
-            
-            // Redirigir a la ruta equivalente en el rol actual
-            const newPath = path.replace('/admin', '/' + currentRole);
-            console.log('Redirigiendo a:', newPath);
-            window.location.href = newPath;
-          }
-        }
-      });
-    });
+    }, 1000);
   </script>
+
 </body>
 </html> 
