@@ -1,0 +1,519 @@
+/**
+ * ESTILOS SIDEBAR ARGON PRO - SISTEMA COLAPSABLE
+ * CSS avanzado para funcionalidad completa del menu lateral
+ */
+
+/* ==================== VARIABLES CSS ==================== */
+:root {
+  --sidebar-width: 250px;
+  --sidebar-collapsed-width: 64px;
+  --sidebar-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --sidebar-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --sidebar-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  --sidebar-border: rgba(255, 255, 255, 0.1);
+  --transition-duration: 0.3s; /* Variable dinámica para JS */
+}
+
+/* ==================== SIDEBAR BASE ==================== */
+.sidebar-argon {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: var(--sidebar-width);
+  height: 100vh;
+  background: var(--sidebar-bg);
+  backdrop-filter: blur(20px);
+  border-right: 1px solid var(--sidebar-border);
+  box-shadow: var(--sidebar-shadow);
+  z-index: 999;
+  transition: var(--sidebar-transition);
+  transform: translateX(0);
+  overflow: hidden;
+}
+
+/* ==================== ESTADO COLAPSADO ==================== */
+.sidebar-argon.collapsed {
+  width: var(--sidebar-collapsed-width);
+}
+
+/* Ajustar contenido principal cuando sidebar está colapsado */
+.sidebar-collapsed .main-content {
+  margin-left: var(--sidebar-collapsed-width);
+}
+
+.main-content {
+  margin-left: var(--sidebar-width);
+  transition: var(--sidebar-transition);
+}
+
+/* ==================== HEADER DEL SIDEBAR ==================== */
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  padding: 1.5rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  transition: var(--sidebar-transition);
+}
+
+.sidebar-header .logo {
+  display: flex;
+  align-items: center;
+  color: white;
+  text-decoration: none;
+  transition: var(--sidebar-transition);
+}
+
+.sidebar-header .logo-icon {
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  transition: var(--sidebar-transition);
+}
+
+.sidebar-header .logo-text {
+  font-size: 1.1rem;
+  font-weight: 600;
+  opacity: 1;
+  transition: var(--sidebar-transition);
+  white-space: nowrap;
+}
+
+/* Header en estado colapsado */
+.sidebar-argon.collapsed .sidebar-header {
+  padding: 1.5rem 0.5rem;
+  justify-content: center;
+}
+
+.sidebar-argon.collapsed .logo-text {
+  opacity: 0;
+  width: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+.sidebar-argon.collapsed .logo-icon {
+  margin-right: 0;
+}
+
+/* ==================== NAVEGACIÓN ==================== */
+.sidebar-nav {
+  padding: 1rem 0;
+  height: calc(100vh - 140px);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+}
+
+/* ==================== SECCIONES DEL MENU ==================== */
+.nav-section {
+  margin-bottom: 1.5rem;
+}
+
+.nav-section-title {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 0 1rem;
+  margin-bottom: 0.5rem;
+  transition: var(--sidebar-transition);
+  opacity: 1;
+}
+
+.sidebar-argon.collapsed .nav-section-title {
+  opacity: 0;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* ==================== ELEMENTOS DEL MENU ==================== */
+.nav-item {
+  margin-bottom: 0.25rem;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  color: rgba(255, 255, 255, 0.9);
+  text-decoration: none;
+  border-radius: 0 25px 25px 0;
+  margin-right: 1rem;
+  transition: var(--sidebar-transition);
+  position: relative;
+  overflow: hidden;
+}
+
+.nav-link:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  transform: translateX(4px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.nav-link.active {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.nav-link.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(135deg, #fff, rgba(255, 255, 255, 0.7));
+}
+
+/* ==================== ICONOS ==================== */
+.nav-icon {
+  width: 20px;
+  height: 20px;
+  margin-right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--sidebar-transition);
+  flex-shrink: 0;
+}
+
+.nav-text {
+  font-size: 0.9rem;
+  font-weight: 500;
+  opacity: 1;
+  transition: var(--sidebar-transition);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* Estado colapsado - solo iconos */
+.sidebar-argon.collapsed .nav-link {
+  padding: 0.75rem;
+  margin-right: 0;
+  justify-content: center;
+  border-radius: 8px;
+  margin: 0.25rem 0.5rem;
+}
+
+.sidebar-argon.collapsed .nav-icon {
+  margin-right: 0;
+}
+
+.sidebar-argon.collapsed .nav-text {
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
+}
+
+/* ==================== BOTÓN TOGGLE ==================== */
+.sidebar-toggle {
+  position: absolute;
+  top: 20px;
+  right: -15px;
+  width: 30px;
+  height: 30px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--sidebar-transition);
+  z-index: 1001;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.sidebar-toggle:hover {
+  background: linear-gradient(135deg, #764ba2, #667eea);
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.sidebar-toggle i {
+  font-size: 12px;
+  transition: var(--sidebar-transition);
+}
+
+.sidebar-argon.collapsed .sidebar-toggle i {
+  transform: rotate(180deg);
+}
+
+/* ==================== FOOTER SIDEBAR ==================== */
+.sidebar-footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.sidebar-footer .help-section {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1rem;
+  text-align: center;
+  transition: var(--sidebar-transition);
+}
+
+.sidebar-footer .help-section .help-icon {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 0.5rem;
+  color: white;
+}
+
+.sidebar-footer .help-section .help-text {
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  transition: var(--sidebar-transition);
+}
+
+.sidebar-footer .help-section .help-description {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.75rem;
+  transition: var(--sidebar-transition);
+}
+
+/* Footer en estado colapsado */
+.sidebar-argon.collapsed .sidebar-footer {
+  padding: 0.5rem;
+}
+
+.sidebar-argon.collapsed .help-section {
+  padding: 0.5rem;
+}
+
+.sidebar-argon.collapsed .help-text,
+.sidebar-argon.collapsed .help-description {
+  opacity: 0;
+  height: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+/* ==================== LOGOUT BUTTON ==================== */
+.logout-section {
+  padding: 0 1rem 1rem;
+}
+
+.logout-btn {
+  width: 100%;
+  background: rgba(220, 53, 69, 0.2);
+  border: 1px solid rgba(220, 53, 69, 0.3);
+  color: white;
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: var(--sidebar-transition);
+  cursor: pointer;
+}
+
+.logout-btn:hover {
+  background: rgba(220, 53, 69, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+}
+
+.sidebar-argon.collapsed .logout-btn {
+  padding: 0.75rem 0.5rem;
+  font-size: 0;
+}
+
+.sidebar-argon.collapsed .logout-btn::before {
+  content: '\f2f5'; /* Font Awesome logout icon */
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  font-size: 14px;
+}
+
+/* ==================== OVERLAY MOBILE ==================== */
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 998;
+  opacity: 0;
+  visibility: hidden;
+  transition: var(--sidebar-transition);
+}
+
+.sidebar-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* ==================== RESPONSIVE DESIGN ==================== */
+
+/* Tablet */
+@media (max-width: 1024px) {
+  .sidebar-argon {
+    width: 240px;
+  }
+  
+  .main-content {
+    margin-left: 240px;
+  }
+  
+  .sidebar-collapsed .main-content {
+    margin-left: var(--sidebar-collapsed-width);
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .sidebar-argon {
+    transform: translateX(-100%);
+    width: 280px;
+    box-shadow: none;
+  }
+  
+  .main-content {
+    margin-left: 0 !important;
+  }
+  
+  .sidebar-open .sidebar-argon {
+    transform: translateX(0);
+    box-shadow: var(--sidebar-shadow);
+  }
+  
+  .sidebar-toggle {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 1002;
+  }
+  
+  .sidebar-open .sidebar-toggle {
+    left: 260px;
+  }
+}
+
+/* Mobile pequeño */
+@media (max-width: 480px) {
+  .sidebar-argon {
+    width: 100vw;
+  }
+  
+  .sidebar-open .sidebar-toggle {
+    left: calc(100vw - 50px);
+  }
+}
+
+/* ==================== ANIMACIONES PERSONALIZADAS ==================== */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+}
+
+.nav-text {
+  animation: slideIn 0.3s ease;
+}
+
+.sidebar-argon.collapsed .nav-text {
+  animation: slideOut 0.3s ease;
+}
+
+/* ==================== TOOLTIPS ==================== */
+.sidebar-tooltip {
+  pointer-events: none;
+  z-index: 9999;
+  animation: tooltipFadeIn 0.2s ease;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) translateX(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
+}
+
+/* ==================== ESTADOS DE FOCUS ==================== */
+.nav-link:focus {
+  outline: 2px solid rgba(255, 255, 255, 0.3);
+  outline-offset: 2px;
+}
+
+.sidebar-toggle:focus {
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 2px;
+}
+
+/* ==================== PERFOMANCE OPTIMIZATIONS ==================== */
+.sidebar-argon,
+.nav-link,
+.nav-text,
+.nav-icon {
+  will-change: transform, opacity, width;
+}
+
+.sidebar-argon.collapsed * {
+  will-change: auto;
+}
+
+/* ==================== DARK MODE SUPPORT ==================== */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --sidebar-bg: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+    --sidebar-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  }
+} 

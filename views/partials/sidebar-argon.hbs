@@ -1,0 +1,375 @@
+<!-- ==================== SIDEBAR LATERAL ARGON PRO ==================== -->
+<aside class="sidebar-argon">
+  <!-- Botón Toggle MÁS A LA IZQUIERDA -->
+  <button class="sidebar-toggle" type="button" aria-label="Toggle Sidebar" 
+          style="position: absolute; top: 24px; right: 16px; width: 32px; height: 32px; 
+                 background: linear-gradient(135deg, #667eea, #764ba2); border: 2px solid rgba(255,255,255,0.2); 
+                 border-radius: 50%; color: white; cursor: pointer; display: flex; align-items: center; 
+                 justify-content: center; z-index: 1001; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+                 transition: all 0.3s ease; font-size: 12px; font-weight: bold;">
+    <span class="toggle-icon">&laquo;</span>
+  </button>
+  
+  <!-- Header del Sidebar -->
+  <div class="sidebar-header">
+    <a href="/admin/dashboard" class="logo">
+      <div class="logo-icon">
+        <i class="fas fa-balance-scale text-white"></i>
+      </div>
+      <span class="logo-text">ProNotary</span>
+    </a>
+  </div>
+
+  <!-- Navegación Principal -->
+  <nav class="sidebar-nav">
+    
+    <!-- Dashboard -->
+    <div class="nav-section">
+      <div class="nav-item">
+        <a href="{{dashboardUrl}}" 
+           class="nav-link {{#if activeDashboard}}active{{/if}}" 
+           data-tooltip="Panel de Control">
+          <div class="nav-icon">
+            <i class="fas fa-tachometer-alt"></i>
+          </div>
+          <span class="nav-text">Dashboard</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Sección: Documentos -->
+    {{#if showDocumentosSection}}
+    <div class="nav-section">
+      <h6 class="nav-section-title">Documentos</h6>
+      
+      {{#if showCargarXML}}
+      <div class="nav-item">
+        <a href="/caja/documentos/nuevo-xml" 
+           class="nav-link {{#if activeXML}}active{{/if}}" 
+           data-tooltip="Cargar XML">
+          <div class="nav-icon">
+            <i class="fas fa-file-code"></i>
+          </div>
+          <span class="nav-text">Cargar XML</span>
+        </a>
+      </div>
+      {{/if}}
+      
+      {{#if showListadoDocumentos}}
+      <div class="nav-item">
+        <a href="{{listadoDocumentosUrl}}" 
+           class="nav-link {{#if activeListado}}active{{/if}}" 
+           data-tooltip="{{listadoDocumentosTooltip}}">
+          <div class="nav-icon">
+            <i class="{{listadoDocumentosIcon}}"></i>
+          </div>
+          <span class="nav-text">{{listadoDocumentosText}}</span>
+        </a>
+      </div>
+      {{/if}}
+
+      {{#if showSupervisarDocumentos}}
+      <div class="nav-item">
+        <a href="/admin/documentos/listado" 
+           class="nav-link {{#if activeSupervisar}}active{{/if}}" 
+           data-tooltip="Supervisar Documentos">
+          <div class="nav-icon">
+            <i class="fas fa-search"></i>
+          </div>
+          <span class="nav-text">Supervisar Documentos</span>
+        </a>
+      </div>
+      {{/if}}
+    </div>
+    {{/if}}
+
+    <!-- Sección: Gestión -->
+    {{#if showGestionSection}}
+    <div class="nav-section">
+      <h6 class="nav-section-title">Gestión</h6>
+      
+      {{#if showMatrizadores}}
+      <div class="nav-item">
+        <a href="/admin/matrizadores" 
+           class="nav-link {{#if activeMatrizadores}}active{{/if}}" 
+           data-tooltip="Gestión de Matrizadores">
+          <div class="nav-icon">
+            <i class="fas fa-users"></i>
+          </div>
+          <span class="nav-text">Matrizadores</span>
+        </a>
+      </div>
+      {{/if}}
+      
+      {{#if showReportes}}
+      <div class="nav-item">
+        <a href="{{reportesUrl}}" 
+           class="nav-link {{#if activeReportes}}active{{/if}}" 
+           data-tooltip="Reportes y Estadísticas">
+          <div class="nav-icon">
+            <i class="fas fa-chart-bar"></i>
+          </div>
+          <span class="nav-text">Reportes</span>
+        </a>
+      </div>
+      {{/if}}
+
+      {{#if showPagos}}
+      <div class="nav-item">
+        <a href="{{pagosUrl}}" 
+           class="nav-link {{#if activePagos}}active{{/if}}" 
+           data-tooltip="{{pagosTooltip}}">
+          <div class="nav-icon">
+            <i class="{{pagosIcon}}"></i>
+          </div>
+          <span class="nav-text">{{pagosText}}</span>
+        </a>
+      </div>
+      {{/if}}
+    </div>
+    {{/if}}
+
+    <!-- Sección: Sistema -->
+    {{#if showSistemaSection}}
+    <div class="nav-section">
+      <h6 class="nav-section-title">{{sistemaSectionTitle}}</h6>
+      
+      {{#if showAuditoria}}
+      <div class="nav-item">
+        <a href="/admin/auditoria" 
+           class="nav-link {{#if activeAuditoria}}active{{/if}}" 
+           data-tooltip="Auditoría del Sistema">
+          <div class="nav-icon">
+            <i class="fas fa-clipboard-list"></i>
+          </div>
+          <span class="nav-text">Auditoría</span>
+        </a>
+      </div>
+      {{/if}}
+      
+      {{#if showEliminaciones}}
+      <div class="nav-item">
+        <a href="{{eliminacionesUrl}}" 
+           class="nav-link {{#if activeEliminaciones}}active{{/if}}" 
+           data-tooltip="{{eliminacionesTooltip}}">
+          <div class="nav-icon">
+            <i class="fas fa-trash-alt"></i>
+          </div>
+          <span class="nav-text">{{eliminacionesText}}</span>
+        </a>
+      </div>
+      {{/if}}
+      
+      {{#if showNotificaciones}}
+      <div class="nav-item">
+        <a href="{{notificacionesUrl}}" 
+           class="nav-link {{#if activeNotificaciones}}active{{/if}}" 
+           data-tooltip="Historial de Notificaciones">
+          <div class="nav-icon">
+            <i class="fas fa-bell"></i>
+          </div>
+          <span class="nav-text">Notificaciones</span>
+        </a>
+      </div>
+      {{/if}}
+    </div>
+    {{/if}}
+
+    <!-- Sección Matrizador (solo para roles específicos) -->
+    {{#if showMatrizadorSection}}
+    <div class="nav-section">
+      <h6 class="nav-section-title">Matrizador</h6>
+      
+      <div class="nav-item">
+        <a href="/caja/mis-documentos" 
+           class="nav-link {{#if activeMisDocumentos}}active{{/if}}" 
+           data-tooltip="Mis Documentos Asignados">
+          <div class="nav-icon">
+            <i class="fas fa-file-edit"></i>
+          </div>
+          <span class="nav-text">Mis Documentos</span>
+        </a>
+      </div>
+      
+      <div class="nav-item">
+        <a href="/caja/entrega-documentos" 
+           class="nav-link {{#if activeEntregaDocumentos}}active{{/if}}" 
+           data-tooltip="Entrega de Documentos">
+          <div class="nav-icon">
+            <i class="fas fa-hand-holding"></i>
+          </div>
+          <span class="nav-text">Entrega</span>
+        </a>
+      </div>
+    </div>
+    {{/if}}
+
+  </nav>
+
+  <!-- Footer del Sidebar - SOLO CERRAR SESIÓN -->
+  <div class="sidebar-footer">
+    <!-- Botón Cerrar Sesión -->
+    <div class="logout-section">
+      <button onclick="window.location.href='/logout'" class="logout-btn">
+        <i class="fas fa-sign-out-alt"></i>
+        <span class="logout-text">Cerrar Sesión</span>
+      </button>
+    </div>
+  </div>
+
+</aside>
+
+<!-- Overlay para Mobile -->
+<div class="sidebar-overlay"></div>
+
+<!-- Estilos específicos para el sidebar - SIN AVISO DE AYUDA -->
+<style>
+  /* SIDEBAR - GRADIENTE AZUL-PÚRPURA ORIGINAL */
+  .sidebar-argon {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
+  }
+  
+  /* BOTÓN TOGGLE - GRADIENTE ORIGINAL */
+  .sidebar-toggle:hover {
+    background: linear-gradient(135deg, #5a67d8, #6b46c1) !important;
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.4) !important;
+  }
+  
+  /* NAVEGACIÓN - COLORES ORIGINALES */
+  .nav-link {
+    color: rgba(255, 255, 255, 0.9) !important;
+    border-radius: 0 25px 25px 0 !important;
+    margin-right: 1rem !important;
+    transition: all 0.3s ease !important;
+  }
+  
+  .nav-link:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: white !important;
+    transform: translateX(4px) !important;
+  }
+  
+  .nav-link.active {
+    background: rgba(255, 255, 255, 0.15) !important;
+    color: white !important;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4) !important;
+  }
+  
+  .nav-section-title {
+    color: rgba(255, 255, 255, 0.6) !important;
+  }
+  
+  /* NAVEGACIÓN - SIN SCROLL INNECESARIO */
+  .sidebar-nav {
+    position: relative !important;
+    z-index: 10 !important;
+    padding-bottom: 80px !important; /* MENOS espacio - solo para el botón de logout */
+    max-height: calc(100vh - 80px) !important; /* Altura máxima optimizada */
+    overflow-y: auto !important;
+  }
+  
+  /* FOOTER - SOLO BOTÓN DE LOGOUT */
+  .sidebar-footer {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    width: var(--sidebar-width) !important;
+    padding: 1rem !important;
+    background: rgba(102, 126, 234, 0.2) !important;
+    backdrop-filter: blur(15px) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.15) !important;
+    z-index: 15 !important;
+  }
+  
+  /* FOOTER EN ESTADO COLAPSADO */
+  .sidebar-argon.collapsed .sidebar-footer {
+    width: var(--sidebar-collapsed-width) !important;
+  }
+  
+  .logout-btn {
+    width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0.75rem !important;
+    background: rgba(239, 68, 68, 0.8) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 8px !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    font-size: 0.85rem !important;
+    font-weight: 500 !important;
+  }
+  
+  .logout-btn:hover {
+    background: rgba(239, 68, 68, 1) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4) !important;
+  }
+  
+  .logout-btn i {
+    margin-right: 0.5rem !important;
+  }
+  
+  /* ESTADO COLAPSADO - SOLO LOGOUT */
+  .sidebar-argon.collapsed .logout-text {
+    opacity: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+  }
+  
+  .sidebar-argon.collapsed .logout-btn {
+    justify-content: center !important;
+  }
+  
+  .sidebar-argon.collapsed .logout-btn i {
+    margin-right: 0 !important;
+  }
+  
+  /* Estados del sidebar */
+  .sidebar-argon.collapsed {
+    width: 4rem !important;
+  }
+  
+  .sidebar-argon.collapsed .nav-text {
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+  
+  .sidebar-argon.collapsed .nav-link {
+    justify-content: center !important;
+  }
+  
+  .sidebar-argon.collapsed .nav-section-title {
+    opacity: 0 !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+  
+  .sidebar-argon.collapsed .logo-text {
+    opacity: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+  }
+  
+  /* Responsive */
+  @media (max-width: 1279px) {
+    .sidebar-argon {
+      transform: translateX(-100%) !important;
+    }
+    
+    .sidebar-argon.show {
+      transform: translateX(0) !important;
+    }
+    
+    .sidebar-footer {
+      position: absolute !important; /* En mobile usar absolute */
+    }
+  }
+</style> 

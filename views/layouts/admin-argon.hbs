@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{title}} - Administración Notarial</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- CSS Personalizados existentes (mantener compatibilidad) -->
+  <link rel="stylesheet" href="/css/table-universal.css">
+  <link rel="stylesheet" href="/css/notificaciones-legible.css">
+  <link rel="stylesheet" href="/css/tabla-documentos-mejorada.css">
+  
+  <!-- Sidebar Argon Pro CSS -->
+  <link rel="stylesheet" href="/css/sidebar-argon.css">
+  
+  <!-- Configuración de Tailwind personalizada -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            'sans': ['Inter', 'ui-sans-serif', 'system-ui'],
+          },
+          colors: {
+            'primary': '#3b82f6',
+            'primary-dark': '#1e40af',
+            'success': '#10b981',
+            'warning': '#f59e0b',
+            'danger': '#ef4444',
+            'info': '#06b6d4',
+            'light': '#f8fafc',
+            'dark': '#1e293b',
+            'sidebar': '#1e293b',
+            'sidebar-hover': '#334155'
+          },
+          spacing: {
+            '68': '17rem',
+            '76': '19rem'
+          },
+          minHeight: {
+            '75': '75vh'
+          }
+        }
+      }
+    }
+  </script>
+  
+  <!-- Estilos personalizados para componentes específicos -->
+  <style>
+    /* Glassmorphism effects */
+    .glass {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    /* Smooth transitions */
+    * {
+      transition: all 0.3s ease;
+    }
+    
+    /* Sidebar animations */
+    .sidebar-collapsed {
+      transform: translateX(-calc(100% - 4rem));
+    }
+    
+    /* Cards with elegant shadows */
+    .card-elegant {
+      background: white;
+      border-radius: 1rem;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      border: 0;
+    }
+    
+    /* Gradient backgrounds */
+    .bg-gradient-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .bg-gradient-success {
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+    
+    .bg-gradient-warning {
+      background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    }
+    
+    .bg-gradient-danger {
+      background: linear-gradient(135deg, #ff6b6b 0%, #ffa726 100%);
+    }
+    
+    /* Elegant hover effects */
+    .hover-lift:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+    }
+    
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    
+    /* Estados del sidebar */
+    .sidebar-argon.sidebar-collapsed {
+      width: 4rem;
+    }
+    
+    .sidebar-argon.sidebar-collapsed .sidebar-text {
+      opacity: 0;
+      pointer-events: none;
+    }
+    
+    .sidebar-argon.sidebar-collapsed .nav-link-argon {
+      justify-content: center;
+    }
+    
+    /* Link activo */
+    .nav-link-argon.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white !important;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    .nav-link-argon.active .shadow-soft-2xl {
+      background: rgba(255, 255, 255, 0.2) !important;
+      backdrop-filter: blur(10px);
+    }
+    
+    .nav-link-argon.active i {
+      color: white !important;
+    }
+    
+    /* Hover effects */
+    .nav-link-argon:hover:not(.active) {
+      background: #f1f5f9;
+      transform: translateX(4px);
+    }
+    
+    /* Responsive */
+    @media (max-width: 1279px) {
+      .sidebar-argon {
+        transform: translateX(-100%);
+      }
+      
+      .sidebar-argon.show {
+        transform: translateX(0);
+      }
+    }
+    
+    /* CONTENIDO PRINCIPAL CON FONDO GRADIENTE RESTAURADO */
+    main, .main-content {
+      margin-left: var(--sidebar-width);
+      transition: margin-left 0.3s ease;
+      min-height: 100vh;
+    }
+    
+    /* Cuando sidebar está colapsado */
+    body.sidebar-collapsed main,
+    body.sidebar-collapsed .main-content {
+      margin-left: var(--sidebar-collapsed-width);
+    }
+    
+    /* Variables CSS disponibles globalmente */
+    :root {
+      --sidebar-width: 250px;
+      --sidebar-collapsed-width: 64px;
+    }
+  </style>
+</head>
+<body class="font-sans antialiased bg-gray-50 text-slate-500">
+  
+  <!-- Fondo elegante superior -->
+  <div class="absolute w-full bg-gradient-primary min-h-75"></div>
+  
+  <!-- Sidebar elegante para Admin -->
+  {{> sidebar-argon 
+      dashboardUrl="/admin/dashboard"
+      showDocumentosSection=true
+      showSupervisarDocumentos=true
+      showGestionSection=true
+      showMatrizadores=true
+      showReportes=true
+      reportesUrl="/admin/reportes"
+      showSistemaSection=true
+      sistemaSectionTitle="Sistema"
+      showAuditoria=true
+      showEliminaciones=true
+      eliminacionesUrl="/admin/auditoria-eliminaciones"
+      eliminacionesText="Eliminaciones"
+      eliminacionesTooltip="Auditoría de Eliminaciones"
+      showNotificaciones=true
+      notificacionesUrl="/admin/notificaciones/historial"
+      activeDashboard=activeDashboard
+      activeListado=activeListado
+      activeMatrizadores=activeMatrizadores
+      activeReportes=activeReportes
+      activeAuditoria=activeAuditoria
+      activeEliminaciones=activeAuditoriaEliminaciones
+      activeNotificaciones=activeNotificaciones
+  }}
+  
+  <!-- Contenido principal -->
+  <main class="main-content relative h-full max-h-screen transition-all duration-200 ease-in-out rounded-xl">
+    
+    <!-- Navbar superior -->
+    {{> navbar-argon}}
+    
+    <!-- Contenido de la página -->
+    <div class="w-full px-6 py-6 mx-auto">
+      
+      <!-- Alertas del sistema -->
+      {{#if error}}
+      <div class="flex items-center p-4 mb-4 text-red-800 rounded-lg bg-red-50 border border-red-200">
+        <i class="fas fa-exclamation-triangle mr-3"></i>
+        <div>
+          <span class="font-medium">Error:</span> {{error}}
+        </div>
+      </div>
+      {{/if}}
+      
+      {{#if success}}
+      <div class="flex items-center p-4 mb-4 text-green-800 rounded-lg bg-green-50 border border-green-200">
+        <i class="fas fa-check-circle mr-3"></i>
+        <div>
+          <span class="font-medium">Éxito:</span> {{success}}
+        </div>
+      </div>
+      {{/if}}
+      
+      <!-- Contenido principal de la página -->
+      {{{body}}}
+      
+    </div>
+  </main>
+  
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- Scripts existentes de ProNotary (mantener funcionalidad) -->
+  <script src="/js/table-universal.js"></script>
+  <script src="/js/main.js"></script>
+  <script src="/js/fix-badges.js"></script>
+  
+  <!-- Sidebar Argon Pro JavaScript -->
+  <script src="/js/sidebar-argon.js"></script>
+  
+  <!-- Scripts de compatibilidad ProNotary -->
+  <script>
+    // Limpiar datos antiguos de localStorage
+    function limpiarDatosAntiguos() {
+      localStorage.removeItem('notaria_autorizaciones');
+      localStorage.removeItem('notaria_preautorizaciones');
+      localStorage.removeItem('sistema_autorizaciones');
+      console.log('✅ Datos antiguos de localStorage limpiados');
+    }
+    
+    // Ejecutar una vez
+    document.addEventListener('DOMContentLoaded', function() {
+      limpiarDatosAntiguos();
+    });
+  </script>
+  
+</body>
+</html> 

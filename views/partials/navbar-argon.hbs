@@ -1,0 +1,213 @@
+<!-- Navbar superior elegante estilo Argon Dashboard -->
+<nav class="relative flex flex-wrap items-center justify-between px-0 py-2 mx-6 transition-all ease-in shadow-none duration-250 rounded-2xl lg:flex-nowrap lg:justify-start">
+  <div class="flex items-center justify-between w-full px-4 py-1 mx-auto flex-wrap-inherit">
+
+    <!-- Título de la página -->
+    <div class="flex items-center">
+      <!-- BOTÓN TOGGLE ELIMINADO - Solo se usa el del sidebar -->
+      
+      <div>
+        <h4 class="mb-0 font-bold text-white">{{title}}</h4>
+        {{#if subtitle}}
+        <p class="mb-0 text-sm text-white/80">{{subtitle}}</p>
+        {{/if}}
+      </div>
+    </div>
+
+    <!-- Barra de búsqueda y controles -->
+    <div class="flex items-center mt-2 grow sm:mt-0 sm:mr-6 md:mr-0 lg:flex lg:basis-auto">
+      
+      <!-- Barra de búsqueda -->
+      <div class="flex items-center md:ml-auto md:pr-4">
+        <div class="relative flex flex-wrap items-stretch w-full transition-all rounded-lg ease">
+          <span class="text-sm ease leading-5.6 absolute z-50 -ml-px flex h-full items-center whitespace-nowrap rounded-lg rounded-tr-none rounded-br-none border border-r-0 border-transparent bg-transparent py-2 px-2.5 text-center font-normal text-white/70 transition-all">
+            <i class="fas fa-search"></i>
+          </span>
+          <input type="text" 
+                 id="searchInput"
+                 class="pl-9 text-sm focus:shadow-lg ease w-full leading-5.6 relative -ml-px block min-w-0 flex-auto rounded-lg border border-solid border-white/20 bg-white/10 backdrop-blur-md text-white bg-clip-padding py-2 pr-3 transition-all placeholder:text-white/60 focus:border-white/40 focus:outline-none focus:bg-white/20" 
+                 placeholder="Buscar documentos, clientes..." />
+        </div>
+      </div>
+      
+      <!-- Controles de usuario -->
+      <ul class="flex flex-row justify-end pl-0 mb-0 list-none md-max:w-full">
+        
+        <!-- Notificaciones -->
+        <li class="relative flex items-center pr-2">
+          <a href="{{notificacionesUrl}}" class="block p-0 text-sm text-white transition-all ease-nav-brand hover:text-gray-200" title="Notificaciones">
+            <div class="relative">
+              <i class="cursor-pointer fa fa-bell text-lg"></i>
+              {{#if notificacionesCount}}
+              <span class="absolute -top-1 -right-1 bg-danger text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">{{notificacionesCount}}</span>
+              {{/if}}
+            </div>
+          </a>
+        </li>
+
+        <!-- Configuración/Settings -->
+        <li class="flex items-center px-2">
+          <button class="p-0 text-sm text-white transition-all ease-nav-brand hover:text-gray-200" title="Configuración" data-settings-toggle>
+            <i class="cursor-pointer fa fa-cog text-lg"></i>
+          </button>
+        </li>
+
+        <!-- Información del usuario -->
+        <li class="flex items-center pl-4">
+          <div class="flex items-center">
+            {{#if userName}}
+              <!-- Avatar del usuario -->
+              <div class="inline-flex items-center justify-center w-8 h-8 mr-3 text-sm text-white bg-gradient-success rounded-full">
+                <i class="fas fa-user"></i>
+              </div>
+              
+              <!-- Información del usuario -->
+              <div class="flex flex-col">
+                <span class="text-sm font-semibold text-white">{{userName}}</span>
+                <span class="text-xs text-white/70">{{userRole}}</span>
+              </div>
+              
+              <!-- Dropdown de usuario -->
+              <div class="relative ml-3">
+                <button class="flex items-center text-white hover:text-gray-200 transition-colors duration-200" data-user-dropdown>
+                  <i class="fas fa-chevron-down text-sm"></i>
+                </button>
+                
+                <!-- Menú dropdown -->
+                <div class="absolute right-0 top-8 w-48 bg-white rounded-lg shadow-xl border opacity-0 invisible transition-all duration-200 z-50" id="userDropdown">
+                  <div class="py-2">
+                    <a href="/perfil" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                      <i class="fas fa-user mr-3"></i>
+                      Mi Perfil
+                    </a>
+                    <a href="/configuracion" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                      <i class="fas fa-cog mr-3"></i>
+                      Configuración
+                    </a>
+                    <hr class="my-2">
+                    <a href="/logout" class="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                      <i class="fas fa-sign-out-alt mr-3"></i>
+                      Cerrar Sesión
+                    </a>
+                  </div>
+                </div>
+              </div>
+            {{else}}
+              <!-- Si no hay usuario autenticado -->
+              <a href="/login" class="flex items-center px-4 py-2 text-sm font-semibold text-white bg-white/20 backdrop-blur-md rounded-lg hover:bg-white/30 transition-all duration-200">
+                <i class="fa fa-user mr-2"></i>
+                <span>Iniciar sesión</span>
+              </a>
+            {{/if}}
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- JavaScript para funcionalidad del navbar -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Dropdown de usuario
+  const userDropdownBtn = document.querySelector('[data-user-dropdown]');
+  const userDropdown = document.getElementById('userDropdown');
+  
+  if (userDropdownBtn && userDropdown) {
+    userDropdownBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      userDropdown.classList.toggle('opacity-0');
+      userDropdown.classList.toggle('invisible');
+    });
+    
+    // Cerrar dropdown al hacer click fuera
+    document.addEventListener('click', function() {
+      userDropdown.classList.add('opacity-0');
+      userDropdown.classList.add('invisible');
+    });
+  }
+  
+  // Funcionalidad de búsqueda
+  const searchInput = document.getElementById('searchInput');
+  if (searchInput) {
+    let searchTimeout;
+    
+    searchInput.addEventListener('input', function() {
+      clearTimeout(searchTimeout);
+      const query = this.value.trim();
+      
+      if (query.length >= 3) {
+        searchTimeout = setTimeout(() => {
+          // Aquí se podría implementar búsqueda en tiempo real
+          console.log('Búsqueda:', query);
+          // Ejemplo: hacer fetch a API de búsqueda
+          // fetch(`/api/search?q=${encodeURIComponent(query)}`)
+        }, 300);
+      }
+    });
+    
+    // Búsqueda al presionar Enter
+    searchInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        const query = this.value.trim();
+        if (query) {
+          // Redirigir a página de resultados
+          window.location.href = `/buscar?q=${encodeURIComponent(query)}`;
+        }
+      }
+    });
+  }
+  
+  // *** CÓDIGO DE TOGGLE ELIMINADO - Solo funciona desde sidebar ***
+});
+</script>
+
+<!-- Estilos adicionales para el navbar -->
+<style>
+/* Efectos de glassmorphism en la búsqueda */
+#searchInput:focus {
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(15px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Dropdown animado */
+#userDropdown.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+/* Hover effects para iconos */
+.fa-bell:hover,
+.fa-cog:hover {
+  transform: scale(1.1);
+  transition: transform 0.2s ease;
+}
+
+/* Animación de notificaciones */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.fa-bell + span {
+  animation: pulse 2s infinite;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  #searchInput {
+    width: 200px;
+  }
+  
+  .user-info {
+    flex-direction: column;
+    align-items: flex-end;
+  }
+  
+  .user-info span {
+    font-size: 0.75rem;
+  }
+}
+</style> 

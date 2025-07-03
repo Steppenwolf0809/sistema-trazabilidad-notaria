@@ -44,3 +44,7 @@ temp/
 *.swo docs-cursor-temp/
 test_*.js
 repomix-output-*.xml
+# Documentación local para Cursor
+.cursor-docs/
+docs/plan-migracion-argon.md
+docs/resumen-conversacional.md

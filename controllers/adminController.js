@@ -348,8 +348,8 @@ async function manejarDashboardComparativo(req, res) {
       cambiosSignificativos: analisis.insights.cambiosSignificativos.length
     });
     
-    res.render('admin/dashboard', {
-      layout: 'admin',
+    res.render('admin/dashboard-argon', {
+      layout: 'admin-argon',
       title: 'Análisis Comparativo - ProNotary',
       activeDashboard: true,
       userRole: req.matrizador?.rol,
@@ -990,8 +990,8 @@ exports.dashboard = async (req, res) => {
       ingresosPeriodo
     });
     
-    res.render('admin/dashboard', {
-      layout: 'admin',
+    res.render('admin/dashboard-argon', {
+      layout: 'admin-argon',
       title: 'Panel de Control Ejecutivo - ProNotary',
       activeDashboard: true,
       userRole: req.matrizador?.rol,
