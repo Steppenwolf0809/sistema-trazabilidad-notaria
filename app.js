@@ -61,7 +61,11 @@ const hbs = engine({
   extname: '.hbs', // Extensión de archivos de plantilla
   defaultLayout: 'main', // Diseño por defecto
   layoutsDir: path.join(__dirname, 'views/layouts'), // Directorio de layouts
-  partialsDir: path.join(__dirname, 'views/partials'), // Directorio de partials
+  partialsDir: [
+    path.join(__dirname, 'views/partials'),
+    path.join(__dirname, 'views/partials/admin'),
+    path.join(__dirname, 'views/partials/caja')
+  ],
   handlebars: Handlebars, // Usar la instancia directamente
   // Configuraciones para permitir acceso a propiedades
   runtimeOptions: {
@@ -418,6 +422,11 @@ const hbs = engine({
       const moment = require('moment');
       moment.locale('es'); // Configurar en español
       return moment(date).format(format || 'DD/MM/YYYY HH:mm:ss');
+    },
+    // Helper para crear nuevos objetos (usado en templates)
+    new: function() {
+      // Este helper no debería ser necesario en templates, pero lo agregamos por compatibilidad
+      return '';
     },
     // Helper para construir query strings para paginación
     buildQueryString: function(params) {

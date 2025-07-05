@@ -1,0 +1,176 @@
+{{!-- 
+  EJEMPLO DE USO DE COMPONENTES UNIVERSALES
+  Sistema Notarial - Demostración de cómo usar los componentes
+  
+  ESTE ARCHIVO ES SOLO PARA REFERENCIA Y DOCUMENTACIÓN
+  No se usa en producción, es para mostrar cómo implementar los componentes
+--}}
+
+{{!-- EJEMPLO 1: Dashboard Admin usando todos los componentes --}}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <h1 class="h3 mb-4 text-gray-800">Dashboard Administrativo</h1>
+    </div>
+  </div>
+
+  {{!-- 1. CARDS DE MÉTRICAS --}}
+  {{> metric-cards 
+      metricas=metricas 
+      rol="admin" 
+      periodo="Enero 2025"
+  }}
+
+  {{!-- 2. SISTEMA DE ALERTAS --}}
+  {{> sistema-alertas 
+      alertas=alertas 
+      rol="admin" 
+      mostrarHeader=true
+  }}
+
+  {{!-- 3. TABLA DE DOCUMENTOS --}}
+  {{> tabla-documentos-universal 
+      datosTabla=datosTabla 
+      rol="admin" 
+      coloresEstado=coloresEstado
+  }}
+</div>
+
+{{!-- EJEMPLO 2: Dashboard Caja simplificado --}}
+<div class="container-fluid">
+  {{!-- Solo métricas y alertas compactas --}}
+  {{> metric-cards 
+      metricas=metricasCaja 
+      rol="caja"
+  }}
+
+  {{> sistema-alertas 
+      alertas=alertasCaja 
+      rol="caja" 
+      mostrarHeader=false
+  }}
+
+  {{> tabla-documentos-universal 
+      datosTabla=documentosCaja 
+      rol="caja" 
+      coloresEstado=coloresEstado
+  }}
+</div>
+
+{{!-- EJEMPLO 3: Dashboard Matrizador --}}
+<div class="container-fluid">
+  {{> metric-cards 
+      metricas=metricasMatrizador 
+      rol="matrizador"
+  }}
+
+  {{> tabla-documentos-universal 
+      datosTabla=documentosMatrizador 
+      rol="matrizador" 
+      coloresEstado=coloresEstado
+  }}
+</div>
+
+{{!-- EJEMPLO 4: Dashboard Recepción --}}
+<div class="container-fluid">
+  {{> metric-cards 
+      metricas=metricasRecepcion 
+      rol="recepcion"
+  }}
+
+  {{> sistema-alertas 
+      alertas=alertasRecepcion 
+      rol="recepcion"
+  }}
+
+  {{> tabla-documentos-universal 
+      datosTabla=documentosRecepcion 
+      rol="recepcion" 
+      coloresEstado=coloresEstado
+  }}
+</div>
+
+{{!-- 
+  DATOS DE EJEMPLO PARA CONTROLADORES
+  
+  En el controlador, usar ComponentesController así:
+  
+  const ComponentesController = require('./componentesController');
+  
+  // Obtener datos para dashboard admin
+  const metricas = await ComponentesController.obtenerMetricasSegunRol('admin', { 
+    fechaInicio: '2025-01-01', 
+    fechaFin: '2025-01-31' 
+  });
+  
+  const alertas = await ComponentesController.obtenerAlertasSegunRol('admin');
+  
+  const datosTabla = await ComponentesController.obtenerDocumentosParaTabla('admin', {
+    fechaInicio: '2025-01-01',
+    fechaFin: '2025-01-31'
+  }, 1, 10);
+  
+  const coloresEstado = ComponentesController.obtenerColoresEstado();
+  
+  // Renderizar vista
+  res.render('admin/dashboard', {
+    metricas,
+    alertas,
+    datosTabla,
+    coloresEstado,
+    rol: 'admin'
+  });
+--}}
+
+{{!-- 
+  ESTRUCTURA DE DATOS ESPERADA:
+  
+  metricas: [
+    {
+      key: 'totalDocumentos',
+      titulo: 'Total Documentos',
+      valor: '$125,430',
+      icono: 'fas fa-file-alt',
+      color: 'blue',
+      valorRaw: 125430
+    }
+  ]
+  
+  alertas: [
+    {
+      tipo: 'documentos_atrasados',
+      titulo: 'Documentos Atrasados',
+      cantidad: 5,
+      descripcion: 'Más de 15 días en proceso',
+      enlace: '/admin/documentos?filtro=atrasados',
+      color: 'red',
+      urgencia: 'alta'
+    }
+  ]
+  
+  datosTabla: {
+    columnas: [
+      { campo: 'codigo_barras', titulo: 'Código', tipo: 'texto', ancho: 'w-32' },
+      { campo: 'estado', titulo: 'Estado', tipo: 'badge', ancho: 'w-32' }
+    ],
+    documentos: [
+      {
+        id: 1,
+        codigo_barras: '12345',
+        nombre_cliente: 'Juan Pérez',
+        estado: 'en_proceso'
+      }
+    ],
+    paginacion: {
+      actual: 1,
+      total: 5,
+      items: 45,
+      limite: 10
+    }
+  }
+  
+  coloresEstado: {
+    'en_proceso': { color: 'blue', texto: 'En Proceso' },
+    'listo_para_entrega': { color: 'green', texto: 'Listo' }
+  }
+--}} 

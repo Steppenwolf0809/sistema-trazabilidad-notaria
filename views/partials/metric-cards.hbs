@@ -1,0 +1,733 @@
+{{!-- 
+  COMPONENTE: CARDS DE MÉTRICAS UNIVERSALES
+  Sistema Notarial - Cards de métricas reutilizables para todos los roles
+  
+  PARÁMETROS REQUERIDOS:
+  - metricas: Array de objetos con { key, titulo, valor, icono, color, valorRaw }
+  - rol: 'admin', 'caja', 'matrizador', 'recepcion'
+  - periodo: Texto del período actual (opcional)
+  
+  CARACTERÍSTICAS:
+  - Diseño Argon elegante con gradientes
+  - Responsive grid (1 columna móvil, 4 columnas desktop)
+  - Hover effects sutiles
+  - Animaciones de carga
+  - Iconos Font Awesome
+  - Colores configurables según tipo de métrica
+--}}
+
+{{#if metricas}}
+<!-- Filtros temporales - DISEÑO DESTACADO Y PROFESIONAL -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card border-0 shadow-lg" style="background: linear-gradient(135deg, #162840 0%, #4E7DA6 100%);">
+      <div class="card-body p-4">
+        <!-- Título elegante -->
+        <div class="d-flex align-items-center mb-3">
+          <div class="icon-wrapper me-3">
+            <i class="fas fa-calendar-alt text-white" style="font-size: 1.5rem;"></i>
+          </div>
+          <div>
+            <h5 class="text-white mb-0 fw-bold">Filtros Temporales</h5>
+            <p class="text-white-50 mb-0 small">Selecciona el período para visualizar las métricas</p>
+          </div>
+        </div>
+        
+        <!-- Botones de filtro destacados -->
+        <div class="filtros-temporales-destacados">
+          <div class="row g-2">
+            <div class="col-6 col-md-2">
+              <button type="button" class="btn filtro-temporal-destacado active w-100" data-filtro="hoy">
+                <i class="fas fa-calendar-day d-block mb-1"></i>
+                <span class="fw-bold">HOY</span>
+                <small class="d-block text-muted">Día actual</small>
+              </button>
+            </div>
+            <div class="col-6 col-md-2">
+              <button type="button" class="btn filtro-temporal-destacado w-100" data-filtro="semana">
+                <i class="fas fa-calendar-week d-block mb-1"></i>
+                <span class="fw-bold">SEMANA</span>
+                <small class="d-block text-muted">7 días</small>
+              </button>
+            </div>
+            <div class="col-6 col-md-2">
+              <button type="button" class="btn filtro-temporal-destacado w-100" data-filtro="mes">
+                <i class="fas fa-calendar-alt d-block mb-1"></i>
+                <span class="fw-bold">MES</span>
+                <small class="d-block text-muted">30 días</small>
+              </button>
+            </div>
+            <div class="col-6 col-md-2">
+              <button type="button" class="btn filtro-temporal-destacado w-100" data-filtro="mes_anterior">
+                <i class="fas fa-calendar-minus d-block mb-1"></i>
+                <span class="fw-bold">ANTERIOR</span>
+                <small class="d-block text-muted">Mes pasado</small>
+              </button>
+            </div>
+            <div class="col-6 col-md-2">
+              <button type="button" class="btn filtro-temporal-destacado w-100" data-filtro="año">
+                <i class="fas fa-calendar d-block mb-1"></i>
+                <span class="fw-bold">AÑO</span>
+                <small class="d-block text-muted">2025</small>
+              </button>
+            </div>
+            <div class="col-6 col-md-2">
+              <button type="button" class="btn filtro-temporal-personalizado w-100" id="filtro-personalizado-btn">
+                <i class="fas fa-cog d-block mb-1"></i>
+                <span class="fw-bold">CUSTOM</span>
+                <small class="d-block text-muted">Rango</small>
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Panel de filtro personalizado elegante -->
+        <div class="mt-4 d-none" id="filtro-personalizado">
+          <div class="card bg-white border-0 shadow-sm">
+            <div class="card-body p-3">
+              <h6 class="text-dark mb-3">
+                <i class="fas fa-calendar-plus me-2 text-primary"></i>
+                Configurar Período Personalizado
+              </h6>
+              <div class="row align-items-end">
+                <div class="col-md-4">
+                  <label class="form-label small fw-bold text-dark">Fecha Inicio</label>
+                  <input type="date" class="form-control border-2" id="fecha-inicio" style="border-color: #162840;">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label small fw-bold text-dark">Fecha Fin</label>
+                  <input type="date" class="form-control border-2" id="fecha-fin" style="border-color: #162840;">
+                </div>
+                <div class="col-md-4">
+                  <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-success fw-bold px-4" id="aplicar-filtro-personalizado" style="background: #BF8C60; border-color: #BF8C60;">
+                      <i class="fas fa-check me-2"></i>
+                      APLICAR
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary fw-bold" id="cancelar-filtro-personalizado">
+                      <i class="fas fa-times me-2"></i>
+                      CANCELAR
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Indicador de período actual -->
+<div class="row mb-3">
+  <div class="col-12">
+    <div class="alert alert-primary border-0 py-2 mb-0 shadow-sm">
+      <div class="d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center">
+          <i class="fas fa-calendar-check me-2"></i>
+          <strong>Mostrando datos de:</strong> 
+          <span id="periodo-actual" class="ms-2 badge bg-light text-dark">
+            {{#if periodo}}{{periodo.texto}}{{else}}Hoy{{/if}}
+          </span>
+        </div>
+        <div class="d-flex align-items-center">
+          <div class="spinner-border spinner-border-sm d-none me-2" role="status" id="loading-metricas">
+            <span class="visually-hidden">Cargando...</span>
+          </div>
+          <small class="text-muted">Actualizado automáticamente</small>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row" id="metricas-container">
+  {{#each metricas}}
+  <div class="col-xl-3 col-md-6 mb-4">
+    <div class="card card-stats card-elegant hover-lift">
+      <!-- Card header con gradiente según color -->
+      <div class="card-header card-header-{{color}} card-header-icon position-relative">
+        <div class="card-icon">
+          <i class="{{icono}} text-white"></i>
+        </div>
+        <div class="numbers">
+          <p class="card-category text-white-50 mb-0">{{titulo}}</p>
+          <h3 class="card-title text-white mb-0" data-toggle="counter" data-target="{{valorRaw}}">
+            {{valor}}
+          </h3>
+        </div>
+      </div>
+      
+      <!-- Card footer con información adicional -->
+      <div class="card-footer bg-transparent">
+        <div class="stats">
+          {{#if (eq ../rol 'admin')}}
+            {{#if (eq key 'totalDocumentos')}}
+              <i class="fas fa-calendar text-muted"></i>
+              <span class="text-muted">{{#if ../periodo}}{{../periodo}}{{else}}Período actual{{/if}}</span>
+            {{else if (eq key 'totalFacturado')}}
+              <i class="fas fa-trending-up text-success"></i>
+              <span class="text-success">Facturación total</span>
+            {{else if (eq key 'pagosPendientes')}}
+              <i class="fas fa-clock text-warning"></i>
+              <span class="text-warning">Por cobrar</span>
+            {{else if (eq key 'totalRetenido')}}
+              <i class="fas fa-receipt text-info"></i>
+              <span class="text-info">Retenciones</span>
+            {{/if}}
+          {{else if (eq ../rol 'caja')}}
+            {{#if (eq key 'documentosHoy')}}
+              <i class="fas fa-calendar-day text-muted"></i>
+              <span class="text-muted">Documentos hoy</span>
+            {{else if (eq key 'cobradoHoy')}}
+              <i class="fas fa-cash-register text-success"></i>
+              <span class="text-success">Cobrado hoy</span>
+            {{else if (eq key 'pendientesCobro')}}
+              <i class="fas fa-exclamation-triangle text-warning"></i>
+              <span class="text-warning">Pendientes</span>
+            {{else if (eq key 'retencionesHoy')}}
+              <i class="fas fa-file-invoice text-info"></i>
+              <span class="text-info">Retenciones hoy</span>
+            {{/if}}
+          {{else if (eq ../rol 'matrizador')}}
+            {{#if (eq key 'docsAsignados')}}
+              <i class="fas fa-user-check text-muted"></i>
+              <span class="text-muted">Asignados a mí</span>
+            {{else if (eq key 'docsCompletados')}}
+              <i class="fas fa-check-circle text-success"></i>
+              <span class="text-success">Completados</span>
+            {{else if (eq key 'docsPendientes')}}
+              <i class="fas fa-hourglass-half text-warning"></i>
+              <span class="text-warning">En proceso</span>
+            {{else if (eq key 'promedioTiempo')}}
+              <i class="fas fa-clock text-info"></i>
+              <span class="text-info">Tiempo promedio</span>
+            {{/if}}
+          {{else if (eq ../rol 'recepcion')}}
+            {{#if (eq key 'docsListos')}}
+              <i class="fas fa-check-circle text-success"></i>
+              <span class="text-success">Listos para entrega</span>
+            {{else if (eq key 'docsEntregadosHoy')}}
+              <i class="fas fa-handshake text-muted"></i>
+              <span class="text-muted">Entregados hoy</span>
+            {{else if (eq key 'codigosPendientes')}}
+              <i class="fas fa-key text-warning"></i>
+              <span class="text-warning">Códigos pendientes</span>
+            {{/if}}
+          {{/if}}
+        </div>
+      </div>
+    </div>
+  </div>
+  {{/each}}
+</div>
+
+<!-- Estilos específicos para las métricas -->
+<style>
+  .card-stats {
+    border-radius: 1rem;
+    overflow: hidden;
+    border: 0;
+    transition: all 0.3s ease;
+  }
+  
+  .card-header-icon {
+    border-radius: 1rem 1rem 0 0;
+    padding: 1.5rem;
+    margin: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .card-header-icon::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
+    pointer-events: none;
+  }
+  
+  /* Gradientes profesionales por color */
+  .card-header-blue {
+    background: linear-gradient(135deg, #162840 0%, #4E7DA6 100%);
+  }
+  
+  .card-header-green {
+    background: linear-gradient(135deg, #B1C6B8 0%, #D0D7D9 100%);
+  }
+  
+  .card-header-orange {
+    background: linear-gradient(135deg, #BF8C60 0%, #d4a574 100%);
+  }
+  
+  .card-header-purple {
+    background: linear-gradient(135deg, #4E7DA6 0%, #162840 100%);
+  }
+  
+  .card-header-red {
+    background: linear-gradient(135deg, #a0734d 0%, #BF8C60 100%);
+  }
+  
+  .card-header-teal {
+    background: linear-gradient(135deg, #6b7c93 0%, #8da2b5 100%);
+  }
+  
+  .card-icon {
+    position: absolute;
+    top: -10px;
+    right: 15px;
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+  
+  .card-icon i {
+    font-size: 1.5rem;
+    color: white !important;
+  }
+  
+  .numbers {
+    padding-right: 80px;
+  }
+  
+  .card-category {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+  }
+  
+  .card-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    line-height: 1.2;
+    margin: 0;
+  }
+  
+  .card-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+  }
+  
+  .stats {
+    display: flex;
+    align-items: center;
+    font-size: 0.875rem;
+  }
+  
+  .stats i {
+    margin-right: 0.5rem;
+    font-size: 0.75rem;
+  }
+  
+  /* Hover effects */
+  .card-stats:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  }
+  
+  .card-stats:hover .card-icon {
+    transform: scale(1.1);
+    background: rgba(255, 255, 255, 0.3);
+  }
+  
+  /* Animación de contador */
+  @keyframes countUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .card-title[data-toggle="counter"] {
+    animation: countUp 0.6s ease-out;
+  }
+  
+  /* Responsive */
+  @media (max-width: 768px) {
+    .card-stats {
+      margin-bottom: 1rem;
+    }
+    
+    .card-header-icon {
+      padding: 1rem;
+    }
+    
+    .card-icon {
+      width: 60px;
+      height: 60px;
+      top: -5px;
+      right: 10px;
+    }
+    
+    .card-icon i {
+      font-size: 1.25rem;
+    }
+    
+    .card-title {
+      font-size: 1.5rem;
+    }
+    
+    .numbers {
+      padding-right: 70px;
+    }
+    
+    .card-stats:hover {
+      transform: none;
+    }
+  }
+  
+  /* Estados de carga */
+  .card-stats.loading {
+    opacity: 0.7;
+  }
+  
+  .card-stats.loading .card-title {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+    color: transparent;
+    border-radius: 4px;
+    height: 2rem;
+    width: 80%;
+  }
+  
+  @keyframes loading {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+  
+  /* Estilos para filtros temporales - MEJORADOS */
+  /* Estilos de filtros movidos a paleta-profesional.css */
+</style>
+
+<!-- JavaScript para animaciones y funcionalidad -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Animar contadores
+    const counters = document.querySelectorAll('[data-toggle="counter"]');
+    
+    counters.forEach(counter => {
+      const target = parseInt(counter.getAttribute('data-target'));
+      const text = counter.textContent;
+      
+      // Si el valor contiene texto adicional (como $, días, etc.)
+      if (isNaN(target)) {
+        // Animación simple para valores no numéricos
+        counter.style.opacity = '0';
+        setTimeout(() => {
+          counter.style.opacity = '1';
+        }, 100);
+        return;
+      }
+      
+      // Animación de contador para valores numéricos
+      let current = 0;
+      const increment = target / 50;
+      const timer = setInterval(() => {
+        current += increment;
+        if (current >= target) {
+          counter.textContent = target.toLocaleString();
+          clearInterval(timer);
+        } else {
+          counter.textContent = Math.floor(current).toLocaleString();
+        }
+      }, 20);
+    });
+    
+    // Observador para animaciones al hacer scroll
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.style.opacity = '1';
+          entry.target.style.transform = 'translateY(0)';
+        }
+      });
+    }, {
+      threshold: 0.1
+    });
+    
+    // Observar todas las cards
+    document.querySelectorAll('.card-stats').forEach(card => {
+      card.style.opacity = '0';
+      card.style.transform = 'translateY(20px)';
+      card.style.transition = 'all 0.6s ease';
+      observer.observe(card);
+    });
+  });
+  
+  // Función para actualizar métricas (llamada desde el dashboard)
+  function actualizarMetricas() {
+    const cards = document.querySelectorAll('.card-stats');
+    cards.forEach(card => {
+      card.classList.add('loading');
+    });
+    
+    // Simular carga (en implementación real, hacer petición AJAX)
+    setTimeout(() => {
+      cards.forEach(card => {
+        card.classList.remove('loading');
+      });
+    }, 1500);
+  }
+  
+  // Función para mostrar/ocultar métricas según filtros
+  function filtrarMetricas(filtro) {
+    const cards = document.querySelectorAll('.card-stats');
+    cards.forEach(card => {
+      const key = card.querySelector('[data-toggle="counter"]').getAttribute('data-key');
+      if (filtro === 'todas' || key.includes(filtro)) {
+        card.style.display = 'block';
+      } else {
+        card.style.display = 'none';
+      }
+    });
+  }
+  
+  // FILTROS TEMPORALES DINÁMICOS
+  // Variables globales - ARREGLO: Filtro por defecto "HOY"
+  let filtroActual = 'hoy';
+  const rolActual = '{{rol}}';
+  
+  // Event listeners para filtros temporales
+  document.addEventListener('DOMContentLoaded', function() {
+    const filtrosTemporales = document.querySelectorAll('.filtro-temporal-destacado');
+    const filtroPersonalizadoBtn = document.getElementById('filtro-personalizado-btn');
+    const filtroPersonalizadoDiv = document.getElementById('filtro-personalizado');
+    const aplicarFiltroBtn = document.getElementById('aplicar-filtro-personalizado');
+    const cancelarFiltroBtn = document.getElementById('cancelar-filtro-personalizado');
+    const periodoActual = document.getElementById('periodo-actual');
+    const loadingSpinner = document.getElementById('loading-metricas');
+    const metricasContainer = document.getElementById('metricas-container');
+    
+    // Event listeners para filtros temporales
+    filtrosTemporales.forEach(btn => {
+      btn.addEventListener('click', function() {
+        const filtro = this.dataset.filtro;
+        aplicarFiltroTemporal(filtro);
+      });
+    });
+    
+    // Event listener para filtro personalizado
+    if (filtroPersonalizadoBtn) {
+      filtroPersonalizadoBtn.addEventListener('click', function() {
+        filtroPersonalizadoDiv.classList.toggle('d-none');
+      });
+    }
+    
+    if (aplicarFiltroBtn) {
+      aplicarFiltroBtn.addEventListener('click', function() {
+        const fechaInicio = document.getElementById('fecha-inicio').value;
+        const fechaFin = document.getElementById('fecha-fin').value;
+        
+        if (!fechaInicio || !fechaFin) {
+          alert('Por favor seleccione ambas fechas');
+          return;
+        }
+        
+        if (new Date(fechaInicio) > new Date(fechaFin)) {
+          alert('La fecha de inicio no puede ser posterior a la fecha de fin');
+          return;
+        }
+        
+        aplicarFiltroTemporal('personalizado', fechaInicio, fechaFin);
+        filtroPersonalizadoDiv.classList.add('d-none');
+      });
+    }
+    
+    if (cancelarFiltroBtn) {
+      cancelarFiltroBtn.addEventListener('click', function() {
+        filtroPersonalizadoDiv.classList.add('d-none');
+        document.getElementById('fecha-inicio').value = '';
+        document.getElementById('fecha-fin').value = '';
+      });
+    }
+  });
+  
+  // Función para aplicar filtro temporal
+  function aplicarFiltroTemporal(filtro, fechaInicio = null, fechaFin = null) {
+    // Mostrar loading
+    const loadingSpinner = document.getElementById('loading-metricas');
+    if (loadingSpinner) {
+      loadingSpinner.classList.remove('d-none');
+    }
+    
+    // Actualizar botones activos
+    const filtrosTemporales = document.querySelectorAll('.filtro-temporal-destacado');
+    filtrosTemporales.forEach(btn => btn.classList.remove('active'));
+    if (filtro !== 'personalizado') {
+      const btnActivo = document.querySelector(`[data-filtro="${filtro}"]`);
+      if (btnActivo) {
+        btnActivo.classList.add('active');
+      }
+    }
+    
+    // Construir URL con parámetros
+    const params = new URLSearchParams();
+    params.append('filtroTemporal', filtro);
+    if (fechaInicio) params.append('fechaInicio', fechaInicio);
+    if (fechaFin) params.append('fechaFin', fechaFin);
+    
+    // Hacer petición AJAX
+    fetch(`/admin/api/metricas-temporales?${params.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        actualizarMetricasDOM(data.metricas);
+        actualizarPeriodo(data.periodo);
+        filtroActual = filtro;
+        
+        // Disparar evento para actualizar gráfico
+        document.dispatchEvent(new CustomEvent('filtroTemporalCambiado', {
+          detail: { filtro: filtro }
+        }));
+      } else {
+        console.error('Error al obtener métricas:', data.error);
+        alert('Error al actualizar métricas: ' + data.error);
+      }
+    })
+    .catch(error => {
+      console.error('Error en la petición:', error);
+      // Fallback: recargar página
+      window.location.reload();
+    })
+    .finally(() => {
+      if (loadingSpinner) {
+        loadingSpinner.classList.add('d-none');
+      }
+    });
+  }
+  
+  // Función para actualizar métricas en el DOM
+  function actualizarMetricasDOM(metricas) {
+    const metricasContainer = document.getElementById('metricas-container');
+    if (!metricasContainer) return;
+    
+    let html = '';
+    metricas.forEach(metrica => {
+      html += `
+        <div class="col-xl-3 col-md-6 mb-4">
+          <div class="card card-stats card-elegant hover-lift">
+            <div class="card-header card-header-${metrica.color} card-header-icon position-relative">
+              <div class="card-icon">
+                <i class="${metrica.icono} text-white"></i>
+              </div>
+              <div class="numbers">
+                <p class="card-category text-white-50 mb-0">${metrica.titulo}</p>
+                <h3 class="card-title text-white mb-0" data-toggle="counter" data-target="${metrica.valorRaw}">
+                  ${metrica.valor}
+                </h3>
+              </div>
+            </div>
+            <div class="card-footer bg-transparent">
+              <div class="stats">
+                <i class="fas fa-calendar text-muted"></i>
+                <span class="text-muted">Período seleccionado</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    
+    metricasContainer.innerHTML = html;
+    
+    // Reinicializar animaciones
+    inicializarAnimaciones();
+  }
+  
+  // Función para actualizar período
+  function actualizarPeriodo(periodo) {
+    const periodoActual = document.getElementById('periodo-actual');
+    if (periodoActual && periodo && periodo.texto) {
+      periodoActual.textContent = periodo.texto;
+    }
+  }
+  
+  // Función para inicializar animaciones
+  function inicializarAnimaciones() {
+    const counters = document.querySelectorAll('[data-toggle="counter"]');
+    counters.forEach(counter => {
+      const target = parseInt(counter.getAttribute('data-target'));
+      if (!isNaN(target)) {
+        let current = 0;
+        const increment = target / 50;
+        const timer = setInterval(() => {
+          current += increment;
+          if (current >= target) {
+            counter.textContent = target.toLocaleString();
+            clearInterval(timer);
+          } else {
+            counter.textContent = Math.floor(current).toLocaleString();
+          }
+        }, 20);
+      }
+    });
+  }
+  
+  // Función global para actualizar alertas
+  window.actualizarAlertas = function() {
+    aplicarFiltroTemporal(filtroActual);
+  };
+  
+  // ARREGLO CRÍTICO: Aplicar filtro por defecto al cargar la página
+  document.addEventListener('DOMContentLoaded', function() {
+    // Esperar un poco para que se cargue todo el DOM
+    setTimeout(function() {
+      console.log('🔧 Aplicando filtro por defecto: hoy');
+      aplicarFiltroTemporal('hoy');
+    }, 500);
+  });
+</script>
+
+{{else}}
+<!-- Estado de carga o sin datos -->
+<div class="row">
+  {{#each (range 1 5)}}
+  <div class="col-xl-3 col-md-6 mb-4">
+    <div class="card card-stats card-elegant loading">
+      <div class="card-header card-header-blue card-header-icon">
+        <div class="card-icon">
+          <i class="fas fa-circle-notch fa-spin text-white"></i>
+        </div>
+        <div class="numbers">
+          <p class="card-category text-white-50 mb-0">Cargando...</p>
+          <h3 class="card-title text-white mb-0">---</h3>
+        </div>
+      </div>
+      <div class="card-footer bg-transparent">
+        <div class="stats">
+          <i class="fas fa-clock text-muted"></i>
+          <span class="text-muted">Obteniendo datos...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  {{/each}}
+</div>
+{{/if}} 

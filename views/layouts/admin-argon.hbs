@@ -22,6 +22,18 @@
   <!-- Sidebar Argon Pro CSS -->
   <link rel="stylesheet" href="/css/sidebar-argon.css">
   
+  <!-- Paleta de Colores Profesional -->
+  <link rel="stylesheet" href="/css/paleta-profesional.css">
+  
+  <!-- Forzar Sidebar Profesional -->
+  <link rel="stylesheet" href="/css/forzar-sidebar.css">
+  
+  <!-- Dashboard Ejecutivo CSS -->
+  <link rel="stylesheet" href="/css/dashboard-ejecutivo.css">
+  
+  <!-- ProNotary Executive UI Design System -->
+
+  
   <!-- Configuración de Tailwind personalizada -->
   <script>
     tailwind.config = {
@@ -31,16 +43,23 @@
             'sans': ['Inter', 'ui-sans-serif', 'system-ui'],
           },
           colors: {
-            'primary': '#3b82f6',
-            'primary-dark': '#1e40af',
-            'success': '#10b981',
-            'warning': '#f59e0b',
-            'danger': '#ef4444',
-            'info': '#06b6d4',
+            // PALETA PROFESIONAL NOTARIAL
+            'primary': '#162840',
+            'primary-light': '#4E7DA6',
+            'primary-dark': '#0d1a2b',
+            'secondary': '#BF8C60',
+            'secondary-light': '#d4a574',
+            'secondary-dark': '#a0734d',
+            'success': '#B1C6B8',
+            'warning': '#BF8C60',
+            'danger': '#a0734d',
+            'info': '#4E7DA6',
             'light': '#f8fafc',
-            'dark': '#1e293b',
-            'sidebar': '#1e293b',
-            'sidebar-hover': '#334155'
+            'dark': '#162840',
+            'sidebar': '#162840',
+            'sidebar-hover': '#4E7DA6',
+            'gray-professional': '#D0D7D9',
+            'gray-verdoso': '#B1C6B8'
           },
           spacing: {
             '68': '17rem',
@@ -81,21 +100,21 @@
       border: 0;
     }
     
-    /* Gradient backgrounds */
+    /* Gradient backgrounds - PALETA PROFESIONAL */
     .bg-gradient-primary {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #162840 0%, #4E7DA6 100%);
     }
     
     .bg-gradient-success {
-      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+      background: linear-gradient(135deg, #B1C6B8 0%, #D0D7D9 100%);
     }
     
     .bg-gradient-warning {
-      background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+      background: linear-gradient(135deg, #BF8C60 0%, #d4a574 100%);
     }
     
     .bg-gradient-danger {
-      background: linear-gradient(135deg, #ff6b6b 0%, #ffa726 100%);
+      background: linear-gradient(135deg, #a0734d 0%, #BF8C60 100%);
     }
     
     /* Elegant hover effects */
@@ -136,11 +155,11 @@
       justify-content: center;
     }
     
-    /* Link activo */
+    /* Link activo - PALETA PROFESIONAL */
     .nav-link-argon.active {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #BF8C60 0%, #d4a574 100%);
       color: white !important;
-      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+      box-shadow: 0 4px 15px rgba(191, 140, 96, 0.4);
     }
     
     .nav-link-argon.active .shadow-soft-2xl {
@@ -191,8 +210,8 @@
 </head>
 <body class="font-sans antialiased bg-gray-50 text-slate-500">
   
-  <!-- Fondo elegante superior -->
-  <div class="absolute w-full bg-gradient-primary min-h-75"></div>
+  <!-- Fondo elegante superior - PALETA PROFESIONAL -->
+  <div class="absolute w-full min-h-75" style="background: linear-gradient(135deg, #162840 0%, #4E7DA6 100%);"></div>
   
   <!-- Sidebar elegante para Admin -->
   {{> sidebar-argon 
@@ -266,6 +285,9 @@
   
   <!-- Sidebar Argon Pro JavaScript -->
   <script src="/js/sidebar-argon.js"></script>
+  
+  <!-- Dashboard Ejecutivo JavaScript -->
+
   
   <!-- Scripts de compatibilidad ProNotary -->
   <script>

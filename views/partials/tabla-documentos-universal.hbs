@@ -1,0 +1,390 @@
+{{!-- 
+  COMPONENTE: TABLA DE DOCUMENTOS UNIVERSAL
+  Sistema Notarial - Tabla reutilizable para todos los roles
+  
+  PARÁMETROS REQUERIDOS:
+  - datosTabla: { columnas: [], documentos: [], paginacion: {} }
+  - rol: 'admin', 'caja', 'matrizador', 'recepcion'
+  - coloresEstado: objeto con colores para badges
+  
+  CARACTERÍSTICAS:
+  - Diseño Argon elegante con Tailwind CSS
+  - Responsive con scroll horizontal en móviles
+  - Badges de colores para estados
+  - Hover effects suaves
+  - Paginación incluida
+  - Clickeable para ver detalles
+--}}
+
+{{#if datosTabla.documentos}}
+<div class="card card-elegant">
+  <div class="card-header bg-white border-0 pb-0">
+    <div class="row align-items-center">
+      <div class="col">
+        <h6 class="text-uppercase text-light ls-1 mb-1">Documentos</h6>
+        <h2 class="text-dark mb-0">
+          {{#if (eq rol 'admin')}}
+            Gestión de Documentos
+          {{else if (eq rol 'caja')}}
+            Control de Pagos
+          {{else if (eq rol 'matrizador')}}
+            Mis Documentos Asignados
+          {{else if (eq rol 'recepcion')}}
+            Documentos para Entrega
+          {{else}}
+            Lista de Documentos
+          {{/if}}
+        </h2>
+      </div>
+      <div class="col-auto">
+        <span class="badge badge-soft-primary">
+          {{datosTabla.paginacion.items}} documentos
+        </span>
+      </div>
+    </div>
+  </div>
+  
+  <div class="card-body px-0 pb-0">
+    <!-- Tabla responsive -->
+    <div class="table-responsive">
+      <table class="table table-flush" id="tabla-documentos-{{rol}}">
+        <thead class="thead-light">
+          <tr>
+            {{#each datosTabla.columnas}}
+            <th class="{{ancho}} text-uppercase text-secondary text-xs font-weight-bolder opacity-7 ps-2">
+              {{titulo}}
+              {{#if (eq tipo 'fecha')}}
+                <i class="fas fa-sort ms-1 text-xs opacity-5"></i>
+              {{/if}}
+            </th>
+            {{/each}}
+            <th class="w-16 text-uppercase text-secondary text-xs font-weight-bolder opacity-7">
+              Acciones
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each datosTabla.documentos}}
+          <tr class="hover-lift transition-all duration-200 cursor-pointer documento-fila" 
+              data-documento-id="{{id}}" 
+              data-codigo="{{codigo_barras}}"
+              onclick="verDetalleDocumento('{{id}}', '{{../rol}}')">
+            {{#each ../datosTabla.columnas}}
+            <td class="{{ancho}} ps-2">
+              {{#if (eq tipo 'badge')}}
+                {{#with (lookup ../this campo)}}
+                  {{#with (lookup ../../coloresEstado this)}}
+                    <span class="badge badge-sm bg-gradient-{{color}} text-white">
+                      {{texto}}
+                    </span>
+                  {{/with}}
+                {{/with}}
+              {{else if (eq tipo 'moneda')}}
+                <span class="text-dark font-weight-bold">
+                  {{#if (lookup ../this campo)}}
+                    ${{numberFormat (lookup ../this campo) decimals=2}}
+                  {{else}}
+                    $0.00
+                  {{/if}}
+                </span>
+              {{else if (eq tipo 'fecha')}}
+                <span class="text-sm text-secondary">
+                  {{#if (lookup ../this campo)}}
+                    {{formatDate (lookup ../this campo) format="DD/MM/YYYY"}}
+                  {{else}}
+                    -
+                  {{/if}}
+                </span>
+              {{else}}
+                <div class="d-flex align-items-center">
+                  <div class="d-flex flex-column justify-content-center">
+                    <h6 class="mb-0 text-sm text-dark">
+                      {{#if (lookup ../this campo)}}
+                        {{lookup ../this campo}}
+                      {{else}}
+                        -
+                      {{/if}}
+                    </h6>
+                    {{#if (eq campo 'nombre_cliente')}}
+                      <p class="text-xs text-secondary mb-0">
+                        {{../identificacion_cliente}}
+                      </p>
+                    {{/if}}
+                  </div>
+                </div>
+              {{/if}}
+            </td>
+            {{/each}}
+            <td class="w-16">
+              <div class="dropdown">
+                <button class="btn btn-link text-secondary mb-0" 
+                        type="button" 
+                        id="dropdownMenuButton{{id}}" 
+                        data-bs-toggle="dropdown" 
+                        aria-expanded="false"
+                        onclick="event.stopPropagation()">
+                  <i class="fas fa-ellipsis-v text-xs"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end px-2 py-3 ms-sm-n4 ms-n5" 
+                    aria-labelledby="dropdownMenuButton{{id}}">
+                  <li>
+                    <a class="dropdown-item border-radius-md" 
+                       href="{{#if (eq ../rol 'admin')}}/admin{{else if (eq ../rol 'caja')}}/caja{{else if (eq ../rol 'matrizador')}}/matrizador{{else if (eq ../rol 'recepcion')}}/recepcion{{/if}}/documentos/{{id}}">
+                      <i class="fas fa-eye text-primary me-2"></i>
+                      Ver Detalles
+                    </a>
+                  </li>
+                  {{#if (eq ../rol 'admin')}}
+                    <li>
+                      <a class="dropdown-item border-radius-md" 
+                         href="/admin/documentos/{{id}}/editar">
+                        <i class="fas fa-edit text-info me-2"></i>
+                        Editar
+                      </a>
+                    </li>
+                  {{/if}}
+                  {{#if (eq ../rol 'caja')}}
+                    {{#if (eq estado_pago 'pendiente_pago')}}
+                      <li>
+                        <a class="dropdown-item border-radius-md" 
+                           href="/caja/documentos/{{id}}/pagar">
+                          <i class="fas fa-dollar-sign text-success me-2"></i>
+                          Registrar Pago
+                        </a>
+                      </li>
+                    {{/if}}
+                  {{/if}}
+                  {{#if (eq ../rol 'recepcion')}}
+                    {{#if (eq estado 'listo_para_entrega')}}
+                      <li>
+                        <a class="dropdown-item border-radius-md" 
+                           href="/recepcion/documentos/{{id}}/entregar">
+                          <i class="fas fa-handshake text-warning me-2"></i>
+                          Entregar
+                        </a>
+                      </li>
+                    {{/if}}
+                  {{/if}}
+                  <li><hr class="dropdown-divider"></li>
+                  <li>
+                    <a class="dropdown-item border-radius-md text-danger" 
+                       href="#" 
+                       onclick="event.stopPropagation(); confirmarAccion('{{id}}', 'eliminar')">
+                      <i class="fas fa-trash text-danger me-2"></i>
+                      Eliminar
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+    
+    <!-- Paginación elegante -->
+    {{#if (gt datosTabla.paginacion.total 1)}}
+    <div class="card-footer bg-white border-0 pt-0">
+      <div class="row align-items-center">
+        <div class="col-lg-6">
+          <p class="text-sm text-secondary mb-0">
+            Mostrando {{datosTabla.paginacion.limite}} de {{datosTabla.paginacion.items}} documentos
+          </p>
+        </div>
+        <div class="col-lg-6">
+          <nav aria-label="Paginación de documentos">
+            <ul class="pagination justify-content-end mb-0">
+              {{#if (gt datosTabla.paginacion.actual 1)}}
+                <li class="page-item">
+                  <a class="page-link" 
+                     href="javascript:void(0)" 
+                     onclick="cambiarPagina({{subtract datosTabla.paginacion.actual 1}})">
+                    <i class="fas fa-angle-left"></i>
+                    <span class="sr-only">Anterior</span>
+                  </a>
+                </li>
+              {{/if}}
+              
+              {{#each (range 1 (add datosTabla.paginacion.total 1))}}
+                {{#if (eq this ../datosTabla.paginacion.actual)}}
+                  <li class="page-item active">
+                    <span class="page-link">{{this}}</span>
+                  </li>
+                {{else}}
+                  <li class="page-item">
+                    <a class="page-link" 
+                       href="javascript:void(0)" 
+                       onclick="cambiarPagina({{this}})">
+                      {{this}}
+                    </a>
+                  </li>
+                {{/if}}
+              {{/each}}
+              
+              {{#if (lt datosTabla.paginacion.actual datosTabla.paginacion.total)}}
+                <li class="page-item">
+                  <a class="page-link" 
+                     href="javascript:void(0)" 
+                     onclick="cambiarPagina({{add datosTabla.paginacion.actual 1}})">
+                    <i class="fas fa-angle-right"></i>
+                    <span class="sr-only">Siguiente</span>
+                  </a>
+                </li>
+              {{/if}}
+            </ul>
+          </nav>
+        </div>
+      </div>
+    </div>
+    {{/if}}
+  </div>
+</div>
+
+<!-- Estilos específicos para la tabla -->
+<style>
+  .documento-fila:hover {
+    background-color: #f8f9fa !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  .badge-soft-primary {
+    background-color: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+    font-weight: 500;
+  }
+  
+  .table-flush td {
+    border-bottom: 1px solid #e9ecef;
+  }
+  
+  .table-flush tbody tr:last-child td {
+    border-bottom: 0;
+  }
+  
+  .dropdown-menu {
+    border: 0;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    border-radius: 0.75rem;
+  }
+  
+  .dropdown-item {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+  }
+  
+  .dropdown-item:hover {
+    background-color: #f8f9fa;
+    transform: translateX(2px);
+  }
+  
+  .page-link {
+    border: 0;
+    color: #6c757d;
+    font-weight: 500;
+    padding: 0.5rem 0.75rem;
+    margin: 0 0.125rem;
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
+  }
+  
+  .page-link:hover {
+    color: #3b82f6;
+    background-color: #f8f9fa;
+    transform: translateY(-1px);
+  }
+  
+  .page-item.active .page-link {
+    background-color: #3b82f6;
+    border-color: #3b82f6;
+    color: white;
+    box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
+  }
+  
+  /* Responsive */
+  @media (max-width: 768px) {
+    .table-responsive {
+      border-radius: 0.75rem;
+    }
+    
+    .documento-fila:hover {
+      transform: none;
+    }
+    
+    .page-link {
+      padding: 0.375rem 0.5rem;
+      font-size: 0.75rem;
+    }
+  }
+</style>
+
+<!-- JavaScript para funcionalidad -->
+<script>
+  // Función para ver detalles del documento
+  function verDetalleDocumento(id, rol) {
+    const baseUrl = rol === 'admin' ? '/admin' : 
+                   rol === 'caja' ? '/caja' : 
+                   rol === 'matrizador' ? '/matrizador' : 
+                   '/recepcion';
+    
+    window.location.href = `${baseUrl}/documentos/${id}`;
+  }
+  
+  // Función para cambiar página
+  function cambiarPagina(pagina) {
+    const urlParams = new URLSearchParams(window.location.search);
+    urlParams.set('pagina', pagina);
+    window.location.search = urlParams.toString();
+  }
+  
+  // Función para confirmar acciones
+  function confirmarAccion(id, accion) {
+    if (accion === 'eliminar') {
+      if (confirm('¿Está seguro de que desea eliminar este documento?')) {
+        // Aquí iría la lógica para eliminar
+        console.log('Eliminando documento:', id);
+      }
+    }
+  }
+  
+  // Inicializar tooltips si Bootstrap está disponible
+  document.addEventListener('DOMContentLoaded', function() {
+    if (typeof bootstrap !== 'undefined') {
+      var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+      var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+      });
+    }
+  });
+</script>
+
+{{else}}
+<!-- Estado vacío elegante -->
+<div class="card card-elegant">
+  <div class="card-body text-center py-5">
+    <div class="mb-4">
+      <i class="fas fa-file-alt text-muted" style="font-size: 4rem; opacity: 0.3;"></i>
+    </div>
+    <h5 class="text-muted mb-2">No hay documentos para mostrar</h5>
+    <p class="text-sm text-secondary mb-4">
+      {{#if (eq rol 'admin')}}
+        No se encontraron documentos que coincidan con los filtros seleccionados.
+      {{else if (eq rol 'caja')}}
+        No hay documentos pendientes de pago en este momento.
+      {{else if (eq rol 'matrizador')}}
+        No tienes documentos asignados actualmente.
+      {{else if (eq rol 'recepcion')}}
+        No hay documentos listos para entrega.
+      {{else}}
+        No se encontraron documentos.
+      {{/if}}
+    </p>
+    <button class="btn btn-outline-primary btn-sm" onclick="location.reload()">
+      <i class="fas fa-sync-alt me-2"></i>
+      Actualizar
+    </button>
+  </div>
+</div>
+{{/if}}

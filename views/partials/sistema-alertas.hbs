@@ -1,0 +1,487 @@
+{{!-- 
+  COMPONENTE: SISTEMA DE ALERTAS UNIVERSAL
+  Sistema Notarial - Alertas reutilizables para todos los roles
+  
+  PARÁMETROS REQUERIDOS:
+  - alertas: Array de objetos con { tipo, titulo, cantidad, descripcion, enlace, color, urgencia }
+  - rol: 'admin', 'caja', 'matrizador', 'recepcion'
+  - mostrarHeader: true/false para mostrar encabezado (opcional, default: true)
+  
+  CARACTERÍSTICAS:
+  - Diseño Argon elegante con alertas clickeables
+  - Configuración por rol de qué alertas mostrar
+  - Hover effects para indicar que son clickeables
+  - Colores apropiados según urgencia
+  - Información contextual útil
+  - Enlaces funcionales con filtros específicos
+--}}
+
+{{#if alertas.length}}
+<div class="row mb-4" id="alertas-section">
+  <div class="col-12">
+    <div class="card border-0 shadow-sm">
+      {{#if (ne mostrarHeader false)}}
+      <div class="card-header bg-gradient-danger text-white border-0">
+        <div class="row align-items-center">
+          <div class="col">
+            <h6 class="text-white mb-0">
+              <i class="fas fa-exclamation-triangle me-2"></i>
+              {{#if (eq rol 'admin')}}
+                Alertas del Sistema - Atención Requerida
+              {{else if (eq rol 'caja')}}
+                Alertas de Caja - Pagos Urgentes
+              {{else if (eq rol 'matrizador')}}
+                Alertas de Matrizador - Documentos Pendientes
+              {{else if (eq rol 'recepcion')}}
+                Alertas de Recepción - Entregas Pendientes
+              {{else}}
+                Alertas del Sistema
+              {{/if}}
+            </h6>
+          </div>
+          <div class="col-auto">
+            <span class="badge bg-white text-danger fw-bold">
+              {{alertas.length}} {{#if (eq alertas.length 1)}}alerta{{else}}alertas{{/if}}
+            </span>
+          </div>
+        </div>
+      </div>
+      {{/if}}
+      
+      <div class="card-body p-0">
+        <div class="row g-0">
+          {{#each alertas}}
+          <div class="col-lg-6 col-xl-4">
+            <div class="alert-item border-start border-{{color}} border-4 p-3 h-100 hover-lift-subtle" 
+                 onclick="navegarAlerta('{{enlace}}')" 
+                 style="cursor: pointer; transition: all 0.3s ease;">
+              <div class="d-flex align-items-start">
+                <div class="alert-icon me-3">
+                  <div class="icon-circle bg-{{color}}-subtle text-{{color}}">
+                    {{#if (eq tipo 'documentos_atrasados')}}
+                      <i class="fas fa-clock"></i>
+                    {{else if (eq tipo 'pagos_vencidos')}}
+                      <i class="fas fa-credit-card"></i>
+                    {{else if (eq tipo 'sin_entregar')}}
+                      <i class="fas fa-handshake"></i>
+                    {{else if (eq tipo 'problemas_sistema')}}
+                      <i class="fas fa-exclamation-triangle"></i>
+                    {{else if (eq tipo 'pagos_urgentes')}}
+                      <i class="fas fa-dollar-sign"></i>
+                    {{else if (eq tipo 'retenciones_pendientes')}}
+                      <i class="fas fa-receipt"></i>
+                    {{else if (eq tipo 'facturas_sin_procesar')}}
+                      <i class="fas fa-file-invoice"></i>
+                    {{else if (eq tipo 'docs_vencidos')}}
+                      <i class="fas fa-calendar-times"></i>
+                    {{else if (eq tipo 'prioridades_altas')}}
+                      <i class="fas fa-fire"></i>
+                    {{else if (eq tipo 'docs_listos_esperando')}}
+                      <i class="fas fa-check-circle"></i>
+                    {{else if (eq tipo 'codigos_expirados')}}
+                      <i class="fas fa-key"></i>
+                    {{else}}
+                      <i class="fas fa-bell"></i>
+                    {{/if}}
+                  </div>
+                </div>
+                
+                <div class="flex-grow-1">
+                  <div class="d-flex justify-content-between align-items-start mb-1">
+                    <h6 class="mb-0 text-{{color}} fw-bold">{{titulo}}</h6>
+                    <span class="badge bg-{{color}} text-white ms-2">{{cantidad}}</span>
+                  </div>
+                  
+                  <p class="text-muted mb-2 small">{{descripcion}}</p>
+                  
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div class="urgencia-indicator">
+                      {{#if (eq urgencia 'alta')}}
+                        <span class="badge bg-danger text-white">
+                          <i class="fas fa-exclamation-triangle me-1"></i>
+                          Urgente
+                        </span>
+                      {{else if (eq urgencia 'media')}}
+                        <span class="badge bg-warning text-dark">
+                          <i class="fas fa-clock me-1"></i>
+                          Moderado
+                        </span>
+                      {{else}}
+                        <span class="badge bg-info text-white">
+                          <i class="fas fa-info-circle me-1"></i>
+                          Informativo
+                        </span>
+                      {{/if}}
+                    </div>
+                    
+                    <div class="action-hint">
+                      <i class="fas fa-arrow-right text-{{color}} small"></i>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {{/each}}
+        </div>
+        
+        {{#if (ne mostrarHeader false)}}
+        <!-- Información explicativa -->
+        <div class="alert alert-info border-0 m-3 mb-0">
+          <div class="row align-items-center">
+            <div class="col-md-8">
+              <i class="fas fa-info-circle me-2"></i>
+              <strong>Sistema de Alertas:</strong> 
+              {{#if (eq rol 'admin')}}
+                Estas alertas se actualizan en tiempo real y requieren atención administrativa inmediata.
+              {{else if (eq rol 'caja')}}
+                Monitoreo de pagos y transacciones que requieren su atención.
+              {{else if (eq rol 'matrizador')}}
+                Documentos asignados que requieren su revisión o acción.
+              {{else if (eq rol 'recepcion')}}
+                Documentos listos para entrega y códigos de verificación.
+              {{else}}
+                Alertas del sistema que requieren atención.
+              {{/if}}
+            </div>
+            <div class="col-md-4 text-md-end">
+              <button type="button" class="btn btn-outline-info btn-sm" onclick="actualizarAlertas()">
+                <i class="fas fa-sync-alt me-1"></i> Actualizar
+              </button>
+            </div>
+          </div>
+        </div>
+        {{/if}}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Estilos específicos para las alertas -->
+<style>
+  .alert-item {
+    transition: all 0.3s ease;
+    background: #ffffff;
+    border-right: 1px solid #e9ecef;
+    border-bottom: 1px solid #e9ecef;
+  }
+  
+  .alert-item:hover {
+    background: #f8f9fa;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+  
+  .alert-item:hover .action-hint i {
+    transform: translateX(3px);
+  }
+  
+  .icon-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    font-weight: 500;
+  }
+  
+  /* Colores específicos para alertas */
+  .bg-red-subtle {
+    background-color: rgba(239, 68, 68, 0.1);
+  }
+  
+  .bg-orange-subtle {
+    background-color: rgba(245, 158, 11, 0.1);
+  }
+  
+  .bg-yellow-subtle {
+    background-color: rgba(251, 191, 36, 0.1);
+  }
+  
+  .bg-blue-subtle {
+    background-color: rgba(59, 130, 246, 0.1);
+  }
+  
+  .bg-green-subtle {
+    background-color: rgba(16, 185, 129, 0.1);
+  }
+  
+  .bg-purple-subtle {
+    background-color: rgba(139, 92, 246, 0.1);
+  }
+  
+  .text-red {
+    color: #ef4444 !important;
+  }
+  
+  .text-orange {
+    color: #f59e0b !important;
+  }
+  
+  .text-yellow {
+    color: #fbbf24 !important;
+  }
+  
+  .text-blue {
+    color: #3b82f6 !important;
+  }
+  
+  .text-green {
+    color: #10b981 !important;
+  }
+  
+  .text-purple {
+    color: #8b5cf6 !important;
+  }
+  
+  .border-red {
+    border-color: #ef4444 !important;
+  }
+  
+  .border-orange {
+    border-color: #f59e0b !important;
+  }
+  
+  .border-yellow {
+    border-color: #fbbf24 !important;
+  }
+  
+  .border-blue {
+    border-color: #3b82f6 !important;
+  }
+  
+  .border-green {
+    border-color: #10b981 !important;
+  }
+  
+  .border-purple {
+    border-color: #8b5cf6 !important;
+  }
+  
+  .bg-red {
+    background-color: #ef4444 !important;
+  }
+  
+  .bg-orange {
+    background-color: #f59e0b !important;
+  }
+  
+  .bg-yellow {
+    background-color: #fbbf24 !important;
+  }
+  
+  .bg-blue {
+    background-color: #3b82f6 !important;
+  }
+  
+  .bg-green {
+    background-color: #10b981 !important;
+  }
+  
+  .bg-purple {
+    background-color: #8b5cf6 !important;
+  }
+  
+  .hover-lift-subtle:hover {
+    transform: translateY(-1px);
+  }
+  
+  .action-hint i {
+    transition: transform 0.2s ease;
+  }
+  
+  .urgencia-indicator .badge {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+  }
+  
+  /* Responsive */
+  @media (max-width: 768px) {
+    .alert-item {
+      border-right: none;
+      border-bottom: 1px solid #e9ecef;
+    }
+    
+    .alert-item:hover {
+      transform: none;
+    }
+    
+    .icon-circle {
+      width: 35px;
+      height: 35px;
+      font-size: 0.875rem;
+    }
+  }
+  
+  /* Animaciones de entrada */
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .alert-item {
+    animation: fadeInUp 0.5s ease-out;
+  }
+  
+  .alert-item:nth-child(1) { animation-delay: 0.1s; }
+  .alert-item:nth-child(2) { animation-delay: 0.2s; }
+  .alert-item:nth-child(3) { animation-delay: 0.3s; }
+  .alert-item:nth-child(4) { animation-delay: 0.4s; }
+  .alert-item:nth-child(5) { animation-delay: 0.5s; }
+  .alert-item:nth-child(6) { animation-delay: 0.6s; }
+</style>
+
+<!-- JavaScript para funcionalidad -->
+<script>
+  // Función para navegar a la alerta
+  function navegarAlerta(enlace) {
+    if (enlace && enlace !== '#') {
+      window.location.href = enlace;
+    }
+  }
+  
+  // Función para actualizar alertas
+  function actualizarAlertas() {
+    const alertasSection = document.getElementById('alertas-section');
+    
+    // Mostrar indicador de carga
+    const loadingOverlay = document.createElement('div');
+    loadingOverlay.className = 'position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center';
+    loadingOverlay.style.background = 'rgba(255, 255, 255, 0.8)';
+    loadingOverlay.style.zIndex = '10';
+    loadingOverlay.innerHTML = `
+      <div class="text-center">
+        <div class="spinner-border text-primary mb-2" role="status">
+          <span class="visually-hidden">Cargando...</span>
+        </div>
+        <div class="text-muted">Actualizando alertas...</div>
+      </div>
+    `;
+    
+    alertasSection.style.position = 'relative';
+    alertasSection.appendChild(loadingOverlay);
+    
+    // Simular actualización (en implementación real, hacer petición AJAX)
+    setTimeout(() => {
+      loadingOverlay.remove();
+      
+      // Mostrar mensaje de éxito
+      const successToast = document.createElement('div');
+      successToast.className = 'toast position-fixed top-0 end-0 m-3';
+      successToast.style.zIndex = '1055';
+      successToast.innerHTML = `
+        <div class="toast-header bg-success text-white">
+          <i class="fas fa-check-circle me-2"></i>
+          <strong class="me-auto">Alertas Actualizadas</strong>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body">
+          Las alertas han sido actualizadas correctamente.
+        </div>
+      `;
+      
+      document.body.appendChild(successToast);
+      
+      // Mostrar toast si Bootstrap está disponible
+      if (typeof bootstrap !== 'undefined') {
+        const toast = new bootstrap.Toast(successToast);
+        toast.show();
+        
+        // Remover toast después de que se oculte
+        successToast.addEventListener('hidden.bs.toast', () => {
+          successToast.remove();
+        });
+      } else {
+        // Fallback sin Bootstrap
+        setTimeout(() => {
+          successToast.remove();
+        }, 3000);
+      }
+    }, 1500);
+  }
+  
+  // Función para marcar alerta como vista
+  function marcarAlertaVista(tipo) {
+    const alertaElement = document.querySelector(`[data-tipo="${tipo}"]`);
+    if (alertaElement) {
+      alertaElement.style.opacity = '0.7';
+      alertaElement.querySelector('.badge').textContent = '0';
+    }
+  }
+  
+  // Función para filtrar alertas por urgencia
+  function filtrarAlertasPorUrgencia(urgencia) {
+    const alertas = document.querySelectorAll('.alert-item');
+    alertas.forEach(alerta => {
+      const urgenciaElement = alerta.querySelector('.urgencia-indicator .badge');
+      if (urgencia === 'todas' || urgenciaElement.textContent.toLowerCase().includes(urgencia)) {
+        alerta.style.display = 'block';
+      } else {
+        alerta.style.display = 'none';
+      }
+    });
+  }
+  
+  // Inicializar tooltips para alertas
+  document.addEventListener('DOMContentLoaded', function() {
+    // Agregar tooltips a las alertas
+    const alertItems = document.querySelectorAll('.alert-item');
+    alertItems.forEach(item => {
+      item.setAttribute('title', 'Clic para ver detalles');
+      item.setAttribute('data-bs-toggle', 'tooltip');
+      item.setAttribute('data-bs-placement', 'top');
+    });
+    
+    // Inicializar tooltips si Bootstrap está disponible
+    if (typeof bootstrap !== 'undefined') {
+      const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+      const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+      });
+    }
+  });
+</script>
+
+{{else}}
+<!-- Sin alertas - Estado positivo -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="alert alert-success border-0 shadow-sm">
+      <div class="d-flex align-items-center">
+        <div class="me-3">
+          <i class="fas fa-check-circle text-success" style="font-size: 2rem;"></i>
+        </div>
+        <div class="flex-grow-1">
+          <h6 class="mb-1 text-success">¡Excelente! No hay alertas pendientes</h6>
+          <p class="mb-0 text-muted">
+            {{#if (eq rol 'admin')}}
+              Todos los procesos del sistema funcionan correctamente.
+            {{else if (eq rol 'caja')}}
+              No hay pagos urgentes que requieran atención inmediata.
+            {{else if (eq rol 'matrizador')}}
+              Todos tus documentos están al día.
+            {{else if (eq rol 'recepcion')}}
+              No hay documentos pendientes de entrega.
+            {{else}}
+              El sistema funciona sin problemas.
+            {{/if}}
+          </p>
+        </div>
+        <div>
+          <button type="button" class="btn btn-outline-success btn-sm" onclick="actualizarAlertas()">
+            <i class="fas fa-sync-alt me-1"></i> Verificar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{{/if}}

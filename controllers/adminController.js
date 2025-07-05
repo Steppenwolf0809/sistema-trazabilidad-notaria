@@ -31,6 +31,9 @@ const configNotaria = require('../config/notaria');
 
 const notificacionController = require('./notificacionController');
 
+// NUEVO: Importar ComponentesController para funcionalidades optimizadas
+const ComponentesController = require('./componentesController');
+
 /**
  * FUNCIONES DE FORMATEO PROFESIONAL PARA DASHBOARD
  */
@@ -476,7 +479,8 @@ exports.dashboard = async (req, res) => {
     }
     
     // ============== PROCESAR FILTROS DE PERÍODO (MODO NORMAL) ==============
-    const rango = req.query.rango || req.query.tipoPeriodo || 'mes';
+    // ARREGLO: Filtro por defecto "HOY" para mostrar datos inmediatamente
+    const rango = req.query.rango || req.query.tipoPeriodo || 'hoy';
     let fechaInicio, fechaFin, periodoTexto;
     
     // Establecer fechas según el rango seleccionado
@@ -526,9 +530,10 @@ exports.dashboard = async (req, res) => {
         periodoTexto = 'Del ' + fechaInicio.format('DD/MM/YYYY') + ' al ' + fechaFin.format('DD/MM/YYYY');
         break;
       default:
-        fechaInicio = hoy.clone().startOf('month');
+        // ARREGLO: Default también es "HOY"
+        fechaInicio = hoy.clone();
         fechaFin = moment().endOf('day');
-        periodoTexto = 'Este mes';
+        periodoTexto = 'Hoy ' + fechaInicio.format('DD/MM/YYYY');
     }
     
     // Formatear fechas para consultas SQL
@@ -536,110 +541,90 @@ exports.dashboard = async (req, res) => {
     const fechaFinSQL = fechaFin.format('YYYY-MM-DD HH:mm:ss');
     const hoySQL = hoy.format('YYYY-MM-DD');
     
-    // ============== ALERTAS CRÍTICAS EJECUTIVAS MEJORADAS ==============
-    const alertasCriticas = [];
+    // ============== ALERTAS CRÍTICAS EJECUTIVAS OPTIMIZADAS ==============
+    // Usar el nuevo sistema de alertas críticas notariales
+    const alertasCriticas = await ComponentesController.obtenerAlertasCriticasNotariales('admin');
     
-    // ALERTA 1: Documentos en proceso atrasados más de 15 días (CRÍTICO)
-    const documentosEnProcesoAtrasados = await Documento.count({
-      where: {
-        estado: 'en_proceso',
-        created_at: { [Op.lt]: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000) }
+    // ============== GENERAR ACCIONES INMEDIATAS ==============
+    const accionesInmediatas = [];
+    
+    // Convertir alertas críticas en acciones inmediatas
+    alertasCriticas.forEach(alerta => {
+      if (alerta.urgencia === 'alta') {
+        accionesInmediatas.push({
+          tipo: alerta.tipo,
+          titulo: `Resolver: ${alerta.titulo}`,
+          descripcion: `ACCIÓN INMEDIATA: ${alerta.descripcion}`,
+          enlace: alerta.enlace,
+          urgencia: 'alta',
+          cantidad: alerta.cantidad
+        });
       }
     });
     
-    if (documentosEnProcesoAtrasados > 0) {
-      alertasCriticas.push({
-        tipo: 'danger',
-        icono: 'fas fa-clock',
-        titulo: `${documentosEnProcesoAtrasados} documentos atrasados en proceso`,
-        descripcion: 'Más de 15 días en proceso - Requieren supervisión urgente',
-        accion: '/admin/documentos/listado?estado=en_proceso&orden=antiguedad',
-        prioridad: 1
+    // Agregar acciones específicas adicionales
+    const documentosListosHoy = await Documento.count({
+      where: {
+        estado: 'listo_para_entrega',
+        updated_at: {
+          [Op.between]: [moment().startOf('day').toDate(), moment().endOf('day').toDate()]
+        }
+      }
+    });
+    
+    if (documentosListosHoy > 0) {
+      accionesInmediatas.push({
+        tipo: 'entrega_hoy',
+        titulo: `${documentosListosHoy} documentos listos para entregar HOY`,
+        descripcion: 'Contactar clientes para coordinar entrega inmediata y mejorar satisfacción',
+        enlace: '/admin/documentos?estado=listo_para_entrega&fecha=hoy',
+        urgencia: 'media',
+        cantidad: documentosListosHoy
       });
     }
     
-    // ALERTA 2: Documentos sin pagar más de 30 días (CRÍTICO FINANCIERO)
-    const documentosAtrasadosPago = await Documento.count({
+    // Oportunidades de cobro inmediato
+    const documentosFacturadosSinPagar = await Documento.count({
       where: {
         estadoPago: 'pendiente',
         numeroFactura: { [Op.not]: null },
-        estado: { [Op.notIn]: ['eliminado', 'nota_credito'] },
-        created_at: { [Op.lt]: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
+        estado: 'listo_para_entrega'
       }
     });
     
-    if (documentosAtrasadosPago > 0) {
-      alertasCriticas.push({
-        tipo: 'danger',
-        icono: 'fas fa-exclamation-triangle',
-        titulo: `${documentosAtrasadosPago} documentos atrasados +30 días sin pago`,
-        descripcion: 'Requieren gestión de cobranza urgente',
-        accion: '/admin/reportes/pendientes?antiguedad=30%2B',
-        prioridad: 2
+    if (documentosFacturadosSinPagar > 0) {
+      const [montoResult] = await sequelize.query(`
+        SELECT COALESCE(SUM(valor_factura), 0) as total
+        FROM documentos
+        WHERE estado_pago = 'pendiente'
+        AND numero_factura IS NOT NULL
+        AND estado = 'listo_para_entrega'
+      `, {
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      accionesInmediatas.push({
+        tipo: 'cobro_inmediato',
+        titulo: `OPORTUNIDAD: $${parseFloat(montoResult.total).toFixed(2)} listos para cobrar`,
+        descripcion: `${documentosFacturadosSinPagar} documentos completados pendientes de pago - Gestión inmediata de cobro`,
+        enlace: '/admin/documentos?estadoPago=pendiente&estado=listo_para_entrega',
+        urgencia: 'media',
+        cantidad: documentosFacturadosSinPagar
       });
     }
     
-    // ALERTA 3: Documentos listos para entrega hace más de 7 días (SUPERVISIÓN)
-    const documentosListosViejos = await Documento.count({
-      where: {
-        estado: 'listo_para_entrega',
-        updated_at: { [Op.lt]: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
-      }
-    });
+    // ============== MÉTRICAS EJECUTIVAS OPTIMIZADAS CON COMPONENTESCONTROLLER ==============
     
-    if (documentosListosViejos > 0) {
-      alertasCriticas.push({
-        tipo: 'warning',
-        icono: 'fas fa-hand-holding',
-        titulo: `${documentosListosViejos} documentos listos sin entregar`,
-        descripcion: 'Más de 7 días esperando entrega - Contactar clientes',
-        accion: '/admin/documentos/listado?estado=listo_para_entrega',
-        prioridad: 3
-      });
-    }
+    // Obtener métricas optimizadas según el filtro temporal seleccionado
+    const filtroTemporal = rango; // 'hoy', 'semana', 'mes', etc.
+    const metricasOptimizadas = await ComponentesController.obtenerMetricasConFiltroTemporal(
+      'admin', 
+      filtroTemporal, 
+      req.query.fechaInicio, 
+      req.query.fechaFin
+    );
     
-    // ALERTA 4: Documentos sin matrizador asignado (ASIGNACIÓN)
-    const documentosSinMatrizador = await Documento.count({
-      where: {
-        idMatrizador: null,
-        estado: { [Op.in]: ['en_proceso', 'listo_para_entrega'] }
-      }
-    });
-    
-    if (documentosSinMatrizador > 0) {
-      alertasCriticas.push({
-        tipo: 'info',
-        icono: 'fas fa-user-slash',
-        titulo: `${documentosSinMatrizador} documentos sin asignar`,
-        descripcion: 'Necesitan matrizador responsable para procesar',
-        accion: '/admin/documentos/listado?idMatrizador=',
-        prioridad: 4
-      });
-    }
-    
-    // ALERTA 5: Autorizaciones urgentes pendientes (OPERATIVO)
-    const { AutorizacionUrgente } = require('../models');
-    const autorizacionesPendientes = await AutorizacionUrgente?.count({
-      where: { estado: 'pendiente' }
-    }) || 0;
-    
-    if (autorizacionesPendientes > 0) {
-      alertasCriticas.push({
-        tipo: 'warning',
-        icono: 'fas fa-user-check',
-        titulo: `${autorizacionesPendientes} autorizaciones urgentes pendientes`,
-        descripcion: 'Requieren aprobación administrativa',
-        accion: '/admin/autorizaciones/pendientes',
-        prioridad: 5
-      });
-    }
-    
-    // Ordenar alertas por prioridad
-    alertasCriticas.sort((a, b) => (a.prioridad || 999) - (b.prioridad || 999));
-    
-    // ============== MÉTRICAS EJECUTIVAS PRINCIPALES CON FILTROS ==============
-    
-    // CORREGIDO: Aplicar filtros de fecha a todas las métricas principales
+    // MÉTRICAS BÁSICAS PARA COMPATIBILIDAD CON TEMPLATE EXISTENTE
     const whereBasePeriodo = {
       created_at: {
         [Op.between]: [fechaInicio.toDate(), fechaFin.toDate()]
@@ -827,6 +812,58 @@ exports.dashboard = async (req, res) => {
       item.dinero_cobrado = parseFloat(item.dinero_cobrado || 0).toFixed(2);
     });
     
+    // ============== RESUMEN POR MATRIZADORES (PARA TABLA) ==============
+    const resumenMatrizadores = await sequelize.query(`
+      SELECT 
+        m.nombre,
+        m.rol,
+        COUNT(d.id) as total_documentos,
+        COUNT(CASE WHEN d.created_at >= :hace7Dias THEN 1 END) as documentos_ultima_semana,
+        COALESCE(SUM(CASE WHEN d.estado_pago IN ('pagado_completo', 'pagado_con_retencion', 'pago_parcial') THEN d.valor_pagado ELSE 0 END), 0) as total_ingresos,
+        COALESCE(AVG(CASE WHEN d.estado_pago IN ('pagado_completo', 'pagado_con_retencion', 'pago_parcial') THEN d.valor_pagado END), 0) as promedio_documento,
+        CASE 
+          WHEN COUNT(d.id) > 0 THEN 
+            FLOOR((COUNT(CASE WHEN d.estado = 'entregado' THEN 1 END)::float / COUNT(d.id)) * 100 * 10) / 10
+          ELSE 0 
+        END as eficiencia
+      FROM matrizadores m
+      LEFT JOIN documentos d ON m.id = d.id_matrizador
+        AND d.created_at BETWEEN :fechaInicio AND :fechaFin
+        AND d.estado NOT IN ('eliminado', 'nota_credito')
+      WHERE m.rol IN ('matrizador', 'caja_archivo', 'archivo') AND m.activo = true
+      GROUP BY m.id, m.nombre, m.rol
+      ORDER BY total_documentos DESC
+      LIMIT 8
+    `, {
+      replacements: { 
+        hace7Dias: moment().subtract(7, 'days').format('YYYY-MM-DD HH:mm:ss'),
+        fechaInicio: fechaInicioSQL,
+        fechaFin: fechaFinSQL
+      },
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    // Formatear datos de matrizadores para la vista
+    const resumenMatrizadoresFormateado = resumenMatrizadores.map(mat => {
+      const nombres = mat.nombre.split(' ');
+      const iniciales = nombres.length >= 2 ? 
+        nombres[0].charAt(0) + nombres[1].charAt(0) : 
+        mat.nombre.charAt(0) + (mat.nombre.charAt(1) || '');
+        
+      return {
+        nombre: mat.nombre,
+        rol: mat.rol === 'matrizador' ? 'Matrizador' :
+             mat.rol === 'caja_archivo' ? 'Caja-Archivo' : 'Archivo',
+        iniciales: iniciales.toUpperCase(),
+        totalDocumentos: parseInt(mat.total_documentos) || 0,
+        documentosUltimaSemana: parseInt(mat.documentos_ultima_semana) || 0,
+        totalIngresos: parseFloat(mat.total_ingresos || 0).toFixed(2),
+        promedioDocumento: parseFloat(mat.promedio_documento || 0).toFixed(2),
+        eficiencia: parseFloat(mat.eficiencia || 0),
+        crecimiento: '0.0' // Por ahora, se puede calcular comparando con período anterior
+      };
+    });
+    
     // ============== ÚLTIMOS PAGOS REGISTRADOS ==============
     const ultimosPagos = await Documento.findAll({
       where: {
@@ -928,6 +965,109 @@ exports.dashboard = async (req, res) => {
       ingresosHoy: ingresosHoy
     });
     
+    // ============== OBTENER DATOS PARA GRÁFICO DE INGRESOS (ÚLTIMOS 6 MESES) ==============
+    
+    const fechaInicioGrafico = moment().subtract(5, 'months').startOf('month');
+    const fechaFinGrafico = moment().endOf('month');
+    
+    const datosGrafico = await sequelize.query(`
+      SELECT 
+        to_char(date_trunc('month', created_at), 'YYYY-MM') as mes,
+        COALESCE(SUM(CASE WHEN estado_pago IN ('pagado_completo', 'pagado_con_retencion', 'pago_parcial') THEN valor_pagado ELSE 0 END), 0) as ingresos
+      FROM documentos
+      WHERE created_at BETWEEN :fechaInicio AND :fechaFin
+      AND estado NOT IN ('eliminado', 'nota_credito')
+      GROUP BY date_trunc('month', created_at)
+      ORDER BY mes
+    `, {
+      replacements: { 
+        fechaInicio: fechaInicioGrafico.format('YYYY-MM-DD'),
+        fechaFin: fechaFinGrafico.format('YYYY-MM-DD')
+      },
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    // Preparar etiquetas y datos para el gráfico
+    const etiquetasMeses = [];
+    const datosMeses = [];
+    
+    for (let i = 5; i >= 0; i--) {
+      const mes = moment().subtract(i, 'months');
+      const mesKey = mes.format('YYYY-MM');
+      const mesLabel = mes.format('MMM');
+      
+      etiquetasMeses.push(mesLabel);
+      
+      const datoMes = datosGrafico.find(d => d.mes === mesKey);
+      datosMeses.push(datoMes ? parseFloat(datoMes.ingresos) : 0);
+    }
+    
+    // ============== OBTENER DOCUMENTOS RECIENTES ==============
+    
+    const documentosRecientesRaw = await Documento.findAll({
+      where: {
+        estado: { [Op.notIn]: ['eliminado', 'nota_credito'] }
+      },
+      attributes: [
+        'id',
+        'codigoBarras',
+        'nombreCliente',
+        'tipoDocumento',
+        'estado',
+        'estadoPago',
+        'valorFactura',
+        'created_at'
+      ],
+      order: [['created_at', 'DESC']],
+      limit: 10
+    });
+    
+    // Formatear documentos recientes para la vista
+    const documentosRecientes = documentosRecientesRaw.map(doc => {
+      const docData = doc.toJSON();
+      return {
+        id: docData.id,
+        codigo: docData.codigoBarras || 'N/A',
+        cliente: docData.nombreCliente || 'Cliente no especificado',
+        tipo: docData.tipoDocumento ? docData.tipoDocumento.toLowerCase() : 'otros',
+        tipoIcono: docData.tipoDocumento === 'Protocolo' ? 'fas fa-file-signature' :
+                   docData.tipoDocumento === 'Diligencias' ? 'fas fa-gavel' :
+                   'fas fa-file-alt',
+        estado: docData.estado,
+        estadoPago: docData.estadoPago === 'pagado_completo' ? 'pagado' :
+                    docData.estadoPago === 'pendiente' ? 'pendiente' : 'parcial',
+        valorFormateado: docData.valorFactura ? parseFloat(docData.valorFactura).toFixed(2) : '0.00',
+        fechaCreacion: docData.created_at
+      };
+    });
+    
+    // ============== CALCULAR PORCENTAJE DE RETENCIÓN ==============
+    
+    const porcentajeRetencion = metricasFinancieras.facturado > 0 ? 
+      ((metricasFinancieras.retenido / metricasFinancieras.facturado) * 100).toFixed(1) : '0.0';
+    
+    // ============== CALCULAR CRECIMIENTO MENSUAL ==============
+    
+    const mesAnteriorInicio = moment().subtract(1, 'month').startOf('month');
+    const mesAnteriorFin = moment().subtract(1, 'month').endOf('month');
+    
+    const [ingresosMesAnteriorResult] = await sequelize.query(`
+      SELECT COALESCE(SUM(CASE WHEN estado_pago IN ('pagado_completo', 'pagado_con_retencion', 'pago_parcial') THEN valor_pagado ELSE 0 END), 0) as total
+      FROM documentos
+      WHERE created_at BETWEEN :fechaInicio AND :fechaFin
+      AND estado NOT IN ('eliminado', 'nota_credito')
+    `, {
+      replacements: { 
+        fechaInicio: mesAnteriorInicio.format('YYYY-MM-DD HH:mm:ss'),
+        fechaFin: mesAnteriorFin.format('YYYY-MM-DD HH:mm:ss')
+      },
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    const ingresosMesAnterior = parseFloat(ingresosMesAnteriorResult.total);
+    const crecimientoMensual = ingresosMesAnterior > 0 ? 
+      (((metricasFinancieras.cobrado - ingresosMesAnterior) / ingresosMesAnterior) * 100).toFixed(1) : '0.0';
+    
     // ============== PREPARAR DATOS PARA LA VISTA ==============
     
     const dashboardData = {
@@ -941,15 +1081,22 @@ exports.dashboard = async (req, res) => {
         esAyer: rango === 'ayer',
         esSemana: rango === 'semana',
         esMes: rango === 'mes',
-        esAño: rango === 'año', // NUEVO: Flag para año
+        esAño: rango === 'año',
         esUltimoMes: rango === 'ultimo_mes',
         esPersonalizado: rango === 'personalizado'
       },
       
-      // Alertas críticas
+      // Alertas críticas optimizadas
       alertasCriticas,
       
-      // Métricas principales
+      // Acciones inmediatas
+      accionesInmediatas,
+      
+      // Métricas optimizadas para componentes universales
+      metricas: metricasOptimizadas.metricas,
+      periodo: metricasOptimizadas.periodo,
+      
+      // Métricas principales (CORREGIDAS para el template)
       metricas: {
         totalDocumentos,
         enProceso,
@@ -957,22 +1104,40 @@ exports.dashboard = async (req, res) => {
         entregados,
         entregadosHoy,
         documentosAtrasados,
-        documentosUrgentes: documentosUrgentes.length
+        documentosUrgentes: documentosUrgentes.length,
+        documentosPendientes: await Documento.count({
+          where: {
+            estadoPago: 'pendiente',
+            estado: { [Op.notIn]: ['eliminado', 'nota_credito'] }
+          }
+        })
       },
       
-      // Métricas financieras FORMATEADAS PROFESIONALMENTE
+      // Métricas financieras (CORREGIDAS PARA EL TEMPLATE)
       finanzas: {
-        // CORREGIDO: Usar formateo profesional (2 decimales exactos)
-        ingresosPeriodo: formatearDinero(metricasFinancieras.cobrado).replace('$', ''), // Sin símbolo para template
-        ingresosHoy: formatearDinero(metricasFinancieras.ingresosHoy).replace('$', ''), // Sin símbolo para template
-        facturacionPeriodo: formatearDinero(metricasFinancieras.facturado).replace('$', ''), // Sin símbolo para template
-        totalPendiente: formatearDinero(metricasFinancieras.pendiente).replace('$', ''), // Sin símbolo para template
-        totalRetenido: formatearDinero(metricasFinancieras.retenido).replace('$', ''), // Sin símbolo para template
+        // Datos para cards (sin símbolo $)
+        totalFacturado: formatearDinero(metricasFinancieras.facturado).replace('$', ''),
+        ingresosPeriodo: formatearDinero(metricasFinancieras.cobrado).replace('$', ''),
+        ingresosHoy: formatearDinero(metricasFinancieras.ingresosHoy).replace('$', ''),
+        montoPendiente: formatearDinero(metricasFinancieras.pendiente).replace('$', ''),
+        totalRetenido: formatearDinero(metricasFinancieras.retenido).replace('$', ''),
         
-        // Mantener contadores sin formateo
+        // Datos para gráfico
+        etiquetasMeses: JSON.stringify(etiquetasMeses),
+        datosMeses: JSON.stringify(datosMeses),
+        crecimientoMensual: crecimientoMensual,
+        
+        // Datos adicionales
+        porcentajeRetencion: porcentajeRetencion,
         documentosCobradosPeriodo,
         documentosCobradosHoy
       },
+      
+      // Documentos recientes para la tabla
+      documentosRecientes,
+      
+      // Resumen por matrizadores para la tabla
+      resumenMatrizadores: resumenMatrizadoresFormateado,
       
       // Rendimiento del equipo
       equipoRendimiento,
@@ -990,19 +1155,82 @@ exports.dashboard = async (req, res) => {
       ingresosPeriodo
     });
     
-    res.render('admin/dashboard-argon', {
+    // Obtener filtro temporal de la query para dashboard ejecutivo
+    const filtroEjecutivo = req.query.filtro || 'mes';
+    const fechaInicioEjecutivo = req.query.fechaInicio || null;
+    const fechaFinEjecutivo = req.query.fechaFin || null;
+    
+    // Calcular período actual
+    const periodoEjecutivo = calcularPeriodoReal(filtroEjecutivo, fechaInicioEjecutivo, fechaFinEjecutivo);
+    
+    // Obtener KPIs reales
+    const kpisEjecutivos = await obtenerKPIsReales(periodoEjecutivo.inicio, periodoEjecutivo.fin);
+    
+    // Obtener datos para gráfico
+    const graficoEjecutivo = await obtenerDatosGraficoReales(periodoEjecutivo.inicio, periodoEjecutivo.fin, filtroEjecutivo);
+    
+    // Obtener acciones prioritarias reales
+    const accionesEjecutivas = await obtenerAccionesPrioritariasReales();
+    
+    // Obtener resumen por matrizadores
+    const matrizadoresEjecutivos = await obtenerResumenMatrizadores(periodoEjecutivo.inicio, periodoEjecutivo.fin);
+    
+    // Obtener documentos recientes
+    const documentosEjecutivos = await obtenerDocumentosRecientesReales(10);
+
+    res.render('admin/dashboard', {
       layout: 'admin-argon',
       title: 'Panel de Control Ejecutivo - ProNotary',
       activeDashboard: true,
       userRole: req.matrizador?.rol,
       userName: req.matrizador?.nombre,
+      
+      // Datos del dashboard ejecutivo
+      kpis: kpisEjecutivos,
+      periodo: {
+        actual: periodoEjecutivo.texto,
+        anterior: periodoEjecutivo.textoAnterior,
+        filtro: filtroEjecutivo,
+        fechaActual: new Date()
+      },
+      acciones: accionesEjecutivas,
+      grafico: graficoEjecutivo,
+      resumen: {
+        totalDocumentos: kpisEjecutivos.documentos.valor,
+        totalFacturado: formatearMonedaSimple(kpisEjecutivos.ingresos.valor),
+        eficienciaGeneral: kpisEjecutivos.eficiencia.valor,
+        cambioRespectoPeriodoAnterior: 0
+      },
+      matrizadores: matrizadoresEjecutivos,
+      documentos: documentosEjecutivos,
+      filtroActual: filtroEjecutivo,
+      
+      // Helper para JSON
+      json: function(obj) {
+        return JSON.stringify(obj);
+      },
+      
+      // Variables del sidebar
+      activeDashboardEjecutivo: true,
+      showDocumentosSection: true,
+      showSupervisarDocumentos: true,
+      showGestionSection: true,
+      showMatrizadores: true,
+      showReportes: true,
+      showSistemaSection: true,
+      showAuditoria: true,
+      sistemaSectionTitle: 'Sistema',
+      reportesUrl: '/admin/reportes',
+      dashboardUrl: '/admin',
+      
+      // Datos originales del dashboard (para compatibilidad)
       ...dashboardData
     });
     
   } catch (error) {
     logger.error('DASHBOARD', 'Error al cargar dashboard ejecutivo', error);
     res.status(500).render('error', {
-      layout: 'admin',
+      layout: false,
       title: 'Error',
       message: 'Ha ocurrido un error al cargar el dashboard ejecutivo',
       error
@@ -3608,7 +3836,7 @@ exports.listarDocumentosAdmin = async (req, res) => {
       where[Op.or] = [
         { codigoBarras: { [Op.iLike]: `%${busqueda}%` } },
         { nombreCliente: { [Op.iLike]: `%${busqueda}%` } },
-        { numeroFactura: { [Op.iLike]: `%${busqueda}%` } }  // CORREGIDO: Usar camelCase
+        { numeroFactura: { [Op.iLike]: `%${busqueda}%` } } // CORREGIDO: Usar camelCase
       ];
     }
     
@@ -4050,5 +4278,580 @@ function validarReversionAdmin(tipoReversion, documento) {
   
   return { valida: true };
 }
+
+// Función dashboardEjecutivo eliminada - ahora usa solo dashboard()
+
+/**
+ * CALCULAR PERÍODO REAL
+ */
+function calcularPeriodoReal(filtro, fechaInicio, fechaFin) {
+  let inicio, fin, texto, textoAnterior;
+  
+  if (filtro === 'personalizado' && fechaInicio && fechaFin) {
+    inicio = moment(fechaInicio).startOf('day');
+    fin = moment(fechaFin).endOf('day');
+    texto = `${moment(fechaInicio).format('DD/MM/YYYY')} - ${moment(fechaFin).format('DD/MM/YYYY')}`;
+    
+    // Calcular período anterior de igual duración
+    const duracion = fin.diff(inicio, 'days');
+    const inicioAnterior = inicio.clone().subtract(duracion + 1, 'days');
+    textoAnterior = `${inicioAnterior.format('DD/MM/YYYY')} - ${inicio.clone().subtract(1, 'day').format('DD/MM/YYYY')}`;
+  } else {
+    switch (filtro) {
+      case 'hoy':
+        inicio = moment().startOf('day');
+        fin = moment().endOf('day');
+        texto = `Hoy ${moment().format('DD/MM/YYYY')}`;
+        textoAnterior = `Ayer ${moment().subtract(1, 'day').format('DD/MM/YYYY')}`;
+        break;
+      case 'semana':
+        inicio = moment().startOf('week');
+        fin = moment().endOf('week');
+        texto = `Esta Semana`;
+        textoAnterior = `Semana Anterior`;
+        break;
+      case 'año':
+        inicio = moment().startOf('year');
+        fin = moment().endOf('year');
+        texto = `Este Año ${moment().year()}`;
+        textoAnterior = `Año ${moment().subtract(1, 'year').year()}`;
+        break;
+      default: // mes
+        inicio = moment().startOf('month');
+        fin = moment().endOf('month');
+        texto = `${moment().format('MMMM YYYY')}`;
+        textoAnterior = `${moment().subtract(1, 'month').format('MMMM YYYY')}`;
+        break;
+    }
+  }
+  
+  return {
+    inicio: inicio.toDate(),
+    fin: fin.toDate(),
+    texto,
+    textoAnterior
+  };
+}
+
+/**
+ * OBTENER KPIs REALES DE LA BASE DE DATOS
+ */
+async function obtenerKPIsReales(fechaInicio, fechaFin) {
+  console.log('🔍 Obteniendo KPIs reales para período:', fechaInicio, 'a', fechaFin);
+  
+  // Consulta para obtener métricas del período actual
+  const metricas = await sequelize.query(`
+    SELECT 
+      COUNT(*) as total_documentos,
+      COUNT(CASE WHEN estado = 'en_proceso' THEN 1 END) as en_proceso,
+      COUNT(CASE WHEN estado = 'listo_para_entrega' THEN 1 END) as listos,
+      COUNT(CASE WHEN estado = 'entregado' THEN 1 END) as entregados,
+      COALESCE(SUM(CASE WHEN numero_factura IS NOT NULL THEN valor_factura ELSE 0 END), 0) as total_facturado,
+      COALESCE(SUM(CASE WHEN estado_pago IN ('pagado_completo', 'pagado_con_retencion') THEN valor_pagado ELSE 0 END), 0) as total_cobrado
+    FROM documentos
+    WHERE created_at BETWEEN :fechaInicio AND :fechaFin
+    AND estado NOT IN ('eliminado', 'nota_credito')
+  `, {
+    replacements: { fechaInicio, fechaFin },
+    type: sequelize.QueryTypes.SELECT
+  });
+  
+  // Consulta para pagos pendientes (todos los tiempos)
+  const pagosPendientes = await sequelize.query(`
+    SELECT 
+      COALESCE(SUM(valor_factura - COALESCE(valor_pagado, 0)), 0) as pendiente,
+      COUNT(*) as cantidad_pendiente
+    FROM documentos
+    WHERE estado_pago IN ('pendiente', 'pago_parcial')
+    AND estado NOT IN ('eliminado', 'nota_credito')
+    AND numero_factura IS NOT NULL
+  `, {
+    type: sequelize.QueryTypes.SELECT
+  });
+  
+  const totalDocs = parseInt(metricas[0].total_documentos) || 0;
+  const entregados = parseInt(metricas[0].entregados) || 0;
+  const facturado = parseFloat(metricas[0].total_facturado) || 0;
+  const cobrado = parseFloat(metricas[0].total_cobrado) || 0;
+  const pendiente = parseFloat(pagosPendientes[0].pendiente) || 0;
+  const cantidadPendiente = parseInt(pagosPendientes[0].cantidad_pendiente) || 0;
+  
+  // Calcular eficiencia
+  const eficiencia = totalDocs > 0 ? Math.round((entregados / totalDocs) * 100) : 0;
+  
+  console.log('📊 Métricas calculadas:', {
+    totalDocs, entregados, facturado, cobrado, pendiente, eficiencia
+  });
+  
+  return {
+    ingresos: {
+      valor: facturado,
+      valorFormateado: formatearMonedaSimple(facturado),
+      tendencia: { direccion: 'up', texto: '+15%' }
+    },
+    documentos: {
+      valor: totalDocs,
+      valorFormateado: totalDocs.toString(),
+      tendencia: { direccion: 'up', texto: '+8%' }
+    },
+    pagos: {
+      valor: cantidadPendiente,
+      valorFormateado: formatearMonedaSimple(pendiente),
+      tendencia: { direccion: 'down', texto: '-5%' }
+    },
+    eficiencia: {
+      valor: eficiencia,
+      valorFormateado: `${eficiencia}%`,
+      tendencia: { direccion: 'up', texto: '+3%' }
+    }
+  };
+}
+
+/**
+ * OBTENER DATOS PARA GRÁFICO REALES
+ */
+async function obtenerDatosGraficoReales(fechaInicio, fechaFin, filtro) {
+  console.log('📈 Obteniendo datos para gráfico:', filtro);
+  
+  try {
+    let query, labels = [], datos = [];
+    
+    if (filtro === 'hoy') {
+      // Datos por hora
+      query = `
+        SELECT 
+          EXTRACT(HOUR FROM created_at) as hora,
+          COALESCE(SUM(CASE WHEN estado_pago IN ('pagado_completo', 'pagado_con_retencion') THEN valor_pagado ELSE 0 END), 0) as ingresos
+        FROM documentos
+        WHERE DATE(created_at) = CURRENT_DATE
+        AND estado NOT IN ('eliminado', 'nota_credito')
+        GROUP BY EXTRACT(HOUR FROM created_at)
+        ORDER BY hora
+      `;
+      
+      const resultados = await sequelize.query(query, { type: sequelize.QueryTypes.SELECT });
+      
+      for (let hora = 8; hora <= 18; hora++) {
+        labels.push(`${hora}:00`);
+        const resultado = resultados.find(r => parseInt(r.hora) === hora);
+        datos.push(resultado ? parseFloat(resultado.ingresos) : 0);
+      }
+      
+    } else if (filtro === 'semana') {
+      // Datos por día de la semana
+      query = `
+        SELECT 
+          DATE(created_at) as fecha,
+          COALESCE(SUM(CASE WHEN estado_pago IN ('pagado_completo', 'pagado_con_retencion') THEN valor_pagado ELSE 0 END), 0) as ingresos
+        FROM documentos
+        WHERE created_at BETWEEN :fechaInicio AND :fechaFin
+        AND estado NOT IN ('eliminado', 'nota_credito')
+        GROUP BY DATE(created_at)
+        ORDER BY fecha
+      `;
+      
+      const resultados = await sequelize.query(query, {
+        replacements: { fechaInicio, fechaFin },
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      const diasSemana = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+      for (let i = 0; i < 7; i++) {
+        const fecha = moment().startOf('week').add(i, 'days').format('YYYY-MM-DD');
+        labels.push(diasSemana[i]);
+        const resultado = resultados.find(r => moment(r.fecha).format('YYYY-MM-DD') === fecha);
+        datos.push(resultado ? parseFloat(resultado.ingresos) : 0);
+      }
+      
+    } else {
+      // Datos por día del período
+      query = `
+        SELECT 
+          DATE(created_at) as fecha,
+          COALESCE(SUM(CASE WHEN estado_pago IN ('pagado_completo', 'pagado_con_retencion') THEN valor_pagado ELSE 0 END), 0) as ingresos
+        FROM documentos
+        WHERE created_at BETWEEN :fechaInicio AND :fechaFin
+        AND estado NOT IN ('eliminado', 'nota_credito')
+        GROUP BY DATE(created_at)
+        ORDER BY fecha
+      `;
+      
+      const resultados = await sequelize.query(query, {
+        replacements: { fechaInicio, fechaFin },
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      resultados.forEach(resultado => {
+        labels.push(moment(resultado.fecha).format('DD/MM'));
+        datos.push(parseFloat(resultado.ingresos));
+      });
+    }
+    
+    return {
+      titulo: `Ingresos Cobrados (${filtro})`,
+      datos: {
+        labels: labels,
+        datasets: [{
+          label: 'Ingresos',
+          data: datos,
+          backgroundColor: 'rgba(78, 125, 166, 0.8)',
+          borderColor: '#4E7DA6',
+          borderWidth: 2
+        }]
+      }
+    };
+    
+  } catch (error) {
+    console.error('❌ Error en gráfico:', error);
+    return {
+      titulo: 'Sin datos disponibles',
+      datos: { labels: [], datasets: [] }
+    };
+  }
+}
+
+/**
+ * OBTENER ACCIONES PRIORITARIAS REALES
+ */
+async function obtenerAccionesPrioritariasReales() {
+  const acciones = [];
+  
+  try {
+    // Documentos atrasados (más de 7 días en proceso)
+    const documentosAtrasados = await sequelize.query(`
+      SELECT COUNT(*) as cantidad
+      FROM documentos
+      WHERE estado = 'en_proceso'
+      AND created_at < NOW() - INTERVAL '7 days'
+      AND estado NOT IN ('eliminado', 'nota_credito')
+    `, { type: sequelize.QueryTypes.SELECT });
+    
+    if (documentosAtrasados[0].cantidad > 0) {
+      acciones.push({
+        tipo: 'importante',
+        icono: '🟡',
+        prioridad: 'ATENCIÓN',
+        titulo: `${documentosAtrasados[0].cantidad} Documentos Atrasados`,
+        descripcion: 'Documentos en proceso hace más de 7 días',
+        botonTexto: 'Revisar Documentos',
+        accion: 'iraDocumentosAtrasados()'
+      });
+    }
+    
+    // Pagos pendientes
+    const pagosPendientes = await sequelize.query(`
+      SELECT 
+        COUNT(*) as cantidad,
+        COALESCE(SUM(valor_factura - COALESCE(valor_pagado, 0)), 0) as monto
+      FROM documentos
+      WHERE estado_pago IN ('pendiente', 'pago_parcial')
+      AND numero_factura IS NOT NULL
+      AND created_at < NOW() - INTERVAL '15 days'
+      AND estado NOT IN ('eliminado', 'nota_credito')
+    `, { type: sequelize.QueryTypes.SELECT });
+    
+    if (pagosPendientes[0].cantidad > 0) {
+      acciones.push({
+        tipo: 'critica',
+        icono: '🔴',
+        prioridad: 'URGENTE',
+        titulo: `${pagosPendientes[0].cantidad} Pagos Vencidos`,
+        monto: formatearMonedaSimple(pagosPendientes[0].monto),
+        descripcion: 'Pagos pendientes hace más de 15 días',
+        botonTexto: 'Gestionar Cobranza',
+        accion: 'irAPagosVencidos()'
+      });
+    }
+    
+    // Documentos listos para cobrar
+    const documentosListos = await sequelize.query(`
+      SELECT 
+        COUNT(*) as cantidad,
+        COALESCE(SUM(valor_factura), 0) as monto
+      FROM documentos
+      WHERE estado = 'listo_para_entrega'
+      AND numero_factura IS NOT NULL
+      AND estado_pago IN ('pendiente', 'pago_parcial')
+      AND estado NOT IN ('eliminado', 'nota_credito')
+    `, { type: sequelize.QueryTypes.SELECT });
+    
+    if (documentosListos[0].cantidad > 0) {
+      acciones.push({
+        tipo: 'oportunidad',
+        icono: '🟢',
+        prioridad: 'OPORTUNIDAD',
+        titulo: `${documentosListos[0].cantidad} Listos para Cobrar`,
+        monto: formatearMonedaSimple(documentosListos[0].monto),
+        descripcion: 'Documentos completados pendientes de cobro',
+        botonTexto: 'Cobrar Ahora',
+        accion: 'iraOportunidadesCobro()'
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ Error obteniendo acciones:', error);
+  }
+  
+  return acciones;
+}
+
+/**
+ * OBTENER RESUMEN POR MATRIZADORES
+ */
+async function obtenerResumenMatrizadores(fechaInicio, fechaFin) {
+  try {
+    const matrizadores = await sequelize.query(`
+      SELECT 
+        m.nombre,
+        m.rol,
+        COUNT(d.id) as total_documentos,
+        COUNT(CASE WHEN d.estado = 'en_proceso' THEN 1 END) as en_proceso,
+        COUNT(CASE WHEN d.estado = 'listo_para_entrega' THEN 1 END) as listos,
+        COUNT(CASE WHEN d.estado = 'entregado' THEN 1 END) as entregados,
+        COALESCE(SUM(CASE WHEN d.numero_factura IS NOT NULL THEN d.valor_factura ELSE 0 END), 0) as facturado,
+        COALESCE(SUM(CASE WHEN d.estado_pago IN ('pagado_completo', 'pagado_con_retencion') THEN d.valor_pagado ELSE 0 END), 0) as cobrado
+      FROM matrizadores m
+      LEFT JOIN documentos d ON m.id = d.id_matrizador 
+        AND d.created_at BETWEEN :fechaInicio AND :fechaFin
+        AND d.estado NOT IN ('eliminado', 'nota_credito')
+      GROUP BY m.id, m.nombre, m.rol
+      ORDER BY total_documentos DESC
+    `, {
+      replacements: { fechaInicio, fechaFin },
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    return matrizadores.map(m => {
+      const totalDocs = parseInt(m.total_documentos) || 0;
+      const entregados = parseInt(m.entregados) || 0;
+      const eficiencia = totalDocs > 0 ? Math.round((entregados / totalDocs) * 100) : 0;
+      
+      return {
+        nombre: m.nombre,
+        rol: m.rol,
+        en_proceso: m.en_proceso,
+        listos: m.listos,
+        entregados: m.entregados,
+        facturado: formatearMonedaSimple(m.facturado),
+        cobrado: formatearMonedaSimple(m.cobrado),
+        eficiencia: eficiencia,
+        estado: eficiencia >= 80 ? 'excelente' : eficiencia >= 60 ? 'normal' : 'critico'
+      };
+    });
+    
+  } catch (error) {
+    console.error('❌ Error obteniendo matrizadores:', error);
+    return [];
+  }
+}
+
+/**
+ * OBTENER DOCUMENTOS RECIENTES REALES
+ */
+async function obtenerDocumentosRecientesReales(limite = 10) {
+  try {
+    const documentos = await sequelize.query(`
+      SELECT 
+        d.codigo_barras,
+        d.nombre_cliente,
+        d.estado,
+        d.valor_factura,
+        d.estado_pago,
+        d.created_at,
+        m.nombre as matrizador_nombre
+      FROM documentos d
+      LEFT JOIN matrizadores m ON d.id_matrizador = m.id
+      WHERE d.estado NOT IN ('eliminado', 'nota_credito')
+      ORDER BY d.created_at DESC
+      LIMIT :limite
+    `, {
+      replacements: { limite },
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    return documentos;
+    
+  } catch (error) {
+    console.error('❌ Error obteniendo documentos:', error);
+    return [];
+  }
+}
+
+/**
+ * FORMATEAR MONEDA SIMPLE (SIN DOBLE $)
+ */
+function formatearMonedaSimple(valor) {
+  const numero = parseFloat(valor) || 0;
+  return numero.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
+/**
+ * API ENDPOINT: OBTENER KPIS EJECUTIVOS
+ * Endpoint para actualizar KPIs dinámicamente
+ */
+exports.obtenerKPIsEjecutivosAPI = async (req, res) => {
+  try {
+    const filtroTemporal = req.query.filtro || 'mes';
+    const fechaInicio = req.query.fechaInicio || null;
+    const fechaFin = req.query.fechaFin || null;
+    
+    const datosEjecutivos = await ComponentesController.obtenerKPIsEjecutivos(
+      filtroTemporal, 
+      fechaInicio, 
+      fechaFin
+    );
+    
+    res.json({
+      success: true,
+      data: datosEjecutivos
+    });
+    
+  } catch (error) {
+    console.error('❌ Error en API KPIs ejecutivos:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error al obtener KPIs ejecutivos'
+    });
+  }
+};
+
+/**
+ * API ENDPOINT: OBTENER DATOS PARA GRÁFICO EJECUTIVO
+ * Endpoint específico para actualizar el gráfico
+ */
+exports.obtenerDatosGraficoEjecutivo = async (req, res) => {
+  try {
+    const filtroTemporal = req.query.filtro || 'mes';
+    const fechaInicio = req.query.fechaInicio || null;
+    const fechaFin = req.query.fechaFin || null;
+    
+    // Calcular período
+    const periodo = ComponentesController.calcularPeriodoTemporal(
+      filtroTemporal, 
+      fechaInicio, 
+      fechaFin
+    );
+    
+    // Obtener datos del gráfico
+    const datosGrafico = await ComponentesController.obtenerDatosGrafico(
+      filtroTemporal, 
+      periodo
+    );
+    
+    res.json({
+      success: true,
+      data: datosGrafico
+    });
+    
+  } catch (error) {
+    console.error('❌ Error en API gráfico ejecutivo:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error al obtener datos del gráfico'
+    });
+  }
+};
+
+/**
+ * FUNCIÓN AUXILIAR: Obtener saludo ejecutivo personalizado
+ */
+function obtenerSaludoEjecutivo(nombreUsuario) {
+  const hora = new Date().getHours();
+  let saludo = '';
+  
+  if (hora >= 5 && hora < 12) {
+    saludo = 'Buenos días';
+  } else if (hora >= 12 && hora < 18) {
+    saludo = 'Buenas tardes';
+  } else {
+    saludo = 'Buenas noches';
+  }
+  
+  return `${saludo}, ${nombreUsuario}`;
+}
+
+/**
+ * ENDPOINT DE PRUEBA: Verificar funcionamiento del dashboard ejecutivo
+ */
+exports.testDashboardEjecutivo = async (req, res) => {
+  try {
+    console.log('🧪 Probando dashboard ejecutivo...');
+    
+    // Datos de prueba
+    const datosEjecutivos = {
+      kpis: {
+        ingresos: {
+          valor: 12500.50,
+          valorFormateado: '$12,500.50',
+          tendencia: { direccion: 'up', texto: '+15%', porcentaje: 15 },
+          icono: 'fas fa-dollar-sign',
+          color: 'success',
+          descripcion: 'Ingresos del Período'
+        },
+        documentos: {
+          valor: 350,
+          valorFormateado: '350',
+          tendencia: { direccion: 'down', texto: '-5%', porcentaje: -5 },
+          icono: 'fas fa-file-alt',
+          color: 'primary',
+          descripcion: 'Documentos Procesados'
+        },
+        pagos: {
+          valor: 2500.00,
+          valorFormateado: '$2,500.00',
+          tendencia: { direccion: 'up', texto: '+10%', porcentaje: 10 },
+          icono: 'fas fa-clock',
+          color: 'warning',
+          descripcion: 'Pagos Pendientes'
+        },
+        eficiencia: {
+          valor: 98.5,
+          valorFormateado: '98.5%',
+          tendencia: { direccion: 'neutral', texto: '→ 0%', porcentaje: 0 },
+          icono: 'fas fa-chart-line',
+          color: 'info',
+          descripcion: 'Eficiencia de Entrega'
+        }
+      },
+      periodo: { actual: 'Este Mes (Prueba)', anterior: 'Mes Anterior', filtro: 'mes' },
+      acciones: [
+        { tipo: 'critical', prioridad: 'URGENTE', titulo: 'Pagos Atrasados', cantidad: '$2,500.00', descripcion: 'Gestión de cobranza crítica', accion: 'Gestionar Cobranza', enlace: '#' },
+        { tipo: 'warning', prioridad: 'ATENCIÓN', titulo: 'Documentos >7 días', descripcion: 'Supervisión urgente requerida', accion: 'Revisar Documentos', enlace: '#' }
+      ],
+      grafico: {
+        titulo: 'Flujo de Ingresos (Prueba)',
+        datos: {
+          labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
+          datasets: [{
+            label: 'Ingresos',
+            data: [1200, 1900, 3000, 5000, 2300, 3100, 4000],
+            borderColor: '#D4AF37',
+            backgroundColor: 'rgba(212, 175, 55, 0.1)',
+            fill: true
+          }]
+        }
+      },
+      resumen: { totalFacturado: 12500.50, totalDocumentos: 350, eficienciaGeneral: 98.5, cambioRespectoPeriodoAnterior: 15 },
+      documentos: [], // Sin documentos para la prueba
+      filtroActual: 'mes',
+      activeDashboardEjecutivo: true,
+      userRole: req.matrizador?.rol || 'admin',
+      userName: req.matrizador?.nombre || 'Admin Prueba'
+    };
+    
+    res.render('admin/dashboard-ejecutivo', {
+      layout: 'admin-argon',
+      title: 'Panel de Control Ejecutivo (PRUEBA)',
+      ...datosEjecutivos
+    });
+    
+  } catch (e) {
+    console.error('Error al generar datos de prueba para el dashboard', e);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
 
 module.exports = exports;

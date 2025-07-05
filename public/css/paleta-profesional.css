@@ -1,0 +1,383 @@
+/**
+ * PALETA DE COLORES PROFESIONAL - SISTEMA NOTARIAL PRONOTARY
+ * Diseño elegante y serio apropiado para software legal empresarial
+ * Extraído de diseño de despachos de abogados de alto nivel
+ */
+
+/* ==================== VARIABLES CSS PROFESIONALES ==================== */
+:root {
+  /* COLORES BASE DEL SISTEMA - PALETA PROFESIONAL */
+  
+  /* Primario (azul marino profundo) */
+  --color-primario: #162840;
+  --color-primario-claro: #4E7DA6;
+  --color-primario-oscuro: #0d1a2b;
+  --color-primario-alpha: rgba(22, 40, 64, 0.1);
+  
+  /* Secundario (dorado/bronce elegante) */
+  --color-secundario: #BF8C60;
+  --color-secundario-claro: #d4a574;
+  --color-secundario-oscuro: #a0734d;
+  --color-secundario-alpha: rgba(191, 140, 96, 0.1);
+  
+  /* Neutros (grises sofisticados) */
+  --color-fondo: #f8fafc;
+  --color-superficie: #ffffff;
+  --color-gris-claro: #D0D7D9;
+  --color-gris-verdoso: #B1C6B8;
+  --color-gris-medio: #8da2b5;
+  --color-gris-oscuro: #6b7c93;
+  
+  /* Textos profesionales */
+  --color-texto-primario: #162840;
+  --color-texto-secundario: #4E7DA6;
+  --color-texto-muted: #6b7c93;
+  --color-texto-light: #8da2b5;
+  
+  /* Bordes y separadores */
+  --color-borde: #D0D7D9;
+  --color-borde-light: rgba(208, 215, 217, 0.5);
+  
+  /* GRADIENTES PROFESIONALES */
+  --gradient-primario: linear-gradient(135deg, var(--color-primario) 0%, var(--color-primario-claro) 100%);
+  --gradient-secundario: linear-gradient(135deg, var(--color-secundario) 0%, var(--color-secundario-claro) 100%);
+  --gradient-neutral: linear-gradient(135deg, var(--color-gris-verdoso) 0%, var(--color-gris-claro) 100%);
+  --gradient-warm: linear-gradient(135deg, var(--color-secundario-oscuro) 0%, var(--color-secundario) 100%);
+  
+  /* SIDEBAR PROFESIONAL */
+  --sidebar-bg: var(--gradient-primario);
+  --sidebar-shadow: 0 10px 30px rgba(22, 40, 64, 0.3);
+  --sidebar-border: rgba(255, 255, 255, 0.1);
+  --sidebar-item-hover: rgba(255, 255, 255, 0.1);
+  --sidebar-item-active: var(--color-secundario);
+  
+  /* SISTEMA DE ALERTAS PROFESIONAL */
+  --alerta-critica-bg: #faf8f5;
+  --alerta-critica-border: var(--color-secundario-claro);
+  --alerta-critica-text: var(--color-primario);
+  
+  --alerta-importante-bg: #f1f5f9;
+  --alerta-importante-border: var(--color-primario-claro);
+  --alerta-importante-text: var(--color-primario);
+  
+  --alerta-positiva-bg: #f8f9fb;
+  --alerta-positiva-border: var(--color-gris-verdoso);
+  --alerta-positiva-text: var(--color-primario);
+  
+  --alerta-info-bg: #f1f5f9;
+  --alerta-info-border: var(--color-gris-medio);
+  --alerta-info-text: var(--color-primario-oscuro);
+}
+
+/* ==================== REEMPLAZOS DE COLORES SATURADOS ==================== */
+
+/* Reemplazar púrpuras saturados */
+.bg-purple-500, .bg-purple-600, .bg-purple-700,
+.text-purple-500, .text-purple-600, .text-purple-700,
+.border-purple-500, .border-purple-600, .border-purple-700 {
+  background-color: var(--color-primario) !important;
+  color: white !important;
+  border-color: var(--color-primario) !important;
+}
+
+/* Reemplazar verdes saturados */
+.bg-green-500, .bg-green-600, .bg-emerald-500,
+.text-green-500, .text-green-600, .text-emerald-500,
+.border-green-500, .border-green-600, .border-emerald-500 {
+  background-color: var(--color-gris-verdoso) !important;
+  color: var(--color-primario) !important;
+  border-color: var(--color-gris-verdoso) !important;
+}
+
+/* Reemplazar naranjas/amarillos saturados */
+.bg-orange-500, .bg-yellow-500, .bg-amber-500,
+.text-orange-500, .text-yellow-500, .text-amber-500,
+.border-orange-500, .border-yellow-500, .border-amber-500 {
+  background-color: var(--color-secundario) !important;
+  color: var(--color-primario) !important;
+  border-color: var(--color-secundario) !important;
+}
+
+/* Reemplazar rojos agresivos */
+.bg-red-500, .bg-red-600, .text-red-500, .text-red-600,
+.border-red-500, .border-red-600 {
+  background-color: var(--color-secundario-oscuro) !important;
+  color: white !important;
+  border-color: var(--color-secundario-oscuro) !important;
+}
+
+/* ==================== COMPONENTES PROFESIONALES ==================== */
+
+/* Botones principales profesionales */
+.btn-primary-profesional {
+  background: var(--gradient-secundario);
+  color: var(--color-primario);
+  border: 1px solid var(--color-secundario);
+  border-radius: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(191, 140, 96, 0.2);
+}
+
+.btn-primary-profesional:hover {
+  background: var(--color-secundario-oscuro);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(191, 140, 96, 0.3);
+}
+
+/* Botones secundarios profesionales */
+.btn-secondary-profesional {
+  background: var(--color-primario);
+  color: white;
+  border: 1px solid var(--color-primario);
+  border-radius: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-secondary-profesional:hover {
+  background: var(--color-primario-claro);
+  border-color: var(--color-primario-claro);
+}
+
+/* Cards profesionales con gradientes elegantes */
+.card-profesional-documentos {
+  background: var(--gradient-primario);
+  color: white;
+  border: none;
+  border-radius: 1rem;
+  box-shadow: 0 8px 25px rgba(22, 40, 64, 0.15);
+}
+
+.card-profesional-facturado {
+  background: var(--gradient-neutral);
+  color: var(--color-primario);
+  border: none;
+  border-radius: 1rem;
+  box-shadow: 0 8px 25px rgba(177, 198, 184, 0.15);
+}
+
+.card-profesional-pendientes {
+  background: var(--gradient-secundario);
+  color: var(--color-primario);
+  border: none;
+  border-radius: 1rem;
+  box-shadow: 0 8px 25px rgba(191, 140, 96, 0.15);
+}
+
+.card-profesional-retenciones {
+  background: var(--gradient-warm);
+  color: white;
+  border: none;
+  border-radius: 1rem;
+  box-shadow: 0 8px 25px rgba(160, 115, 77, 0.15);
+}
+
+/* Sistema de alertas profesional */
+.alerta-critica-profesional {
+  background-color: var(--alerta-critica-bg);
+  border: 1px solid var(--alerta-critica-border);
+  color: var(--alerta-critica-text);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  box-shadow: 0 2px 8px rgba(191, 140, 96, 0.1);
+}
+
+.alerta-importante-profesional {
+  background-color: var(--alerta-importante-bg);
+  border: 1px solid var(--alerta-importante-border);
+  color: var(--alerta-importante-text);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  box-shadow: 0 2px 8px rgba(78, 125, 166, 0.1);
+}
+
+.alerta-positiva-profesional {
+  background-color: var(--alerta-positiva-bg);
+  border: 1px solid var(--alerta-positiva-border);
+  color: var(--alerta-positiva-text);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  box-shadow: 0 2px 8px rgba(177, 198, 184, 0.1);
+}
+
+.alerta-info-profesional {
+  background-color: var(--alerta-info-bg);
+  border: 1px solid var(--alerta-info-border);
+  color: var(--alerta-info-text);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  box-shadow: 0 2px 8px rgba(141, 162, 181, 0.1);
+}
+
+/* ==================== UTILIDADES PROFESIONALES ==================== */
+
+/* Texto profesional */
+.text-profesional-primario { color: var(--color-primario) !important; }
+.text-profesional-secundario { color: var(--color-secundario) !important; }
+.text-profesional-muted { color: var(--color-texto-muted) !important; }
+
+/* Fondos profesionales */
+.bg-profesional-primario { background-color: var(--color-primario) !important; }
+.bg-profesional-secundario { background-color: var(--color-secundario) !important; }
+.bg-profesional-fondo { background-color: var(--color-fondo) !important; }
+
+/* Bordes profesionales */
+.border-profesional { border-color: var(--color-borde) !important; }
+.border-profesional-light { border-color: var(--color-borde-light) !important; }
+
+/* Gradientes como clases */
+.gradient-profesional-primario { background: var(--gradient-primario) !important; }
+.gradient-profesional-secundario { background: var(--gradient-secundario) !important; }
+.gradient-profesional-neutral { background: var(--gradient-neutral) !important; }
+.gradient-profesional-warm { background: var(--gradient-warm) !important; }
+
+/* ==================== RESPONSIVE PROFESIONAL ==================== */
+@media (max-width: 768px) {
+  .card-profesional-documentos,
+  .card-profesional-facturado,
+  .card-profesional-pendientes,
+  .card-profesional-retenciones {
+    margin-bottom: 1rem;
+  }
+  
+  .btn-primary-profesional,
+  .btn-secondary-profesional {
+    width: 100%;
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* ==================== ANIMACIONES PROFESIONALES ==================== */
+@keyframes fadeInProfesional {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-profesional {
+  animation: fadeInProfesional 0.6s ease-out;
+}
+
+/* Hover effects profesionales */
+.hover-profesional:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(22, 40, 64, 0.15);
+  transition: all 0.3s ease;
+}
+
+/* ==================== FILTROS TEMPORALES DESTACADOS ==================== */
+.filtros-temporales-destacados {
+  margin-top: 1rem;
+}
+
+.filtro-temporal-destacado {
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.8);
+  padding: 1rem 0.5rem;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.filtro-temporal-destacado:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.filtro-temporal-destacado.active {
+  background: linear-gradient(135deg, #BF8C60 0%, #d4a574 100%);
+  border-color: #BF8C60;
+  color: white;
+  box-shadow: 0 8px 25px rgba(191, 140, 96, 0.3);
+}
+
+.filtro-temporal-destacado.active:hover {
+  background: linear-gradient(135deg, #d4a574 0%, #BF8C60 100%);
+  transform: translateY(-2px);
+}
+
+.filtro-temporal-destacado i {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.filtro-temporal-destacado span {
+  display: block;
+  font-size: 0.9rem;
+  letter-spacing: 0.5px;
+}
+
+.filtro-temporal-destacado small {
+  font-size: 0.7rem;
+  opacity: 0.8;
+}
+
+.filtro-temporal-personalizado {
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px dashed rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.7);
+  padding: 1rem 0.5rem;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  text-align: center;
+}
+
+.filtro-temporal-personalizado:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.5);
+  color: white;
+  transform: translateY(-2px);
+}
+
+.filtro-temporal-personalizado i {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.filtro-temporal-personalizado span {
+  display: block;
+  font-size: 0.9rem;
+  letter-spacing: 0.5px;
+}
+
+.filtro-temporal-personalizado small {
+  font-size: 0.7rem;
+  opacity: 0.8;
+}
+
+/* ==================== RESPONSIVE PARA FILTROS ==================== */
+@media (max-width: 768px) {
+  .filtros-temporales-destacados .col-6 {
+    margin-bottom: 0.5rem;
+  }
+  
+  .filtro-temporal-destacado,
+  .filtro-temporal-personalizado {
+    padding: 0.75rem 0.25rem;
+  }
+  
+  .filtro-temporal-destacado i,
+  .filtro-temporal-personalizado i {
+    font-size: 1.2rem;
+  }
+  
+  .filtro-temporal-destacado span,
+  .filtro-temporal-personalizado span {
+    font-size: 0.8rem;
+  }
+}

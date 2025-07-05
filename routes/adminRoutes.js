@@ -15,6 +15,9 @@ const matrizadorController = require('../controllers/matrizadorController');
 // Importar modelo Matrizador
 const Matrizador = require('../models/Matrizador');
 
+// Importar ComponentesController para nuevas funcionalidades
+const ComponentesController = require('../controllers/componentesController');
+
 // Middleware de autenticación
 const { verificarToken, validarAccesoConAuditoria } = require('../middlewares/auth');
 
@@ -26,10 +29,70 @@ router.use(validarAccesoConAuditoria(['admin']));
 
 // =============== FUNCIONES AUTORIZADAS PARA ADMIN ===============
 
-// Panel principal (Dashboard) - SUPERVISIÓN ÚNICAMENTE
+// Panel principal (Dashboard Ejecutivo)
 router.get('/', adminController.dashboard);
-router.get('/dashboard/:periodo?', adminController.dashboard);
-router.get('/dashboard-util', adminController.dashboard);
+router.get('/dashboard-ejecutivo', adminController.dashboard);
+
+// =============== API ENDPOINTS PARA DASHBOARD OPTIMIZADO ===============
+
+// API para métricas temporales dinámicas (disponible globalmente)
+router.get('/api/metricas-temporales', async (req, res) => {
+  try {
+    const { filtroTemporal = 'mes', fechaInicio, fechaFin } = req.query;
+    const rol = req.matrizador?.rol || 'admin';
+    
+    console.log(`🔍 [API MÉTRICAS] Filtro: ${filtroTemporal}, Rol: ${rol}`);
+    
+    const resultado = await ComponentesController.obtenerMetricasConFiltroTemporal(
+      rol, 
+      filtroTemporal, 
+      fechaInicio, 
+      fechaFin
+    );
+    
+    res.json({
+      success: true,
+      metricas: resultado.metricas,
+      periodo: resultado.periodo
+    });
+    
+  } catch (error) {
+    console.error('❌ [API MÉTRICAS] Error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// API para alertas críticas notariales
+router.get('/api/alertas-criticas', async (req, res) => {
+  try {
+    const rol = req.matrizador?.rol || 'admin';
+    
+    console.log(`🚨 [API ALERTAS] Obteniendo alertas para rol: ${rol}`);
+    
+    const alertas = await ComponentesController.obtenerAlertasCriticasNotariales(rol);
+    
+    res.json({
+      success: true,
+      alertas: alertas
+    });
+    
+  } catch (error) {
+    console.error('❌ [API ALERTAS] Error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// API para KPIs ejecutivos - NUEVA FUNCIONALIDAD
+router.get('/api/kpis-ejecutivos', adminController.obtenerKPIsEjecutivosAPI);
+
+// API para gráfico ejecutivo - NUEVA FUNCIONALIDAD
+router.get('/api/grafico-ejecutivo', adminController.obtenerDatosGraficoEjecutivo);
 
 // Página de alertas - SUPERVISIÓN
 router.get('/alertas', adminController.mostrarAlertas);

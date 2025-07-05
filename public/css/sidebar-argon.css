@@ -3,25 +3,33 @@
  * CSS avanzado para funcionalidad completa del menu lateral
  */
 
-/* ==================== VARIABLES CSS ==================== */
+/* ==================== VARIABLES CSS PROFESIONALES ==================== */
 :root {
   --sidebar-width: 250px;
   --sidebar-collapsed-width: 64px;
   --sidebar-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  --sidebar-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  --sidebar-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  
+  /* PALETA PROFESIONAL NOTARIAL */
+  --sidebar-bg: linear-gradient(135deg, #162840 0%, #4E7DA6 100%);
+  --sidebar-shadow: 0 10px 30px rgba(22, 40, 64, 0.3);
   --sidebar-border: rgba(255, 255, 255, 0.1);
+  --sidebar-item-hover: rgba(255, 255, 255, 0.1);
+  --sidebar-item-active: #BF8C60;
+  --sidebar-text: rgba(255, 255, 255, 0.9);
+  --sidebar-text-muted: rgba(255, 255, 255, 0.6);
+  
   --transition-duration: 0.3s; /* Variable dinámica para JS */
 }
 
-/* ==================== SIDEBAR BASE ==================== */
+/* ==================== SIDEBAR BASE FORZADO ==================== */
 .sidebar-argon {
-  position: fixed;
+  position: fixed !important;
   top: 0;
   left: 0;
   width: var(--sidebar-width);
   height: 100vh;
-  background: var(--sidebar-bg);
+  background: var(--sidebar-bg) !important;
+  background: linear-gradient(135deg, #162840 0%, #4E7DA6 100%) !important;
   backdrop-filter: blur(20px);
   border-right: 1px solid var(--sidebar-border);
   box-shadow: var(--sidebar-shadow);
@@ -29,6 +37,13 @@
   transition: var(--sidebar-transition);
   transform: translateX(0);
   overflow: hidden;
+}
+
+/* FORZAR COLORES PROFESIONALES - MÁXIMA ESPECIFICIDAD */
+.sidebar-argon,
+.sidebar-argon.show,
+.sidebar-argon.collapsed {
+  background: linear-gradient(135deg, #162840 0%, #4E7DA6 100%) !important;
 }
 
 /* ==================== ESTADO COLAPSADO ==================== */
@@ -129,7 +144,7 @@
 }
 
 .nav-section-title {
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--sidebar-text-muted);
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -157,7 +172,7 @@
   display: flex;
   align-items: center;
   padding: 0.75rem 1rem;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--sidebar-text);
   text-decoration: none;
   border-radius: 0 25px 25px 0;
   margin-right: 1rem;
@@ -167,16 +182,16 @@
 }
 
 .nav-link:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--sidebar-item-hover);
   color: white;
   transform: translateX(4px);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 15px rgba(22, 40, 64, 0.2);
 }
 
 .nav-link.active {
-  background: rgba(255, 255, 255, 0.15);
+  background: linear-gradient(135deg, var(--sidebar-item-active), rgba(191, 140, 96, 0.8));
   color: white;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 20px rgba(191, 140, 96, 0.4);
 }
 
 .nav-link.active::before {
@@ -236,7 +251,7 @@
   right: -15px;
   width: 30px;
   height: 30px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, #162840, #4E7DA6);
   border: 2px solid rgba(255, 255, 255, 0.2);
   border-radius: 50%;
   color: white;
@@ -246,7 +261,7 @@
   justify-content: center;
   transition: var(--sidebar-transition);
   z-index: 1001;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 15px rgba(22, 40, 64, 0.3);
 }
 
 .sidebar-toggle:hover {

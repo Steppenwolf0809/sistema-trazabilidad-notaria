@@ -1,0 +1,441 @@
+{{!-- 
+  EJEMPLO DE USO: COMPONENTE DETALLE DOCUMENTO UNIVERSAL
+  
+  Este archivo muestra cómo implementar el componente de detalle en cada rol.
+  Copia el código relevante a tu controlador y vista.
+--}}
+
+{{!-- ============================================================================ --}}
+{{!-- EJEMPLO 1: IMPLEMENTACIÓN EN ADMIN --}}
+{{!-- ============================================================================ --}}
+
+{{!-- En tu controlador (adminController.js): --}}
+{{!-- 
+async verDetalleDocumento(req, res) {
+  try {
+    const { id } = req.params;
+    const ComponentesController = require('./componentesController');
+    
+    // Obtener datos del detalle usando el componente universal
+    const datosDetalle = await ComponentesController.obtenerDetalleDocumento('admin', id);
+    
+    if (datosDetalle.error) {
+      return res.status(404).render('error', { 
+        mensaje: datosDetalle.error 
+      });
+    }
+    
+    res.render('admin/documentos/detalle', {
+      ...datosDetalle,
+      titulo: 'Supervisión de Documento'
+    });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).render('error', { 
+      mensaje: 'Error interno del servidor' 
+    });
+  }
+}
+--}}
+
+{{!-- En tu vista (admin/documentos/detalle.hbs): --}}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h4>Supervisión de Documento</h4>
+        </div>
+        <div class="card-body">
+          {{!-- Usar el componente universal --}}
+          {{> detalle-documento-universal 
+              documento=documento 
+              rol=rol 
+              accionesDisponibles=accionesDisponibles 
+              permisos=permisos}}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{{!-- ============================================================================ --}}
+{{!-- EJEMPLO 2: IMPLEMENTACIÓN EN CAJA --}}
+{{!-- ============================================================================ --}}
+
+{{!-- En tu controlador (cajaController.js): --}}
+{{!-- 
+async verDetalleDocumento(req, res) {
+  try {
+    const { id } = req.params;
+    const ComponentesController = require('./componentesController');
+    
+    // Obtener datos del detalle usando el componente universal
+    const datosDetalle = await ComponentesController.obtenerDetalleDocumento('caja', id);
+    
+    if (datosDetalle.error) {
+      return res.status(404).render('error', { 
+        mensaje: datosDetalle.error 
+      });
+    }
+    
+    // Obtener datos adicionales específicos de caja
+    const matrizadores = await Usuario.findAll({
+      where: { rol: 'matrizador', activo: true },
+      attributes: ['id', 'nombre', 'email']
+    });
+    
+    res.render('caja/documentos/detalle', {
+      ...datosDetalle,
+      matrizadores,
+      titulo: 'Control de Pagos - Documento'
+    });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).render('error', { 
+      mensaje: 'Error interno del servidor' 
+    });
+  }
+}
+--}}
+
+{{!-- En tu vista (caja/documentos/detalle.hbs): --}}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      {{!-- Usar el componente universal --}}
+      {{> detalle-documento-universal 
+          documento=documento 
+          rol=rol 
+          accionesDisponibles=accionesDisponibles 
+          permisos=permisos}}
+    </div>
+  </div>
+</div>
+
+{{!-- Modal para registrar pago (específico de caja) --}}
+<div class="modal fade" id="registrarPagoModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Registrar Pago</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="formRegistrarPago">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Valor a Pagar</label>
+                <input type="number" class="form-control" name="valorPago" step="0.01" required>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Método de Pago</label>
+                <select class="form-control" name="metodoPago" required>
+                  <option value="">Seleccionar...</option>
+                  <option value="efectivo">Efectivo</option>
+                  <option value="transferencia">Transferencia</option>
+                  <option value="cheque">Cheque</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-12">
+              <div class="mb-3">
+                <label class="form-label">Observaciones</label>
+                <textarea class="form-control" name="observaciones" rows="3"></textarea>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="registrarPago()">Registrar Pago</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{{!-- ============================================================================ --}}
+{{!-- EJEMPLO 3: IMPLEMENTACIÓN EN MATRIZADOR --}}
+{{!-- ============================================================================ --}}
+
+{{!-- En tu controlador (matrizadorController.js): --}}
+{{!-- 
+async verDetalleDocumento(req, res) {
+  try {
+    const { id } = req.params;
+    const ComponentesController = require('./componentesController');
+    
+    // Verificar que el documento esté asignado al matrizador
+    const documento = await Documento.findOne({
+      where: { 
+        id: id,
+        matrizador_id: req.user.id 
+      }
+    });
+    
+    if (!documento) {
+      return res.status(404).render('error', { 
+        mensaje: 'Documento no encontrado o no asignado' 
+      });
+    }
+    
+    // Obtener datos del detalle usando el componente universal
+    const datosDetalle = await ComponentesController.obtenerDetalleDocumento('matrizador', id);
+    
+    res.render('matrizador/documentos/detalle', {
+      ...datosDetalle,
+      titulo: 'Mi Documento Asignado'
+    });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).render('error', { 
+      mensaje: 'Error interno del servidor' 
+    });
+  }
+}
+--}}
+
+{{!-- En tu vista (matrizador/documentos/detalle.hbs): --}}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      {{!-- Usar el componente universal --}}
+      {{> detalle-documento-universal 
+          documento=documento 
+          rol=rol 
+          accionesDisponibles=accionesDisponibles 
+          permisos=permisos}}
+    </div>
+  </div>
+</div>
+
+{{!-- ============================================================================ --}}
+{{!-- EJEMPLO 4: IMPLEMENTACIÓN EN RECEPCIÓN --}}
+{{!-- ============================================================================ --}}
+
+{{!-- En tu controlador (recepcionController.js): --}}
+{{!-- 
+async verDetalleDocumento(req, res) {
+  try {
+    const { id } = req.params;
+    const ComponentesController = require('./componentesController');
+    
+    // Obtener datos del detalle usando el componente universal
+    const datosDetalle = await ComponentesController.obtenerDetalleDocumento('recepcion', id);
+    
+    if (datosDetalle.error) {
+      return res.status(404).render('error', { 
+        mensaje: datosDetalle.error 
+      });
+    }
+    
+    res.render('recepcion/documentos/detalle', {
+      ...datosDetalle,
+      titulo: 'Documento para Entrega'
+    });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).render('error', { 
+      mensaje: 'Error interno del servidor' 
+    });
+  }
+}
+--}}
+
+{{!-- En tu vista (recepcion/documentos/detalle.hbs): --}}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      {{!-- Usar el componente universal --}}
+      {{> detalle-documento-universal 
+          documento=documento 
+          rol=rol 
+          accionesDisponibles=accionesDisponibles 
+          permisos=permisos}}
+    </div>
+  </div>
+</div>
+
+{{!-- ============================================================================ --}}
+{{!-- JAVASCRIPT COMÚN PARA TODOS LOS ROLES --}}
+{{!-- ============================================================================ --}}
+
+<script>
+// Función para marcar documento como listo (matrizador)
+function marcarListo(documentoId) {
+  if (confirm('¿Estás seguro de marcar este documento como listo para entrega?')) {
+    fetch(`/matrizador/documentos/${documentoId}/marcar-listo`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        location.reload();
+      } else {
+        alert('Error: ' + data.message);
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error al procesar la solicitud');
+    });
+  }
+}
+
+// Función para registrar pago (caja)
+function registrarPago() {
+  const form = document.getElementById('formRegistrarPago');
+  const formData = new FormData(form);
+  
+  fetch(`/caja/documentos/{{documento.id}}/registrar-pago`, {
+    method: 'POST',
+    body: formData
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      location.reload();
+    } else {
+      alert('Error: ' + data.message);
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('Error al registrar el pago');
+  });
+}
+
+// Función para cambiar matrizador (caja)
+function cambiarMatrizador(documentoId, nuevoMatrizadorId) {
+  fetch(`/caja/documentos/${documentoId}/cambiar-matrizador`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      nuevoMatrizadorId: nuevoMatrizadorId
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      location.reload();
+    } else {
+      alert('Error: ' + data.message);
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('Error al cambiar el matrizador');
+  });
+}
+</script>
+
+{{!-- ============================================================================ --}}
+{{!-- ESTRUCTURA DE DATOS ESPERADA --}}
+{{!-- ============================================================================ --}}
+
+{{!-- 
+ESTRUCTURA DE DATOS QUE RETORNA ComponentesController.obtenerDetalleDocumento():
+
+{
+  documento: {
+    id: 262,
+    codigoBarras: "DOC-2024-001",
+    tipoDocumento: "Escritura Pública",
+    estado: "listo_para_entrega",
+    estadoPago: "pagado_completo",
+    nombreCliente: "Juan Pérez",
+    identificacionCliente: "1234567890",
+    emailCliente: "juan@email.com",
+    telefonoCliente: "0987654321",
+    valorFactura: 150.00,
+    valorPagado: 150.00,
+    valorPendiente: 0.00,
+    valorRetenido: 0.00,
+    numeroFactura: "FAC-001",
+    metodoPago: "transferencia",
+    fechaFactura: "2024-01-15",
+    fechaUltimoPago: "2024-01-20",
+    fechaEntrega: null,
+    codigoVerificacion: "VER123",
+    notas: "Documento urgente",
+    created_at: "2024-01-10",
+    matrizador: {
+      id: 5,
+      nombre: "María González",
+      email: "maria@notaria.com",
+      rol: "matrizador"
+    },
+    comparecientes: [
+      {
+        nombre: "Juan Pérez",
+        identificacion: "1234567890",
+        rol: "comprador"
+      }
+    ]
+  },
+  rol: "admin",
+  accionesDisponibles: [
+    {
+      tipo: "exportar",
+      texto: "Exportar",
+      enlace: "/admin/documentos/262/exportar",
+      icono: "fas fa-download"
+    }
+  ],
+  permisos: {
+    verFinanciero: true,
+    verReversiones: true,
+    verHistorialCompleto: true,
+    editarDocumento: false,
+    registrarPago: false,
+    procesarEntrega: false
+  },
+  colores: {
+    "en_proceso": "warning",
+    "listo_para_entrega": "info",
+    "entregado": "success",
+    "cancelado": "danger"
+  }
+}
+--}}
+
+{{!-- ============================================================================ --}}
+{{!-- RUTAS RECOMENDADAS --}}
+{{!-- ============================================================================ --}}
+
+{{!-- 
+RUTAS RECOMENDADAS PARA CADA ROL:
+
+Admin:
+- GET /admin/documentos/:id/detalle
+- GET /admin/documentos/:id/exportar
+- GET /admin/documentos/:id/historial
+
+Caja:
+- GET /caja/documentos/:id/detalle
+- POST /caja/documentos/:id/registrar-pago
+- POST /caja/documentos/:id/cambiar-matrizador
+
+Matrizador:
+- GET /matrizador/documentos/:id/detalle
+- GET /matrizador/documentos/:id/editar
+- POST /matrizador/documentos/:id/marcar-listo
+
+Recepción:
+- GET /recepcion/documentos/:id/detalle
+- GET /recepcion/documentos/:id/entrega
+- POST /recepcion/documentos/:id/procesar-entrega
+--}}
+</rewritten_file>

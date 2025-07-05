@@ -1,0 +1,247 @@
+{{!-- 
+  COMPONENTE: ACCIONES INMEDIATAS
+  Sistema Notarial - Lista de acciones prioritarias para el día
+  
+  PARÁMETROS REQUERIDOS:
+  - acciones: Array de objetos con { tipo, titulo, descripcion, enlace, urgencia, cantidad }
+  - rol: 'admin', 'caja', 'matrizador', 'recepcion'
+  
+  CARACTERÍSTICAS:
+  - Diseño Argon elegante con lista de acciones
+  - Priorización visual según urgencia
+  - Enlaces directos para resolver problemas
+  - Información específica y números reales
+--}}
+
+{{#if acciones.length}}
+<div class="row mb-4" id="acciones-inmediatas-section">
+  <div class="col-12">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header gradient-profesional-primario text-white border-0">
+        <div class="row align-items-center">
+          <div class="col">
+            <h6 class="text-white mb-0">
+              <i class="fas fa-tasks me-2"></i>
+              {{#if (eq rol 'admin')}}
+                Acciones Inmediatas - Panel Ejecutivo
+              {{else if (eq rol 'caja')}}
+                Acciones Inmediatas - Gestión de Pagos
+              {{else if (eq rol 'matrizador')}}
+                Acciones Inmediatas - Mis Documentos
+              {{else if (eq rol 'recepcion')}}
+                Acciones Inmediatas - Entregas Pendientes
+              {{else}}
+                Acciones Inmediatas
+              {{/if}}
+            </h6>
+          </div>
+          <div class="col-auto">
+            <span class="badge bg-white text-primary fw-bold">
+              {{acciones.length}} {{#if (eq acciones.length 1)}}acción{{else}}acciones{{/if}}
+            </span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card-body p-0">
+        <div class="list-group list-group-flush">
+          {{#each acciones}}
+          <div class="list-group-item list-group-item-action border-0 hover-lift-subtle" 
+               onclick="navegarAccion('{{enlace}}')" 
+               style="cursor: pointer; transition: all 0.3s ease;">
+            <div class="row align-items-center">
+              <div class="col-auto">
+                <div class="prioridad-indicator">
+                  {{#if (eq urgencia 'alta')}}
+                    <div class="icon-circle bg-profesional-secundario text-white">
+                      <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                  {{else if (eq urgencia 'media')}}
+                    <div class="icon-circle bg-profesional-primario text-white">
+                      <i class="fas fa-clock"></i>
+                    </div>
+                  {{else}}
+                    <div class="icon-circle" style="background: #B1C6B8; color: #162840;">
+                      <i class="fas fa-info-circle"></i>
+                    </div>
+                  {{/if}}
+                </div>
+              </div>
+              
+              <div class="col">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div>
+                    <h6 class="mb-1 fw-bold text-dark">{{titulo}}</h6>
+                    <p class="mb-0 text-muted small">{{descripcion}}</p>
+                  </div>
+                  <div class="text-end">
+                    {{#if cantidad}}
+                      <span class="badge bg-{{#if (eq urgencia 'alta')}}danger{{else if (eq urgencia 'media')}}warning{{else}}info{{/if}} text-white">
+                        {{cantidad}}
+                      </span>
+                    {{/if}}
+                  </div>
+                </div>
+                
+                <div class="row mt-2">
+                  <div class="col">
+                    <div class="urgencia-badge">
+                      {{#if (eq urgencia 'alta')}}
+                        <span class="badge bg-danger-subtle text-danger">
+                          <i class="fas fa-fire me-1"></i>
+                          Urgente
+                        </span>
+                      {{else if (eq urgencia 'media')}}
+                        <span class="badge bg-warning-subtle text-warning">
+                          <i class="fas fa-clock me-1"></i>
+                          Moderado
+                        </span>
+                      {{else}}
+                        <span class="badge bg-info-subtle text-info">
+                          <i class="fas fa-info-circle me-1"></i>
+                          Informativo
+                        </span>
+                      {{/if}}
+                    </div>
+                  </div>
+                  <div class="col-auto">
+                    <div class="action-hint">
+                      <i class="fas fa-arrow-right text-primary small"></i>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {{/each}}
+        </div>
+        
+        <!-- Información explicativa -->
+        <div class="alert alert-light border-0 m-3 mb-0">
+          <div class="row align-items-center">
+            <div class="col-md-8">
+              <i class="fas fa-lightbulb me-2 text-warning"></i>
+              <strong>Acciones Inmediatas:</strong> 
+              {{#if (eq rol 'admin')}}
+                Tareas prioritarias que requieren su atención administrativa inmediata para optimizar la operación.
+              {{else if (eq rol 'caja')}}
+                Pagos y transacciones que requieren gestión inmediata para mantener el flujo de caja.
+              {{else if (eq rol 'matrizador')}}
+                Documentos asignados que requieren su atención prioritaria para cumplir con los plazos.
+              {{else if (eq rol 'recepcion')}}
+                Entregas y códigos pendientes que requieren atención inmediata para satisfacer a los clientes.
+              {{else}}
+                Tareas prioritarias que requieren atención inmediata.
+              {{/if}}
+            </div>
+            <div class="col-md-4 text-md-end">
+              <button type="button" class="btn btn-outline-primary btn-sm" onclick="actualizarAcciones()">
+                <i class="fas fa-sync-alt me-1"></i> Actualizar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Estilos específicos para acciones inmediatas -->
+<style>
+  .list-group-item-action {
+    transition: all 0.3s ease;
+  }
+  
+  .list-group-item-action:hover {
+    background-color: #f8f9fa;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .list-group-item-action:hover .action-hint i {
+    transform: translateX(3px);
+  }
+  
+  .icon-circle {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    font-weight: 500;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+  
+  .prioridad-indicator {
+    position: relative;
+  }
+  
+  .prioridad-indicator::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #28a745;
+    border: 2px solid white;
+    animation: pulse 2s infinite;
+  }
+  
+  .urgencia-badge .badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+  }
+  
+  .action-hint i {
+    transition: transform 0.3s ease;
+  }
+  
+  /* Colores sutiles para badges */
+  .bg-danger-subtle {
+    background-color: rgba(220, 53, 69, 0.1);
+  }
+  
+  .bg-warning-subtle {
+    background-color: rgba(255, 193, 7, 0.1);
+  }
+  
+  .bg-info-subtle {
+    background-color: rgba(13, 202, 240, 0.1);
+  }
+  
+  @keyframes pulse {
+    0% {
+      transform: scale(0.95);
+      box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+    }
+    
+    70% {
+      transform: scale(1);
+      box-shadow: 0 0 0 10px rgba(40, 167, 69, 0);
+    }
+    
+    100% {
+      transform: scale(0.95);
+      box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+    }
+  }
+</style>
+
+<!-- JavaScript para navegación -->
+<script>
+  function navegarAccion(enlace) {
+    if (enlace) {
+      window.location.href = enlace;
+    }
+  }
+  
+  function actualizarAcciones() {
+    // Recargar la página o hacer llamada AJAX para actualizar acciones
+    window.location.reload();
+  }
+</script>
+{{/if}} 

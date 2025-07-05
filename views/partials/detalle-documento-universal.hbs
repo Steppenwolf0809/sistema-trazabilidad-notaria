@@ -1,0 +1,598 @@
+{{!-- 
+  COMPONENTE: DETALLE DE DOCUMENTO UNIVERSAL
+  Sistema Notarial - Detalle reutilizable para todos los roles
+  
+  PARÁMETROS REQUERIDOS:
+  - documento: Objeto con todos los datos del documento
+  - rol: 'admin', 'caja', 'matrizador', 'recepcion'
+  - permisos: Objeto con permisos específicos del rol
+  - accionesDisponibles: Array de acciones que puede realizar el rol
+  
+  CARACTERÍSTICAS:
+  - Diseño Argon elegante adaptable
+  - Secciones configurables según rol
+  - Acciones específicas por rol
+  - Información contextual relevante
+  - Responsive design
+--}}
+
+{{#if documento}}
+<div class="container-fluid">
+  
+  <!-- HEADER CON ACCIONES SEGÚN ROL -->
+  <div class="card card-elegant mb-4">
+    <div class="card-header bg-gradient-primary text-white border-0">
+      <div class="row align-items-center">
+        <div class="col">
+          <h4 class="text-white mb-1">
+            <i class="{{#if (eq rol 'admin')}}fas fa-binoculars{{else if (eq rol 'caja')}}fas fa-cash-register{{else if (eq rol 'matrizador')}}fas fa-file-signature{{else if (eq rol 'recepcion')}}fas fa-handshake{{else}}fas fa-file-alt{{/if}} me-2"></i>
+            {{#if (eq rol 'admin')}}
+              Supervisión de Documento
+            {{else if (eq rol 'caja')}}
+              Control de Pagos - Documento
+            {{else if (eq rol 'matrizador')}}
+              Mi Documento Asignado
+            {{else if (eq rol 'recepcion')}}
+              Documento para Entrega
+            {{else}}
+              Detalle de Documento
+            {{/if}}
+          </h4>
+          <p class="text-white-50 mb-0">
+            Código: <span class="badge bg-white text-primary">{{documento.codigoBarras}}</span>
+            • Estado: {{> estado-badge estado=documento.estado}}
+          </p>
+        </div>
+        <div class="col-auto">
+          <div class="btn-group">
+            <!-- Botón volver (todos los roles) -->
+            <a href="{{#if (eq rol 'admin')}}/admin/documentos{{else if (eq rol 'caja')}}/caja/documentos{{else if (eq rol 'matrizador')}}/matrizador/documentos{{else if (eq rol 'recepcion')}}/recepcion/documentos{{/if}}" 
+               class="btn btn-outline-light btn-sm">
+              <i class="fas fa-arrow-left me-1"></i> Volver
+            </a>
+            
+            <!-- Acciones específicas según rol -->
+            {{#if accionesDisponibles}}
+              {{#each accionesDisponibles}}
+                {{#if (eq this.tipo 'editar')}}
+                  <a href="{{this.enlace}}" class="btn btn-light btn-sm">
+                    <i class="fas fa-edit me-1"></i> {{this.texto}}
+                  </a>
+                {{else if (eq this.tipo 'pagar')}}
+                  <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#registrarPagoModal">
+                    <i class="fas fa-dollar-sign me-1"></i> {{this.texto}}
+                  </button>
+                {{else if (eq this.tipo 'entregar')}}
+                  <a href="{{this.enlace}}" class="btn btn-warning btn-sm">
+                    <i class="fas fa-handshake me-1"></i> {{this.texto}}
+                  </a>
+                {{else if (eq this.tipo 'marcar_listo')}}
+                  <button class="btn btn-info btn-sm" onclick="marcarListo('{{../documento.id}}')">
+                    <i class="fas fa-check me-1"></i> {{this.texto}}
+                  </button>
+                {{/if}}
+              {{/each}}
+            {{/if}}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INFORMACIÓN PRINCIPAL EN CARDS -->
+  <div class="row mb-4">
+    
+    <!-- INFORMACIÓN GENERAL -->
+    <div class="col-lg-4 mb-4">
+      <div class="card card-elegant h-100">
+        <div class="card-header bg-light border-0">
+          <h6 class="text-dark mb-0">
+            <i class="fas fa-info-circle text-primary me-2"></i>
+            Información General
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="info-item mb-3">
+            <label class="text-muted small mb-1">CÓDIGO DEL DOCUMENTO</label>
+            <div class="badge bg-gradient-primary text-white fs-6 px-3 py-2">
+              {{documento.codigoBarras}}
+            </div>
+          </div>
+          
+          <div class="info-item mb-3">
+            <label class="text-muted small mb-1">TIPO DE DOCUMENTO</label>
+            <div class="fw-bold text-dark">{{documento.tipoDocumento}}</div>
+          </div>
+          
+          <div class="info-item mb-3">
+            <label class="text-muted small mb-1">ESTADO ACTUAL</label>
+            <div>{{> estado-badge estado=documento.estado tamaño="md"}}</div>
+          </div>
+          
+          <div class="info-item mb-3">
+            <label class="text-muted small mb-1">FECHA DE REGISTRO</label>
+            <div class="text-dark">
+              <i class="fas fa-calendar-plus text-muted me-1"></i>
+              {{formatDate documento.created_at}}
+            </div>
+            <small class="text-muted">Cuándo se subió al sistema</small>
+          </div>
+          
+          {{#if documento.fechaFactura}}
+          <div class="info-item mb-3">
+            <label class="text-muted small mb-1">FECHA DEL DOCUMENTO</label>
+            <div class="text-dark">
+              <i class="fas fa-file-alt text-muted me-1"></i>
+              {{formatDate documento.fechaFactura}}
+            </div>
+            <small class="text-muted">Fecha original del documento (XML)</small>
+          </div>
+          {{/if}}
+          
+          {{#if documento.fechaEntrega}}
+          <div class="info-item">
+            <label class="text-muted small mb-1">FECHA DE ENTREGA</label>
+            <div class="text-success">
+              <i class="fas fa-check-circle text-success me-1"></i>
+              {{formatDate documento.fechaEntrega}}
+            </div>
+          </div>
+          {{/if}}
+        </div>
+      </div>
+    </div>
+
+    <!-- INFORMACIÓN DEL CLIENTE -->
+    <div class="col-lg-4 mb-4">
+      <div class="card card-elegant h-100">
+        <div class="card-header bg-light border-0">
+          <h6 class="text-dark mb-0">
+            <i class="fas fa-user text-primary me-2"></i>
+            Información del Cliente
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="info-item mb-3">
+            <label class="text-muted small mb-1">NOMBRE COMPLETO</label>
+            <div class="fw-bold text-dark fs-6">{{documento.nombreCliente}}</div>
+          </div>
+          
+          <div class="info-item mb-3">
+            <label class="text-muted small mb-1">IDENTIFICACIÓN</label>
+            <div class="text-dark">
+              <i class="fas fa-id-card text-muted me-1"></i>
+              {{documento.identificacionCliente}}
+            </div>
+          </div>
+          
+          {{#if documento.emailCliente}}
+          <div class="info-item mb-3">
+            <label class="text-muted small mb-1">EMAIL</label>
+            <div class="text-dark">
+              <i class="fas fa-envelope text-muted me-1"></i>
+              <a href="mailto:{{documento.emailCliente}}" class="text-decoration-none">
+                {{documento.emailCliente}}
+              </a>
+            </div>
+          </div>
+          {{/if}}
+          
+          {{#if documento.telefonoCliente}}
+          <div class="info-item">
+            <label class="text-muted small mb-1">TELÉFONO</label>
+            <div class="text-dark">
+              <i class="fas fa-phone text-muted me-1"></i>
+              <a href="tel:{{documento.telefonoCliente}}" class="text-decoration-none">
+                {{documento.telefonoCliente}}
+              </a>
+            </div>
+          </div>
+          {{/if}}
+        </div>
+      </div>
+    </div>
+
+    <!-- INFORMACIÓN DEL MATRIZADOR -->
+    <div class="col-lg-4 mb-4">
+      <div class="card card-elegant h-100">
+        <div class="card-header bg-light border-0">
+          <h6 class="text-dark mb-0">
+            <i class="fas fa-user-tie text-primary me-2"></i>
+            {{#if (eq rol 'matrizador')}}Mi Asignación{{else}}Matrizador Asignado{{/if}}
+          </h6>
+        </div>
+        <div class="card-body">
+          {{#if documento.matrizador}}
+            <div class="info-item mb-3">
+              <label class="text-muted small mb-1">MATRIZADOR</label>
+              <div class="fw-bold text-dark">{{documento.matrizador.nombre}}</div>
+            </div>
+            
+            <div class="info-item mb-3">
+              <label class="text-muted small mb-1">EMAIL</label>
+              <div class="text-dark">
+                <i class="fas fa-envelope text-muted me-1"></i>
+                {{documento.matrizador.email}}
+              </div>
+            </div>
+            
+            <div class="info-item mb-3">
+              <label class="text-muted small mb-1">ESTADO DEL PROCESO</label>
+              <div>{{> estado-badge estado=documento.estado tamaño="sm"}}</div>
+            </div>
+            
+            {{#if (eq documento.estado "listo_para_entrega")}}
+            <div class="info-item">
+              <label class="text-muted small mb-1">CÓDIGO DE ENTREGA</label>
+              <div class="badge bg-gradient-success text-white fs-4 px-3 py-2">
+                {{documento.codigoVerificacion}}
+              </div>
+            </div>
+            {{/if}}
+            
+            {{#if (eq rol 'caja')}}
+            <div class="mt-3">
+              <button class="btn btn-outline-secondary btn-sm w-100" 
+                      data-bs-toggle="modal" data-bs-target="#cambiarMatrizadorModal">
+                <i class="fas fa-exchange-alt me-1"></i> Cambiar Matrizador
+              </button>
+            </div>
+            {{/if}}
+            
+          {{else}}
+            <div class="text-center py-3">
+              <i class="fas fa-user-slash text-muted fa-2x mb-2"></i>
+              <p class="text-muted mb-2">No hay matrizador asignado</p>
+              {{#if (eq rol 'caja')}}
+              <button class="btn btn-primary btn-sm" 
+                      data-bs-toggle="modal" data-bs-target="#cambiarMatrizadorModal">
+                <i class="fas fa-user-plus me-1"></i> Asignar Matrizador
+              </button>
+              {{else}}
+              <div class="alert alert-warning py-2 mb-0">
+                <small><i class="fas fa-exclamation-triangle me-1"></i>Requiere asignación</small>
+              </div>
+              {{/if}}
+            </div>
+          {{/if}}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INFORMACIÓN FINANCIERA (Solo para Admin y Caja) -->
+  {{#if (or (eq rol 'admin') (eq rol 'caja'))}}
+  <div class="row mb-4">
+    <div class="col-12">
+      {{> seccion-financiera documento=documento rol=rol}}
+    </div>
+  </div>
+  {{/if}}
+
+  <!-- SECCIONES ADICIONALES SEGÚN ROL -->
+  <div class="row">
+    
+    <!-- NOTAS (Todos los roles) -->
+    {{#if documento.notas}}
+    <div class="col-lg-6 mb-4">
+      <div class="card card-elegant">
+        <div class="card-header bg-light border-0">
+          <h6 class="text-dark mb-0">
+            <i class="fas fa-sticky-note text-primary me-2"></i>
+            Notas del Documento
+          </h6>
+        </div>
+        <div class="card-body">
+          <p class="text-dark mb-0">{{documento.notas}}</p>
+        </div>
+      </div>
+    </div>
+    {{/if}}
+
+    <!-- COMPARECIENTES (Todos los roles) -->
+    {{#if documento.comparecientes.length}}
+    <div class="col-lg-6 mb-4">
+      <div class="card card-elegant">
+        <div class="card-header bg-light border-0">
+          <h6 class="text-dark mb-0">
+            <i class="fas fa-users text-primary me-2"></i>
+            Comparecientes
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-sm table-borderless">
+              <thead class="table-light">
+                <tr>
+                  <th class="text-muted small">NOMBRE</th>
+                  <th class="text-muted small">IDENTIFICACIÓN</th>
+                  <th class="text-muted small">ROL</th>
+                </tr>
+              </thead>
+              <tbody>
+                {{#each documento.comparecientes}}
+                <tr>
+                  <td class="text-dark">{{this.nombre}}</td>
+                  <td class="text-muted">{{this.identificacion}}</td>
+                  <td>
+                    <span class="badge bg-light text-dark">{{this.rol}}</span>
+                  </td>
+                </tr>
+                {{/each}}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    {{/if}}
+  </div>
+
+  <!-- INFORMACIÓN DE ENTREGA (Solo si está entregado) -->
+  {{#if (eq documento.estado "entregado")}}
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card card-elegant border-success">
+        <div class="card-header bg-gradient-success text-white border-0">
+          <h6 class="text-white mb-0">
+            <i class="fas fa-check-circle me-2"></i>
+            Información de Entrega Completada
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="info-item mb-3">
+                <label class="text-muted small mb-1">RECEPTOR</label>
+                <div class="fw-bold text-dark">{{documento.nombreReceptor}}</div>
+              </div>
+              
+              <div class="info-item">
+                <label class="text-muted small mb-1">IDENTIFICACIÓN DEL RECEPTOR</label>
+                <div class="text-dark">{{documento.identificacionReceptor}}</div>
+              </div>
+            </div>
+            
+            <div class="col-md-6">
+              <div class="info-item mb-3">
+                <label class="text-muted small mb-1">RELACIÓN CON EL CLIENTE</label>
+                <div class="text-dark">
+                  {{#if (eq documento.relacionReceptor "titular")}}
+                    <span class="badge bg-success">Titular</span>
+                  {{else if (eq documento.relacionReceptor "familiar")}}
+                    <span class="badge bg-info">Familiar</span>
+                  {{else if (eq documento.relacionReceptor "representante_legal")}}
+                    <span class="badge bg-warning text-dark">Representante Legal</span>
+                  {{else if (eq documento.relacionReceptor "apoderado")}}
+                    <span class="badge bg-primary">Apoderado</span>
+                  {{else}}
+                    <span class="badge bg-secondary">{{documento.relacionReceptor}}</span>
+                  {{/if}}
+                </div>
+              </div>
+              
+              <div class="info-item">
+                <label class="text-muted small mb-1">FECHA DE ENTREGA</label>
+                <div class="text-success">
+                  <i class="fas fa-calendar-check text-success me-1"></i>
+                  {{formatDate documento.fechaEntrega}}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {{/if}}
+
+  <!-- PANEL DE REVERSIONES (Solo Admin) -->
+  {{#if (eq rol 'admin')}}
+  <div class="row mb-4">
+    <div class="col-12">
+      {{> panel-reversiones documento=documento}}
+    </div>
+  </div>
+  {{/if}}
+
+</div>
+
+<!-- PARTIALS AUXILIARES -->
+
+<!-- Partial: Estado Badge -->
+{{#define "estado-badge"}}
+  {{#if (eq estado "en_proceso")}}
+    <span class="badge bg-gradient-warning text-dark {{#if tamaño}}badge-{{tamaño}}{{/if}}">
+      <i class="fas fa-clock me-1"></i>En Proceso
+    </span>
+  {{else if (eq estado "listo_para_entrega")}}
+    <span class="badge bg-gradient-info text-white {{#if tamaño}}badge-{{tamaño}}{{/if}}">
+      <i class="fas fa-check-circle me-1"></i>Listo para Entrega
+    </span>
+  {{else if (eq estado "entregado")}}
+    <span class="badge bg-gradient-success text-white {{#if tamaño}}badge-{{tamaño}}{{/if}}">
+      <i class="fas fa-handshake me-1"></i>Entregado
+    </span>
+  {{else if (eq estado "cancelado")}}
+    <span class="badge bg-gradient-danger text-white {{#if tamaño}}badge-{{tamaño}}{{/if}}">
+      <i class="fas fa-times-circle me-1"></i>Cancelado
+    </span>
+  {{else if (eq estado "nota_credito")}}
+    <span class="badge bg-gradient-secondary text-white {{#if tamaño}}badge-{{tamaño}}{{/if}}">
+      <i class="fas fa-undo me-1"></i>Nota de Crédito
+    </span>
+  {{else}}
+    <span class="badge bg-gradient-dark text-white {{#if tamaño}}badge-{{tamaño}}{{/if}}">
+      {{estado}}
+    </span>
+  {{/if}}
+{{/define}}
+
+<!-- Partial: Sección Financiera -->
+{{#define "seccion-financiera"}}
+  <div class="card card-elegant">
+    <div class="card-header bg-gradient-primary text-white border-0">
+      <h6 class="text-white mb-0">
+        <i class="fas fa-money-bill-wave me-2"></i>
+        Información Financiera y Pagos
+      </h6>
+      {{#if (and (eq rol 'caja') (neq documento.estado "eliminado") (neq documento.estadoPago "pagado_completo"))}}
+      <button class="btn btn-light btn-sm float-end" data-bs-toggle="modal" data-bs-target="#registrarPagoModal">
+        <i class="fas fa-plus-circle me-1"></i> Registrar Pago
+      </button>
+      {{/if}}
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <!-- Datos de Facturación -->
+        <div class="col-md-6 mb-3">
+          <div class="card border-primary h-100">
+            <div class="card-header bg-primary text-white py-2">
+              <h6 class="mb-0"><i class="fas fa-file-invoice me-1"></i>Facturación</h6>
+            </div>
+            <div class="card-body">
+              <div class="info-item mb-2">
+                <label class="text-muted small">N° FACTURA</label>
+                <div class="badge bg-secondary">
+                  {{#if documento.numeroFactura}}{{documento.numeroFactura}}{{else}}No registrado{{/if}}
+                </div>
+              </div>
+              <div class="info-item mb-2">
+                <label class="text-muted small">VALOR TOTAL</label>
+                <div class="fs-5 text-primary fw-bold">
+                  ${{#if documento.valorFactura}}{{formatMoney documento.valorFactura}}{{else}}0.00{{/if}}
+                </div>
+              </div>
+              {{#if documento.fechaFactura}}
+              <div class="info-item">
+                <label class="text-muted small">FECHA FACTURA</label>
+                <div class="text-dark">{{formatDate documento.fechaFactura}}</div>
+              </div>
+              {{/if}}
+            </div>
+          </div>
+        </div>
+
+        <!-- Estado de Pago -->
+        <div class="col-md-6 mb-3">
+          <div class="card border-{{#if (eq documento.estadoPago "pagado_completo")}}success{{else if (eq documento.estadoPago "pagado_con_retencion")}}info{{else if (eq documento.estadoPago "pago_parcial")}}warning{{else}}danger{{/if}} h-100">
+            <div class="card-header bg-{{#if (eq documento.estadoPago "pagado_completo")}}success{{else if (eq documento.estadoPago "pagado_con_retencion")}}info{{else if (eq documento.estadoPago "pago_parcial")}}warning{{else}}danger{{/if}} text-white py-2">
+              <h6 class="mb-0"><i class="fas fa-credit-card me-1"></i>Estado de Pago</h6>
+            </div>
+            <div class="card-body">
+              <div class="info-item mb-2">
+                <label class="text-muted small">ESTADO</label>
+                <div>
+                  {{#if (eq documento.estadoPago "pagado_completo")}}
+                    <span class="badge bg-success">✅ Pagado Completo</span>
+                  {{else if (eq documento.estadoPago "pagado_con_retencion")}}
+                    <span class="badge bg-info">🧾 Pagado con Retención</span>
+                  {{else if (eq documento.estadoPago "pago_parcial")}}
+                    <span class="badge bg-warning text-dark">⚠️ Pago Parcial</span>
+                  {{else}}
+                    <span class="badge bg-danger">❌ Pendiente</span>
+                  {{/if}}
+                </div>
+              </div>
+              <div class="info-item mb-2">
+                <label class="text-muted small">MÉTODO</label>
+                <div class="badge bg-secondary">
+                  {{#if documento.metodoPago}}{{documento.metodoPago}}{{else}}No registrado{{/if}}
+                </div>
+              </div>
+              {{#if documento.fechaUltimoPago}}
+              <div class="info-item">
+                <label class="text-muted small">ÚLTIMO PAGO</label>
+                <div class="text-success">{{formatDateTime documento.fechaUltimoPago}}</div>
+              </div>
+              {{/if}}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Desglose Financiero -->
+      {{#if (neq documento.estadoPago "pendiente_pago")}}
+      <div class="card border-info">
+        <div class="card-header bg-info text-white py-2">
+          <h6 class="mb-0"><i class="fas fa-calculator me-1"></i>Desglose Financiero</h6>
+        </div>
+        <div class="card-body">
+          <div class="row text-center">
+            <div class="col-md-3">
+              <div class="border-end">
+                <div class="text-muted small">VALOR TOTAL</div>
+                <div class="fs-4 text-primary">${{#if documento.valorFactura}}{{formatMoney documento.valorFactura}}{{else}}0.00{{/if}}</div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="border-end">
+                <div class="text-muted small">PAGADO</div>
+                <div class="fs-4 text-success">${{#if documento.valorPagado}}{{formatMoney documento.valorPagado}}{{else}}0.00{{/if}}</div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="{{#if documento.tieneRetencion}}border-end{{/if}}">
+                <div class="text-muted small">PENDIENTE</div>
+                <div class="fs-4 text-danger">${{#if documento.valorPendiente}}{{formatMoney documento.valorPendiente}}{{else}}0.00{{/if}}</div>
+              </div>
+            </div>
+            {{#if documento.tieneRetencion}}
+            <div class="col-md-3">
+              <div class="text-muted small">RETENCIÓN</div>
+              <div class="fs-4 text-warning">${{#if documento.valorRetenido}}{{formatMoney documento.valorRetenido}}{{else}}0.00{{/if}}</div>
+            </div>
+            {{/if}}
+          </div>
+        </div>
+      </div>
+      {{/if}}
+    </div>
+  </div>
+{{/define}}
+
+<!-- Estilos específicos -->
+<style>
+  .info-item {
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    padding-bottom: 0.5rem;
+  }
+  
+  .info-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+  
+  .badge-sm {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+  }
+  
+  .badge-md {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.7rem;
+  }
+  
+  .badge-lg {
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+  }
+</style>
+
+{{else}}
+<!-- Estado de error -->
+<div class="container-fluid">
+  <div class="card card-elegant">
+    <div class="card-body text-center py-5">
+      <i class="fas fa-exclamation-triangle text-warning fa-3x mb-3"></i>
+      <h5 class="text-muted mb-2">Documento no encontrado</h5>
+      <p class="text-secondary mb-4">
+        El documento solicitado no existe o no tienes permisos para verlo.
+      </p>
+      <a href="javascript:history.back()" class="btn btn-outline-primary">
+        <i class="fas fa-arrow-left me-1"></i> Volver
+      </a>
+    </div>
+  </div>
+</div>
+{{/if}} 

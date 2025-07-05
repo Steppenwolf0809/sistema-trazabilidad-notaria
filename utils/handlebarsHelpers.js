@@ -549,6 +549,11 @@ const helpers = {
     return JSON.stringify(context);
   },
   
+  // Alias para JSON.stringify (usado en vistas)
+  'JSON.stringify': (context) => {
+    return JSON.stringify(context);
+  },
+  
   // ============== HELPERS DE UTILIDADES ==============
   
   capitalize: (str) => {

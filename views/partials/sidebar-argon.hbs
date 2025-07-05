@@ -3,16 +3,16 @@
   <!-- Botón Toggle MÁS A LA IZQUIERDA -->
   <button class="sidebar-toggle" type="button" aria-label="Toggle Sidebar" 
           style="position: absolute; top: 24px; right: 16px; width: 32px; height: 32px; 
-                 background: linear-gradient(135deg, #667eea, #764ba2); border: 2px solid rgba(255,255,255,0.2); 
+                 background: linear-gradient(135deg, #162840, #4E7DA6); border: 2px solid rgba(255,255,255,0.2); 
                  border-radius: 50%; color: white; cursor: pointer; display: flex; align-items: center; 
-                 justify-content: center; z-index: 1001; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+                 justify-content: center; z-index: 1001; box-shadow: 0 4px 15px rgba(22,40,64,0.3);
                  transition: all 0.3s ease; font-size: 12px; font-weight: bold;">
     <span class="toggle-icon">&laquo;</span>
   </button>
   
   <!-- Header del Sidebar -->
   <div class="sidebar-header">
-    <a href="/admin/dashboard" class="logo">
+    <a href="/admin/" class="logo">
       <div class="logo-icon">
         <i class="fas fa-balance-scale text-white"></i>
       </div>
@@ -25,12 +25,13 @@
     
     <!-- Dashboard -->
     <div class="nav-section">
+      <!-- Dashboard Principal -->
       <div class="nav-item">
-        <a href="{{dashboardUrl}}" 
-           class="nav-link {{#if activeDashboard}}active{{/if}}" 
-           data-tooltip="Panel de Control">
+        <a href="/admin/" 
+           class="nav-link {{#if activeDashboardEjecutivo}}active{{/if}}" 
+           data-tooltip="Panel Ejecutivo con KPIs y Tendencias">
           <div class="nav-icon">
-            <i class="fas fa-tachometer-alt"></i>
+            <i class="fas fa-crown"></i>
           </div>
           <span class="nav-text">Dashboard</span>
         </a>
@@ -224,18 +225,18 @@
 
 <!-- Estilos específicos para el sidebar - SIN AVISO DE AYUDA -->
 <style>
-  /* SIDEBAR - GRADIENTE AZUL-PÚRPURA ORIGINAL */
+  /* SIDEBAR - GRADIENTE PROFESIONAL AZUL MARINO */
   .sidebar-argon {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    background: linear-gradient(135deg, #162840 0%, #4E7DA6 100%) !important;
     border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
+    box-shadow: 0 10px 30px rgba(22, 40, 64, 0.3) !important;
   }
   
-  /* BOTÓN TOGGLE - GRADIENTE ORIGINAL */
+  /* BOTÓN TOGGLE - GRADIENTE PROFESIONAL */
   .sidebar-toggle:hover {
-    background: linear-gradient(135deg, #5a67d8, #6b46c1) !important;
+    background: linear-gradient(135deg, #4E7DA6, #BF8C60) !important;
     transform: scale(1.05);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.4) !important;
+    box-shadow: 0 6px 20px rgba(22, 40, 64, 0.4) !important;
   }
   
   /* NAVEGACIÓN - COLORES ORIGINALES */
@@ -253,9 +254,9 @@
   }
   
   .nav-link.active {
-    background: rgba(255, 255, 255, 0.15) !important;
+    background: linear-gradient(135deg, #BF8C60, #d4a574) !important;
     color: white !important;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4) !important;
+    box-shadow: 0 4px 15px rgba(191, 140, 96, 0.4) !important;
   }
   
   .nav-section-title {
@@ -278,7 +279,7 @@
     left: 0 !important;
     width: var(--sidebar-width) !important;
     padding: 1rem !important;
-    background: rgba(102, 126, 234, 0.2) !important;
+    background: rgba(22, 40, 64, 0.2) !important;
     backdrop-filter: blur(15px) !important;
     border-top: 1px solid rgba(255, 255, 255, 0.15) !important;
     z-index: 15 !important;

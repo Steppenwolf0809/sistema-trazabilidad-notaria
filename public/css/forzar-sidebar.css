@@ -1,0 +1,136 @@
+/**
+ * FORZAR SIDEBAR PROFESIONAL - MÁXIMA ESPECIFICIDAD
+ * Este archivo fuerza la aplicación de los colores profesionales
+ * en el sidebar con la máxima especificidad CSS posible
+ */
+
+/* ==================== FORZAR SIDEBAR PROFESIONAL ==================== */
+
+/* Aplicar con múltiples selectores para máxima especificidad */
+.sidebar-argon.sidebar-argon.sidebar-argon,
+.sidebar-argon.sidebar-argon,
+.sidebar-argon,
+.sidenav.sidenav,
+.sidenav,
+nav.sidenav,
+.main-sidebar,
+.sidebar {
+  background: linear-gradient(135deg, #162840 0%, #4E7DA6 100%) !important;
+  background-color: #162840 !important;
+}
+
+/* Forzar en todos los estados posibles */
+.sidebar-argon.show,
+.sidebar-argon.collapsed,
+.sidebar-argon:hover,
+.sidebar-argon.active {
+  background: linear-gradient(135deg, #162840 0%, #4E7DA6 100%) !important;
+  background-color: #162840 !important;
+}
+
+/* Forzar elementos internos del sidebar */
+.sidebar-argon .sidebar-wrapper,
+.sidebar-argon .nav,
+.sidebar-argon .navbar,
+.sidebar-argon .navbar-nav {
+  background: transparent !important;
+}
+
+/* Forzar items del sidebar */
+.sidebar-argon .nav-item .nav-link {
+  color: rgba(255, 255, 255, 0.8) !important;
+  transition: all 0.3s ease !important;
+}
+
+.sidebar-argon .nav-item .nav-link:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: white !important;
+}
+
+.sidebar-argon .nav-item .nav-link.active {
+  background: linear-gradient(135deg, #BF8C60 0%, #d4a574 100%) !important;
+  color: white !important;
+  box-shadow: 0 2px 8px rgba(191, 140, 96, 0.3) !important;
+}
+
+/* Forzar brand/logo */
+.sidebar-argon .navbar-brand {
+  color: white !important;
+}
+
+/* Forzar iconos */
+.sidebar-argon .nav-link i {
+  color: inherit !important;
+}
+
+/* Forzar scrollbar si existe */
+.sidebar-argon::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.sidebar-argon::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3) !important;
+  border-radius: 6px !important;
+}
+
+.sidebar-argon::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Forzar cualquier elemento con clases de Argon */
+.bg-gradient-primary,
+.bg-primary,
+.navbar-primary {
+  background: linear-gradient(135deg, #162840 0%, #4E7DA6 100%) !important;
+  background-color: #162840 !important;
+}
+
+/* Forzar elementos con colores púrpura */
+.bg-purple,
+.bg-gradient-purple,
+.navbar-purple {
+  background: linear-gradient(135deg, #162840 0%, #4E7DA6 100%) !important;
+  background-color: #162840 !important;
+}
+
+/* Forzar con selectores específicos de Argon */
+.sidenav[data-color="primary"],
+.sidenav[data-color="purple"],
+.sidenav[data-color="default"] {
+  background: linear-gradient(135deg, #162840 0%, #4E7DA6 100%) !important;
+}
+
+/* Forzar elementos inline que puedan tener estilos */
+.sidebar-argon[style*="background"],
+.sidenav[style*="background"] {
+  background: linear-gradient(135deg, #162840 0%, #4E7DA6 100%) !important;
+}
+
+/* ==================== BOTÓN TOGGLE PROFESIONAL ==================== */
+
+/* Forzar botón de colapsar con colores profesionales */
+.sidebar-toggle,
+button.sidebar-toggle {
+  background: linear-gradient(135deg, #162840, #4E7DA6) !important;
+  box-shadow: 0 4px 15px rgba(22, 40, 64, 0.3) !important;
+  border: 2px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+.sidebar-toggle:hover,
+button.sidebar-toggle:hover {
+  background: linear-gradient(135deg, #4E7DA6, #BF8C60) !important;
+  box-shadow: 0 6px 20px rgba(22, 40, 64, 0.4) !important;
+  transform: scale(1.05) !important;
+}
+
+.sidebar-toggle:active,
+button.sidebar-toggle:active {
+  background: linear-gradient(135deg, #BF8C60, #d4a574) !important;
+  transform: scale(0.95) !important;
+}
+
+/* Forzar elementos con estilos inline */
+.sidebar-toggle[style*="background"],
+button.sidebar-toggle[style*="background"] {
+  background: linear-gradient(135deg, #162840, #4E7DA6) !important;
+} 
