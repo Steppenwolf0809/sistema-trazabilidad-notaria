@@ -1071,20 +1071,8 @@ exports.dashboard = async (req, res) => {
     // ============== PREPARAR DATOS PARA LA VISTA ==============
     
     const dashboardData = {
-      // Información del período
-      periodo: {
-        rango: rango,
-        fechaInicio: fechaInicio.format('YYYY-MM-DD'),
-        fechaFin: fechaFin.format('YYYY-MM-DD'),
-        periodoTexto,
-        esHoy: rango === 'hoy',
-        esAyer: rango === 'ayer',
-        esSemana: rango === 'semana',
-        esMes: rango === 'mes',
-        esAño: rango === 'año',
-        esUltimoMes: rango === 'ultimo_mes',
-        esPersonalizado: rango === 'personalizado'
-      },
+      // Información del período (REMOVIDA PARA EVITAR CONFLICTO)
+      // El período se define más abajo con fechaActual
       
       // Alertas críticas optimizadas
       alertasCriticas,
@@ -1094,7 +1082,7 @@ exports.dashboard = async (req, res) => {
       
       // Métricas optimizadas para componentes universales
       metricas: metricasOptimizadas.metricas,
-      periodo: metricasOptimizadas.periodo,
+      // periodo: metricasOptimizadas.periodo, // REMOVIDO PARA EVITAR CONFLICTO
       
       // Métricas principales (CORREGIDAS para el template)
       metricas: {
@@ -1191,7 +1179,11 @@ exports.dashboard = async (req, res) => {
         actual: periodoEjecutivo.texto,
         anterior: periodoEjecutivo.textoAnterior,
         filtro: filtroEjecutivo,
-        fechaActual: new Date()
+        fechaActual: (() => {
+          const fecha = moment().format('YYYY-MM-DD HH:mm:ss');
+          console.log('🔍 DEBUG: fechaActual generada:', fecha);
+          return fecha;
+        })()
       },
       acciones: accionesEjecutivas,
       grafico: graficoEjecutivo,
