@@ -38,239 +38,12 @@ const ComponentesController = require('./componentesController');
  * FUNCIONES DE FORMATEO PROFESIONAL PARA DASHBOARD
  */
 
-// Función helper para formatear dinero con formato estadounidense (puntos)
-const formatearDinero = (valor) => {
-  if (!valor || isNaN(valor)) return '$0.00';
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(parseFloat(valor));
-};
+// FUNCIONES DE FORMATEO Y VALIDACIÓN MOVIDAS A ComponentesController
+// Usar ComponentesController.formatearDinero, .formatearPorcentaje, .formatearDiferencia, .validarMetricas
 
-// Función helper para formatear porcentajes (1 decimal máximo)
-const formatearPorcentaje = (valor) => {
-  if (!valor || isNaN(valor)) return '0.0%';
-  return `${parseFloat(valor).toFixed(1)}%`;
-};
+// FUNCIÓN MOVIDA A ComponentesController.calcularMetricasPeriodo
 
-// Función helper para formatear diferencias con signo
-const formatearDiferencia = (valor, tipo = 'dinero') => {
-  if (!valor || isNaN(valor)) return tipo === 'dinero' ? '$0.00' : '0.0%';
-  
-  const num = parseFloat(valor);
-  const signo = num >= 0 ? '+' : '-';
-  
-  if (tipo === 'dinero') {
-    return `${signo}$${Math.abs(num).toFixed(2)}`;
-  } else if (tipo === 'porcentaje') {
-    return `${signo}${Math.abs(num).toFixed(1)}%`;
-  }
-  
-  return `${signo}${Math.abs(num).toFixed(2)}`;
-};
-
-// Función para validar métricas antes del formateo
-const validarMetricas = (metricas) => {
-  // Verificar que sean números válidos
-  Object.keys(metricas).forEach(key => {
-    if (isNaN(metricas[key]) || metricas[key] === null || metricas[key] === undefined) {
-      console.warn(`Valor inválido en ${key}:`, metricas[key]);
-      metricas[key] = 0;
-    }
-  });
-  
-  // Verificar fórmula matemática: Facturado = Cobrado + Retenido + Pendiente
-  if (metricas.facturado !== undefined && metricas.cobrado !== undefined && 
-      metricas.retenido !== undefined && metricas.pendiente !== undefined) {
-    const suma = parseFloat(metricas.cobrado) + parseFloat(metricas.retenido) + parseFloat(metricas.pendiente);
-    const diferencia = Math.abs(parseFloat(metricas.facturado) - suma);
-    
-    if (diferencia > 0.01) { // Tolerancia de 1 centavo
-      console.warn('Posible error matemático detectado:', {
-        facturado: metricas.facturado,
-        suma: suma,
-        diferencia: diferencia
-      });
-    }
-  }
-  
-  return metricas;
-};
-
-/**
- * NUEVA FUNCIÓN: Calcular métricas de un período específico
- * Función auxiliar para análisis comparativo
- */
-async function calcularMetricasPeriodo(fechaInicio, fechaFin) {
-  const fechaInicioSQL = fechaInicio.format('YYYY-MM-DD HH:mm:ss');
-  const fechaFinSQL = fechaFin.format('YYYY-MM-DD HH:mm:ss');
-  
-  // Condiciones base para el período
-  const whereBasePeriodo = {
-    created_at: {
-      [Op.between]: [fechaInicio.toDate(), fechaFin.toDate()]
-    },
-    estado: { [Op.notIn]: ['eliminado', 'nota_credito'] }
-  };
-  
-  // Métricas operativas
-  const totalDocumentos = await Documento.count({ where: whereBasePeriodo });
-  const enProceso = await Documento.count({ where: { ...whereBasePeriodo, estado: 'en_proceso' } });
-  const listoParaEntrega = await Documento.count({ where: { ...whereBasePeriodo, estado: 'listo_para_entrega' } });
-  const entregados = await Documento.count({ where: { ...whereBasePeriodo, estado: 'entregado' } });
-  
-  // Métricas financieras
-  const [facturacionResult] = await sequelize.query(`
-    SELECT COALESCE(SUM(valor_factura), 0) as total
-    FROM documentos
-    WHERE created_at BETWEEN :fechaInicio AND :fechaFin
-    AND numero_factura IS NOT NULL
-    AND estado NOT IN ('eliminado', 'nota_credito')
-  `, {
-    replacements: { fechaInicio: fechaInicioSQL, fechaFin: fechaFinSQL },
-    type: sequelize.QueryTypes.SELECT
-  });
-  
-  const [ingresosResult] = await sequelize.query(`
-    SELECT COALESCE(SUM(CASE WHEN estado_pago IN ('pagado_completo', 'pagado_con_retencion', 'pago_parcial') THEN valor_pagado ELSE 0 END), 0) as total
-    FROM documentos
-    WHERE created_at BETWEEN :fechaInicio AND :fechaFin
-    AND estado NOT IN ('eliminado', 'nota_credito')
-  `, {
-    replacements: { fechaInicio: fechaInicioSQL, fechaFin: fechaFinSQL },
-    type: sequelize.QueryTypes.SELECT
-  });
-  
-  const [retencionesResult] = await sequelize.query(`
-    SELECT COALESCE(SUM(valor_retenido), 0) as total
-    FROM documentos
-    WHERE created_at BETWEEN :fechaInicio AND :fechaFin
-    AND numero_factura IS NOT NULL
-    AND estado NOT IN ('eliminado', 'nota_credito')
-  `, {
-    replacements: { fechaInicio: fechaInicioSQL, fechaFin: fechaFinSQL },
-    type: sequelize.QueryTypes.SELECT
-  });
-  
-  const facturado = parseFloat(facturacionResult.total);
-  const cobrado = parseFloat(ingresosResult.total);
-  const retenido = parseFloat(retencionesResult.total);
-  const pendiente = facturado - cobrado - retenido;
-  
-  // Calcular eficiencia
-  const eficiencia = totalDocumentos > 0 ? Math.round((entregados / totalDocumentos) * 100) : 0;
-  
-  return {
-    // Métricas operativas
-    totalDocumentos,
-    enProceso,
-    listoParaEntrega,
-    entregados,
-    eficiencia,
-    
-    // Métricas financieras
-    facturado,
-    cobrado,
-    retenido,
-    pendiente,
-    
-    // Período
-    fechaInicio: fechaInicio.format('YYYY-MM-DD'),
-    fechaFin: fechaFin.format('YYYY-MM-DD'),
-    periodoTexto: `${fechaInicio.format('DD/MM/YYYY')} - ${fechaFin.format('DD/MM/YYYY')}`
-  };
-}
-
-/**
- * NUEVA FUNCIÓN: Generar análisis comparativo entre dos períodos
- */
-function generarAnalisisComparativo(periodoA, periodoB) {
-  const metricas = [
-    { key: 'facturado', nombre: 'Facturado', formato: 'moneda', icono: 'fas fa-file-invoice' },
-    { key: 'cobrado', nombre: 'Cobrado', formato: 'moneda', icono: 'fas fa-dollar-sign' },
-    { key: 'retenido', nombre: 'Retenido', formato: 'moneda', icono: 'fas fa-receipt' },
-    { key: 'pendiente', nombre: 'Pendiente', formato: 'moneda', icono: 'fas fa-clock' },
-    { key: 'totalDocumentos', nombre: 'Documentos', formato: 'numero', icono: 'fas fa-file-alt' },
-    { key: 'entregados', nombre: 'Entregados', formato: 'numero', icono: 'fas fa-handshake' },
-    { key: 'eficiencia', nombre: 'Eficiencia', formato: 'porcentaje', icono: 'fas fa-chart-line' }
-  ];
-  
-  const comparaciones = metricas.map(metrica => {
-    const valorA = periodoA[metrica.key] || 0;
-    const valorB = periodoB[metrica.key] || 0;
-    const diferencia = valorA - valorB;
-    const porcentaje = valorB !== 0 ? ((diferencia / valorB) * 100) : 0;
-    
-    // FORMATEO PROFESIONAL según el tipo de métrica
-    let valorAFormateado, valorBFormateado, diferenciaFormateada;
-    
-    if (metrica.formato === 'moneda') {
-      valorAFormateado = formatearDinero(valorA);
-      valorBFormateado = formatearDinero(valorB);
-      diferenciaFormateada = formatearDiferencia(diferencia, 'dinero');
-    } else if (metrica.formato === 'porcentaje') {
-      valorAFormateado = formatearPorcentaje(valorA);
-      valorBFormateado = formatearPorcentaje(valorB);
-      diferenciaFormateada = formatearDiferencia(diferencia, 'porcentaje');
-    } else {
-      valorAFormateado = Math.round(valorA).toString();
-      valorBFormateado = Math.round(valorB).toString();
-      diferenciaFormateada = diferencia >= 0 ? `+${Math.round(diferencia)}` : Math.round(diferencia).toString();
-    }
-    
-    return {
-      ...metrica,
-      valorA,
-      valorB,
-      diferencia,
-      // VALORES FORMATEADOS PARA LA VISTA
-      valorAFormateado,
-      valorBFormateado,
-      diferenciaFormateada,
-      porcentaje: Math.round(porcentaje * 10) / 10, // Redondear a 1 decimal
-      porcentajeFormateado: formatearDiferencia(porcentaje, 'porcentaje'),
-      direccion: diferencia > 0 ? 'up' : diferencia < 0 ? 'down' : 'equal',
-      color: diferencia > 0 ? 'success' : diferencia < 0 ? 'danger' : 'secondary',
-      significativo: Math.abs(porcentaje) >= 10 // Cambio significativo si >= 10%
-    };
-  });
-  
-  // Generar insights automáticos
-  const cambiosSignificativos = comparaciones
-    .filter(c => c.significativo)
-    .sort((a, b) => Math.abs(b.porcentaje) - Math.abs(a.porcentaje))
-    .slice(0, 3);
-  
-  const mejoras = comparaciones.filter(c => c.direccion === 'up' && c.significativo);
-  const empeoramientos = comparaciones.filter(c => c.direccion === 'down' && c.significativo);
-  
-  // Generar recomendaciones
-  const recomendaciones = [];
-  if (mejoras.length > empeoramientos.length) {
-    recomendaciones.push('Tendencia positiva general - mantener estrategias actuales');
-  }
-  if (empeoramientos.some(e => e.key === 'pendiente')) {
-    recomendaciones.push('Revisar proceso de cobros - pendientes aumentaron');
-  }
-  if (mejoras.some(m => m.key === 'eficiencia')) {
-    recomendaciones.push('Eficiencia operativa mejorando - continuar optimizaciones');
-  }
-  if (empeoramientos.some(e => e.key === 'totalDocumentos')) {
-    recomendaciones.push('Volumen de documentos disminuyó - revisar captación');
-  }
-  
-  return {
-    comparaciones,
-    insights: {
-      cambiosSignificativos,
-      mejoras,
-      empeoramientos,
-      recomendaciones
-    }
-  };
-}
+// FUNCIÓN MOVIDA A ComponentesController.generarAnalisisComparativo
 
 /**
  * NUEVA FUNCIÓN: Manejar dashboard en modo comparativo
@@ -292,7 +65,7 @@ async function manejarDashboardComparativo(req, res) {
       periodoA_fin = moment(fechaFinA).endOf('day');
       periodoA_texto = `${periodoA_inicio.format('DD/MM/YYYY')} - ${periodoA_fin.format('DD/MM/YYYY')}`;
     } else {
-      const fechasA = calcularFechasPorRango(rangoA);
+      const fechasA = ComponentesController.calcularFechasPorRango(rangoA);
       periodoA_inicio = fechasA.inicio;
       periodoA_fin = fechasA.fin;
       periodoA_texto = fechasA.texto;
@@ -305,20 +78,20 @@ async function manejarDashboardComparativo(req, res) {
       periodoB_fin = moment(fechaFinB).endOf('day');
       periodoB_texto = `${periodoB_inicio.format('DD/MM/YYYY')} - ${periodoB_fin.format('DD/MM/YYYY')}`;
     } else {
-      const fechasB = calcularFechasPorRango(rangoB);
+      const fechasB = ComponentesController.calcularFechasPorRango(rangoB);
       periodoB_inicio = fechasB.inicio;
       periodoB_fin = fechasB.fin;
       periodoB_texto = fechasB.texto;
     }
     
-    // Calcular métricas para ambos períodos
+    // Calcular métricas para ambos períodos usando ComponentesController
     const [metricasA, metricasB] = await Promise.all([
-      calcularMetricasPeriodo(periodoA_inicio, periodoA_fin),
-      calcularMetricasPeriodo(periodoB_inicio, periodoB_fin)
+      ComponentesController.calcularMetricasPeriodo(periodoA_inicio, periodoA_fin),
+      ComponentesController.calcularMetricasPeriodo(periodoB_inicio, periodoB_fin)
     ]);
     
-    // Generar análisis comparativo
-    const analisis = generarAnalisisComparativo(metricasA, metricasB);
+    // Generar análisis comparativo usando ComponentesController
+    const analisis = ComponentesController.generarAnalisisComparativo(metricasA, metricasB);
     
     // Preparar datos para la vista
     const dashboardData = {
@@ -371,93 +144,7 @@ async function manejarDashboardComparativo(req, res) {
   }
 }
 
-/**
- * FUNCIÓN AUXILIAR: Calcular fechas según rango predefinido
- */
-function calcularFechasPorRango(rango) {
-  const hoy = moment().startOf('day');
-  
-  switch (rango) {
-    case 'hoy':
-      return {
-        inicio: hoy.clone(),
-        fin: moment().endOf('day'),
-        texto: 'Hoy'
-      };
-    case 'ayer':
-      return {
-        inicio: hoy.clone().subtract(1, 'days'),
-        fin: hoy.clone().subtract(1, 'days').endOf('day'),
-        texto: 'Ayer'
-      };
-    case 'semana':
-      return {
-        inicio: hoy.clone().startOf('week'),
-        fin: moment().endOf('day'),
-        texto: 'Esta semana'
-      };
-    case 'semana_anterior':
-      return {
-        inicio: hoy.clone().subtract(1, 'week').startOf('week'),
-        fin: hoy.clone().subtract(1, 'week').endOf('week'),
-        texto: 'Semana anterior'
-      };
-    case 'mes':
-      return {
-        inicio: hoy.clone().startOf('month'),
-        fin: moment().endOf('day'),
-        texto: 'Este mes'
-      };
-    case 'mes_anterior':
-      return {
-        inicio: hoy.clone().subtract(1, 'month').startOf('month'),
-        fin: hoy.clone().subtract(1, 'month').endOf('month'),
-        texto: 'Mes anterior'
-      };
-    case 'trimestre':
-      return {
-        inicio: hoy.clone().startOf('quarter'),
-        fin: moment().endOf('day'),
-        texto: 'Este trimestre'
-      };
-    case 'trimestre_anterior':
-      return {
-        inicio: hoy.clone().subtract(1, 'quarter').startOf('quarter'),
-        fin: hoy.clone().subtract(1, 'quarter').endOf('quarter'),
-        texto: 'Trimestre anterior'
-      };
-    case 'año':
-      return {
-        inicio: hoy.clone().startOf('year'),
-        fin: moment().endOf('day'),
-        texto: 'Este año'
-      };
-    case 'año_anterior':
-      return {
-        inicio: hoy.clone().subtract(1, 'year').startOf('year'),
-        fin: hoy.clone().subtract(1, 'year').endOf('year'),
-        texto: 'Año anterior'
-      };
-    case 'ultimos_30':
-      return {
-        inicio: hoy.clone().subtract(30, 'days'),
-        fin: moment().endOf('day'),
-        texto: 'Últimos 30 días'
-      };
-    case '30_dias_anteriores':
-      return {
-        inicio: hoy.clone().subtract(60, 'days'),
-        fin: hoy.clone().subtract(30, 'days'),
-        texto: '30 días anteriores'
-      };
-    default:
-      return {
-        inicio: hoy.clone().startOf('month'),
-        fin: moment().endOf('day'),
-        texto: 'Este mes'
-      };
-  }
-}
+
 
 /**
  * Dashboard Administrativo EJECUTIVO PROFESIONAL
@@ -957,7 +644,7 @@ exports.dashboard = async (req, res) => {
     // ============== VALIDAR Y FORMATEAR MÉTRICAS ==============
     
     // Validar métricas financieras antes del formateo
-    const metricasFinancieras = validarMetricas({
+          const metricasFinancieras = ComponentesController.validarMetricas({
       facturado: facturacionPeriodo,
       cobrado: ingresosPeriodo,
       retenido: totalRetenido,
@@ -1104,11 +791,11 @@ exports.dashboard = async (req, res) => {
       // Métricas financieras (CORREGIDAS PARA EL TEMPLATE)
       finanzas: {
         // Datos para cards (sin símbolo $)
-        totalFacturado: formatearDinero(metricasFinancieras.facturado).replace('$', ''),
-        ingresosPeriodo: formatearDinero(metricasFinancieras.cobrado).replace('$', ''),
-        ingresosHoy: formatearDinero(metricasFinancieras.ingresosHoy).replace('$', ''),
-        montoPendiente: formatearDinero(metricasFinancieras.pendiente).replace('$', ''),
-        totalRetenido: formatearDinero(metricasFinancieras.retenido).replace('$', ''),
+        totalFacturado: ComponentesController.formatearDinero(metricasFinancieras.facturado).replace('$', ''),
+        ingresosPeriodo: ComponentesController.formatearDinero(metricasFinancieras.cobrado).replace('$', ''),
+        ingresosHoy: ComponentesController.formatearDinero(metricasFinancieras.ingresosHoy).replace('$', ''),
+        montoPendiente: ComponentesController.formatearDinero(metricasFinancieras.pendiente).replace('$', ''),
+        totalRetenido: ComponentesController.formatearDinero(metricasFinancieras.retenido).replace('$', ''),
         
         // Datos para gráfico
         etiquetasMeses: JSON.stringify(etiquetasMeses),

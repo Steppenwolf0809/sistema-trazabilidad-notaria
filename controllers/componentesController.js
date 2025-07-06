@@ -1846,6 +1846,183 @@ class ComponentesController {
       }
     };
   }
+
+  /**
+   * FUNCIONES DE VALIDACIÓN Y FORMATEO CENTRALIZADAS
+   * Movidas desde adminController para eliminar duplicación
+   */
+
+  /**
+   * Valida métricas financieras asegurando coherencia matemática
+   * @param {Object} metricas - Objeto con métricas financieras
+   * @returns {Object} Métricas validadas
+   */
+  static validarMetricas(metricas) {
+    // Verificar que sean números válidos
+    Object.keys(metricas).forEach(key => {
+      if (isNaN(metricas[key]) || metricas[key] === null || metricas[key] === undefined) {
+        console.warn(`Valor inválido en ${key}:`, metricas[key]);
+        metricas[key] = 0;
+      }
+    });
+    
+    // Verificar fórmula matemática: Facturado = Cobrado + Retenido + Pendiente
+    if (metricas.facturado !== undefined && metricas.cobrado !== undefined && 
+        metricas.retenido !== undefined && metricas.pendiente !== undefined) {
+      const suma = parseFloat(metricas.cobrado) + parseFloat(metricas.retenido) + parseFloat(metricas.pendiente);
+      const diferencia = Math.abs(parseFloat(metricas.facturado) - suma);
+      
+      if (diferencia > 0.01) { // Tolerancia de 1 centavo
+        console.warn('Posible error matemático detectado:', {
+          facturado: metricas.facturado,
+          suma: suma,
+          diferencia: diferencia
+        });
+      }
+    }
+    
+    return metricas;
+  }
+
+  /**
+   * Formatea valor monetario con formato estadounidense
+   * @param {number} valor - Valor a formatear
+   * @returns {string} Valor formateado como moneda
+   */
+  static formatearDinero(valor) {
+    if (!valor || isNaN(valor)) return '$0.00';
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(parseFloat(valor));
+  }
+
+  /**
+   * Formatea porcentaje con 1 decimal máximo
+   * @param {number} valor - Valor a formatear
+   * @returns {string} Valor formateado como porcentaje
+   */
+  static formatearPorcentaje(valor) {
+    if (!valor || isNaN(valor)) return '0.0%';
+    return `${parseFloat(valor).toFixed(1)}%`;
+  }
+
+  /**
+   * Formatea diferencias con signo para comparaciones
+   * @param {number} valor - Valor de diferencia
+   * @param {string} tipo - 'dinero' o 'porcentaje'
+   * @returns {string} Diferencia formateada con signo
+   */
+  static formatearDiferencia(valor, tipo = 'dinero') {
+    if (!valor || isNaN(valor)) return tipo === 'dinero' ? '$0.00' : '0.0%';
+    
+    const num = parseFloat(valor);
+    const signo = num >= 0 ? '+' : '-';
+    
+    if (tipo === 'dinero') {
+      return `${signo}$${Math.abs(num).toFixed(2)}`;
+    } else if (tipo === 'porcentaje') {
+      return `${signo}${Math.abs(num).toFixed(1)}%`;
+    }
+    
+    return `${signo}${Math.abs(num).toFixed(2)}`;
+  }
+
+  /**
+   * Genera análisis comparativo entre dos períodos
+   * @param {Object} periodoA - Métricas del primer período
+   * @param {Object} periodoB - Métricas del segundo período
+   * @returns {Object} Análisis comparativo completo
+   */
+  static generarAnalisisComparativo(periodoA, periodoB) {
+    const metricas = [
+      { key: 'facturado', nombre: 'Facturado', formato: 'moneda', icono: 'fas fa-file-invoice' },
+      { key: 'cobrado', nombre: 'Cobrado', formato: 'moneda', icono: 'fas fa-dollar-sign' },
+      { key: 'retenido', nombre: 'Retenido', formato: 'moneda', icono: 'fas fa-receipt' },
+      { key: 'pendiente', nombre: 'Pendiente', formato: 'moneda', icono: 'fas fa-clock' },
+      { key: 'totalDocumentos', nombre: 'Documentos', formato: 'numero', icono: 'fas fa-file-alt' },
+      { key: 'entregados', nombre: 'Entregados', formato: 'numero', icono: 'fas fa-handshake' },
+      { key: 'eficiencia', nombre: 'Eficiencia', formato: 'porcentaje', icono: 'fas fa-chart-line' }
+    ];
+    
+    const comparaciones = metricas.map(metrica => {
+      const valorA = periodoA[metrica.key] || 0;
+      const valorB = periodoB[metrica.key] || 0;
+      const diferencia = valorA - valorB;
+      const porcentaje = valorB !== 0 ? ((diferencia / valorB) * 100) : 0;
+      
+      // FORMATEO PROFESIONAL según el tipo de métrica
+      let valorAFormateado, valorBFormateado, diferenciaFormateada;
+      
+      if (metrica.formato === 'moneda') {
+        valorAFormateado = this.formatearDinero(valorA);
+        valorBFormateado = this.formatearDinero(valorB);
+        diferenciaFormateada = this.formatearDiferencia(diferencia, 'dinero');
+      } else if (metrica.formato === 'porcentaje') {
+        valorAFormateado = this.formatearPorcentaje(valorA);
+        valorBFormateado = this.formatearPorcentaje(valorB);
+        diferenciaFormateada = this.formatearDiferencia(diferencia, 'porcentaje');
+      } else {
+        valorAFormateado = Math.round(valorA).toString();
+        valorBFormateado = Math.round(valorB).toString();
+        diferenciaFormateada = diferencia >= 0 ? `+${Math.round(diferencia)}` : Math.round(diferencia).toString();
+      }
+      
+      return {
+        ...metrica,
+        valorA,
+        valorB,
+        diferencia,
+        // VALORES FORMATEADOS PARA LA VISTA
+        valorAFormateado,
+        valorBFormateado,
+        diferenciaFormateada,
+        porcentaje: Math.round(porcentaje * 10) / 10, // Redondear a 1 decimal
+        porcentajeFormateado: this.formatearDiferencia(porcentaje, 'porcentaje'),
+        direccion: diferencia > 0 ? 'up' : diferencia < 0 ? 'down' : 'equal',
+        color: diferencia > 0 ? 'success' : diferencia < 0 ? 'danger' : 'secondary',
+        significativo: Math.abs(porcentaje) >= 10 // Cambio significativo si >= 10%
+      };
+    });
+    
+    // Generar insights automáticos
+    const cambiosSignificativos = comparaciones
+      .filter(c => c.significativo)
+      .sort((a, b) => Math.abs(b.porcentaje) - Math.abs(a.porcentaje))
+      .slice(0, 3);
+    
+    const mejoras = comparaciones.filter(c => c.direccion === 'up' && c.significativo);
+    const empeoramientos = comparaciones.filter(c => c.direccion === 'down' && c.significativo);
+    
+    // Generar recomendaciones
+    const recomendaciones = [];
+    if (mejoras.length > empeoramientos.length) {
+      recomendaciones.push('Tendencia positiva general - mantener estrategias actuales');
+    }
+    if (empeoramientos.some(e => e.key === 'pendiente')) {
+      recomendaciones.push('Revisar proceso de cobros - pendientes aumentaron');
+    }
+    if (mejoras.some(m => m.key === 'eficiencia')) {
+      recomendaciones.push('Eficiencia operativa mejorando - continuar optimizaciones');
+    }
+    if (empeoramientos.some(e => e.key === 'totalDocumentos')) {
+      recomendaciones.push('Volumen de documentos disminuyó - revisar captación');
+    }
+    
+    return {
+      comparaciones,
+      insights: {
+        cambiosSignificativos,
+        mejoras,
+        empeoramientos,
+        recomendaciones
+      },
+      periodoA: periodoA.periodoTexto,
+      periodoB: periodoB.periodoTexto
+    };
+  }
 }
 
 module.exports = ComponentesController;
