@@ -935,6 +935,110 @@ class ComponentesController {
   }
 
   /**
+   * FUNCIÓN AUXILIAR: Calcular fechas según rango predefinido
+   * @param {string} rango - Rango de tiempo (hoy, semana, mes, etc.)
+   * @param {string} [fechaInicioCustom] - Fecha de inicio personalizada (YYYY-MM-DD)
+   * @param {string} [fechaFinCustom] - Fecha de fin personalizada (YYYY-MM-DD)
+   * @returns {object} Objeto con inicio, fin y texto del período
+   */
+  static calcularFechasPorRango(rango, fechaInicioCustom = null, fechaFinCustom = null) {
+    const hoy = moment().startOf('day');
+
+    switch (rango) {
+      case 'hoy':
+        return {
+          inicio: hoy.clone(),
+          fin: moment().endOf('day'),
+          texto: 'Hoy'
+        };
+      case 'ayer':
+        return {
+          inicio: hoy.clone().subtract(1, 'days'),
+          fin: hoy.clone().subtract(1, 'days').endOf('day'),
+          texto: 'Ayer'
+        };
+      case 'semana':
+        return {
+          inicio: hoy.clone().startOf('week'),
+          fin: moment().endOf('day'),
+          texto: 'Esta semana'
+        };
+      case 'semana_anterior':
+        return {
+          inicio: hoy.clone().subtract(1, 'week').startOf('week'),
+          fin: hoy.clone().subtract(1, 'week').endOf('week'),
+          texto: 'Semana anterior'
+        };
+      case 'mes':
+        return {
+          inicio: hoy.clone().startOf('month'),
+          fin: moment().endOf('day'),
+          texto: 'Este mes'
+        };
+      case 'mes_anterior':
+        return {
+          inicio: hoy.clone().subtract(1, 'month').startOf('month'),
+          fin: moment().subtract(1, 'month').endOf('month'),
+          texto: 'Mes anterior'
+        };
+      case 'trimestre':
+        return {
+          inicio: hoy.clone().startOf('quarter'),
+          fin: moment().endOf('day'),
+          texto: 'Este trimestre'
+        };
+      case 'trimestre_anterior':
+        return {
+          inicio: hoy.clone().subtract(1, 'quarter').startOf('quarter'),
+          fin: hoy.clone().subtract(1, 'quarter').endOf('quarter'),
+          texto: 'Trimestre anterior'
+        };
+      case 'año':
+        return {
+          inicio: hoy.clone().startOf('year'),
+          fin: moment().endOf('day'),
+          texto: 'Este año'
+        };
+      case 'año_anterior':
+        return {
+          inicio: hoy.clone().subtract(1, 'year').startOf('year'),
+          fin: hoy.clone().subtract(1, 'year').endOf('year'),
+          texto: 'Año anterior'
+        };
+      case 'ultimos_30':
+        return {
+          inicio: hoy.clone().subtract(30, 'days'),
+          fin: moment().endOf('day'),
+          texto: 'Últimos 30 días'
+        };
+      case '30_dias_anteriores':
+        return {
+          inicio: hoy.clone().subtract(60, 'days'),
+          fin: hoy.clone().subtract(30, 'days'),
+          texto: '30 días anteriores'
+        };
+      case 'personalizado':
+        return {
+          inicio: moment(fechaInicioCustom).startOf('day'),
+          fin: moment(fechaFinCustom).endOf('day'),
+          texto: `Del ${moment(fechaInicioCustom).format('DD/MM/YYYY')} al ${moment(fechaFinCustom).format('DD/MM/YYYY')}`
+        };
+      case 'desde_inicio':
+        return {
+          inicio: moment('2020-01-01').startOf('day'), // Arbitrary early date
+          fin: moment().endOf('day'),
+          texto: 'Desde el Inicio (Todos los datos históricos)'
+        };
+      default:
+        return {
+          inicio: hoy.clone().startOf('month'),
+          fin: moment().endOf('day'),
+          texto: 'Este mes'
+        };
+    }
+  }
+
+  /**
    * OBTENER DATOS COMPLETOS DE UN DOCUMENTO PARA DETALLE
    * @param {string} rol - Rol del usuario
    * @param {string} documentoId - ID del documento
