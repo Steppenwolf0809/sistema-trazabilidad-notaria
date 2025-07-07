@@ -13,8 +13,24 @@ const crearUsuarios = async () => {
   try {
     console.log('👥 Creando usuarios reales de la notaría...');
     
-    // Asegurar que la tabla existe
-    await Matrizador.sync({ alter: false });
+    // Importar modelo con retry
+    let Matrizador;
+    try {
+      Matrizador = require('./models/Matrizador');
+      console.log('✅ Modelo importado correctamente');
+    } catch (error) {
+      console.log('❌ Error importando modelo:', error.message);
+      throw error;
+    }
+    
+    // Verificar conexión antes de continuar
+    try {
+      await Matrizador.sync({ alter: false });
+      console.log('✅ Modelo sincronizado correctamente');
+    } catch (syncError) {
+      console.log('❌ Error sincronizando modelo:', syncError.message);
+      throw syncError;
+    }
 
     // Contraseña temporal para todos (cambiar después del primer login)
     const passwordTemporal = 'notaria123';

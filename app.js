@@ -21,7 +21,7 @@ const { testConnection, syncModels } = require('./config/database');
 // Importar helpers personalizados de Handlebars
 const customHelpers = require('./utils/handlebarsHelpers');
 
-// Auto-setup para Render - Configuración automática con usuarios reales de la notaría
+// Auto-setup mejorado para Render - Con retry logic y mejor timing
 const setupDatabase = async () => {
   try {
     // Solo ejecutar en producción (Render)
@@ -32,61 +32,170 @@ const setupDatabase = async () => {
     
     console.log('🔧 Iniciando configuración automática de base de datos...');
     console.log('👥 Usuarios reales de la notaría se crearán automáticamente');
+    console.log('⏳ Esperando que PostgreSQL esté completamente listo...');
+    
+    // Esperar más tiempo para que PostgreSQL esté completamente inicializado
+    await new Promise(resolve => setTimeout(resolve, 10000)); // 10 segundos
     
     const { exec } = require('child_process');
     const { promisify } = require('util');
     const execAsync = promisify(exec);
     
-    // 1. Ejecutar migraciones (si existen)
-    try {
-      console.log('📋 Ejecutando migraciones de base de datos...');
-      const { stdout, stderr } = await execAsync('npx sequelize-cli db:migrate');
-      console.log('✅ Migraciones completadas');
-      if (stdout) console.log('📝 Output:', stdout);
-    } catch (migrationError) {
-      console.log('⚠️ Error en migraciones (pueden ya estar aplicadas):', migrationError.message);
-      // Continuar aunque falle - las tablas pueden ya existir
+    // Función para intentar conexión con retry
+    const testDatabaseConnection = async (maxRetries = 5) => {
+      const { Sequelize } = require('sequelize');
+      
+      for (let i = 0; i < maxRetries; i++) {
+        try {
+          console.log(`🔌 Intento de conexión ${i + 1}/${maxRetries}...`);
+          
+          const sequelize = new Sequelize(process.env.DATABASE_URL, {
+            dialect: 'postgres',
+            logging: false,
+            dialectOptions: {
+              ssl: process.env.NODE_ENV === 'production' ? {
+                require: true,
+                rejectUnauthorized: false
+              } : false
+            }
+          });
+          
+          await sequelize.authenticate();
+          await sequelize.close();
+          console.log('✅ Conexión a base de datos exitosa');
+          return true;
+        } catch (error) {
+          console.log(`❌ Intento ${i + 1} falló:`, error.message);
+          if (i < maxRetries - 1) {
+            console.log('⏳ Esperando 5 segundos antes del siguiente intento...');
+            await new Promise(resolve => setTimeout(resolve, 5000));
+          }
+        }
+      }
+      return false;
+    };
+    
+    // Verificar conexión antes de continuar
+    const connectionOk = await testDatabaseConnection();
+    if (!connectionOk) {
+      console.log('❌ No se pudo establecer conexión después de varios intentos');
+      console.log('⚠️ Auto-setup omitido, pero servidor continuará funcionando');
+      return;
     }
     
-    // 2. Crear usuarios reales de la notaría
+    // 1. Ejecutar migraciones con retry
     try {
-      // Importar modelo después de un breve delay para asegurar conexión
+      console.log('📋 Ejecutando migraciones de base de datos...');
+      const { stdout } = await execAsync('npx sequelize-cli db:migrate', {
+        timeout: 60000 // 60 segundos timeout
+      });
+      console.log('✅ Migraciones completadas exitosamente');
+    } catch (migrationError) {
+      console.log('⚠️ Error en migraciones:', migrationError.message);
+      console.log('🔄 Esto puede ser normal si las migraciones ya están aplicadas');
+    }
+    
+    // 2. Crear usuarios reales de la notaría con retry
+    try {
+      console.log('👥 Verificando usuarios existentes...');
+      
+      // Importar modelo después de migraciones
+      const { Matrizador } = require('./models');
+      
+      // Dar tiempo adicional para que las tablas se creen
       await new Promise(resolve => setTimeout(resolve, 3000));
-      
-      const Matrizador = require('./models/Matrizador');
-      
-      // Sincronizar modelos primero
-      await Matrizador.sync({ alter: false });
       
       const usuariosCount = await Matrizador.count();
       console.log(`👥 Usuarios existentes en base de datos: ${usuariosCount}`);
       
       if (usuariosCount === 0) {
         console.log('👥 Creando usuarios reales de la notaría...');
-        const { stdout } = await execAsync('node crear-usuarios.js');
+        
+        // Ejecutar script con timeout extendido
+        const { stdout } = await execAsync('node crear-usuarios.js', {
+          timeout: 60000 // 60 segundos timeout
+        });
+        
         console.log('✅ Usuarios de la notaría creados exitosamente');
         console.log('🔑 Contraseña temporal para todos: notaria123');
-        if (stdout) console.log('📝 Output usuarios:', stdout);
+        
+        // Verificar que los usuarios se crearon
+        const nuevosUsuarios = await Matrizador.count();
+        console.log(`📊 Total usuarios creados: ${nuevosUsuarios}`);
+        
       } else {
         console.log('👥 Usuarios ya existen, omitiendo creación');
       }
     } catch (userError) {
       console.log('⚠️ Error verificando/creando usuarios:', userError.message);
-      console.log('🔄 Intentando crear usuarios directamente...');
+      console.log('🔄 Intentando crear usuarios con método alternativo...');
       
       try {
-        await execAsync('node crear-usuarios.js');
-        console.log('✅ Usuarios creados en segundo intento');
-      } catch (secondError) {
-        console.log('❌ Error en segundo intento:', secondError.message);
-        console.log('⚠️ Los usuarios pueden necesitar crearse manualmente');
+        // Método alternativo: crear usuarios directamente en código
+        const bcrypt = require('bcryptjs');
+        const { Matrizador } = require('./models');
+        
+        const passwordHash = await bcrypt.hash('notaria123', 10);
+        
+        const usuariosEsenciales = [
+          {
+            nombre: 'Administrador',
+            email: 'admin@notaria.com',
+            identificacion: 'ADMIN001',
+            cargo: 'Administrador del Sistema',
+            password: passwordHash,
+            rol: 'admin',
+            activo: true
+          },
+          {
+            nombre: 'MAYRA CRISTINA CORELLA PARRA',
+            email: 'mayra@notaria.com',
+            identificacion: 'MAT001',
+            cargo: 'Matrizador Principal',
+            password: passwordHash,
+            rol: 'matrizador',
+            activo: true
+          },
+          {
+            nombre: 'Cindy Pazmiño',
+            email: 'cindy@notaria.com',
+            identificacion: 'CAJA001',
+            cargo: 'Caja',
+            password: passwordHash,
+            rol: 'caja',
+            activo: true
+          },
+          {
+            nombre: 'KAROL VELASTEGUI',
+            email: 'karolrecepcion@notaria.com',
+            identificacion: 'REC001',
+            cargo: 'Encargada de Recepción',
+            password: passwordHash,
+            rol: 'recepcion',
+            activo: true
+          }
+        ];
+        
+        for (const usuario of usuariosEsenciales) {
+          await Matrizador.findOrCreate({
+            where: { email: usuario.email },
+            defaults: usuario
+          });
+          console.log(`✅ Usuario esencial creado: ${usuario.email}`);
+        }
+        
+        console.log('✅ Usuarios esenciales creados con método alternativo');
+        
+      } catch (alternativeError) {
+        console.log('❌ Error en método alternativo:', alternativeError.message);
+        console.log('⚠️ Los usuarios deberán crearse manualmente');
       }
     }
     
     console.log('🎉 Auto-setup de notaría completado');
     
   } catch (error) {
-    console.log('❌ Error en auto-setup:', error);
+    console.log('❌ Error general en auto-setup:', error);
     console.log('⚠️ Continuando con inicio normal del servidor...');
   }
 };
