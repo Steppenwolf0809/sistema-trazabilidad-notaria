@@ -3260,7 +3260,7 @@ function extraerDatosGenericos(datos) {
 // NUEVA FUNCIÓN: Extraer datos específicos de XMLs de retención
 function extraerDatosRetencionXML(comprobanteRetencion) {
   console.log('🔍 Extrayendo datos de comprobante de retención...');
-  console.log('Estructura completa:', JSON.stringify(comprobanteRetencion, null, 2));
+  console.log('📋 Estructura XML recibida:', Object.keys(comprobanteRetencion));
   
   const datos = {};
   
@@ -3298,61 +3298,72 @@ function extraerDatosRetencionXML(comprobanteRetencion) {
     });
   }
   
-  // Documentos sustento (facturas relacionadas)
-  if (comprobanteRetencion.docsSustento && comprobanteRetencion.docsSustento.docSustento) {
-    const docSustento = comprobanteRetencion.docsSustento.docSustento;
+  // 🔧 FIX CRÍTICO: Extraer retenciones directamente de la sección 'impuestos'
+  console.log('🔍 Buscando sección de impuestos...');
+  
+  // Inicializar valores de retención
+  datos.retencionIva = 0;
+  datos.retencionRenta = 0;
+  datos.numeroFactura = '';
+  datos.fechaFactura = '';
+  
+  // Procesar sección impuestos (estructura directa del XML)
+  if (comprobanteRetencion.impuestos && comprobanteRetencion.impuestos.impuesto) {
+    console.log('✅ Sección impuestos encontrada');
     
-    // Puede ser un objeto o array, normalizar a array
-    const docsSustento = Array.isArray(docSustento) ? docSustento : [docSustento];
+    // Normalizar a array (puede ser objeto único o array)
+    const impuestos = Array.isArray(comprobanteRetencion.impuestos.impuesto) ? 
+      comprobanteRetencion.impuestos.impuesto : [comprobanteRetencion.impuestos.impuesto];
     
-    // Tomar el primer documento sustento
-    if (docsSustento.length > 0) {
-      const primerDoc = docsSustento[0];
-      datos.numeroFactura = primerDoc.numDocSustento || '';
-      datos.fechaFactura = primerDoc.fechaEmisionDocSustento || '';
-      datos.importeTotal = parseFloat(primerDoc.importeTotal || 0);
+    console.log(`📊 Procesando ${impuestos.length} impuestos...`);
+    
+    // Procesar cada impuesto
+    impuestos.forEach((impuesto, index) => {
+      const codigo = parseInt(impuesto.codigo || 0);
+      const valorRetenido = parseFloat(impuesto.valorRetenido || 0);
+      const baseImponible = parseFloat(impuesto.baseImponible || 0);
+      const porcentajeRetener = parseFloat(impuesto.porcentajeRetener || 0);
       
-      console.log('✅ Documento sustento extraído:', {
-        factura: datos.numeroFactura,
-        fecha: datos.fechaFactura,
-        importe: datos.importeTotal
+      console.log(`🔍 Impuesto ${index + 1}:`, {
+        codigo,
+        valorRetenido,
+        baseImponible,
+        porcentajeRetener
       });
       
-      // Extraer retenciones específicas
-      if (primerDoc.retenciones && primerDoc.retenciones.retencion) {
-        const retenciones = Array.isArray(primerDoc.retenciones.retencion) ? 
-          primerDoc.retenciones.retencion : [primerDoc.retenciones.retencion];
-        
-        datos.retencionIva = 0;
-        datos.retencionRenta = 0;
-        
-        retenciones.forEach(retencion => {
-          const codigo = parseInt(retencion.codigo || 0);
-          const valorRetenido = parseFloat(retencion.valorRetenido || 0);
-          
-          console.log(`🔍 Procesando retención: código=${codigo}, valor=${valorRetenido}`);
-          
-          if (codigo === 2) {
-            // Código 2 = Retención IVA
-            datos.retencionIva += valorRetenido;
-            console.log(`✅ Retención IVA: +${valorRetenido} = ${datos.retencionIva}`);
-          } else if (codigo === 1) {
-            // Código 1 = Retención Renta
-            datos.retencionRenta += valorRetenido;
-            console.log(`✅ Retención Renta: +${valorRetenido} = ${datos.retencionRenta}`);
-          }
-        });
-        
-        // Calcular total retenido
-        datos.totalRetenido = datos.retencionIva + datos.retencionRenta;
-        
-        console.log('📊 Retenciones calculadas:', {
-          iva: datos.retencionIva,
-          renta: datos.retencionRenta,
-          total: datos.totalRetenido
-        });
+      // Extraer número de factura del primer impuesto
+      if (index === 0 && impuesto.numDocSustento) {
+        datos.numeroFactura = impuesto.numDocSustento;
+        datos.fechaFactura = impuesto.fechaEmisionDocSustento || '';
+        console.log(`✅ Factura sustento: ${datos.numeroFactura}`);
       }
-    }
+      
+      // Clasificar retenciones por código
+      if (codigo === 2) {
+        // Código 2 = Retención IVA
+        datos.retencionIva += valorRetenido;
+        console.log(`✅ Retención IVA: +${valorRetenido} = ${datos.retencionIva}`);
+      } else if (codigo === 1 && valorRetenido > 0) {
+        // Código 1 = Retención Renta (solo si tiene valor > 0)
+        datos.retencionRenta += valorRetenido;
+        console.log(`✅ Retención Renta: +${valorRetenido} = ${datos.retencionRenta}`);
+      } else if (codigo === 1 && valorRetenido === 0) {
+        console.log(`⏭️ Retención Renta con valor 0, ignorando`);
+      } else {
+        console.log(`⏭️ Código ${codigo} no reconocido como IVA o Renta`);
+      }
+    });
+    
+    // Calcular total retenido
+    datos.totalRetenido = datos.retencionIva + datos.retencionRenta;
+    
+    console.log('📊 RESULTADO FINAL - Retenciones calculadas:', {
+      iva: datos.retencionIva,
+      renta: datos.retencionRenta,
+      total: datos.totalRetenido
+    });
+  } else {
+    console.log('❌ No se encontró sección impuestos en el XML');
   }
   
   // Validar datos mínimos
@@ -3364,7 +3375,7 @@ function extraerDatosRetencionXML(comprobanteRetencion) {
     console.log('⚠️ No se encontraron retenciones válidas');
   }
   
-  console.log('📋 Datos finales de retención:', datos);
+  console.log('📋 DATOS FINALES DE RETENCIÓN:', datos);
   return datos;
 }
 

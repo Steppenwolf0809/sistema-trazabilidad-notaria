@@ -484,6 +484,7 @@ app.use('/api/autorizaciones-urgentes', verificarToken, autorizacionUrgenteRoute
 // Ruta de login
 app.get('/login', (req, res) => {
   res.render('login', {
+    layout: false, // Desactivar layout para login
     title: 'Iniciar Sesión',
     error: req.query.error
   });

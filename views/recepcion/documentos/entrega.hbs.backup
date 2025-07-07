@@ -775,22 +775,22 @@
             </div>
             <div class="card-body table-universal-body">
               <div class="table-responsive">
-                <table class="table table-striped table-hover">
+                <table id="tabla-entrega-recepcion" class="table table-hover table-universal tabla-ordenable table-striped">
                   <thead class="table-light">
                     <tr>
-                      <th style="width: 120px;">Código</th>
-                      <th style="width: 200px;">Cliente</th>
-                      <th style="width: 100px;" class="text-center">Tipo</th>
-                      <th style="width: 150px;">Matrizador</th>
-                      <th style="width: 100px;" class="text-end">Valor</th>
-                      <th style="width: 120px;" class="text-center">Estado Pago</th>
-                      <th style="width: 100px;" class="text-center">Fecha</th>
-                      <th style="width: 100px;" class="text-center">Acciones</th>
+                      <th class="col-codigo" style="width: 120px;">Código</th>
+                      <th class="col-cliente" style="width: 200px;">Cliente</th>
+                      <th class="col-tipo text-center" style="width: 80px;">Tipo</th>
+                      <th class="col-matrizador" style="width: 120px;">Matrizador</th>
+                      <th class="col-valor text-end" style="width: 80px;">Valor</th>
+                      <th class="col-pago text-center" style="width: 100px;">Pago</th>
+                      <th class="col-fecha text-center" style="width: 100px;">Fecha</th>
+                      <th class="col-acciones text-center" style="width: 100px;">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
                     {{#each documentosListos}}
-                      <tr>
+                      <tr class="table-row">
                         <!-- Código del documento -->
                         <td>
                           <a href="/recepcion/documentos/entrega/{{this.id}}" class="text-primary text-decoration-none">
@@ -878,91 +878,41 @@
   </div>
 </div>
 
-{{!-- ============== JAVASCRIPT MEJORADO PARA ENTREGA Y BÚSQUEDA ============== --}}
+{{!-- ============== JAVASCRIPT SIMPLIFICADO PARA ENTREGA ============== --}}
 <script>
+console.log('🔍 [DEBUG] Iniciando JavaScript simplificado...');
+
 document.addEventListener('DOMContentLoaded', function() {
+  console.log('✅ [DEBUG] DOM cargado - script básico funcionando');
   
-  // ===================================================================
-  //            SCRIPT PARA BÚSQUEDA Y FILTROS AVANZADOS
-  // ===================================================================
-  
-  // Auto-submit en búsqueda rápida
+  // Funcionalidad básica de búsqueda
   const busquedaInput = document.getElementById('busqueda');
   if (busquedaInput) {
-    let timeout;
-    busquedaInput.addEventListener('input', function() {
-      clearTimeout(timeout);
-      timeout = setTimeout(() => {
-        if (this.value.length >= 3 || this.value.length === 0) {
-          document.getElementById('formBusqueda').submit();
-        }
-      }, 1500);
-    });
+    console.log('✅ [DEBUG] Input de búsqueda encontrado');
   }
   
-  // Validación de fechas
-  const fechaDesde = document.getElementById('fechaDesde');
-  const fechaHasta = document.getElementById('fechaHasta');
+  // Variables globales mínimas
+  window.documentoPrincipal = null;
+  window.documentosDisponibles = [];
+  window.usuarioActual = { rol: 'recepcion' };
   
-  if (fechaDesde && fechaHasta) {
-    fechaDesde.addEventListener('change', function() {
-      if (this.value) fechaHasta.min = this.value;
-    });
-    
-    fechaHasta.addEventListener('change', function() {
-      if (this.value) fechaDesde.max = this.value;
-    });
+  // Verificar tabla
+  const tabla = document.getElementById('tabla-entrega-recepcion');
+  if (tabla) {
+    console.log('✅ [DEBUG] Tabla encontrada:', tabla.id);
+  } else {
+    console.log('⚠️ [DEBUG] Tabla no encontrada');
   }
+  
+  console.log('✅ [DEBUG] Configuración básica completada');
+  
+}); // Cierre de DOMContentLoaded
 
-  // ===================================================================
-  //            SCRIPT PARA ENTREGA GRUPAL JERÁRQUICA
-  // ===================================================================
+console.log('✅ [DEBUG] Script JavaScript simplificado completado');
 
-  // Solo ejecutar si estamos en la vista de entrega de un documento específico
-  if (window.location.pathname.includes('/recepcion/documentos/entrega/')) {
-    // Configuración global
-    window.documentoPrincipal = {{{json documento}}};
-    window.documentosDisponibles = {{{json documentosGrupales.documentos}}};
-    window.gruposRelacionados = {{{json documentosGrupales.gruposRelacionados}}};
-    window.documentosIndependientes = {{{json documentosGrupales.documentosIndependientes}}};
-    window.usuarioActual = { rol: 'recepcion' };
-    
-    // Variables del DOM
-    const selectAll = document.getElementById('selectAll');
-    const documentoCheckboxes = document.querySelectorAll('.documento-checkbox');
-    const contadorSeleccion = document.getElementById('contador-seleccion');
-    const codigoInput = document.getElementById('codigoVerificacion');
-    const btnValidar = document.getElementById('validarCodigo');
-    const listaCodigosValidos = document.getElementById('lista-codigos-validos');
-    const verificacionLlamada = document.getElementById('verificacionLlamada');
-    const divObservaciones = document.getElementById('div-observaciones');
-    const btnConfirmar = document.getElementById('btnConfirmarEntrega');
-    
-    function actualizarSeleccion() {
-      const seleccionados = Array.from(documentoCheckboxes).filter(cb => cb.checked);
-      const totalSeleccionados = seleccionados.length; // ✅ CORREGIDO: Solo contar checkboxes marcados
-      
-      if (contadorSeleccion) {
-        contadorSeleccion.textContent = `${totalSeleccionados} documento(s) seleccionado(s)`;
-      }
-      
-      actualizarCodigosValidos(seleccionados);
-      
-      const idsSeleccionados = seleccionados.map(cb => cb.value);
-      document.getElementById('documentos_seleccionados').value = idsSeleccionados.join(',');
-      document.getElementById('entrega_grupal').value = idsSeleccionados.length > 0 ? 'true' : 'false';
-      
-      aplicarEstilosSeleccion(seleccionados);
-      
-      // ✅ NUEVO: Logging para debug
-      console.log(`🔢 [CONTADOR] Checkboxes marcados: ${seleccionados.length}`);
-      console.log(`🔢 [CONTADOR] IDs seleccionados: [${idsSeleccionados.join(', ')}]`);
-    }
-    
-    function actualizarCodigosValidos(seleccionados) {
-      if (!listaCodigosValidos) return;
-      let codigosHTML = '';
-      if (window.documentoPrincipal && window.documentoPrincipal.codigoVerificacion && window.documentoPrincipal.codigoVerificacion !== 'sin_codigo') {
+</script>
+
+<style>
         codigosHTML += `<code class="bg-dark text-light px-2 py-1 rounded me-2">${window.documentoPrincipal.codigoVerificacion}</code><small class="text-muted me-3">(principal)</small>`;
       }
       seleccionados.forEach(checkbox => {
@@ -1068,20 +1018,13 @@ document.addEventListener('DOMContentLoaded', function() {
       document.getElementById('seccion-entrega-grupal').style.display = 'none';
     };
   }
+  
+  console.log('✅ [DEBUG] Funcionalidad básica configurada - tabla debería funcionar ahora');
+  
+}); // Cierre de DOMContentLoaded
 
-  // ===================================================================
-  //            SISTEMA DE AUTORIZACIÓN URGENTE COMPLETO
-  // ===================================================================
-  
-  // Variables globales para el documento actual
-  window.documentoActual = {{{json documento}}};
-  
-  // Contadores y temporizadores
-  let tiempoInicioEspera = null;
-  let intervaloPoll = null;
-  let contadorTiempo = null;
-  
-     // ============== FUNCIÓN PRINCIPAL: SOLICITAR AUTORIZACIÓN URGENTE ==============
+// ============== FUNCIONES COMENTADAS TEMPORALMENTE ==============
+/*
    
    window.solicitarAutorizacionUrgente = function() {
      console.log('🔄 Iniciando solicitud de autorización urgente...');
@@ -2308,6 +2251,10 @@ function actualizarUIDocumentosAutorizados(documentosIds) {
   });
 }
 
+*/
+
+console.log('✅ [DEBUG] Script JavaScript simplificado completado');
+
 </script>
 
 <style>
@@ -2380,6 +2327,17 @@ function actualizarUIDocumentosAutorizados(documentosIds) {
   font-size: 0.875rem;
 }
 
-/* CSS de emergencia ya no necesario - usando estructura Bootstrap estándar */
+/* ===================================================================
+   FIX DE EMERGENCIA PARA COLAPSO DE TABLA
+   =================================================================== */
+#tabla-entrega-recepcion .table-row > td,
+#tabla-entrega-recepcion .table-row > th {
+    display: table-cell !important; /* Forzar comportamiento de celda */
+    vertical-align: middle;
+}
+
+#tabla-entrega-recepcion .cliente-nombre {
+    display: inline !important; /* Anular el 'display: block' conflictivo */
+}
 
 </style> 

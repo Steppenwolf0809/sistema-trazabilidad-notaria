@@ -134,52 +134,79 @@
         </div>
         <div class="card-body">
           <div class="table-responsive">
-            <table class="table table-hover mb-0">
-              <thead>
+            <table class="table table-hover mb-0 table-striped">
+              <thead class="table-light">
                 <tr>
-                  <th>Código</th>
-                  <th>Cliente</th>
-                  <th>Tipo Documento</th>
-                  <th>Matrizador</th>
-                  <th>Valor</th>
-                  <th>Estado Pago</th>
-                  <th>Días sin Retirar</th>
-                  <th>Fecha Finalización</th>
-                  <th>Acciones</th>
+                  <th style="width: 120px;">Código</th>
+                  <th style="width: 200px;">Cliente</th>
+                  <th class="text-center" style="width: 100px;">Tipo</th>
+                  <th style="width: 120px;">Matrizador</th>
+                  <th class="text-end" style="width: 80px;">Valor</th>
+                  <th class="text-center" style="width: 100px;">Estado Pago</th>
+                  <th class="text-center" style="width: 120px;">Días sin Retirar</th>
+                  <th class="text-center" style="width: 120px;">Fecha Finalización</th>
+                  <th class="text-center" style="width: 100px;">Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {{#each documentos}}
                 <tr>
+                  <!-- Código del documento -->
                   <td>
-                    <a href="/recepcion/documentos/detalle/{{this.id}}" class="text-primary">
+                    <a href="/recepcion/documentos/detalle/{{this.id}}" class="text-primary text-decoration-none">
                       <strong>{{this.codigoBarras}}</strong>
                     </a>
+                    {{#if this.numeroFactura}}
+                      <br><small class="text-muted">F: {{this.numeroFactura}}</small>
+                    {{/if}}
                   </td>
-                  <td>{{this.nombreCliente}}</td>
+                  
+                  <!-- Cliente -->
                   <td>
+                    <div class="fw-bold">{{this.nombreCliente}}</div>
+                    {{#if this.identificacionCliente}}
+                      <small class="text-muted">{{this.identificacionCliente}}</small>
+                    {{/if}}
+                  </td>
+                  
+                  <!-- Tipo de documento -->
+                  <td class="text-center">
                     <span class="badge bg-info">{{this.tipoDocumento}}</span>
                   </td>
+                  
+                  <!-- Matrizador -->
                   <td>
                     {{#if this.matrizador}}
-                      {{this.matrizador.nombre}}
+                      <span class="fw-bold">{{this.matrizador.nombre}}</span>
                     {{else}}
                       <span class="text-muted">Sin asignar</span>
                     {{/if}}
                   </td>
-                  <td>
-                    <strong>${{this.valorFactura}}</strong>
+                  
+                  <!-- Valor -->
+                  <td class="text-end">
+                    <strong class="text-success">${{formatMoney this.valorFactura}}</strong>
                   </td>
-                  <td>
+                  
+                  <!-- Estado de pago -->
+                  <td class="text-center">
                     {{#if (eq this.estadoPago 'pagado_completo')}}
-                      <span class="badge bg-success">Pagado</span>
+                      <span class="badge bg-success">
+                        <i class="fas fa-check-circle me-1"></i>Pagado
+                      </span>
                     {{else if (eq this.estadoPago 'pagado_con_retencion')}}
-                      <span class="badge bg-warning">Con Retención</span>
+                      <span class="badge bg-warning">
+                        <i class="fas fa-university me-1"></i>Con Retención
+                      </span>
                     {{else}}
-                      <span class="badge bg-danger">Pendiente</span>
+                      <span class="badge bg-danger">
+                        <i class="fas fa-exclamation-triangle me-1"></i>Pendiente
+                      </span>
                     {{/if}}
                   </td>
-                  <td>
+                  
+                  <!-- Días sin retirar -->
+                  <td class="text-center">
                     {{#if (gte (daysSince this.updated_at) 15)}}
                       <span class="badge bg-danger">{{daysSince this.updated_at}} días 🚨</span>
                     {{else if (gte (daysSince this.updated_at) 7)}}
@@ -190,12 +217,16 @@
                       <span class="badge bg-success">{{daysSince this.updated_at}} días</span>
                     {{/if}}
                   </td>
-                  <td>
+                  
+                  <!-- Fecha de finalización -->
+                  <td class="text-center">
                     <small class="text-muted">
                       {{formatDateEcuador this.updated_at}}
                     </small>
                   </td>
-                  <td>
+                  
+                  <!-- Acciones -->
+                  <td class="text-center">
                                          <div class="btn-group btn-group-sm" role="group">
                        <a href="/recepcion/documentos/detalle/{{this.id}}" 
                           class="btn btn-outline-info" title="Ver Detalle">
@@ -283,10 +314,70 @@
 .border-left-info {
   border-left: 0.25rem solid #36b9cc !important;
 }
-.table th {
-  background-color: #f8f9fc;
-  border-top: none;
+
+/* 🎯 TABLA OPTIMIZADA - Headers legibles y alineados */
+.table thead.table-light th {
+  background-color: #f8f9fa !important;
+  color: #495057 !important;
+  font-weight: 600 !important;
+  border-bottom: 2px solid #dee2e6 !important;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.75rem 0.5rem;
+  vertical-align: middle;
 }
+
+.table tbody td {
+  vertical-align: middle;
+  padding: 0.75rem 0.5rem;
+  border-top: 1px solid #dee2e6;
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.table-hover tbody tr:hover {
+  background-color: rgba(0, 123, 255, 0.1);
+}
+
+/* Responsive: Ajustes para móviles */
+@media (max-width: 768px) {
+  .table thead th {
+    font-size: 0.75rem;
+    padding: 0.5rem 0.25rem;
+  }
+  
+  .table tbody td {
+    padding: 0.5rem 0.25rem;
+    font-size: 0.875rem;
+  }
+  
+  .badge {
+    font-size: 0.7rem;
+  }
+}
+
+/* Mejorar legibilidad de badges */
+.badge {
+  font-size: 0.75rem;
+  padding: 0.375rem 0.5rem;
+}
+
+.badge i {
+  font-size: 0.7rem;
+}
+
+/* Enlaces más visibles */
+.text-primary {
+  color: #0d6efd !important;
+}
+
+.text-primary:hover {
+  color: #0a58ca !important;
+}
+
 .btn-group-sm > .btn {
   padding: 0.25rem 0.5rem;
 }

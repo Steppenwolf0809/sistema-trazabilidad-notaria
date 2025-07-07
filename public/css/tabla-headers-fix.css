@@ -1,0 +1,74 @@
+/* 
+  FIX PARA HEADERS BLANCOS INVISIBLES
+  Sistema Notarial - Corrección global para thead class="table-light"
+  
+  PROBLEMA: Los headers con class="table-light" tienen texto blanco sobre fondo blanco
+  SOLUCIÓN: Forzar texto oscuro en headers con fondo claro
+*/
+
+/* Corregir headers con table-light - texto oscuro sobre fondo claro */
+.table thead.table-light th {
+  color: #495057 !important;
+  font-weight: 600 !important;
+  background-color: #f8f9fa !important;
+  border-bottom: 2px solid #dee2e6 !important;
+}
+
+/* Alternativa: Headers con fondo oscuro y texto blanco (más elegante) */
+.table thead.table-dark th {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  background-color: #343a40 !important;
+  border-bottom: 2px solid #495057 !important;
+}
+
+/* Mejorar contraste en headers de reportes */
+.table thead th {
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.75rem 0.5rem;
+}
+
+/* Hover effect en headers ordenables */
+.table thead th.ordenable:hover {
+  background-color: #e9ecef !important;
+  cursor: pointer;
+}
+
+.table thead.table-dark th.ordenable:hover {
+  background-color: #495057 !important;
+  cursor: pointer;
+}
+
+/* Iconos de ordenamiento */
+.table thead th .sort-icon {
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
+}
+
+.table thead th:hover .sort-icon {
+  opacity: 1;
+}
+
+/* Responsive: Headers en móviles */
+@media (max-width: 768px) {
+  .table thead th {
+    font-size: 0.75rem;
+    padding: 0.5rem 0.25rem;
+  }
+}
+
+/* Corrección específica para tablas universales */
+.table-universal thead th {
+  color: #495057 !important;
+  background-color: #f8f9fa !important;
+  border-bottom: 2px solid #dee2e6 !important;
+}
+
+/* Corrección para tablas de entrega */
+.table-universal.tabla-ordenable thead th {
+  color: #495057 !important;
+  background-color: #f8f9fa !important;
+  font-weight: 600 !important;
+} 

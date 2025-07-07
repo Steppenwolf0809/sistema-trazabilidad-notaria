@@ -19,6 +19,9 @@
   <link rel="stylesheet" href="/css/notificaciones-legible.css">
   <link rel="stylesheet" href="/css/tabla-documentos-mejorada.css">
   
+  <!-- FIX: Corrección headers blancos invisibles -->
+  <link rel="stylesheet" href="/css/tabla-headers-fix.css">
+  
   <!-- Sidebar Argon Pro CSS -->
   <link rel="stylesheet" href="/css/sidebar-argon.css">
   
@@ -239,7 +242,7 @@
       activeEliminaciones=activeAuditoriaEliminaciones
       activeNotificaciones=activeNotificaciones
   }}
-  
+
   <!-- Contenido principal -->
   <main class="main-content relative h-full max-h-screen transition-all duration-200 ease-in-out rounded-xl">
     
@@ -250,26 +253,26 @@
     <div class="w-full px-6 py-6 mx-auto">
       
       <!-- Alertas del sistema -->
-      {{#if error}}
+    {{#if error}}
       <div class="flex items-center p-4 mb-4 text-red-800 rounded-lg bg-red-50 border border-red-200">
         <i class="fas fa-exclamation-triangle mr-3"></i>
         <div>
           <span class="font-medium">Error:</span> {{error}}
         </div>
-      </div>
-      {{/if}}
-      
-      {{#if success}}
+    </div>
+    {{/if}}
+    
+    {{#if success}}
       <div class="flex items-center p-4 mb-4 text-green-800 rounded-lg bg-green-50 border border-green-200">
         <i class="fas fa-check-circle mr-3"></i>
         <div>
           <span class="font-medium">Éxito:</span> {{success}}
         </div>
-      </div>
-      {{/if}}
-      
+    </div>
+    {{/if}}
+    
       <!-- Contenido principal de la página -->
-      {{{body}}}
+    {{{body}}}
       
     </div>
   </main>
