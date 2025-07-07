@@ -21,6 +21,76 @@ const { testConnection, syncModels } = require('./config/database');
 // Importar helpers personalizados de Handlebars
 const customHelpers = require('./utils/handlebarsHelpers');
 
+// Auto-setup para Render - Configuración automática con usuarios reales de la notaría
+const setupDatabase = async () => {
+  try {
+    // Solo ejecutar en producción (Render)
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🔄 Desarrollo local - omitiendo auto-setup');
+      return;
+    }
+    
+    console.log('🔧 Iniciando configuración automática de base de datos...');
+    console.log('👥 Usuarios reales de la notaría se crearán automáticamente');
+    
+    const { exec } = require('child_process');
+    const { promisify } = require('util');
+    const execAsync = promisify(exec);
+    
+    // 1. Ejecutar migraciones (si existen)
+    try {
+      console.log('📋 Ejecutando migraciones de base de datos...');
+      const { stdout, stderr } = await execAsync('npx sequelize-cli db:migrate');
+      console.log('✅ Migraciones completadas');
+      if (stdout) console.log('📝 Output:', stdout);
+    } catch (migrationError) {
+      console.log('⚠️ Error en migraciones (pueden ya estar aplicadas):', migrationError.message);
+      // Continuar aunque falle - las tablas pueden ya existir
+    }
+    
+    // 2. Crear usuarios reales de la notaría
+    try {
+      // Importar modelo después de un breve delay para asegurar conexión
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      const Matrizador = require('./models/Matrizador');
+      
+      // Sincronizar modelos primero
+      await Matrizador.sync({ alter: false });
+      
+      const usuariosCount = await Matrizador.count();
+      console.log(`👥 Usuarios existentes en base de datos: ${usuariosCount}`);
+      
+      if (usuariosCount === 0) {
+        console.log('👥 Creando usuarios reales de la notaría...');
+        const { stdout } = await execAsync('node crear-usuarios.js');
+        console.log('✅ Usuarios de la notaría creados exitosamente');
+        console.log('🔑 Contraseña temporal para todos: notaria123');
+        if (stdout) console.log('📝 Output usuarios:', stdout);
+      } else {
+        console.log('👥 Usuarios ya existen, omitiendo creación');
+      }
+    } catch (userError) {
+      console.log('⚠️ Error verificando/creando usuarios:', userError.message);
+      console.log('🔄 Intentando crear usuarios directamente...');
+      
+      try {
+        await execAsync('node crear-usuarios.js');
+        console.log('✅ Usuarios creados en segundo intento');
+      } catch (secondError) {
+        console.log('❌ Error en segundo intento:', secondError.message);
+        console.log('⚠️ Los usuarios pueden necesitar crearse manualmente');
+      }
+    }
+    
+    console.log('🎉 Auto-setup de notaría completado');
+    
+  } catch (error) {
+    console.log('❌ Error en auto-setup:', error);
+    console.log('⚠️ Continuando con inicio normal del servidor...');
+  }
+};
+
 // Creación de la aplicación Express
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -600,40 +670,56 @@ app.use(async (req, res) => {
   });
 });
 
-// Iniciar el servidor
-app.listen(PORT, async () => {
-  console.log(`🚀 Servidor iniciado en http://localhost:${PORT}`);
+// Función para iniciar servidor con auto-setup
+const startServer = async () => {
+  // Ejecutar auto-setup primero
+  await setupDatabase();
   
-  // Probar conexión a la base de datos
-  const dbConnected = await testConnection();
-  if (dbConnected) {
-    console.log('🔌 Base de datos conectada correctamente');
+  // Luego iniciar servidor (código existente)
+  app.listen(PORT, async () => {
+    console.log(`🚀 Servidor ProNotary iniciado en puerto ${PORT}`);
     
-    // Sincronizar modelos con la base de datos
-    await syncModels();
-    
-    // Inicializar el servicio de notificaciones después de la conexión a BD
-    try {
-      const notificationService = require('./services/notificationService');
-      const servicioInicializado = await notificationService.inicializar();
+    // Probar conexión a la base de datos
+    const dbConnected = await testConnection();
+    if (dbConnected) {
+      console.log('🔌 Base de datos conectada correctamente');
       
-      if (servicioInicializado) {
-        console.log('📱 Servicio de notificaciones WhatsApp inicializado correctamente');
-      } else {
-        console.log('⚠️ El servicio de notificaciones no se pudo inicializar completamente');
+      // Sincronizar modelos con la base de datos
+      await syncModels();
+      
+      // Inicializar el servicio de notificaciones después de la conexión a BD
+      try {
+        const notificationService = require('./services/notificationService');
+        const servicioInicializado = await notificationService.inicializar();
+        
+        if (servicioInicializado) {
+          console.log('📱 Servicio de notificaciones WhatsApp inicializado correctamente');
+        } else {
+          console.log('⚠️ El servicio de notificaciones no se pudo inicializar completamente');
+        }
+      } catch (notificationError) {
+        console.error('❌ Error al inicializar servicio de notificaciones:', notificationError.message);
+        console.log('   El sistema funcionará sin notificaciones automáticas');
       }
-    } catch (notificationError) {
-      console.error('❌ Error al inicializar servicio de notificaciones:', notificationError.message);
-      console.log('   El sistema funcionará sin notificaciones automáticas');
+    } else {
+      console.log('⚠️ No se pudo conectar a la base de datos');
     }
-  } else {
-    console.log('⚠️ No se pudo conectar a la base de datos');
-  }
-  
-  console.log('✅ ¡Sistema de Trazabilidad Documental iniciado correctamente!');
-  console.log('👉 Panel administrativo disponible en http://localhost:' + PORT + '/admin');
-  console.log('👉 Página de login disponible en http://localhost:' + PORT + '/login');
-});
+    
+    console.log('✅ ¡Sistema ProNotary iniciado correctamente!');
+    console.log('👉 Panel administrativo disponible en http://localhost:' + PORT + '/admin');
+    console.log('👉 Página de login disponible en http://localhost:' + PORT + '/login');
+    console.log('🔑 Usuarios disponibles con contraseña temporal "notaria123":');
+    console.log('   👑 admin@notaria.com (Administrador)');
+    console.log('   📋 mayra@notaria.com (Matrizador Principal)');
+    console.log('   💰 cindy@notaria.com (Caja)');
+    console.log('   📨 karolrecepcion@notaria.com (Recepción)');
+    console.log('   🗂️ lmdiazarchivo@notaria.com (Archivo)');
+    console.log('   ⚠️ CAMBIAR contraseñas después del primer login');
+  });
+};
+
+// Llamar la función en lugar de app.listen directo
+startServer();
 
 // Manejo de errores no capturados
 process.on('unhandledRejection', (err) => {
