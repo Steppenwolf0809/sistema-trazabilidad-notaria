@@ -308,7 +308,11 @@ AutorizacionUrgente.belongsTo(Matrizador, {
 // NOTA: Las relaciones para el sistema de notificaciones están definidas en models/Documento.js
 // para evitar conflictos de alias duplicados
 
+// Importar la configuración de la base de datos
+const { sequelize } = require('../config/database');
+
 module.exports = {
+  sequelize, // Exportar la instancia de sequelize para sync
   Documento,
   Matrizador,
   EventoDocumento,
