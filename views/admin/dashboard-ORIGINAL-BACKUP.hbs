@@ -1391,9 +1391,12 @@
             }
         }
 </style>
-    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h2 class="text-2xl font-bold text-gray-800 mb-0">Panel de Control Ejecutivo</h2>
+    <div class="container-fluid py-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="card mb-4">
+                    <div class="card-header pb-0">
+                        <h2 class="h4 font-weight-bold text-dark mb-0">Panel de Control Ejecutivo</h2>
                         <div class="periodo-info-elegante">
                             <span class="periodo-actual-elegante">
                                 <i class="fas fa-calendar-check me-1"></i>
@@ -1405,428 +1408,367 @@
                             </span>
                         </div>
                     </div>
-            <div class="p-4">
-                <div class="mb-6">
-                    <div class="sticky top-4 z-20 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-4 mb-6">
-                        <div class="flex flex-wrap items-center gap-4">
-                            <button class="btn btn-secondary {{#if (eq filtroActual 'hoy')}}!bg-blue-600 !text-white !border-blue-600{{/if}}" 
-                                    onclick="aplicarFiltro('hoy')">
-                                <i class="fas fa-calendar-day me-1"></i> HOY
-                            </button>
-                            <button class="btn btn-secondary {{#if (eq filtroActual 'semana')}}!bg-blue-600 !text-white !border-blue-600{{/if}}" 
-                                    onclick="aplicarFiltro('semana')">
-                                <i class="fas fa-calendar-week me-1"></i> SEMANA
-                            </button>
-                            <button class="btn btn-secondary {{#if (eq filtroActual 'mes')}}!bg-blue-600 !text-white !border-blue-600{{/if}}" 
-                                    onclick="aplicarFiltro('mes')">
-                                <i class="fas fa-calendar-alt me-1"></i> MES
-                            </button>
-                            <button class="btn btn-secondary {{#if (eq filtroActual 'año')}}!bg-blue-600 !text-white !border-blue-600{{/if}}" 
-                                    onclick="aplicarFiltro('año')">
-                                <i class="fas fa-calendar me-1"></i> AÑO
-                            </button>
-                            <div class="relative">
-                                <button class="btn btn-secondary {{#if (eq filtroActual 'personalizado')}}!bg-blue-600 !text-white !border-blue-600{{/if}}" 
-                                        id="btnPersonalizado" onclick="togglePopoverPersonalizado()">
-                                    <i class="fas fa-cog me-1"></i> PERSONALIZADO
-                                </button>
-                                
-                                {{!-- POPOVER MODERNO --}}
-                                <div id="popoverPersonalizado" class="absolute top-full left-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-30" style="display: none;">
-                                    <div class="p-4">
-                                        <h6 class="font-semibold text-gray-800 mb-3">
-                                            <i class="fas fa-calendar-alt me-2"></i>Seleccionar Rango
-                                        </h6>
-                                        <div class="space-y-4">
-                                            <div>
-                                                <label class="block text-sm font-medium text-gray-700 mb-1">Fecha Inicio:</label>
-                                                <input type="date" id="fechaInicio" class="form-input" value="{{req.query.fechaInicio}}">
-                                            </div>
-                                            <div>
-                                                <label class="block text-sm font-medium text-gray-700 mb-1">Fecha Fin:</label>
-                                                <input type="date" id="fechaFin" class="form-input" value="{{req.query.fechaFin}}">
-                                            </div>
-                                            <div class="flex gap-2">
-                                                <button class="btn btn-primary flex-1" onclick="aplicarFiltroPersonalizado()">
-                                                    <i class="fas fa-check me-1"></i>Aplicar
-                                                </button>
-                                                <button class="btn btn-secondary flex-1" onclick="cancelarFiltroPersonalizado()">
-                                                    <i class="fas fa-times me-1"></i>Cancelar
-                                                </button>
+                    <div class="card-body px-0 pt-0 pb-2">
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="filtros-container-elegante mb-3">
+                                    <div class="filtros-principales-elegantes">
+                                        <button class="btn-filtro-ultra {{#if (eq filtroActual 'hoy')}}activo{{/if}}" 
+                                                onclick="aplicarFiltro('hoy')">
+                                            <i class="fas fa-calendar-day me-1"></i> HOY
+                                        </button>
+                                        <button class="btn-filtro-ultra {{#if (eq filtroActual 'semana')}}activo{{/if}}" 
+                                                onclick="aplicarFiltro('semana')">
+                                            <i class="fas fa-calendar-week me-1"></i> SEMANA
+                                        </button>
+                                        <button class="btn-filtro-ultra {{#if (eq filtroActual 'mes')}}activo{{/if}}" 
+                                                onclick="aplicarFiltro('mes')">
+                                            <i class="fas fa-calendar-alt me-1"></i> MES
+                                        </button>
+                                        <button class="btn-filtro-ultra {{#if (eq filtroActual 'año')}}activo{{/if}}" 
+                                                onclick="aplicarFiltro('año')">
+                                            <i class="fas fa-calendar me-1"></i> AÑO
+                                        </button>
+                                        <div class="filtro-personalizado-wrapper">
+                                            <button class="btn-filtro-ultra {{#if (eq filtroActual 'personalizado')}}activo{{/if}}" 
+                                                    id="btnPersonalizado" onclick="togglePopoverPersonalizado()">
+                                                <i class="fas fa-cog me-1"></i> PERSONALIZADO
+                                            </button>
+                                            
+                                            {{!-- POPOVER ULTRA ELEGANTE --}}
+                                            <div id="popoverPersonalizado" class="popover-personalizado-ultra" style="display: none;">
+                                                <div class="popover-arrow-ultra"></div>
+                                                <div class="popover-header-ultra">
+                                                    <h6 class="popover-title-ultra">
+                                                        <i class="fas fa-calendar-alt me-2"></i>Seleccionar Rango
+                                                    </h6>
+                                                </div>
+                                                <div class="popover-body-ultra">
+                                                    <div class="fecha-group-ultra">
+                                                        <label class="fecha-label-ultra">Fecha Inicio:</label>
+                                                        <input type="date" id="fechaInicio" class="fecha-input-ultra" value="{{req.query.fechaInicio}}">
+                                                    </div>
+                                                    <div class="fecha-group-ultra">
+                                                        <label class="fecha-label-ultra">Fecha Fin:</label>
+                                                        <input type="date" id="fechaFin" class="fecha-input-ultra" value="{{req.query.fechaFin}}">
+                                                    </div>
+                                                    <div class="popover-botones-ultra">
+                                                        <button class="btn-popover-aplicar-ultra" onclick="aplicarFiltroPersonalizado()">
+                                                            <i class="fas fa-check me-1"></i>Aplicar
+                                                        </button>
+                                                        <button class="btn-popover-cancelar-ultra" onclick="cancelarFiltroPersonalizado()">
+                                                            <i class="fas fa-times me-1"></i>Cancelar
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
+                            </div>
                         </div>
                         
-                        {{!-- INDICADOR DE CARGA --}}
-                        <div id="indicador-carga" class="hidden mt-4 text-center">
-                            <div class="inline-flex items-center px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg">
-                                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                <span class="text-blue-700 font-medium">Actualizando métricas...</span>
-                            </div>
-                        </div>
-                    </div>
-                
-                {{!-- KPIs EJECUTIVOS - RESPONSIVE MEJORADO --}}
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-6">
+                                {{!-- KPIs EJECUTIVOS - RESPONSIVE MEJORADO --}}
+        <div class="kpis-ejecutivos-grid mb-4">
             {{!-- KPI 1: INGRESOS --}}
-            <div data-kpi="ingresos" class="bg-gradient-to-r from-green-400 to-green-600 rounded-xl shadow-lg p-6 text-white transform hover:scale-105 transition-all duration-300 hover:shadow-xl cursor-pointer">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <div class="flex items-center space-x-2 mb-2">
-                            <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                                <i class="fas fa-dollar-sign text-lg"></i>
-                            </div>
-                            <span class="text-sm font-semibold uppercase tracking-wide">INGRESOS {{periodo.actual}}</span>
-                        </div>
-                        <div class="text-3xl font-bold mb-2 kpi-valor">
-                            ${{kpis.ingresos.valorFormateado}}
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <div class="flex items-center bg-white/20 rounded-full px-3 py-1">
-                                <svg class="w-4 h-4 text-white mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M5.293 7.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L6.707 7.707a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
-                                </svg>
-                                <span class="text-sm font-semibold kpi-tendencia">{{kpis.ingresos.tendencia.texto}}</span>
-                            </div>
-                        </div>
-                        <div class="text-xs text-green-100 mt-1">
-                            vs {{#if periodo.anterior}}{{periodo.anterior}}{{else}}período anterior{{/if}}
-                        </div>
+            <div class="kpi-card-ejecutivo">
+                <div class="kpi-header-ejecutivo">
+                    <div class="kpi-icono-ejecutivo verde">
+                        <i class="fas fa-dollar-sign"></i>
                     </div>
-                    <div class="text-4xl opacity-20">
-                        <i class="fas fa-coins"></i>
+                    <div class="kpi-info-ejecutivo">
+                        <div class="kpi-etiqueta-ejecutivo">INGRESOS {{periodo.actual}}</div>
+                        <div class="kpi-numero-ejecutivo">${{kpis.ingresos.valorFormateado}}</div>
+                        <div class="kpi-tendencia-ejecutivo verde">
+                            <i class="fas fa-arrow-up"></i> {{kpis.ingresos.tendencia.texto}}
+                        </div>
+                        <div class="kpi-comparacion-ejecutivo">vs {{#if periodo.anterior}}{{periodo.anterior}}{{else}}período anterior{{/if}}</div>
                     </div>
                 </div>
             </div>
             
             {{!-- KPI 2: DOCUMENTOS --}}
-            <div data-kpi="documentos" class="bg-gradient-to-r from-blue-400 to-blue-600 rounded-xl shadow-lg p-6 text-white transform hover:scale-105 transition-all duration-300 hover:shadow-xl cursor-pointer">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <div class="flex items-center space-x-2 mb-2">
-                            <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                                <i class="fas fa-file-alt text-lg"></i>
-                            </div>
-                            <span class="text-sm font-semibold uppercase tracking-wide">DOCUMENTOS {{periodo.actual}}</span>
-                        </div>
-                        <div class="text-3xl font-bold mb-2 kpi-valor">
-                            {{kpis.documentos.valorFormateado}}
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <div class="flex items-center bg-white/20 rounded-full px-3 py-1">
-                                <svg class="w-4 h-4 text-white mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M5.293 7.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L6.707 7.707a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
-                                </svg>
-                                <span class="text-sm font-semibold kpi-tendencia">{{kpis.documentos.tendencia.texto}}</span>
-                            </div>
-                        </div>
-                        <div class="text-xs text-blue-100 mt-1">
-                            vs {{#if periodo.anterior}}{{periodo.anterior}}{{else}}período anterior{{/if}}
-                        </div>
+            <div class="kpi-card-ejecutivo">
+                <div class="kpi-header-ejecutivo">
+                    <div class="kpi-icono-ejecutivo azul">
+                        <i class="fas fa-file-alt"></i>
                     </div>
-                    <div class="text-4xl opacity-20">
-                        <i class="fas fa-folder-open"></i>
+                    <div class="kpi-info-ejecutivo">
+                        <div class="kpi-etiqueta-ejecutivo">DOCUMENTOS {{periodo.actual}}</div>
+                        <div class="kpi-numero-ejecutivo">{{kpis.documentos.valorFormateado}}</div>
+                        <div class="kpi-tendencia-ejecutivo verde">
+                            <i class="fas fa-arrow-up"></i> {{kpis.documentos.tendencia.texto}}
+                        </div>
+                        <div class="kpi-comparacion-ejecutivo">vs {{#if periodo.anterior}}{{periodo.anterior}}{{else}}período anterior{{/if}}</div>
                     </div>
                 </div>
             </div>
             
             {{!-- KPI 3: PAGOS PENDIENTES --}}
-            <div data-kpi="pagos" class="bg-gradient-to-r from-orange-400 to-orange-600 rounded-xl shadow-lg p-6 text-white transform hover:scale-105 transition-all duration-300 hover:shadow-xl cursor-pointer">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <div class="flex items-center space-x-2 mb-2">
-                            <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                                <i class="fas fa-clock text-lg"></i>
-                            </div>
-                            <span class="text-sm font-semibold uppercase tracking-wide">PAGOS PENDIENTES</span>
-                        </div>
-                        <div class="text-3xl font-bold mb-2 kpi-valor">
-                            ${{kpis.pagos.valorFormateado}}
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <div class="flex items-center bg-white/20 rounded-full px-2 py-1">
-                                <i class="fas fa-file-alt text-xs mr-1"></i>
-                                <span class="text-sm font-medium">{{kpis.pagos.valor}} docs</span>
-                            </div>
-                        </div>
-                        <div class="text-xs text-orange-100 mt-1">
-                            Pendientes de cobro
-                        </div>
+            <div class="kpi-card-ejecutivo">
+                <div class="kpi-header-ejecutivo">
+                    <div class="kpi-icono-ejecutivo naranja">
+                        <i class="fas fa-clock"></i>
                     </div>
-                    <div class="text-4xl opacity-20">
-                        <i class="fas fa-hourglass-half"></i>
+                    <div class="kpi-info-ejecutivo">
+                        <div class="kpi-etiqueta-ejecutivo">PAGOS PENDIENTES</div>
+                        <div class="kpi-numero-ejecutivo">${{kpis.pagos.valorFormateado}}</div>
+                        <div class="kpi-tendencia-ejecutivo amarillo">
+                            <i class="fas fa-file-alt"></i> {{kpis.pagos.valor}} docs
+                        </div>
+                        <div class="kpi-comparacion-ejecutivo">Pendientes de cobro</div>
                     </div>
                 </div>
             </div>
             
             {{!-- KPI 4: EFICIENCIA --}}
-            <div data-kpi="eficiencia" class="bg-gradient-to-r from-cyan-400 to-cyan-600 rounded-xl shadow-lg p-6 text-white transform hover:scale-105 transition-all duration-300 hover:shadow-xl cursor-pointer">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <div class="flex items-center space-x-2 mb-2">
-                            <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                                <i class="fas fa-chart-line text-lg"></i>
-                            </div>
-                            <span class="text-sm font-semibold uppercase tracking-wide">EFICIENCIA ENTREGA</span>
-                        </div>
-                        <div class="text-3xl font-bold mb-2 kpi-valor">
-                            {{kpis.eficiencia.valorFormateado}}
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <div class="flex items-center bg-white/20 rounded-full px-3 py-1">
-                                <svg class="w-4 h-4 text-white mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M5.293 7.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L6.707 7.707a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
-                                </svg>
-                                <span class="text-sm font-semibold kpi-tendencia">{{kpis.eficiencia.tendencia.texto}}</span>
-                            </div>
-                        </div>
-                        <div class="text-xs text-cyan-100 mt-1">
-                            Documentos entregados a tiempo
-                        </div>
+            <div class="kpi-card-ejecutivo">
+                <div class="kpi-header-ejecutivo">
+                    <div class="kpi-icono-ejecutivo azul-claro">
+                        <i class="fas fa-chart-line"></i>
                     </div>
-                    <div class="text-4xl opacity-20">
-                        <i class="fas fa-trophy"></i>
+                    <div class="kpi-info-ejecutivo">
+                        <div class="kpi-etiqueta-ejecutivo">EFICIENCIA ENTREGA</div>
+                        <div class="kpi-numero-ejecutivo">{{kpis.eficiencia.valorFormateado}}</div>
+                        <div class="kpi-tendencia-ejecutivo verde">
+                            <i class="fas fa-arrow-up"></i> {{kpis.eficiencia.tendencia.texto}}
+                        </div>
+                        <div class="kpi-comparacion-ejecutivo">Documentos entregados a tiempo</div>
                     </div>
                 </div>
             </div>
         </div>
-        
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            {{!-- GRÁFICO PROFESIONAL EN TARJETA BLANCA (2/3 del ancho) --}}
-            <div class="lg:col-span-2">
-                <div class="bg-white rounded-lg shadow-md overflow-hidden">
-                    <div class="p-4 border-b border-gray-200">
-                        <div class="flex items-center">
-                            <div class="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center text-white mr-3">
-                                <i class="fas fa-chart-line text-xl"></i>
-                            </div>
-                            <div>
-                                <h6 class="text-lg font-semibold text-gray-800 mb-0">📊 {{grafico.titulo}}</h6>
-                                <p class="text-sm text-gray-600 mb-0">Tendencia de ingresos del período seleccionado</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="p-4">
-                        {{#if grafico.datos.labels.length}}
-                            <div class="relative h-80">
-                                <canvas id="chart-line" class="w-full h-full" height="300"></canvas>
-                            </div>
-                        {{else}}
-                            <div class="text-center py-12">
-                                <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <i class="fas fa-chart-line text-2xl text-gray-400"></i>
+                        
+                        <div class="row mb-4">
+                            {{!-- GRÁFICO PROFESIONAL EN TARJETA BLANCA (8 columnas) --}}
+                            <div class="col-lg-8">
+                                <div class="tarjeta-grafico-profesional">
+                                    <div class="grafico-header-profesional">
+                                        <div class="d-flex align-items-center">
+                                            <div class="icono-grafico-profesional me-3">
+                                                <i class="fas fa-chart-line"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="titulo-grafico-profesional mb-0">📊 {{grafico.titulo}}</h6>
+                                                <p class="subtitulo-grafico-profesional mb-0">Tendencia de ingresos del período seleccionado</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="grafico-contenido-profesional">
+                                        {{#if grafico.datos.labels.length}}
+                                            <div class="chart-container-profesional">
+                                                <canvas id="chart-line" class="chart-canvas-profesional" height="300"></canvas>
+                                            </div>
+                                        {{else}}
+                                            <div class="grafico-sin-datos">
+                                                <div class="icono-sin-datos">
+                                                    <i class="fas fa-chart-line"></i>
+                                                </div>
+                                                <h6 class="titulo-sin-datos">Sin datos disponibles</h6>
+                                                <p class="descripcion-sin-datos">No hay información para mostrar en el período seleccionado</p>
+                                                <button class="btn-sin-datos" onclick="cambiarPeriodo('mes')">
+                                                    <i class="fas fa-calendar-alt me-2"></i>Ver Este Mes
+                                                </button>
+                                            </div>
+                                        {{/if}}
+                                    </div>
                                 </div>
-                                <h6 class="text-lg font-medium text-gray-600 mb-2">Sin datos disponibles</h6>
-                                <p class="text-gray-500 mb-4">No hay información para mostrar en el período seleccionado</p>
-                                <button class="btn btn-primary" onclick="cambiarPeriodo('mes')">
-                                    <i class="fas fa-calendar-alt me-2"></i>Ver Este Mes
-                                </button>
                             </div>
-                        {{/if}}
-                    </div>
-                </div>
-            </div>
-            
-            {{!-- CENTRO DE ALERTAS EJECUTIVO (1/3 del ancho) --}}
-            <div class="lg:col-span-1">
-                <div class="space-y-4">
-                    {{#if acciones.length}}
-                        {{!-- HEADER COMPACTO Y ELEGANTE --}}
-                        <div class="bg-white rounded-lg shadow-md p-4 border-l-4 border-red-500">
-                            <div class="flex items-center">
-                                <div class="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center text-white mr-3">
-                                    <i class="fas fa-exclamation-triangle text-sm"></i>
-                                </div>
-                                <div>
-                                    <h6 class="font-bold text-red-600 text-sm mb-0">⚠️ ATENCIÓN INMEDIATA</h6>
-                                    <p class="text-xs text-gray-600 mb-0">{{acciones.length}} acciones pendientes</p>
+                            
+                            {{!-- CENTRO DE ALERTAS EJECUTIVO CENTRADO Y ELEGANTE --}}
+                            <div class="col-lg-4">
+                                <div class="alertas-cuadricula-container">
+                                    {{#if acciones.length}}
+                                        {{!-- HEADER COMPACTO Y ELEGANTE --}}
+                                        <div class="alertas-header-compacto mb-3">
+                                            <div class="d-flex align-items-center justify-content-between">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="icono-atencion-compacto me-2">
+                                                        <i class="fas fa-exclamation-triangle"></i>
+                                                    </div>
+                                                    <div>
+                                                        <h6 class="titulo-atencion-compacto mb-0">⚠️ ATENCIÓN INMEDIATA</h6>
+                                                        <p class="subtitulo-atencion-compacto mb-0">{{acciones.length}} acciones pendientes</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        {{!-- CUADRÍCULA DE ALERTAS ULTRA COMPACTAS --}}
+                                        <div class="alertas-cuadricula">
+                                            {{#each acciones}}
+                                                <div class="alerta-cuadricula-item">
+                                                    <div class="alerta-cuadricula-header">
+                                                        <div class="icono-cuadricula icono-{{tipo}}">
+                                                            {{icono}}
+                                                        </div>
+                                                        <span class="badge-cuadricula badge-{{tipo}}">{{prioridad}}</span>
+                                                    </div>
+                                                    
+                                                    <div class="alerta-cuadricula-contenido">
+                                                        <h6 class="alerta-cuadricula-titulo">{{titulo}}</h6>
+                                                        <p class="alerta-cuadricula-descripcion">{{descripcion}}</p>
+                                                        
+                                                        {{#if monto}}
+                                                            <div class="alerta-cuadricula-monto">
+                                                                <span class="monto-cuadricula">${{monto}}</span>
+                                                                <span class="monto-label-cuadricula">en riesgo</span>
+                                                            </div>
+                                                        {{/if}}
+                                                    </div>
+                                                    
+                                                    <button class="btn-cuadricula btn-{{tipo}}" onclick="{{accion}}">
+                                                        <i class="fas fa-arrow-right me-1"></i>{{botonTexto}}
+                                                    </button>
+                                                </div>
+                                            {{/each}}
+                                        </div>
+                                    {{else}}
+                                        {{!-- ESTADO TODO OK --}}
+                                        <div class="todo-ok-impactante">
+                                            <div class="ok-icono-grande">
+                                                <i class="fas fa-check-circle"></i>
+                                            </div>
+                                            <h5 class="ok-titulo">¡SISTEMA ÓPTIMO!</h5>
+                                            <p class="ok-descripcion">Todas las operaciones funcionando correctamente</p>
+                                        </div>
+                                    {{/if}}
+                                    
+
                                 </div>
                             </div>
                         </div>
                         
-                        {{!-- CUADRÍCULA DE ALERTAS ULTRA COMPACTAS --}}
-                        <div class="space-y-3">
-                            {{#each acciones}}
-                                <div class="bg-white rounded-lg shadow-md p-3 border-l-4 border-orange-500 hover:shadow-lg transition-shadow">
-                                    <div class="flex items-center justify-between mb-2">
-                                        <div class="w-6 h-6 bg-orange-500 rounded-md flex items-center justify-center text-white">
-                                            <i class="fas fa-exclamation text-xs"></i>
+                        {{!-- SISTEMA DE PESTAÑAS ELEGANTE --}}
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header pb-0">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <h6 class="mb-0">📊 Datos Detallados - {{periodo.actual}}</h6>
+                                            <div class="tabs-navegacion">
+                                                <button class="tab-btn active" data-tab="matrizadores">
+                                                    <i class="fas fa-users me-2"></i>Resumen por Matrizadores
+                                                </button>
+                                                <button class="tab-btn" data-tab="documentos">
+                                                    <i class="fas fa-file-alt me-2"></i>Documentos Recientes
+                                                </button>
+                                            </div>
                                         </div>
-                                        <span class="px-2 py-1 text-xs font-semibold text-orange-700 bg-orange-100 rounded-full">
-                                            ALTA
-                                        </span>
                                     </div>
-                                    
-                                    <div class="mb-3">
-                                        <h6 class="text-sm font-bold text-gray-800 mb-1">{{titulo}}</h6>
-                                        <p class="text-xs text-gray-600 leading-tight">{{descripcion}}</p>
+                                    <div class="card-body px-0 pt-0 pb-2">
+                                        {{!-- TAB MATRIZADORES --}}
+                                        <div class="tab-content active" id="tab-matrizadores">
+                                            <div class="table-responsive p-0">
+                                                <table class="table align-items-center mb-0">
+                                                    <thead>
+                                                        <tr>
+                                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Matrizador</th>
+                                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">En Proceso</th>
+                                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Listos</th>
+                                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Entregados</th>
+                                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Facturado</th>
+                                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Cobrado</th>
+                                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Eficiencia</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {{#each matrizadores}}
+                                                            {{#unless (or (eq rol 'admin') (eq rol 'caja'))}}
+                                                            <tr>
+                                                                <td>
+                                                                    <div class="d-flex px-2 py-1">
+                                                                        <div class="d-flex flex-column justify-content-center">
+                                                                            <h6 class="mb-0 text-sm">{{nombre}}</h6>
+                                                                            <p class="text-xs text-secondary mb-0">{{rol}}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
+                                                                <td>
+                                                                    <p class="text-xs font-weight-bold mb-0">{{en_proceso}}</p>
+                                                                </td>
+                                                                <td>
+                                                                    <p class="text-xs font-weight-bold mb-0">{{listos}}</p>
+                                                                </td>
+                                                                <td>
+                                                                    <p class="text-xs font-weight-bold mb-0">{{entregados}}</p>
+                                                                </td>
+                                                                <td>
+                                                                    <p class="text-xs font-weight-bold mb-0">${{facturado}}</p>
+                                                                </td>
+                                                                <td>
+                                                                    <p class="text-xs font-weight-bold mb-0">${{cobrado}}</p>
+                                                                </td>
+                                                                <td>
+                                                                    <span class="badge badge-sm bg-gradient-{{#if (eq estado 'excelente')}}success{{else if (eq estado 'normal')}}warning{{else}}danger{{/if}}">
+                                                                        {{eficiencia}}%
+                                                                    </span>
+                                                                </td>
+                                                            </tr>
+                                                            {{/unless}}
+                                                        {{/each}}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
                                         
-                                        {{#if monto}}
-                                            <div class="bg-gray-50 rounded-md p-2 mt-2 text-center">
-                                                <span class="block text-sm font-bold text-red-600">${{monto}}</span>
-                                                <span class="text-xs text-gray-500 uppercase tracking-wide">en riesgo</span>
+                                        {{!-- TAB DOCUMENTOS --}}
+                                        <div class="tab-content" id="tab-documentos">
+                                            <div class="table-responsive p-0">
+                                                <table class="table align-items-center mb-0">
+                                                    <thead>
+                                                        <tr>
+                                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Código</th>
+                                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Cliente</th>
+                                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Matrizador</th>
+                                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Estado</th>
+                                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Valor</th>
+                                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Fecha</th>
+                                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Estado Pago</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {{#each documentos}}
+                                                            <tr>
+                                                                <td>
+                                                                    <div class="d-flex px-2 py-1">
+                                                                        <div class="d-flex flex-column justify-content-center">
+                                                                            <h6 class="mb-0 text-sm">{{codigo_barras}}</h6>
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
+                                                                <td>
+                                                                    <p class="text-xs font-weight-bold mb-0">{{nombre_cliente}}</p>
+                                                                </td>
+                                                                <td>
+                                                                    <p class="text-xs font-weight-bold mb-0">{{matrizador_nombre}}</p>
+                                                                </td>
+                                                                <td>
+                                                                    <span class="badge badge-sm bg-gradient-{{#if (eq estado 'listo_para_entrega')}}success{{else if (eq estado 'en_proceso')}}warning{{else}}primary{{/if}}">
+                                                                        {{#if (eq estado 'listo_para_entrega')}}listo_para_entrega{{else if (eq estado 'en_proceso')}}en_proceso{{else}}{{estado}}{{/if}}
+                                                                    </span>
+                                                                </td>
+                                                                <td>
+                                                                    <p class="text-xs font-weight-bold mb-0">${{valor_factura}}</p>
+                                                                </td>
+                                                                <td>
+                                                                    <p class="text-xs font-weight-bold mb-0">{{formatDateEcuador created_at}}</p>
+                                                                </td>
+                                                                <td>
+                                                                    <span class="badge badge-sm bg-gradient-{{#if (eq estado_pago 'pagado_completo')}}success{{else if (eq estado_pago 'pago_parcial')}}warning{{else}}danger{{/if}}">
+                                                                        {{#if (eq estado_pago 'pagado_completo')}}pagado_completo{{else if (eq estado_pago 'pago_parcial')}}pago_parcial{{else}}{{estado_pago}}{{/if}}
+                                                                    </span>
+                                                                </td>
+                                                            </tr>
+                                                        {{/each}}
+                                                    </tbody>
+                                                </table>
                                             </div>
-                                        {{/if}}
+                                        </div>
                                     </div>
-                                    
-                                    <button class="w-full bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold py-2 px-3 rounded-md transition-colors" onclick="{{accion}}">
-                                        <i class="fas fa-arrow-right me-1"></i>{{botonTexto}}
-                                    </button>
                                 </div>
-                            {{/each}}
-                        </div>
-                    {{else}}
-                        {{!-- ESTADO TODO OK --}}
-                        <div class="bg-white rounded-lg shadow-md p-6 text-center border-2 border-green-500">
-                            <div class="text-3xl text-green-500 mb-3">
-                                <i class="fas fa-check-circle"></i>
-                            </div>
-                            <h5 class="text-lg font-bold text-green-600 mb-2">¡SISTEMA ÓPTIMO!</h5>
-                            <p class="text-sm text-gray-600">Todas las operaciones funcionando correctamente</p>
-                        </div>
-                    {{/if}}
-                </div>
-            </div>
-        </div>
-        
-        {{!-- SISTEMA DE PESTAÑAS ELEGANTE --}}
-        <div class="bg-white rounded-lg shadow-md mb-6">
-            <div class="p-4 border-b border-gray-200">
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <h6 class="text-lg font-semibold text-gray-800 mb-0">📊 Datos Detallados - {{periodo.actual}}</h6>
-                    <div class="flex flex-wrap gap-2">
-                        <button class="tab-btn btn btn-secondary active" data-tab="matrizadores">
-                            <i class="fas fa-users me-2"></i>Resumen por Matrizadores
-                        </button>
-                        <button class="tab-btn btn btn-secondary" data-tab="documentos">
-                            <i class="fas fa-file-alt me-2"></i>Documentos Recientes
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <div class="p-0">
-                {{!-- TAB MATRIZADORES --}}
-                <div class="tab-content active" id="tab-matrizadores">
-                    {{!-- Indicador de período --}}
-                    <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center space-x-2">
-                                <i class="fas fa-calendar-alt text-blue-600"></i>
-                                <span class="text-sm font-medium text-blue-800">Período mostrado:</span>
-                                <span class="text-sm font-bold text-blue-900 periodo-tabla-matrizadores">{{periodo.actual}}</span>
-                            </div>
-                            <div class="text-xs text-blue-600">
-                                <i class="fas fa-info-circle"></i>
-                                Los datos se actualizan automáticamente al cambiar filtros
                             </div>
                         </div>
-                    </div>
-                    
-                    <div class="overflow-x-auto">
-                        <table class="w-full">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Matrizador</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">En Proceso</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Listos</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Entregados</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Facturado</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Cobrado</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Eficiencia</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                                {{#each matrizadores}}
-                                    {{#unless (or (eq rol 'admin') (eq rol 'caja') (eq rol 'recepcion'))}}
-                                    <tr class="hover:bg-gray-50">
-                                        <td class="px-4 py-3">
-                                            <div>
-                                                <h6 class="text-sm font-semibold text-gray-800">{{nombre}}</h6>
-                                                <p class="text-xs text-gray-500">{{rol}}</p>
-                                            </div>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <p class="text-xs font-bold text-yellow-600">{{en_proceso}}</p>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <p class="text-xs font-bold text-blue-600">{{listos}}</p>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <p class="text-xs font-bold text-green-600">{{entregados}}</p>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <p class="text-xs font-bold text-gray-800">${{facturado}}</p>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <p class="text-xs font-bold text-green-600">${{cobrado}}</p>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full {{#if (eq estado 'excelente')}}bg-green-100 text-green-800{{else if (eq estado 'normal')}}bg-yellow-100 text-yellow-800{{else}}bg-red-100 text-red-800{{/if}}">
-                                                {{eficiencia}}%
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    {{/unless}}
-                                {{/each}}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                
-                {{!-- TAB DOCUMENTOS --}}
-                <div class="tab-content" id="tab-documentos">
-                    <div class="overflow-x-auto">
-                        <table class="w-full tabla-documentos">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Código</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Cliente</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Matrizador</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Estado</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Valor</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Fecha</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Estado Pago</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                                {{#each documentos}}
-                                    <tr class="hover:bg-gray-50">
-                                        <td class="px-4 py-3">
-                                            <div>
-                                                <h6 class="text-sm font-semibold text-gray-800">{{codigo_barras}}</h6>
-                                            </div>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <p class="text-xs font-bold text-gray-800">{{nombre_cliente}}</p>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <p class="text-xs font-bold text-gray-600">{{matrizador_nombre}}</p>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full {{#if (eq estado 'listo_para_entrega')}}bg-green-100 text-green-800{{else if (eq estado 'en_proceso')}}bg-yellow-100 text-yellow-800{{else}}bg-blue-100 text-blue-800{{/if}}">
-                                                {{#if (eq estado 'listo_para_entrega')}}Listo{{else if (eq estado 'en_proceso')}}En proceso{{else}}{{estado}}{{/if}}
-                                            </span>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <p class="text-xs font-bold text-gray-800">${{valor_factura}}</p>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <p class="text-xs font-bold text-gray-600">{{formatDateEcuador created_at}}</p>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full {{#if (eq estado_pago 'pagado_completo')}}bg-green-100 text-green-800{{else if (eq estado_pago 'pago_parcial')}}bg-yellow-100 text-yellow-800{{else}}bg-red-100 text-red-800{{/if}}">
-                                                {{#if (eq estado_pago 'pagado_completo')}}Pagado{{else if (eq estado_pago 'pago_parcial')}}Parcial{{else}}{{estado_pago}}{{/if}}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                {{/each}}
-                            </tbody>
-                        </table>
                     </div>
                 </div>
             </div>
@@ -1844,7 +1786,7 @@
         
         const datosGrafico = {{{json grafico.datos}}};
         if (datosGrafico && datosGrafico.labels && datosGrafico.labels.length > 0) {
-            inicializarGrafico(datosGrafico, '{{periodo.actual}}');
+            inicializarGrafico(datosGrafico);
         }
         
         // Inicializar sistema de pestañas elegante
@@ -1873,18 +1815,12 @@
         });
     }
     
-    function inicializarGrafico(datos, periodoTexto = null) {
+    function inicializarGrafico(datos) {
         const ctx = document.getElementById('chart-line');
         if (!ctx) return;
         
         if (graficoActual) {
             graficoActual.destroy();
-        }
-        
-        // Construir título del gráfico con período
-        let tituloGrafico = 'Evolución de Ingresos';
-        if (periodoTexto) {
-            tituloGrafico += ` - ${periodoTexto}`;
         }
         
         graficoActual = new Chart(ctx, {
@@ -1897,15 +1833,6 @@
                     legend: {
                         display: true,
                         position: 'top'
-                    },
-                    title: {
-                        display: true,
-                        text: tituloGrafico,
-                        font: {
-                            size: 16,
-                            weight: 'bold'
-                        },
-                        color: '#162840'
                     }
                 },
                 scales: {
@@ -1935,11 +1862,7 @@
             if (popover) popover.style.display = 'none';
         }
         
-        // NUEVO: Actualizar métricas dinámicamente sin recargar página
-        actualizarMetricasAjax(filtro);
-        
-        // Actualizar botones de filtro
-        actualizarBotonesFiltro(filtro);
+        window.location.href = `/admin?filtro=${filtro}`;
     }
     
     // === POPOVER ULTRA ELEGANTE === //
@@ -1962,7 +1885,7 @@
     // Cerrar popover al hacer clic fuera
     document.addEventListener('click', function(event) {
         const popover = document.getElementById('popoverPersonalizado');
-        const wrapper = document.getElementById('btnPersonalizado').parentElement;
+        const wrapper = document.querySelector('.filtro-personalizado-wrapper');
         
         if (popover && wrapper && !wrapper.contains(event.target)) {
             popover.style.display = 'none';
@@ -1983,14 +1906,7 @@
             return;
         }
         
-        // NUEVO: Actualizar métricas dinámicamente con fechas personalizadas
-        actualizarMetricasAjax('personalizado', fechaInicio, fechaFin);
-        
-        // Ocultar popover
-        document.getElementById('popoverPersonalizado').style.display = 'none';
-        
-        // Actualizar botones de filtro
-        actualizarBotonesFiltro('personalizado');
+        window.location.href = `/admin?filtro=personalizado&fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
     }
     
     function cancelarFiltroPersonalizado() {
@@ -2015,344 +1931,6 @@
     
     function cambiarPeriodo(periodo) {
         aplicarFiltro(periodo);
-    }
-    
-    // ===== NUEVAS FUNCIONES AJAX PARA FILTROS DINÁMICOS =====
-    
-    function actualizarMetricasAjax(filtro, fechaInicio = null, fechaFin = null) {
-        console.log('🔄 Actualizando métricas dinámicamente...', { filtro, fechaInicio, fechaFin });
-        
-        // Mostrar indicador de carga
-        mostrarIndicadorCarga(true);
-        
-        // Construir URL con parámetros
-        let url = `/admin/dashboard?ajax=true&filtro=${filtro}`;
-        if (fechaInicio && fechaFin) {
-            url += `&fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
-        }
-        
-        fetch(url, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('✅ Datos recibidos:', data);
-            
-            // Actualizar KPIs
-            actualizarKPIs(data.kpis);
-            
-            // Actualizar gráfico
-            if (data.grafico && data.grafico.datos) {
-                inicializarGrafico(data.grafico.datos, data.periodo.actual);
-            }
-            
-            // Actualizar tabla de documentos
-            if (data.documentos) {
-                actualizarTablaDocumentos(data.documentos);
-            }
-            
-            // Actualizar tabla de matrizadores
-            if (data.matrizadores) {
-                console.log('👥 Datos de matrizadores recibidos:', data.matrizadores);
-                actualizarTablaMatrizadores(data.matrizadores);
-            } else {
-                console.log('⚠️ No se recibieron datos de matrizadores');
-            }
-            
-            // Actualizar período actual
-            if (data.periodo) {
-                actualizarTextoPeriodo(data.periodo);
-            }
-            
-            // Ocultar indicador de carga
-            mostrarIndicadorCarga(false);
-            
-        })
-        .catch(error => {
-            console.error('❌ Error actualizando métricas:', error);
-            mostrarIndicadorCarga(false);
-            
-            // Fallback: recargar página si AJAX falla
-            console.log('🔄 Fallback: recargando página...');
-            let fallbackUrl = `/admin/dashboard?filtro=${filtro}`;
-            if (fechaInicio && fechaFin) {
-                fallbackUrl += `&fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
-            }
-            window.location.href = fallbackUrl;
-        });
-    }
-    
-    function actualizarKPIs(kpis) {
-        console.log('📊 Actualizando KPIs:', kpis);
-        
-        // Actualizar cada KPI
-        Object.keys(kpis).forEach(key => {
-            const kpi = kpis[key];
-            const elemento = document.querySelector(`[data-kpi="${key}"]`);
-            
-            if (elemento) {
-                // Actualizar valor
-                const valorElemento = elemento.querySelector('.kpi-valor');
-                if (valorElemento) {
-                    valorElemento.textContent = kpi.valorFormateado;
-                }
-                
-                // Actualizar tendencia
-                const tendenciaElemento = elemento.querySelector('.kpi-tendencia');
-                if (tendenciaElemento && kpi.tendencia) {
-                    tendenciaElemento.textContent = kpi.tendencia.texto;
-                    tendenciaElemento.className = `kpi-tendencia ${kpi.tendencia.direccion}`;
-                }
-            }
-        });
-    }
-    
-    function actualizarBotonesFiltro(filtroActivo) {
-        console.log('🔘 Actualizando botones de filtro:', filtroActivo);
-        
-        // Remover clase activa de todos los botones
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.classList.remove('btn-warning');
-            btn.classList.add('btn-outline-secondary');
-        });
-        
-        // Agregar clase activa al botón seleccionado
-        const botonActivo = document.querySelector(`[onclick*="${filtroActivo}"]`);
-        if (botonActivo) {
-            botonActivo.classList.remove('btn-outline-secondary');
-            botonActivo.classList.add('btn-warning');
-        }
-    }
-    
-    function actualizarTablaDocumentos(documentos) {
-        console.log('📋 Actualizando tabla de documentos:', documentos.length);
-        
-        const tbody = document.querySelector('.tabla-documentos tbody');
-        if (!tbody) return;
-        
-        // Limpiar tabla actual
-        tbody.innerHTML = '';
-        
-        // Agregar nuevos documentos
-        documentos.forEach(doc => {
-            const fila = crearFilaDocumento(doc);
-            tbody.appendChild(fila);
-        });
-    }
-    
-    function crearFilaDocumento(doc) {
-        const fila = document.createElement('tr');
-        fila.className = 'hover:bg-gray-50';
-        
-        fila.innerHTML = `
-            <td class="px-4 py-3">
-                <div>
-                    <h6 class="text-sm font-semibold text-gray-800">${doc.codigo_barras}</h6>
-                </div>
-            </td>
-            <td class="px-4 py-3">
-                <p class="text-xs font-bold text-gray-800">${doc.nombre_cliente}</p>
-            </td>
-            <td class="px-4 py-3">
-                <p class="text-xs font-bold text-gray-600">${doc.matrizador_nombre || 'N/A'}</p>
-            </td>
-            <td class="px-4 py-3">
-                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${obtenerClaseEstado(doc.estado)}">
-                    ${formatearEstado(doc.estado)}
-                </span>
-            </td>
-            <td class="px-4 py-3">
-                <p class="text-xs font-bold text-gray-800">$${doc.valor_factura}</p>
-            </td>
-            <td class="px-4 py-3">
-                <p class="text-xs font-bold text-gray-600">${formatearFecha(doc.created_at)}</p>
-            </td>
-            <td class="px-4 py-3">
-                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${obtenerClaseEstadoPago(doc.estado_pago)}">
-                    ${formatearEstadoPago(doc.estado_pago)}
-                </span>
-            </td>
-        `;
-        
-        return fila;
-    }
-    
-    function obtenerClaseEstado(estado) {
-        switch (estado) {
-            case 'listo_para_entrega': return 'bg-green-100 text-green-800';
-            case 'en_proceso': return 'bg-yellow-100 text-yellow-800';
-            default: return 'bg-blue-100 text-blue-800';
-        }
-    }
-    
-    function formatearEstado(estado) {
-        switch (estado) {
-            case 'listo_para_entrega': return 'Listo';
-            case 'en_proceso': return 'En proceso';
-            default: return estado;
-        }
-    }
-    
-    function obtenerClaseEstadoPago(estadoPago) {
-        switch (estadoPago) {
-            case 'pagado_completo': return 'bg-green-100 text-green-800';
-            case 'pago_parcial': return 'bg-yellow-100 text-yellow-800';
-            default: return 'bg-red-100 text-red-800';
-        }
-    }
-    
-    function formatearEstadoPago(estadoPago) {
-        switch (estadoPago) {
-            case 'pagado_completo': return 'Pagado';
-            case 'pago_parcial': return 'Parcial';
-            default: return estadoPago;
-        }
-    }
-    
-    function actualizarTextoPeriodo(periodo) {
-        console.log('📅 Actualizando texto de período:', periodo);
-        
-        // Actualizar el período actual
-        const elementoPeriodo = document.querySelector('.periodo-actual-elegante');
-        if (elementoPeriodo && periodo.actual) {
-            elementoPeriodo.innerHTML = `<i class="fas fa-calendar-check me-1"></i><strong>${periodo.actual}</strong>`;
-        }
-        
-        // Actualizar la fecha de actualización
-        const elementoFecha = document.querySelector('.actualizacion-elegante');
-        if (elementoFecha) {
-            const fechaActual = new Date().toLocaleDateString('es-EC', {
-                day: '2-digit',
-                month: '2-digit', 
-                year: 'numeric'
-            });
-            elementoFecha.innerHTML = `<i class="fas fa-sync-alt me-1"></i>Actualizado: ${fechaActual}`;
-        }
-        
-        // Actualizar el título principal del dashboard
-        const elementoTitulo = document.querySelector('.text-2xl.font-bold.text-gray-800');
-        if (elementoTitulo) {
-            elementoTitulo.textContent = `Panel de Control Ejecutivo - ${periodo.actual}`;
-        }
-        
-        // Actualizar el indicador de período en la tabla de matrizadores
-        const elementoTablaMatrizadores = document.querySelector('.periodo-tabla-matrizadores');
-        if (elementoTablaMatrizadores && periodo.actual) {
-            elementoTablaMatrizadores.textContent = periodo.actual;
-        }
-    }
-    
-    function formatearFecha(fecha) {
-        return new Date(fecha).toLocaleDateString('es-EC', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-        });
-    }
-    
-    function actualizarTablaMatrizadores(matrizadores) {
-        console.log('👥 Actualizando tabla de matrizadores:', matrizadores.length);
-        
-        const tbody = document.querySelector('#tab-matrizadores tbody');
-        if (!tbody) {
-            console.log('❌ No se encontró tbody de matrizadores');
-            return;
-        }
-        
-        console.log('✅ Tbody encontrado, limpiando tabla...');
-        
-        // Limpiar tabla actual
-        tbody.innerHTML = '';
-        
-        let filasAgregadas = 0;
-        
-        // Agregar nuevos matrizadores
-        matrizadores.forEach((mat, index) => {
-            console.log(`🔍 Procesando matrizador ${index + 1}:`, mat);
-            
-            // Filtrar admin, caja y recepcion
-            if (mat.rol !== 'admin' && mat.rol !== 'caja' && mat.rol !== 'recepcion') {
-                const fila = crearFilaMatrizador(mat);
-                tbody.appendChild(fila);
-                filasAgregadas++;
-                console.log(`✅ Fila agregada para ${mat.nombre}`);
-            } else {
-                console.log(`⏭️ Saltando ${mat.nombre} (rol: ${mat.rol})`);
-            }
-        });
-        
-        console.log(`📊 Total de filas agregadas: ${filasAgregadas}`);
-    }
-    
-
-    
-    function crearFilaMatrizador(mat) {
-        const fila = document.createElement('tr');
-        fila.className = 'hover:bg-gray-50';
-        
-        // Calcular estado de eficiencia
-        let estadoEficiencia = 'regular';
-        let claseEficiencia = 'bg-red-100 text-red-800';
-        
-        if (mat.eficiencia >= 80) {
-            estadoEficiencia = 'excelente';
-            claseEficiencia = 'bg-green-100 text-green-800';
-        } else if (mat.eficiencia >= 60) {
-            estadoEficiencia = 'normal';
-            claseEficiencia = 'bg-yellow-100 text-yellow-800';
-        }
-        
-        fila.innerHTML = `
-            <td class="px-4 py-3">
-                <div>
-                    <h6 class="text-sm font-semibold text-gray-800">${mat.nombre}</h6>
-                    <p class="text-xs text-gray-500">${mat.rol}</p>
-                </div>
-            </td>
-            <td class="px-4 py-3">
-                <p class="text-xs font-bold text-yellow-600">${mat.en_proceso}</p>
-            </td>
-            <td class="px-4 py-3">
-                <p class="text-xs font-bold text-blue-600">${mat.listos}</p>
-            </td>
-            <td class="px-4 py-3">
-                <p class="text-xs font-bold text-green-600">${mat.entregados}</p>
-            </td>
-            <td class="px-4 py-3">
-                <p class="text-xs font-bold text-gray-800">$${mat.facturado}</p>
-            </td>
-            <td class="px-4 py-3">
-                <p class="text-xs font-bold text-green-600">$${mat.cobrado}</p>
-            </td>
-            <td class="px-4 py-3">
-                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${claseEficiencia}">
-                    ${mat.eficiencia}%
-                </span>
-            </td>
-        `;
-        
-        return fila;
-    }
-
-    function mostrarIndicadorCarga(mostrar) {
-        const indicador = document.getElementById('indicador-carga');
-        if (indicador) {
-            if (mostrar) {
-                indicador.classList.remove('hidden');
-            } else {
-                indicador.classList.add('hidden');
-            }
-        }
-        
-        // Deshabilitar botones durante la carga
-        document.querySelectorAll('.btn').forEach(btn => {
-            btn.disabled = mostrar;
-            btn.style.opacity = mostrar ? '0.6' : '1';
-        });
     }
 </script> 
 </script> 

@@ -352,7 +352,7 @@ async function manejarDashboardComparativo(req, res) {
     });
     
     res.render('admin/dashboard-argon', {
-      layout: 'admin',
+      layout: 'admin-argon',
       title: 'Análisis Comparativo - ProNotary',
       activeDashboard: true,
       userRole: req.matrizador?.rol,
@@ -1174,37 +1174,12 @@ exports.dashboard = async (req, res) => {
     
     // Obtener resumen por matrizadores
     const matrizadoresEjecutivos = await obtenerResumenMatrizadores(periodoEjecutivo.inicio, periodoEjecutivo.fin);
-    console.log('🧑‍💼 Matrizadores obtenidos:', matrizadoresEjecutivos.length, 'registros');
     
     // Obtener documentos recientes
     const documentosEjecutivos = await obtenerDocumentosRecientesReales(10);
 
-    // ============== SOPORTE PARA AJAX ==============
-    // Si la solicitud es AJAX, devolver solo los datos JSON
-    if (req.query.ajax === 'true') {
-      console.log('📡 Enviando respuesta AJAX con matrizadores:', matrizadoresEjecutivos.length);
-      return res.json({
-        success: true,
-        kpis: kpisEjecutivos,
-        periodo: {
-          actual: periodoEjecutivo.texto,
-          anterior: periodoEjecutivo.textoAnterior,
-          filtro: filtroEjecutivo
-        },
-        grafico: graficoEjecutivo,
-        documentos: documentosEjecutivos,
-        matrizadores: matrizadoresEjecutivos,
-        acciones: accionesEjecutivas,
-        resumen: {
-          totalDocumentos: kpisEjecutivos.documentos.valor,
-          totalFacturado: formatearMonedaSimple(kpisEjecutivos.ingresos.valor),
-          eficienciaGeneral: kpisEjecutivos.eficiencia.valor
-        }
-      });
-    }
-
     res.render('admin/dashboard', {
-      layout: 'admin',
+      layout: 'admin-argon',
       title: 'Panel de Control Ejecutivo - ProNotary',
       activeDashboard: true,
       userRole: req.matrizador?.rol,
@@ -1263,7 +1238,36 @@ exports.dashboard = async (req, res) => {
   }
 };
 
-
+/**
+ * Dashboard Tailwind CSS - Función de testing para migración
+ * Reutiliza la misma lógica que el dashboard principal
+ */
+exports.dashboardTailwind = async (req, res) => {
+  try {
+    // Guardar el render original
+    const originalRender = res.render;
+    
+    // Interceptar el render para usar el template y layout de Tailwind
+    res.render = function(view, options, callback) {
+      if (view === 'admin/dashboard') {
+        view = 'admin/dashboard-tailwind';
+        options.layout = 'main-tailwind';
+      }
+      return originalRender.call(this, view, options, callback);
+    };
+    
+    // Reutilizar la misma lógica que el dashboard principal
+    return await exports.dashboard(req, res);
+  } catch (error) {
+    console.error('Error en dashboard Tailwind:', error);
+    res.status(500).render('error', {
+      layout: false,
+      title: 'Error',
+      message: 'Error al cargar dashboard Tailwind',
+      error
+    });
+  }
+};
 
 /**
  * Función auxiliar para obtener datos de volumen de documentos para gráfico
@@ -4627,7 +4631,6 @@ async function obtenerAccionesPrioritariasReales() {
  */
 async function obtenerResumenMatrizadores(fechaInicio, fechaFin) {
   try {
-    console.log('🔍 Consultando matrizadores para período:', fechaInicio, 'a', fechaFin);
     const matrizadores = await sequelize.query(`
       SELECT 
         m.nombre,
@@ -4649,8 +4652,6 @@ async function obtenerResumenMatrizadores(fechaInicio, fechaFin) {
       type: sequelize.QueryTypes.SELECT
     });
     
-    console.log('📊 Matrizadores raw obtenidos:', matrizadores.length);
-    
     return matrizadores.map(m => {
       const totalDocs = parseInt(m.total_documentos) || 0;
       const entregados = parseInt(m.entregados) || 0;
@@ -4667,7 +4668,7 @@ async function obtenerResumenMatrizadores(fechaInicio, fechaFin) {
         eficiencia: eficiencia,
         estado: eficiencia >= 80 ? 'excelente' : eficiencia >= 60 ? 'normal' : 'critico'
       };
-    }).filter(m => m.rol !== 'admin' && m.rol !== 'caja' && m.rol !== 'recepcion');
+    });
     
   } catch (error) {
     console.error('❌ Error obteniendo matrizadores:', error);
@@ -4873,7 +4874,7 @@ exports.testDashboardEjecutivo = async (req, res) => {
     };
     
     res.render('admin/dashboard-ejecutivo', {
-      layout: 'admin',
+      layout: 'admin-argon',
       title: 'Panel de Control Ejecutivo (PRUEBA)',
       ...datosEjecutivos
     });

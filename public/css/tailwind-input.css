@@ -1,0 +1,5 @@
+/* Tailwind CSS directives - ignore CSS validation warnings */
+/* @tailwind directives are processed by PostCSS and Tailwind CLI */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

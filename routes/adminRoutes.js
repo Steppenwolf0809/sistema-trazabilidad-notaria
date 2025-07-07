@@ -31,6 +31,7 @@ router.use(validarAccesoConAuditoria(['admin']));
 
 // Panel principal (Dashboard Ejecutivo)
 router.get('/', adminController.dashboard);
+router.get('/dashboard', adminController.dashboard);
 router.get('/dashboard-ejecutivo', adminController.dashboard);
 
 // =============== API ENDPOINTS PARA DASHBOARD OPTIMIZADO ===============
