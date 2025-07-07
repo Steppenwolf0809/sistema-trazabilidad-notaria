@@ -27,7 +27,7 @@
   --table-border: var(--border-light);
   --table-hover: #f8faff;
   --table-header-bg: linear-gradient(135deg, #f1f5ff 0%, #e0e7ff 100%);
-  --table-header-color: var(--primary);
+  --table-header-color: #1e293b;
   --table-shadow: 0 1px 3px rgba(79, 70, 229, 0.1);
 }
 
@@ -2244,4 +2244,53 @@
 
 #modalDetalleNotificacion .table-sm td {
     padding: 0.5rem;
+}
+
+/* ====================================================
+   🔧 CORRECCIÓN DEFINITIVA HEADERS BLANCOS
+   Especificidad máxima para headers legibles
+   ==================================================== */
+
+/* Asegurar headers legibles en todas las tablas */
+.table th,
+.table thead th,
+.thead-light th,
+.table-header,
+.tabla-notaria th,
+.tabla-ordenable th,
+.table-documentos th,
+.table-universal th,
+#tablaDocumentosMatrizadores th {
+  color: #1e293b !important;
+  font-weight: 600 !important;
+  background-color: #f8f9fa !important;
+  border-bottom: 2px solid #dee2e6 !important;
+}
+
+/* Headers con hover */
+.table th:hover,
+.tabla-notaria th:hover,
+.tabla-ordenable th:hover {
+  color: #0f172a !important;
+  background-color: #e9ecef !important;
+}
+
+/* Iconos en headers */
+.table th .sort-icon,
+.tabla-notaria th .sort-icon,
+.tabla-ordenable th .sort-icon {
+  color: #64748b !important;
+}
+
+.table th:hover .sort-icon,
+.tabla-notaria th:hover .sort-icon,
+.tabla-ordenable th:hover .sort-icon {
+  color: #0f172a !important;
+}
+
+/* Asegurar que texto en spans dentro de headers sea legible */
+.table th span,
+.tabla-notaria th span,
+.tabla-ordenable th span {
+  color: #1e293b !important;
 }

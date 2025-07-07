@@ -71,4 +71,63 @@
   color: #495057 !important;
   background-color: #f8f9fa !important;
   font-weight: 600 !important;
+}
+
+/* ====================================================
+   🔧 CORRECCIÓN REFORZADA HEADERS BLANCOS v2.0
+   ==================================================== */
+
+/* Forzar texto oscuro en TODOS los headers - máxima especificidad */
+.table th,
+.table thead th,
+.table-hover th,
+.table-striped th,
+.table-bordered th,
+.tabla-notaria th,
+.tabla-ordenable th,
+.table-documentos th,
+table th,
+thead th,
+#tablaDocumentosMatrizadores th,
+.col-codigo, .col-cliente, .col-fecha, .col-estado, .col-pago, .col-valor, .col-acciones {
+  color: #1e293b !important;
+  font-weight: 600 !important;
+  background-color: #f8f9fa !important;
+  border-bottom: 2px solid #dee2e6 !important;
+}
+
+/* Específico para el ID de tabla de matrizadores */
+#tablaDocumentosMatrizadores thead th {
+  color: #1e293b !important;
+  background-color: #f8f9fa !important;
+  font-weight: 600 !important;
+}
+
+/* Elementos dentro de headers */
+.table th span,
+.tabla-notaria th span,
+.tabla-ordenable th span,
+#tablaDocumentosMatrizadores th span {
+  color: #1e293b !important;
+}
+
+/* Iconos en headers */
+.table th i,
+.tabla-notaria th i,
+.tabla-ordenable th i,
+.sort-icon {
+  color: #64748b !important;
+}
+
+/* Hover states reforzados */
+.table th:hover,
+.tabla-notaria th:hover,
+.tabla-ordenable th:hover {
+  color: #0f172a !important;
+  background-color: #e9ecef !important;
+}
+
+.table th:hover span,
+.table th:hover i {
+  color: #0f172a !important;
 } 
