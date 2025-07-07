@@ -41,10 +41,19 @@ temp/
 *.sublime-project
 *.sublime-workspace
 *.swp
-*.swo docs-cursor-temp/
-test_*.js
-repomix-output-*.xml
-# Documentación local para Cursor
-.cursor-docs/
-docs/plan-migracion-argon.md
-docs/resumen-conversacional.md
+*.swo
+
+# Exclusiones de organización de proyecto
+docs/
+scripts/
+temp/
+*debug*.js
+*test*.js
+*.md
+!README.md
+*.sql
+*.txt
+!package.json
+!package-lock.json
+!postcss.config.js
+!tailwind.config.js
