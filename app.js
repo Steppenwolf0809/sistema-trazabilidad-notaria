@@ -21,7 +21,7 @@ const { testConnection, syncModels } = require('./config/database');
 // Importar helpers personalizados de Handlebars
 const customHelpers = require('./utils/handlebarsHelpers');
 
-// Auto-setup mejorado para Render - Con sync directo de modelos (sin CLI)
+// Auto-setup simplificado para Render - Solo usuarios después del sync normal
 const setupDatabase = async () => {
   try {
     // Solo ejecutar en producción (Render)
@@ -30,60 +30,48 @@ const setupDatabase = async () => {
       return;
     }
     
-    console.log('🔧 Iniciando configuración automática de base de datos...');
-    console.log('👥 Usuarios reales de la notaría se crearán automáticamente');
-    console.log('⏳ Esperando que PostgreSQL esté completamente listo...');
+    console.log('🔧 Auto-setup simplificado - Solo creación de usuarios...');
+    console.log('⏳ Esperando que el sistema complete la sincronización normal...');
     
-    // Esperar tiempo para que PostgreSQL esté completamente inicializado
-    await new Promise(resolve => setTimeout(resolve, 5000)); // 5 segundos
+    // Esperar más tiempo para que el sistema complete su sync automático
+    await new Promise(resolve => setTimeout(resolve, 15000)); // 15 segundos
     
-    // Función para crear tablas directamente con Sequelize
-    const createTables = async () => {
-      try {
-        console.log('📋 Creando tablas directamente con Sequelize...');
-        
-        // Importar todos los modelos del índice
-        const models = require('./models');
-        
-        // Usar la configuración de base de datos existente
-        const { sequelize } = require('./config/database');
-        
-        // Verificar conexión
-        await sequelize.authenticate();
-        console.log('✅ Conexión a base de datos verificada');
-        
-        // Sincronizar todos los modelos (crear tablas)
-        await sequelize.sync({ 
-          force: false, // No recrear si ya existen
-          alter: true   // Ajustar si hay diferencias
-        });
-        
-        console.log('✅ Todas las tablas creadas/sincronizadas correctamente');
-        return true;
-        
-      } catch (error) {
-        console.log('❌ Error creando tablas:', error.message);
-        return false;
+    // Función para verificar que las tablas existen
+    const verificarTablas = async (maxIntentos = 10) => {
+      for (let i = 0; i < maxIntentos; i++) {
+        try {
+          console.log(`🔍 Verificando tablas (intento ${i + 1}/${maxIntentos})...`);
+          
+          const { Matrizador } = require('./models');
+          
+          // Intentar hacer una consulta simple para verificar que la tabla existe
+          await Matrizador.count();
+          console.log('✅ Tabla matrizadores verificada correctamente');
+          return true;
+          
+        } catch (error) {
+          console.log(`⏳ Intento ${i + 1} - Tabla aún no disponible: ${error.message}`);
+          if (i < maxIntentos - 1) {
+            await new Promise(resolve => setTimeout(resolve, 3000)); // 3 segundos entre intentos
+          }
+        }
       }
+      return false;
     };
     
-    // Crear tablas
-    const tablesCreated = await createTables();
-    if (!tablesCreated) {
-      console.log('⚠️ No se pudieron crear las tablas, omitiendo creación de usuarios');
+    // Verificar que las tablas estén listas
+    const tablasListas = await verificarTablas();
+    if (!tablasListas) {
+      console.log('❌ Las tablas no están disponibles después de varios intentos');
+      console.log('⚠️ Los usuarios deberán crearse manualmente');
       return;
     }
     
-    // 2. Crear usuarios reales de la notaría
+    // Crear usuarios una vez que las tablas están listas
     try {
       console.log('👥 Verificando usuarios existentes...');
       
-      // Importar modelo después de crear tablas
       const { Matrizador } = require('./models');
-      
-      // Dar tiempo para que las tablas se estabilicen
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
       const usuariosCount = await Matrizador.count();
       console.log(`👥 Usuarios existentes en base de datos: ${usuariosCount}`);
       
@@ -104,7 +92,6 @@ const setupDatabase = async () => {
             rol: 'admin',
             activo: true
           },
-          
           // MATRIZADORES
           {
             nombre: 'MAYRA CRISTINA CORELLA PARRA',
@@ -151,7 +138,6 @@ const setupDatabase = async () => {
             rol: 'matrizador',
             activo: true
           },
-          
           // CAJA
           {
             nombre: 'Cindy Pazmiño',
@@ -171,7 +157,6 @@ const setupDatabase = async () => {
             rol: 'caja',
             activo: true
           },
-          
           // RECEPCIÓN
           {
             nombre: 'KAROL VELASTEGUI',
@@ -200,7 +185,6 @@ const setupDatabase = async () => {
             rol: 'recepcion',
             activo: true
           },
-          
           // ARCHIVO
           {
             nombre: 'MARIA LUCINDA DIAZ PILATASIG',
@@ -233,29 +217,32 @@ const setupDatabase = async () => {
           }
         }
         
-        console.log(`\n📊 Resumen de usuarios creados:`);
-        console.log(`✅ Usuarios nuevos: ${usuariosCreados}`);
+        console.log(`\n📊 RESUMEN FINAL:`);
+        console.log(`✅ Usuarios nuevos creados: ${usuariosCreados}`);
         console.log(`📝 Contraseña temporal para todos: notaria123`);
         console.log(`⚠️ IMPORTANTE: Cambiar contraseñas después del primer login`);
         
-        // Verificar que los usuarios se crearon
+        // Verificar total final
         const totalUsuarios = await Matrizador.count();
         console.log(`📊 Total usuarios en sistema: ${totalUsuarios}`);
+        console.log(`🎉 ¡Sistema listo para que todo el personal de la notaría haga login!`);
         
       } else {
-        console.log('👥 Usuarios ya existen, omitiendo creación');
+        console.log('👥 Los usuarios ya existen en el sistema');
+        console.log(`📊 Total usuarios disponibles: ${usuariosCount}`);
+        console.log('✅ Sistema listo para login con usuarios existentes');
       }
       
     } catch (userError) {
-      console.log('❌ Error con usuarios:', userError.message);
-      console.log('⚠️ Login puede no funcionar hasta que se creen usuarios manualmente');
+      console.log('❌ Error final con usuarios:', userError.message);
+      console.log('⚠️ Los usuarios deberán crearse manualmente usando el panel admin');
     }
     
-    console.log('🎉 Auto-setup de notaría completado exitosamente');
+    console.log('🎉 Auto-setup completado - Sistema ProNotary listo para uso');
     
   } catch (error) {
-    console.log('❌ Error general en auto-setup:', error);
-    console.log('⚠️ Continuando con inicio normal del servidor...');
+    console.log('❌ Error en auto-setup simplificado:', error);
+    console.log('⚠️ El sistema funcionará, pero puede requerir creación manual de usuarios');
   }
 };
 
