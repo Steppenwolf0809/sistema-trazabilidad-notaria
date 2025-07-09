@@ -3,6 +3,9 @@
  * Configura el servidor Express y todas las rutas de la aplicación
  */
 
+// 🚨 CARGAR VARIABLES DE ENTORNO PRIMERO
+require('dotenv').config();
+
 // Importaciones de paquetes
 const express = require('express');
 const cors = require('cors');

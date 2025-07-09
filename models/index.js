@@ -14,6 +14,7 @@ const AuditoriaEliminacion = require('./AuditoriaEliminacion');
 const NotificacionEnviada = require('./NotificacionEnviada');
 const AutorizacionUrgente = require('./AutorizacionUrgente');
 const NotificacionGrupal = require('./NotificacionGrupal');
+const Pago = require('./Pago'); // 🚨 AGREGADO: Modelo crítico para sistema de pagos
 
 // Relaciones entre modelos
 
@@ -305,6 +306,28 @@ AutorizacionUrgente.belongsTo(Matrizador, {
   as: 'rechazador'
 });
 
+// ============== RELACIONES PARA SISTEMA DE PAGOS ==============
+
+// Relación Documento - Pago (Un documento puede tener muchos pagos)
+Documento.hasMany(Pago, {
+  foreignKey: 'documento_id',
+  as: 'pagos'
+});
+Pago.belongsTo(Documento, {
+  foreignKey: 'documento_id',
+  as: 'documento'
+});
+
+// Relación Matrizador - Pago (Un usuario puede registrar muchos pagos)
+Matrizador.hasMany(Pago, {
+  foreignKey: 'usuario_id',
+  as: 'pagosRealizados' // 🔧 CORREGIDO: Evitar conflicto con alias existente
+});
+Pago.belongsTo(Matrizador, {
+  foreignKey: 'usuario_id',
+  as: 'usuario'
+});
+
 // NOTA: Las relaciones para el sistema de notificaciones están definidas en models/Documento.js
 // para evitar conflictos de alias duplicados
 
@@ -324,5 +347,6 @@ module.exports = {
   AuditoriaEliminacion,
   NotificacionEnviada,
   AutorizacionUrgente,
-  NotificacionGrupal
+  NotificacionGrupal,
+  Pago // 🚨 EXPORTADO: Modelo crítico para sistema de pagos
 }; 
