@@ -6,12 +6,12 @@
 const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
-// Configuración optimizada para Render + desarrollo local
+// Configuración optimizada para Railway + desarrollo local
 let sequelize;
 
 if (process.env.DATABASE_URL) {
-  // Producción (Render) - Usar DATABASE_URL
-  console.log('🌐 Configurando conexión para producción (Render)...');
+  // Producción (Railway) - Usar DATABASE_URL
+  console.log('🌐 Configurando conexión para producción (Railway)...');
   sequelize = new Sequelize(process.env.DATABASE_URL, {
     dialect: 'postgres',
     logging: process.env.NODE_ENV === 'development' ? console.log : false,
