@@ -14,6 +14,8 @@ const Handlebars = require('handlebars'); // Importar Handlebars directamente
 const path = require('path');
 const bodyParser = require('body-parser');
 const session = require('express-session');
+const pgSession = require('connect-pg-simple')(session);
+const { Pool } = require('pg');
 const flash = require('connect-flash');
 const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
@@ -259,19 +261,59 @@ app.use(bodyParser.json()); // Parsea cuerpos de solicitud en formato JSON
 app.use(bodyParser.urlencoded({ extended: true })); // Parsea cuerpos de solicitud desde formularios
 app.use(cookieParser()); // Parse cookies
 
+// 🔧 CONFIGURACIÓN SESIONES PERSISTENTES POSTGRESQL
+let sessionStore;
+
+if (process.env.DATABASE_URL) {
+  console.log('🔧 Configurando sesiones persistentes en PostgreSQL (Railway)...');
+  
+  // Pool de conexiones PostgreSQL específico para sesiones
+  const sessionPool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    max: 5, // Máximo 5 conexiones para sesiones
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 2000,
+  });
+
+  // Event listeners para debugging sesiones
+  sessionPool.on('connect', () => {
+    console.log('📦 Nueva conexión al pool de sesiones PostgreSQL');
+  });
+
+  sessionPool.on('error', (err) => {
+    console.error('❌ Error en pool de sesiones PostgreSQL:', err);
+  });
+  
+  // Configurar PostgreSQL Store
+  sessionStore = new pgSession({
+    pool: sessionPool,
+    tableName: 'user_sessions',
+    createTableIfMissing: true, // Crear tabla automáticamente
+    pruneSessionInterval: 60 * 15, // Limpiar sesiones expiradas cada 15 min
+    errorLog: console.error
+  });
+  
+} else {
+  console.log('🔧 Configurando sesiones en MemoryStore (localhost)...');
+  sessionStore = undefined; // Usar MemoryStore por defecto
+}
+
 // Configuración de sesión
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'clave-secreta-notaria',
+  store: sessionStore,
+    secret: process.env.SESSION_SECRET || process.env.JWT_SECRET || 'clave-secreta-notaria',
   resave: false,
   saveUninitialized: false,
-  cookie: { 
-    maxAge: 7 * 24 * 60 * 60 * 1000, // Extender a 7 días
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+  name: 'notaria.sid', // Nombre personalizado para la cookie
+  cookie: {
+    maxAge: 24 * 60 * 60 * 1000, // 24 horas (más seguro que 7 días)
+    httpOnly: true, // Prevenir acceso desde JavaScript
+    secure: process.env.NODE_ENV === 'production', // HTTPS en producción
     path: '/',
-    sameSite: 'lax' // Valor más seguro que permite funcionalidad de redirecciones mientras mantiene protección CSRF
+    sameSite: 'lax' // Protección CSRF manteniendo funcionalidad
   },
-  rolling: true // Renueva el tiempo de expiración de la cookie en cada request
+  rolling: true // Renueva el tiempo de expiración en cada request
 }));
 
 // Configuración de flash messages
@@ -754,13 +796,29 @@ app.get('/', (req, res) => {
   }
 });
 
-// Ruta de logout global
+// Ruta de logout global mejorada
 app.get('/logout', (req, res) => {
-  // Eliminar la cookie del token
-  res.clearCookie('token');
+  console.log('🚪 Logout iniciado para usuario:', req.user?.nombre || 'Anónimo');
   
-  // Redirigir a la página de login
-  return res.redirect('/login');
+  // Destruir sesión en PostgreSQL
+  req.session.destroy((err) => {
+    if (err) {
+      console.error('❌ Error al destruir sesión:', err);
+      // Continuar con logout aunque falle la destrucción de sesión
+    } else {
+      console.log('✅ Sesión destruida correctamente');
+    }
+    
+    // Limpiar todas las cookies relacionadas
+    res.clearCookie('token');
+    res.clearCookie('notaria.sid'); // Cookie de sesión personalizada
+    res.clearCookie('connect.sid'); // Cookie por defecto de express-session
+    
+    console.log('🧹 Cookies limpiadas, redirigiendo a login');
+    
+    // Redirigir a la página de login
+    return res.redirect('/login');
+  });
 });
 
 // Manejo de rutas no encontradas
