@@ -464,6 +464,67 @@ function calcularFechasPorRango(rango) {
  * Diseñado para proporcionar información crítica y tomar decisiones informadas
  */
 
+// 🛡️ DASHBOARD ULTRA-SIMPLE COMO FALLBACK
+exports.dashboardSimple = async (req, res) => {
+  console.log('🛡️ Dashboard simple iniciado (modo seguro)...');
+  
+  try {
+    // Solo métricas absolutamente básicas
+    const metricas = {
+      totalDocumentos: 'Cargando...',
+      documentosHoy: 'Cargando...',
+      usuariosActivos: 'Cargando...',
+      sistema: 'Operativo'
+    };
+    
+    // Intentar métricas básicas con timeout corto
+    try {
+      const { Documento, Matrizador } = require('../models');
+      
+      // Timeout de 3 segundos para cada consulta
+      const timeoutPromise = (ms) => new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout')), ms)
+      );
+      
+      metricas.totalDocumentos = await Promise.race([
+        Documento.count(),
+        timeoutPromise(3000)
+      ]).catch(() => 'Error');
+      
+      metricas.usuariosActivos = await Promise.race([
+        Matrizador.count({ where: { activo: true } }),
+        timeoutPromise(3000)
+      ]).catch(() => 'Error');
+      
+    } catch (error) {
+      console.warn('⚠️ Error en métricas básicas:', error.message);
+    }
+    
+    res.render('admin/dashboard', {
+      title: 'Dashboard Admin (Modo Seguro)',
+      usuario: req.user,
+      stats: metricas,
+      documentosRecientes: [],
+      modoSeguro: true,
+      mensaje: 'Dashboard en modo seguro - Funcionalidad limitada',
+      layout: 'admin'
+    });
+    
+  } catch (error) {
+    console.error('❌ Error en dashboard simple:', error.message);
+    
+    // Último recurso: página de error amigable
+    res.render('admin/dashboard', {
+      title: 'Dashboard Admin (Error)',
+      usuario: req.user || { nombre: 'Usuario' },
+      stats: { error: 'Sistema temporalmente no disponible' },
+      documentosRecientes: [],
+      error: 'Dashboard temporalmente no disponible. Intente nuevamente.',
+      layout: 'admin'
+    });
+  }
+};
+
 exports.dashboardOptimizado = async (req, res) => {
   console.log('🚀 Dashboard optimizado para Railway iniciado...');
   const inicioTotal = Date.now();

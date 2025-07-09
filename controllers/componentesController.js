@@ -711,7 +711,7 @@ class ComponentesController {
           type: sequelize.QueryTypes.SELECT
         });
         
-        if (matrizadoresSobrecargados.length > 0) {
+        if (matrizadoresSobrecargados && matrizadoresSobrecargados.length > 0) {
           const totalSobrecargados = matrizadoresSobrecargados.length;
           const nombres = matrizadoresSobrecargados.map(m => `${m.nombre} (${m.docs_asignados})`).join(', ');
           

@@ -34,6 +34,9 @@ router.use(validarAccesoConAuditoria(['admin']));
 // 🚀 Dashboard optimizado para Railway
 router.get('/dashboard-optimizado', adminController.dashboardOptimizado);
 
+// 🛡️ Dashboard ultra-simple como fallback
+router.get('/dashboard-simple', adminController.dashboardSimple);
+
 router.get('/', adminController.dashboard);
 router.get('/dashboard', adminController.dashboard);
 router.get('/dashboard-ejecutivo', adminController.dashboard);

@@ -16,7 +16,8 @@ const helpers = {
   formatDateTime: (date) => {
     if (!date) return 'No registrada';
     if (date === 'now') return moment().format('DD/MM/YYYY HH:mm');
-    return moment(date).format('DD/MM/YYYY HH:mm');
+    // 🔧 FIX: Usar formatos específicos para evitar deprecation warning
+    return moment(date, ['YYYY-MM-DD HH:mm:ss', 'YYYY-MM-DD', 'DD/MM/YYYY', moment.ISO_8601], true).format('DD/MM/YYYY HH:mm');
   },
 
   // CRÍTICO: Este es el helper que faltaba
