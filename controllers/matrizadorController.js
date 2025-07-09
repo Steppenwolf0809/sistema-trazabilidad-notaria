@@ -1429,6 +1429,7 @@ const matrizadorController = {
   
   /**
    * Inicia sesión de un matrizador con email y contraseña
+   * 🚨 MEJORADO: Error handling robusto sin cuelgues del sistema
    * @param {Object} req - Objeto de solicitud Express
    * @param {Object} res - Objeto de respuesta Express
    */
@@ -1436,8 +1437,12 @@ const matrizadorController = {
     try {
       const { email, password } = req.body;
       
-      // Validar que se hayan proporcionado credenciales
+      console.log(`🔐 Intento de login: ${email || 'sin_email'} desde IP: ${req.ip || 'unknown'}`);
+      
+      // 🚨 VALIDACIÓN ROBUSTA: Credenciales proporcionadas
       if (!email || !password) {
+        console.log(`❌ Login fallido: Credenciales faltantes - Email: ${!!email}, Password: ${!!password}`);
+        
         if (req.path.startsWith('/api/')) {
           return res.status(400).json({
             exito: false,
@@ -1449,12 +1454,18 @@ const matrizadorController = {
         return res.redirect('/login');
       }
       
-      // Buscar el matrizador por email
+      // 🚨 BÚSQUEDA SEGURA: Usuario en base de datos
       const matrizador = await Matrizador.findOne({
-        where: { email, activo: true }
+        where: { 
+          email: email.toLowerCase().trim(), // Normalizar email
+          activo: true 
+        }
       });
       
+      // 🚨 MANEJO ROBUSTO: Usuario no encontrado (sin cuelgue)
       if (!matrizador) {
+        console.log(`❌ Login fallido: Usuario no encontrado - ${email}`);
+        
         if (req.path.startsWith('/api/')) {
           return res.status(401).json({
             exito: false,
@@ -1466,10 +1477,19 @@ const matrizadorController = {
         return res.redirect('/login');
       }
       
-      // Verificar la contraseña
-      const passwordValido = await bcrypt.compare(password, matrizador.password);
+      // 🚨 VERIFICACIÓN SEGURA: Contraseña (sin cuelgue)
+      let passwordValido = false;
+      try {
+        passwordValido = await bcrypt.compare(password, matrizador.password);
+      } catch (bcryptError) {
+        console.error(`❌ Error en verificación de password para ${email}:`, bcryptError.message);
+        passwordValido = false; // Asegurar que falle de forma segura
+      }
       
+      // 🚨 MANEJO ROBUSTO: Contraseña incorrecta (sin cuelgue)
       if (!passwordValido) {
+        console.log(`❌ Login fallido: Contraseña incorrecta - ${email}`);
+        
         if (req.path.startsWith('/api/')) {
           return res.status(401).json({
             exito: false,
@@ -1480,6 +1500,9 @@ const matrizadorController = {
         req.flash('error', 'Credenciales inválidas');
         return res.redirect('/login');
       }
+      
+      // ✅ LOGIN EXITOSO: Generar token y continuar
+      console.log(`✅ Login exitoso: ${email} (${matrizador.rol}) - IP: ${req.ip || 'unknown'}`);
       
       // Generar token JWT para sesión
       const token = jwt.sign(
@@ -1494,7 +1517,12 @@ const matrizadorController = {
       );
       
       // Actualizar fecha de último acceso
-      await matrizador.update({ ultimoAcceso: new Date() });
+      try {
+        await matrizador.update({ ultimoAcceso: new Date() });
+      } catch (updateError) {
+        console.warn(`⚠️ No se pudo actualizar último acceso para ${email}:`, updateError.message);
+        // No afectar el login si falla la actualización
+      }
       
       // Si es una vista, establecer cookies y redirigir
       if (!req.path.startsWith('/api/')) {
@@ -1529,18 +1557,28 @@ const matrizadorController = {
         },
         mensaje: 'Inicio de sesión exitoso'
       });
-    } catch (error) {
-      console.error('Error al iniciar sesión:', error);
       
+    } catch (error) {
+      // 🚨 MANEJO CRÍTICO: Error inesperado (NUNCA debe colgar sistema)
+      console.error('💥 Error crítico en login:', {
+        message: error.message,
+        stack: error.stack,
+        email: req.body?.email || 'unknown',
+        ip: req.ip || 'unknown',
+        timestamp: new Date().toISOString()
+      });
+      
+      // CRÍTICO: Respuesta de emergencia sin cuelgue
       if (req.path.startsWith('/api/')) {
         return res.status(500).json({
           exito: false,
-          mensaje: 'Error al iniciar sesión',
-          error: error.message
+          mensaje: 'Error interno del servidor. Intente nuevamente.',
+          timestamp: new Date().toISOString()
         });
       }
       
-      req.flash('error', `Error al iniciar sesión: ${error.message}`);
+      // Para vistas: redirigir con mensaje de error
+      req.flash('error', 'Error interno del servidor. Por favor, intente nuevamente.');
       return res.redirect('/login');
     }
   },
