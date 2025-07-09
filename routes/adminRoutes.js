@@ -30,6 +30,10 @@ router.use(validarAccesoConAuditoria(['admin']));
 // =============== FUNCIONES AUTORIZADAS PARA ADMIN ===============
 
 // Panel principal (Dashboard Ejecutivo)
+
+// 🚀 Dashboard optimizado para Railway
+router.get('/dashboard-optimizado', adminController.dashboardOptimizado);
+
 router.get('/', adminController.dashboard);
 router.get('/dashboard', adminController.dashboard);
 router.get('/dashboard-ejecutivo', adminController.dashboard);

@@ -4,7 +4,11 @@
  */
 
 const twilio = require('twilio');
+const moment = require('moment-timezone');
 const configNotaria = require('../config/notaria');
+
+// Zona horaria de Ecuador
+const TIMEZONE_ECUADOR = 'America/Guayaquil';
 
 // Configuración del servicio
 let configuracion = {
@@ -194,18 +198,13 @@ const generarMensajeEntregaConfirmada = (documento, datosEntrega) => {
     contextoTramite = ` - ${documento.notas.trim()}`;
   }
 
-  // Formatear fecha y hora
-  const fechaEntrega = new Date(datosEntrega.fechaEntrega || new Date()).toLocaleDateString('es-EC', {
-    day: '2-digit', 
-    month: '2-digit', 
-    year: 'numeric'
-  });
-  
-  const horaEntrega = new Date(datosEntrega.fechaEntrega || new Date()).toLocaleTimeString('es-EC', { 
-    hour: '2-digit', 
-    minute: '2-digit',
-    hour12: false
-  });
+  // 🇪🇨 Formatear fecha y hora CON ZONA HORARIA ECUADOR
+  const fechaEntregaEcuador = datosEntrega.fechaEntrega ? 
+    moment(datosEntrega.fechaEntrega).tz(TIMEZONE_ECUADOR) : 
+    moment().tz(TIMEZONE_ECUADOR);
+    
+  const fechaEntrega = fechaEntregaEcuador.format('DD/MM/YYYY');
+  const horaEntrega = fechaEntregaEcuador.format('HH:mm');
   
   // ✅ CORRECCIÓN: Aplicar censura directamente aquí
   const identificacionCensurada = censurarIdentificacion(datosEntrega.identificacionReceptor);
@@ -325,18 +324,13 @@ const generarMensajeEntregaGrupalConfirmada = (documentos, datosEntrega) => {
   const documentoPrincipal = documentos[0];
   const totalDocumentos = documentos.length;
   
-  // Formatear fecha y hora
-  const fechaEntrega = new Date(datosEntrega.fechaEntrega || new Date()).toLocaleDateString('es-EC', {
-    day: '2-digit', 
-    month: '2-digit', 
-    year: 'numeric'
-  });
-  
-  const horaEntrega = new Date(datosEntrega.fechaEntrega || new Date()).toLocaleTimeString('es-EC', { 
-    hour: '2-digit', 
-    minute: '2-digit',
-    hour12: false
-  });
+  // 🇪🇨 Formatear fecha y hora CON ZONA HORARIA ECUADOR
+  const fechaEntregaEcuador = datosEntrega.fechaEntrega ? 
+    moment(datosEntrega.fechaEntrega).tz(TIMEZONE_ECUADOR) : 
+    moment().tz(TIMEZONE_ECUADOR);
+    
+  const fechaEntrega = fechaEntregaEcuador.format('DD/MM/YYYY');
+  const horaEntrega = fechaEntregaEcuador.format('HH:mm');
   
   // Aplicar censura a la identificación
   const identificacionCensurada = censurarIdentificacion(datosEntrega.identificacionReceptor);

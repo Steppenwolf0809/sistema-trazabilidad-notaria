@@ -463,6 +463,103 @@ function calcularFechasPorRango(rango) {
  * Dashboard Administrativo EJECUTIVO PROFESIONAL
  * Diseñado para proporcionar información crítica y tomar decisiones informadas
  */
+
+exports.dashboardOptimizado = async (req, res) => {
+  console.log('🚀 Dashboard optimizado para Railway iniciado...');
+  const inicioTotal = Date.now();
+  
+  try {
+    
+// 🚀 OPTIMIZACIÓN RAILWAY: Timeout para consultas lentas
+const consultaConTimeout = async (consulta, timeout = 10000) => {
+  return Promise.race([
+    consulta(),
+    new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Query timeout')), timeout)
+    )
+  ]);
+};
+    
+// 🚀 OPTIMIZACIÓN RAILWAY: Cache simple en memoria
+const cache = new Map();
+const getCachedData = async (key, consulta, ttl = 60000) => {
+  const cached = cache.get(key);
+  if (cached && Date.now() - cached.timestamp < ttl) {
+    return cached.data;
+  }
+  
+  const data = await consulta();
+  cache.set(key, { data, timestamp: Date.now() });
+  return data;
+};
+    
+    // Datos esenciales únicamente (no todos los reportes)
+    const datosEsenciales = await consultaConTimeout(async () => {
+      
+// 🚀 OPTIMIZACIÓN RAILWAY: Combinar múltiples conteos en una query
+const estadisticasGenerales = await sequelize.query(`
+  SELECT 
+    (SELECT COUNT(*) FROM documentos) as totalDocumentos,
+    (SELECT COUNT(*) FROM matrizadores WHERE activo = true) as matrizadoresActivos,
+    (SELECT COUNT(*) FROM documentos WHERE estado = 'pendiente') as documentosPendientes,
+    (SELECT COUNT(*) FROM documentos WHERE estado = 'entregado') as documentosEntregados,
+    (SELECT COALESCE(SUM(CAST(valorFactura AS DECIMAL(10,2))), 0) FROM documentos WHERE valorFactura IS NOT NULL AND valorFactura != '' AND valorFactura != '0') as totalFacturado,
+    (SELECT COALESCE(SUM(CAST(valorRetencion AS DECIMAL(10,2))), 0) FROM documentos WHERE valorRetencion IS NOT NULL AND valorRetencion != '' AND valorRetencion != '0') as totalRetenido
+`, { type: sequelize.QueryTypes.SELECT });
+
+const stats = estadisticasGenerales[0];
+      return stats;
+    }, 8000); // Timeout 8 segundos
+    
+    // Solo últimos 5 documentos (no 50)
+    const documentosRecientes = await consultaConTimeout(async () => {
+      return await Documento.findAll({
+        limit: 5,
+        order: [['created_at', 'DESC']],
+        attributes: ['id', 'tipoDocumento', 'nombreCliente', 'estado'],
+        include: [
+          { 
+            model: Matrizador, 
+            as: 'matrizador',
+            attributes: ['nombre'],
+            required: false
+          }
+        ]
+      });
+    }, 5000);
+    
+    const tiempoTotal = Date.now() - inicioTotal;
+    console.log(`⚡ Dashboard optimizado cargado en ${tiempoTotal}ms`);
+    
+    res.render('admin/dashboard', {
+      title: 'Dashboard Admin (Optimizado)',
+      usuario: req.user,
+      stats: datosEsenciales,
+      documentosRecientes,
+      optimizado: true,
+      tiempoCarga: tiempoTotal,
+      layout: 'admin'
+    });
+    
+  } catch (error) {
+    console.error('❌ Error en dashboard optimizado:', error.message);
+    
+    // Fallback: dashboard mínimo
+    res.render('admin/dashboard', {
+      title: 'Dashboard Admin (Modo Seguro)',
+      usuario: req.user,
+      stats: { 
+        totalDocumentos: 'N/A',
+        matrizadoresActivos: 'N/A',
+        totalFacturado: 'N/A'
+      },
+      documentosRecientes: [],
+      error: 'Dashboard en modo seguro - Consultas tardaron demasiado',
+      layout: 'admin'
+    });
+  }
+};
+
 exports.dashboard = async (req, res) => {
   try {
     // 🔍 INICIO DE DEBUGGING - Dashboard Ejecutivo
