@@ -3,14 +3,14 @@
  * Contiene funciones para interactuar con la API y gestionar la interfaz de usuario
  */
 
-// Cuando el documento esté listo
+// Cuando el documento este listo
 document.addEventListener('DOMContentLoaded', function() {
   console.log('Sistema de Trazabilidad Documental - Frontend cargado');
   
-  // Actualizar año en el pie de página
+  // Actualizar ano en el pie de pagina
   actualizarAnioPiePagina();
   
-  // Inicializar formulario de verificación
+  // Inicializar formulario de verificacion
   inicializarFormularioVerificacion();
   
   // Inicializar ordenamiento de tablas
@@ -21,10 +21,10 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 /**
- * Actualiza el año en el pie de página
+ * Actualiza el ano en el pie de pagina
  */
 function actualizarAnioPiePagina() {
-  // Buscar todas las instancias de currentYear y reemplazarlas con el año actual
+  // Buscar todas las instancias de currentYear y reemplazarlas con el ano actual
   const currentYearElements = document.querySelectorAll('.current-year');
   const currentYear = new Date().getFullYear();
   
@@ -34,7 +34,7 @@ function actualizarAnioPiePagina() {
 }
 
 /**
- * Inicializa el formulario de verificación de documentos
+ * Inicializa el formulario de verificacion de documentos
  */
 function inicializarFormularioVerificacion() {
   const form = document.getElementById('verificar-form');
@@ -46,7 +46,7 @@ function inicializarFormularioVerificacion() {
       const codigoBarras = document.getElementById('codigo-barras').value.trim();
       
       if (!codigoBarras) {
-        mostrarAlerta('Por favor, ingrese un código de barras', 'danger');
+        mostrarAlerta('Por favor, ingrese un codigo de barras', 'danger');
         return;
       }
       
@@ -56,14 +56,14 @@ function inicializarFormularioVerificacion() {
 }
 
 /**
- * Verifica un documento mediante su código de barras
- * @param {string} codigoBarras - Código de barras del documento
+ * Verifica un documento mediante su codigo de barras
+ * @param {string} codigoBarras - Codigo de barras del documento
  */
 function verificarDocumento(codigoBarras) {
   // Mostrar indicador de carga
   mostrarAlerta('Verificando documento...', 'info');
   
-  // Hacer la petición a la API
+  // Hacer la peticion a la API
   fetch(`/api/documentos/buscar/codigo/${codigoBarras}`)
     .then(response => {
       if (!response.ok) {
@@ -73,7 +73,7 @@ function verificarDocumento(codigoBarras) {
     })
     .then(data => {
       if (data.exito) {
-        // Redirigir a la página de detalles del documento
+        // Redirigir a la pagina de detalles del documento
         window.location.href = `/documentos/detalle/${data.datos.id}`;
       } else {
         mostrarAlerta(data.mensaje, 'warning');
@@ -85,7 +85,7 @@ function verificarDocumento(codigoBarras) {
 }
 
 /**
- * Muestra una alerta en la página
+ * Muestra una alerta en la pagina
  * @param {string} mensaje - Mensaje a mostrar
  * @param {string} tipo - Tipo de alerta (success, danger, warning, info)
  */
@@ -121,22 +121,22 @@ function mostrarAlerta(mensaje, tipo = 'info') {
   // Agregar alerta al contenedor
   alertasContainer.appendChild(alertaDiv);
   
-  // Eliminar la alerta después de 5 segundos
+  // Eliminar la alerta despues de 5 segundos
   setTimeout(() => {
     alertaDiv.remove();
   }, 5000);
 }
 
 /**
- * 🔧 SISTEMA DE ORDENAMIENTO DE TABLAS UNIVERSAL CORREGIDO
- * Versión 2.0 - Soluciona problemas de CSS hover y ordenamiento bidireccional
+ * SISTEMA DE ORDENAMIENTO DE TABLAS UNIVERSAL CORREGIDO
+ * Version 2.0 - Soluciona problemas de CSS hover y ordenamiento bidireccional
  * 
  * PROBLEMAS CORREGIDOS:
- * ✅ Headers no se ponen blancos en hover
- * ✅ Ordenamiento bidireccional funcional
- * ✅ Iconos claros que indican dirección
- * ✅ Compatible con todos los roles
- * ✅ Manejo de errores robusto
+ * - Headers no se ponen blancos en hover
+ * - Ordenamiento bidireccional funcional
+ * - Iconos claros que indican direccion
+ * - Compatible con todos los roles
+ * - Manejo de errores robusto
  */
 
 // Estado global del ordenamiento mejorado
@@ -152,11 +152,11 @@ let estadoOrdenamientoGlobal = {
 };
 
 /**
- * 🚀 INICIALIZACIÓN PRINCIPAL DEL SISTEMA
- * Función principal que configura todas las tablas ordenables
+ * INICIALIZACION PRINCIPAL DEL SISTEMA
+ * Funcion principal que configura todas las tablas ordenables
  */
 function inicializarOrdenamientoTablas() {
-  console.log('🔄 [ORDENAMIENTO v2.0] Inicializando sistema corregido...');
+  console.log('ORDENAMIENTO v2.0 Inicializando sistema corregido...');
   
   try {
     // Inyectar CSS corregido primero
@@ -166,7 +166,7 @@ function inicializarOrdenamientoTablas() {
     const tablasOrdenables = document.querySelectorAll('.tabla-ordenable');
     
     if (tablasOrdenables.length === 0) {
-      console.log('ℹ️ [ORDENAMIENTO] No se encontraron tablas ordenables en esta página');
+      console.log('ORDENAMIENTO No se encontraron tablas ordenables en esta pagina');
       return;
     }
     
@@ -177,26 +177,26 @@ function inicializarOrdenamientoTablas() {
         configurarTablaOrdenableV2(tabla, index);
         tablasConfiguradas++;
       } catch (error) {
-        console.error(`❌ [ORDENAMIENTO] Error configurando tabla ${index}:`, error);
+        console.error(`ORDENAMIENTO Error configurando tabla ${index}:`, error);
       }
     });
     
-    console.log(`✅ [ORDENAMIENTO] Sistema configurado exitosamente para ${tablasConfiguradas}/${tablasOrdenables.length} tabla(s)`);
+    console.log(`ORDENAMIENTO Sistema configurado exitosamente para ${tablasConfiguradas}/${tablasOrdenables.length} tabla(s)`);
     
     // Restaurar estado si existe
     restaurarEstadoOrdenamiento();
     
   } catch (error) {
-    console.error('❌ [ORDENAMIENTO] Error crítico en inicialización:', error);
+    console.error('ORDENAMIENTO Error critico en inicializacion:', error);
   }
 }
 
 /**
- * 💉 INYECCIÓN DE CSS CORREGIDO
+ * INYECCION DE CSS CORREGIDO
  * Inyecta estilos que solucionan los problemas de hover blanco
  */
 function inyectarEstilosCorregidos() {
-  console.log('🎨 [ORDENAMIENTO] Inyectando CSS corregido...');
+  console.log('ORDENAMIENTO Inyectando CSS corregido...');
   
   // Verificar si ya existe
   if (document.getElementById('ordenamiento-css-corregido')) {
@@ -205,7 +205,7 @@ function inyectarEstilosCorregidos() {
   
   const estilosCorregidos = `
     <style id="ordenamiento-css-corregido">
-      /* 🔧 CORRECCIÓN CRÍTICA: Estilos de hover para headers ordenables */
+      /* CORRECCION CRITICA: Estilos de hover para headers ordenables */
       
       /* Estilos base para headers ordenables */
       .tabla-ordenable th.ordenable {
@@ -216,7 +216,7 @@ function inyectarEstilosCorregidos() {
         border-bottom: 2px solid transparent !important;
       }
       
-      /* 🎯 CORRECCIÓN PRINCIPAL: Hover apropiado según el tema */
+      /* CORRECCION PRINCIPAL: Hover apropiado segun el tema */
       
       /* Para tablas con fondo claro (table-light) */
       .table-light .tabla-ordenable th.ordenable:hover,
@@ -250,7 +250,7 @@ function inyectarEstilosCorregidos() {
         border-bottom-color: #ffc107 !important;
       }
       
-      /* 🎯 ICONOS DE ORDENAMIENTO MEJORADOS */
+      /* ICONOS DE ORDENAMIENTO MEJORADOS */
       .ordenamiento-icono {
         margin-left: 0.5rem !important;
         font-size: 0.8em !important;
@@ -287,14 +287,14 @@ function inyectarEstilosCorregidos() {
         100% { transform: scale(1.1); opacity: 1; }
       }
       
-      /* 🔧 CORRECCIONES ESPECÍFICAS PARA PROBLEMAS IDENTIFICADOS */
+      /* CORRECCIONES ESPECIFICAS PARA PROBLEMAS IDENTIFICADOS */
       
-      /* Sobrescribir estilos problemáticos de vistas específicas */
+      /* Sobrescribir estilos problematicos de vistas especificas */
       .tabla-ordenable th.ordenable:hover {
         background-color: unset !important;
       }
       
-      /* Aplicar estilos correctos según contexto */
+      /* Aplicar estilos correctos segun contexto */
       .table-light .tabla-ordenable th.ordenable:hover {
         background-color: rgba(0, 0, 0, 0.05) !important;
       }
@@ -343,16 +343,16 @@ function inyectarEstilosCorregidos() {
   `;
   
   document.head.insertAdjacentHTML('beforeend', estilosCorregidos);
-  console.log('✅ [ORDENAMIENTO] CSS corregido inyectado exitosamente');
+  console.log('ORDENAMIENTO CSS corregido inyectado exitosamente');
 }
 
-/**
- * ⚙️ CONFIGURACIÓN DE TABLA INDIVIDUAL
- * Configura una tabla específica para ordenamiento robusto
- */
+  /**
+   * CONFIGURACION DE TABLA INDIVIDUAL
+   * Configura una tabla especifica para ordenamiento robusto
+   */
 function configurarTablaOrdenableV2(tabla, indice) {
   const tablaId = tabla.id || `tabla-ordenable-${indice}`;
-  console.log(`📊 [ORDENAMIENTO] Configurando tabla: ${tablaId}`);
+  console.log(`ORDENAMIENTO Configurando tabla: ${tablaId}`);
   
   // Asignar ID si no tiene
   if (!tabla.id) {
@@ -363,7 +363,7 @@ function configurarTablaOrdenableV2(tabla, indice) {
   const headers = tabla.querySelectorAll('th.ordenable');
   
   if (headers.length === 0) {
-    console.warn(`⚠️ [ORDENAMIENTO] No se encontraron headers ordenables en tabla ${tablaId}`);
+    console.warn(`ORDENAMIENTO No se encontraron headers ordenables en tabla ${tablaId}`);
     return;
   }
   
@@ -372,19 +372,19 @@ function configurarTablaOrdenableV2(tabla, indice) {
     configurarHeaderOrdenable(header, tabla, headerIndex);
   });
   
-  console.log(`✅ [ORDENAMIENTO] Tabla ${tablaId} configurada con ${headers.length} columnas ordenables`);
+  console.log(`ORDENAMIENTO Tabla ${tablaId} configurada con ${headers.length} columnas ordenables`);
 }
 
-/**
- * 🎯 CONFIGURACIÓN DE HEADER INDIVIDUAL
- * Configura un header específico para ordenamiento
- */
+  /**
+   * CONFIGURACION DE HEADER INDIVIDUAL
+   * Configura un header especifico para ordenamiento
+   */
 function configurarHeaderOrdenable(header, tabla, indice) {
   const columna = header.getAttribute('data-columna');
   const tipoColumna = header.getAttribute('data-tipo') || 'texto';
   
   if (!columna) {
-    console.warn(`⚠️ [ORDENAMIENTO] Header ${indice} sin atributo data-columna`);
+    console.warn(`ORDENAMIENTO Header ${indice} sin atributo data-columna`);
     return;
   }
   
@@ -402,13 +402,13 @@ function configurarHeaderOrdenable(header, tabla, indice) {
     manejarClickHeaderV2(this, tabla, columna, tipoColumna);
   });
   
-  console.log(`🎯 [ORDENAMIENTO] Header configurado: ${columna} (${tipoColumna})`);
+  console.log(`ORDENAMIENTO Header configurado: ${columna} (${tipoColumna})`);
 }
 
-/**
- * 🏗️ CONFIGURACIÓN DE ESTRUCTURA DE HEADER
- * Asegura que el header tenga la estructura correcta
- */
+  /**
+   * CONFIGURACION DE ESTRUCTURA DE HEADER
+   * Asegura que el header tenga la estructura correcta
+   */
 function configurarEstructuraHeader(header, columna, tipoColumna) {
   // Buscar o crear el span del texto
   let spanTexto = header.querySelector('span');
@@ -436,18 +436,18 @@ function configurarEstructuraHeader(header, columna, tipoColumna) {
   header.setAttribute('title', `Clic para ordenar por ${spanTexto.textContent}`);
 }
 
-/**
- * 🖱️ MANEJO DE CLICK EN HEADER
- * Función principal que maneja el click en headers ordenables
- */
+  /**
+   * MANEJO DE CLICK EN HEADER
+   * Funcion principal que maneja el click en headers ordenables
+   */
 function manejarClickHeaderV2(header, tabla, columna, tipoColumna) {
-  console.log(`🖱️ [ORDENAMIENTO] Click en columna: ${columna} (${tipoColumna})`);
+  console.log(`ORDENAMIENTO Click en columna: ${columna} (${tipoColumna})`);
   
   try {
     // Mostrar estado de carga
     mostrarEstadoCarga(tabla, true);
     
-    // Determinar nueva dirección
+    // Determinar nueva direccion
     const direccionActual = header.getAttribute('data-direccion') || null;
     let nuevaDireccion;
     
@@ -459,7 +459,7 @@ function manejarClickHeaderV2(header, tabla, columna, tipoColumna) {
       nuevaDireccion = 'asc'; // Primera vez
     }
     
-    console.log(`📊 [ORDENAMIENTO] ${columna}: ${direccionActual || 'ninguna'} → ${nuevaDireccion}`);
+    console.log(`ORDENAMIENTO ${columna}: ${direccionActual || 'ninguna'} -> ${nuevaDireccion}`);
     
     // Actualizar estado global
     estadoOrdenamientoGlobal.columnaActual = columna;
@@ -472,19 +472,19 @@ function manejarClickHeaderV2(header, tabla, columna, tipoColumna) {
     // Ejecutar ordenamiento
     setTimeout(() => {
       ejecutarOrdenamiento(tabla, columna, nuevaDireccion, tipoColumna);
-    }, 100); // Pequeño delay para mostrar el cambio de UI
+    }, 100); // Pequeno delay para mostrar el cambio de UI
     
   } catch (error) {
-    console.error('❌ [ORDENAMIENTO] Error en manejo de click:', error);
+    console.error('ORDENAMIENTO Error en manejo de click:', error);
     mostrarEstadoCarga(tabla, false);
     mostrarError('Error al ordenar. Intente nuevamente.');
   }
 }
 
-/**
- * 🎨 ACTUALIZACIÓN DE UI DE HEADERS
- * Actualiza los iconos y estados visuales de todos los headers
- */
+  /**
+   * ACTUALIZACION DE UI DE HEADERS
+   * Actualiza los iconos y estados visuales de todos los headers
+   */
 function actualizarUIHeaders(tabla, columnaActiva, direccion) {
   const headers = tabla.querySelectorAll('th.ordenable');
   
@@ -504,7 +504,7 @@ function actualizarUIHeaders(tabla, columnaActiva, direccion) {
       header.classList.add('activo');
       header.setAttribute('data-direccion', direccion);
       
-      // Cambiar icono con animación
+      // Cambiar icono con animacion
       icono.classList.add('cambiando');
       
       setTimeout(() => {
@@ -519,12 +519,12 @@ function actualizarUIHeaders(tabla, columnaActiva, direccion) {
   });
 }
 
-/**
- * ⚡ EJECUCIÓN DE ORDENAMIENTO
- * Ejecuta el ordenamiento según el tipo de tabla
- */
+  /**
+   * EJECUCION DE ORDENAMIENTO
+   * Ejecuta el ordenamiento segun el tipo de tabla
+   */
 function ejecutarOrdenamiento(tabla, columna, direccion, tipoColumna) {
-  console.log(`⚡ [ORDENAMIENTO] Ejecutando: ${columna} (${direccion})`);
+  console.log(`ORDENAMIENTO Ejecutando: ${columna} (${direccion})`);
   
   try {
     // Determinar tipo de ordenamiento
@@ -538,66 +538,66 @@ function ejecutarOrdenamiento(tabla, columna, direccion, tipoColumna) {
     guardarEstadoOrdenamiento(columna, direccion);
     
   } catch (error) {
-    console.error('❌ [ORDENAMIENTO] Error en ejecución:', error);
+    console.error('ORDENAMIENTO Error en ejecucion:', error);
     mostrarEstadoCarga(tabla, false);
     mostrarError('Error al ordenar datos.');
   }
 }
 
-/**
- * 🌐 ORDENAMIENTO POR SERVIDOR
- * Maneja ordenamiento con recarga de página (mantiene filtros y paginación)
- */
+  /**
+   * ORDENAMIENTO POR SERVIDOR
+   * Maneja ordenamiento con recarga de pagina (mantiene filtros y paginacion)
+   */
 function ejecutarOrdenamientoServidor(columna, direccion) {
-  console.log(`🌐 [ORDENAMIENTO] Servidor: ${columna} (${direccion})`);
+  console.log(`ORDENAMIENTO Servidor: ${columna} (${direccion})`);
   
   try {
-    // Construir nueva URL con parámetros de ordenamiento
+    // Construir nueva URL con parametros de ordenamiento
     const url = new URL(window.location);
     
-    // Actualizar parámetros de ordenamiento
+    // Actualizar parametros de ordenamiento
     url.searchParams.set('ordenarPor', columna);
     url.searchParams.set('ordenDireccion', direccion);
     
-    // Resetear página a 1 para ver resultados ordenados desde el principio
+    // Resetear pagina a 1 para ver resultados ordenados desde el principio
     url.searchParams.set('page', '1');
     
-    console.log(`🔄 [ORDENAMIENTO] Navegando a: ${url.pathname}${url.search}`);
+    console.log(`ORDENAMIENTO Navegando a: ${url.pathname}${url.search}`);
     
     // Navegar a nueva URL
     window.location.href = url.toString();
     
   } catch (error) {
-    console.error('❌ [ORDENAMIENTO] Error en ordenamiento servidor:', error);
+    console.error('ORDENAMIENTO Error en ordenamiento servidor:', error);
     throw error;
   }
 }
 
 /**
- * 🏠 ORDENAMIENTO LOCAL
- * Maneja ordenamiento en el cliente (para tablas pequeñas)
+ * ORDENAMIENTO LOCAL
+ * Maneja ordenamiento en el cliente (para tablas pequenas)
  */
 function ejecutarOrdenamientoLocal(tabla, columna, direccion, tipoColumna) {
-  console.log(`🏠 [ORDENAMIENTO] Local: ${columna} (${direccion})`);
+  console.log(`ORDENAMIENTO Local: ${columna} (${direccion})`);
   
   try {
     const tbody = tabla.querySelector('tbody');
     if (!tbody) {
-      throw new Error('No se encontró tbody en la tabla');
+      throw new Error('No se encontro tbody en la tabla');
     }
     
     const filas = Array.from(tbody.querySelectorAll('tr'));
     
     if (filas.length === 0) {
-      console.log('ℹ️ [ORDENAMIENTO] No hay filas para ordenar');
+      console.log('ORDENAMIENTO No hay filas para ordenar');
       mostrarEstadoCarga(tabla, false);
       return;
     }
     
-    // Obtener índice de columna
+    // Obtener indice de columna
     const indiceColumna = obtenerIndiceColumna(tabla, columna);
     if (indiceColumna === -1) {
-      throw new Error(`No se encontró la columna: ${columna}`);
+      throw new Error(`No se encontro la columna: ${columna}`);
     }
     
     // Ordenar filas
@@ -616,18 +616,18 @@ function ejecutarOrdenamientoLocal(tabla, columna, direccion, tipoColumna) {
     // Ocultar estado de carga
     setTimeout(() => {
       mostrarEstadoCarga(tabla, false);
-      console.log('✅ [ORDENAMIENTO] Local completado');
+      console.log('ORDENAMIENTO Local completado');
     }, 300);
     
   } catch (error) {
-    console.error('❌ [ORDENAMIENTO] Error en ordenamiento local:', error);
+    console.error('ORDENAMIENTO Error en ordenamiento local:', error);
     mostrarEstadoCarga(tabla, false);
     throw error;
   }
 }
 
 /**
- * 🔍 FUNCIONES AUXILIARES DE ORDENAMIENTO
+ * FUNCIONES AUXILIARES DE ORDENAMIENTO
  */
 
 function esOrdenamientoLocal(tabla) {
@@ -649,14 +649,14 @@ function extraerValorCelda(fila, indiceColumna, tipoColumna) {
   const celda = fila.cells[indiceColumna];
   if (!celda) return '';
   
-  // Buscar valor específico para ordenamiento
+  // Buscar valor especifico para ordenamiento
   const valorSort = celda.getAttribute('data-sort-value');
   if (valorSort) return valorSort;
   
   // Extraer texto limpio
   let valor = celda.textContent.trim();
   
-  // Procesar según tipo
+  // Procesar segun tipo
   switch (tipoColumna) {
     case 'numero':
       valor = valor.replace(/[$,\s]/g, '');
@@ -680,7 +680,7 @@ function compararValores(a, b, tipoColumna) {
 }
 
 /**
- * 🎭 FUNCIONES DE UI Y ESTADO
+ * FUNCIONES DE UI Y ESTADO
  */
 
 function mostrarEstadoCarga(tabla, mostrar) {
@@ -692,9 +692,9 @@ function mostrarEstadoCarga(tabla, mostrar) {
 }
 
 function mostrarError(mensaje) {
-  console.error(`❌ [ORDENAMIENTO] ${mensaje}`);
+  console.error(`ORDENAMIENTO ${mensaje}`);
   
-  // Crear notificación temporal
+  // Crear notificacion temporal
   const alerta = document.createElement('div');
   alerta.className = 'alert alert-warning alert-dismissible fade show position-fixed';
   alerta.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 300px;';
@@ -706,7 +706,7 @@ function mostrarError(mensaje) {
   
   document.body.appendChild(alerta);
   
-  // Auto-remover después de 5 segundos
+  // Auto-remover despues de 5 segundos
   setTimeout(() => {
     if (alerta.parentNode) {
       alerta.remove();
@@ -715,7 +715,7 @@ function mostrarError(mensaje) {
 }
 
 /**
- * 💾 PERSISTENCIA DE ESTADO
+ * PERSISTENCIA DE ESTADO
  */
 
 function guardarEstadoOrdenamiento(columna, direccion) {
@@ -730,9 +730,9 @@ function guardarEstadoOrdenamiento(columna, direccion) {
     };
     
     localStorage.setItem('ordenamiento-estado', JSON.stringify(estado));
-    console.log(`💾 [ORDENAMIENTO] Estado guardado: ${columna} (${direccion})`);
+    console.log(`ORDENAMIENTO Estado guardado: ${columna} (${direccion})`);
   } catch (error) {
-    console.warn('⚠️ [ORDENAMIENTO] No se pudo guardar estado:', error);
+    console.warn('ORDENAMIENTO No se pudo guardar estado:', error);
   }
 }
 
@@ -745,11 +745,11 @@ function restaurarEstadoOrdenamiento() {
     
     const estado = JSON.parse(estadoGuardado);
     
-    // Verificar si es la misma página y no muy antiguo (1 hora)
+    // Verificar si es la misma pagina y no muy antiguo (1 hora)
     if (estado.url === window.location.pathname && 
         (Date.now() - estado.timestamp) < 3600000) {
       
-      console.log(`🔄 [ORDENAMIENTO] Restaurando estado: ${estado.columna} (${estado.direccion})`);
+      console.log(`ORDENAMIENTO Restaurando estado: ${estado.columna} (${estado.direccion})`);
       
       // Buscar header correspondiente y aplicar estado
       const header = document.querySelector(`th.ordenable[data-columna="${estado.columna}"]`);
@@ -763,26 +763,26 @@ function restaurarEstadoOrdenamiento() {
       }
     }
   } catch (error) {
-    console.warn('⚠️ [ORDENAMIENTO] Error restaurando estado:', error);
+    console.warn('ORDENAMIENTO Error restaurando estado:', error);
   }
 }
 
 /**
- * 🌍 EXPOSICIÓN GLOBAL
+ * EXPOSICION GLOBAL
  * Hacer funciones disponibles globalmente
  */
 window.inicializarOrdenamientoTablas = inicializarOrdenamientoTablas;
 window.estadoOrdenamientoGlobal = estadoOrdenamientoGlobal;
 
-// Auto-inicialización cuando el DOM esté listo
+// Auto-inicializacion cuando el DOM este listo
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', inicializarOrdenamientoTablas);
 } else {
-  // DOM ya está listo
+  // DOM ya esta listo
   setTimeout(inicializarOrdenamientoTablas, 100);
 }
 
-console.log('📚 [ORDENAMIENTO v2.0] Sistema universal cargado y listo');
+console.log('ORDENAMIENTO v2.0 Sistema universal cargado y listo');
 
 // ============== SISTEMA DE NOTIFICACIONES GRUPALES - SPRINT 3 ==============
 
@@ -792,8 +792,8 @@ console.log('📚 [ORDENAMIENTO v2.0] Sistema universal cargado y listo');
  * NOTIFICACIONES GRUPALES MOVIDAS A ARCHIVO SEPARADO
  * Ver: /public/js/notificaciones-grupales.js
  *
- * Esta sección fue eliminada para evitar conflictos con el archivo dedicado.
+ * Esta seccion fue eliminada para evitar conflictos con el archivo dedicado.
  * El sistema de notificaciones grupales ahora se maneja completamente en su propio archivo.
  */
 
-console.log('��� [MAIN.JS] Sistema principal cargado correctamente');
+console.log('MAIN.JS Sistema principal cargado correctamente');

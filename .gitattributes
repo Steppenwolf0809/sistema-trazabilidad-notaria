@@ -1,0 +1,18 @@
+# Establece codificación UTF-8 y line endings LF para archivos de texto
+*.js text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.hbs text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.sql text eol=lf
+
+# Archivos binarios no deben ser modificados
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary 
