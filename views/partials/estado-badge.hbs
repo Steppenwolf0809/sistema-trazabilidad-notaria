@@ -1,0 +1,35 @@
+{{! ✅ PARTIAL ESTADO-BADGE - Independiente para uso en cualquier template }}
+{{! Extraído del componente universal para evitar errores de referencias }}
+
+{{#if (eq estado "en_proceso")}}
+  <span class="badge bg-gradient-warning text-dark {{#if tamaño}}badge-{{tamaño}}{{/if}}">
+    <i class="fas fa-clock me-1"></i>En Proceso
+  </span>
+{{else if (eq estado "listo_para_entrega")}}
+  <span class="badge bg-gradient-info text-white {{#if tamaño}}badge-{{tamaño}}{{/if}}">
+    <i class="fas fa-check-circle me-1"></i>Listo para Entrega
+  </span>
+{{else if (eq estado "entregado")}}
+  <span class="badge bg-gradient-success text-white {{#if tamaño}}badge-{{tamaño}}{{/if}}">
+    <i class="fas fa-handshake me-1"></i>Entregado
+  </span>
+{{else if (eq estado "cancelado")}}
+  <span class="badge bg-gradient-danger text-white {{#if tamaño}}badge-{{tamaño}}{{/if}}">
+    <i class="fas fa-times-circle me-1"></i>Cancelado
+  </span>
+{{else if (eq estado "nota_credito")}}
+  <span class="badge bg-gradient-secondary text-white {{#if tamaño}}badge-{{tamaño}}{{/if}}">
+    <i class="fas fa-undo me-1"></i>Nota de Crédito
+  </span>
+{{else}}
+  <span class="badge bg-gradient-dark text-white {{#if tamaño}}badge-{{tamaño}}{{/if}}">
+    {{estado}}
+  </span>
+{{/if}}
+
+{{! ✅ NOTA TÉCNICA:
+    - Partial independiente para evitar errores "could not be found"
+    - Funcionalidad idéntica al define interno del componente universal
+    - Soporte para parámetro tamaño opcional (sm, md, lg)
+    - Compatible con todos los estados de documento del sistema
+}} 

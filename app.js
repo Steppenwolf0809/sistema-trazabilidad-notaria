@@ -724,6 +724,15 @@ app.set('views', path.join(__dirname, 'views'));
 // Servir archivos estáticos desde la carpeta 'public'
 app.use(express.static(path.join(__dirname, 'public')));
 
+// 🔧 FIX: Ruta específica para favicon.ico para evitar errores CSP
+app.get('/favicon.ico', (req, res) => {
+  // Usar emoji como favicon simple
+  res.status(200);
+  res.setHeader('Content-Type', 'image/x-icon');
+  res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache 1 día
+  res.end();
+});
+
 // Rutas de la API
 const documentoRoutes = require('./routes/documentoRoutes');
 const matrizadorRoutes = require('./routes/matrizadorRoutes');
