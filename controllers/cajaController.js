@@ -878,19 +878,31 @@ const cajaController = {
       // 🔧 CORECCIÓN: Si no hay pagos en tabla separada pero el documento está pagado,
       // crear un pago virtual para mostrar las opciones de corrección
       if (pagos.length === 0 && parseFloat(documento.valorPagado || 0) > 0) {
-        console.log(`📊 [CAJA-DETALLE] Documento ${documentoId}: Pago registrado al momento de creación, creando pago virtual`);
+        console.log(`📊 [CAJA-DETALLE] Documento ${documentoId}: Pago registrado, creando pago virtual`);
+        
+        // 🆕 NUEVO: Determinar si pago fue realmente "al crear" o "posterior"
+        const fechaCreacion = moment(documento.created_at);
+        const fechaActualizacion = moment(documento.updated_at);
+        const diferenciaMinutos = fechaActualizacion.diff(fechaCreacion, 'minutes');
+        
+        // Si la diferencia es <= 5 minutos, considerar "al crear"
+        const fueAlCrear = diferenciaMinutos <= 5;
+        
+        // 🔧 FIX: Usar método de pago del documento si existe, sino usar el valor por defecto
+        const metodoPago = documento.metodoPago || documento.formaPago || 'efectivo';
         
         // Crear objeto virtual que simula un pago para las correcciones
         const pagoVirtual = {
           id: `virtual_${documentoId}`,
           documento_id: documentoId,
           monto: documento.valorPagado,
-          forma_pago: 'efectivo', // Valor por defecto para pagos antiguos
-          fecha_pago: documento.created_at || documento.updatedAt,
+          forma_pago: metodoPago, // 🔧 FIX: Usar método real del documento
+          fecha_pago: documento.updated_at || documento.created_at, // Usar fecha de actualización
           es_retencion: false,
           revertido: false,
           esVirtual: true, // Flag para identificar que es virtual
-          observaciones: 'Pago registrado al momento de creación del documento'
+          fueAlCrear: fueAlCrear, // 🆕 NUEVO: Flag para determinar momento real
+          observaciones: fueAlCrear ? 'Pago registrado al crear documento' : 'Pago registrado posteriormente'
         };
         
         pagos.push(pagoVirtual);
@@ -941,6 +953,106 @@ const cajaController = {
         message: 'Error al cargar el documento',
         error
       });
+    }
+  },
+
+  /**
+   * 🆕 NUEVO: Corregir datos de pago
+   */
+  corregirDatosPago: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { metodoPago, valorPago, numeroComprobante, observaciones } = req.body;
+      
+      console.log(`📊 [CAJA-CORREGIR] Documento ${id}: Corrigiendo datos de pago`);
+      
+      // Obtener documento
+      const documento = await Documento.findByPk(id);
+      if (!documento) {
+        return res.status(404).json({ error: 'Documento no encontrado' });
+      }
+      
+      // Actualizar datos del documento
+      await documento.update({
+        metodoPago: metodoPago || documento.metodoPago,
+        valorPagado: valorPago || documento.valorPagado,
+        numeroComprobante: numeroComprobante || documento.numeroComprobante
+      });
+      
+      // Registrar en eventos
+      await EventoDocumento.create({
+        documento_id: id,
+        tipo_evento: 'correccion_pago',
+        descripcion: `Datos de pago corregidos: Método: ${metodoPago}, Valor: $${valorPago}`,
+        usuario_id: req.matrizador.id,
+        detalles: JSON.stringify({
+          metodoPago: metodoPago,
+          valorPago: valorPago,
+          numeroComprobante: numeroComprobante,
+          observaciones: observaciones
+        })
+      });
+      
+      console.log(`✅ [CAJA-CORREGIR] Documento ${id}: Datos corregidos exitosamente`);
+      res.redirect(`/caja/documentos/detalle/${id}`);
+      
+    } catch (error) {
+      console.error('❌ Error corrigiendo datos de pago:', error);
+      res.status(500).json({ error: 'Error interno del servidor' });
+    }
+  },
+
+  /**
+   * 🆕 NUEVO: Revertir pago
+   */
+  revertirPago: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { justificacion } = req.body;
+      
+      console.log(`📊 [CAJA-REVERTIR] Documento ${id}: Revirtiendo pago`);
+      
+      // Obtener documento
+      const documento = await Documento.findByPk(id);
+      if (!documento) {
+        return res.status(404).json({ error: 'Documento no encontrado' });
+      }
+      
+      // Guardar datos originales para auditoría
+      const datosOriginales = {
+        valorPagado: documento.valorPagado,
+        metodoPago: documento.metodoPago,
+        estadoPago: documento.estadoPago,
+        numeroComprobante: documento.numeroComprobante
+      };
+      
+      // Revertir pago
+      await documento.update({
+        valorPagado: 0,
+        metodoPago: null,
+        estadoPago: 'pendiente',
+        numeroComprobante: null
+      });
+      
+      // Registrar en eventos
+      await EventoDocumento.create({
+        documento_id: id,
+        tipo_evento: 'reversion_pago',
+        descripcion: `Pago revertido. Valor original: $${datosOriginales.valorPagado}`,
+        usuario_id: req.matrizador.id,
+        detalles: JSON.stringify({
+          datosOriginales: datosOriginales,
+          justificacion: justificacion,
+          fechaReversion: new Date()
+        })
+      });
+      
+      console.log(`✅ [CAJA-REVERTIR] Documento ${id}: Pago revertido exitosamente`);
+      res.redirect(`/caja/documentos/detalle/${id}`);
+      
+    } catch (error) {
+      console.error('❌ Error revirtiendo pago:', error);
+      res.status(500).json({ error: 'Error interno del servidor' });
     }
   },
 

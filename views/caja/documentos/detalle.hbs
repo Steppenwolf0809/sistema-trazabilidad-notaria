@@ -290,7 +290,10 @@
                             | <strong>Obs:</strong> {{this.observaciones}}
                             {{/if}}
                             {{#if this.esVirtual}}
-                            | <span class="text-info"><i class="fas fa-info-circle"></i> Registrado al crear documento</span>
+                            | <span class="{{#if this.fueAlCrear}}text-info{{else}}text-warning{{/if}}">
+                                <i class="fas fa-info-circle"></i> 
+                                {{#if this.fueAlCrear}}Registrado al crear documento{{else}}Registrado posteriormente{{/if}}
+                              </span>
                             {{/if}}
                           </p>
                         </div>
@@ -3111,6 +3114,140 @@ document.addEventListener('DOMContentLoaded', function() {
 
   console.log('📖 Vista caja con modal de reversiones completo cargada para documento {{documento.codigoBarras}}');
 });
+
+// 🆕 NUEVO: Funciones para botones de corrección de pagos
+function corregirPagoVirtual(pagoId, monto, metodoPago) {
+  console.log('🔧 Corrigiendo pago virtual:', pagoId, monto, metodoPago);
+  
+  // Extraer ID del documento del pagoId virtual
+  const documentoId = pagoId.replace('virtual_', '');
+  
+  // Crear modal dinámico para corrección
+  const modalHtml = `
+    <div class="modal fade" id="modalCorregirPago" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Corregir Datos de Pago</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <form action="/caja/documentos/${documentoId}/corregir-pago" method="POST">
+            <div class="modal-body">
+              <div class="mb-3">
+                <label class="form-label">Método de Pago</label>
+                <select class="form-select" name="metodoPago" required>
+                  <option value="efectivo" ${metodoPago === 'efectivo' ? 'selected' : ''}>Efectivo</option>
+                  <option value="transferencia" ${metodoPago === 'transferencia' ? 'selected' : ''}>Transferencia</option>
+                  <option value="tarjeta" ${metodoPago === 'tarjeta' ? 'selected' : ''}>Tarjeta</option>
+                  <option value="cheque" ${metodoPago === 'cheque' ? 'selected' : ''}>Cheque</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Valor del Pago</label>
+                <input type="number" class="form-control" name="valorPago" step="0.01" value="${monto}" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Número de Comprobante (opcional)</label>
+                <input type="text" class="form-control" name="numeroComprobante">
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Observaciones (opcional)</label>
+                <textarea class="form-control" name="observaciones" rows="3"></textarea>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+              <button type="submit" class="btn btn-primary">Guardar Corrección</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // Agregar modal al DOM y mostrarlo
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+  const modal = new bootstrap.Modal(document.getElementById('modalCorregirPago'));
+  modal.show();
+  
+  // Limpiar modal cuando se cierre
+  document.getElementById('modalCorregirPago').addEventListener('hidden.bs.modal', function() {
+    this.remove();
+  });
+}
+
+function deshacerPagoVirtual(pagoId, monto, metodoPago) {
+  console.log('🔄 Revirtiendo pago virtual:', pagoId, monto, metodoPago);
+  
+  // Extraer ID del documento del pagoId virtual
+  const documentoId = pagoId.replace('virtual_', '');
+  
+  // Crear modal dinámico para reversión
+  const modalHtml = `
+    <div class="modal fade" id="modalRevertirPago" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header bg-warning">
+            <h5 class="modal-title">⚠️ Revertir Pago</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <form action="/caja/documentos/${documentoId}/revertir-pago" method="POST">
+            <div class="modal-body">
+              <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                <strong>¡Atención!</strong> Esta acción eliminará el pago de <strong>$${monto}</strong> registrado por <strong>${metodoPago}</strong>.
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Justificación (requerida)</label>
+                <textarea class="form-control" name="justificacion" rows="3" required 
+                          placeholder="Explique por qué se está revirtiendo este pago..."></textarea>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="confirmarReversion" required>
+                <label class="form-check-label" for="confirmarReversion">
+                  Confirmo que deseo revertir este pago y que la justificación es correcta
+                </label>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+              <button type="submit" class="btn btn-warning">Revertir Pago</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // Agregar modal al DOM y mostrarlo
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+  const modal = new bootstrap.Modal(document.getElementById('modalRevertirPago'));
+  modal.show();
+  
+  // Limpiar modal cuando se cierre
+  document.getElementById('modalRevertirPago').addEventListener('hidden.bs.modal', function() {
+    this.remove();
+  });
+}
+
+// Funciones para pagos normales (no virtuales)
+function corregirPago(pagoId, monto, metodoPago) {
+  console.log('🔧 Corrigiendo pago normal:', pagoId, monto, metodoPago);
+  // Reutilizar la función de pago virtual ya que la lógica es similar
+  corregirPagoVirtual(`virtual_{{documento.id}}`, monto, metodoPago);
+}
+
+function deshacerPago(pagoId, monto, metodoPago) {
+  console.log('🔄 Revirtiendo pago normal:', pagoId, monto, metodoPago);
+  // Reutilizar la función de pago virtual ya que la lógica es similar
+  deshacerPagoVirtual(`virtual_{{documento.id}}`, monto, metodoPago);
+}
+
+function deshacerRetencion(pagoId, monto, metodoPago) {
+  console.log('🔄 Revirtiendo retención:', pagoId, monto, metodoPago);
+  // Reutilizar la función de pago virtual ya que la lógica es similar
+  deshacerPagoVirtual(`virtual_{{documento.id}}`, monto, metodoPago);
+}
 </script>
 {{else}}
 <div class="alert alert-warning">

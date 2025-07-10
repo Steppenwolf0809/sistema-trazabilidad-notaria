@@ -58,6 +58,10 @@ router.get('/documentos/detalle/:id', cajaController.verDocumento);
 router.get('/documentos/detalle/:id/pago', cajaController.mostrarFormularioRegistrarPago);
 router.post('/registrar-pago', upload.none(), cajaController.registrarPago);
 
+// 🆕 NUEVO: Rutas para corrección de pagos
+router.post('/documentos/:id/corregir-pago', cajaController.corregirDatosPago);
+router.post('/documentos/:id/revertir-pago', cajaController.revertirPago);
+
 // NUEVO: Procesamiento de XML de retención (ÚNICO método soportado)
 router.post('/procesar-xml-retencion', upload.single('xmlRetencion'), cajaController.procesarXMLRetencion);
 

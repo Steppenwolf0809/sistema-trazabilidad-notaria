@@ -16,8 +16,21 @@ const helpers = {
   formatDateTime: (date) => {
     if (!date) return 'No registrada';
     if (date === 'now') return moment().format('DD/MM/YYYY HH:mm');
-    // 🔧 FIX: Usar formatos específicos para evitar deprecation warning
-    return moment(date, ['YYYY-MM-DD HH:mm:ss', 'YYYY-MM-DD', 'DD/MM/YYYY', moment.ISO_8601], true).format('DD/MM/YYYY HH:mm');
+    
+    try {
+      // 🔧 FIX: Mejorar manejo de fechas para evitar "Fecha inválida"
+      const momentDate = moment(date, ['YYYY-MM-DD HH:mm:ss', 'YYYY-MM-DD', 'DD/MM/YYYY', moment.ISO_8601], true);
+      
+      if (!momentDate.isValid()) {
+        console.error('❌ formatDateTime: Fecha inválida:', date);
+        return 'Fecha inválida';
+      }
+      
+      return momentDate.format('DD/MM/YYYY HH:mm');
+    } catch (error) {
+      console.error('❌ formatDateTime: Error procesando fecha:', error, 'Fecha:', date);
+      return 'Error en fecha';
+    }
   },
 
   // CRÍTICO: Este es el helper que faltaba
