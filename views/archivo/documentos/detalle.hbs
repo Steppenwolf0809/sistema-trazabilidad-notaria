@@ -1,8 +1,8 @@
-{{! ✅ DETALLE DE DOCUMENTO ARCHIVO - MIGRADO AL COMPONENTE UNIVERSAL }}
-{{! Soluciona problema de layout en columnas ilegibles }}
+{{! ✅ DETALLE DE DOCUMENTO ARCHIVO - LAYOUT MEJORADO CON HISTORIAL }}
+{{! Soluciona problema de layout en columnas ilegibles + Agrega historial completo }}
 
 {{#if documento}}
-  {{! ✅ USO DEL COMPONENTE UNIVERSAL - Layout vertical legible }}
+  {{! ✅ USO DEL COMPONENTE UNIVERSAL - Layout vertical legible con historial }}
   {{> detalle-documento-universal 
       documento=documento 
       rol="archivo" 
@@ -14,6 +14,18 @@
       )
       accionesDisponibles=(buildAccionesArchivo documento esDocumentoPropio)
   }}
+
+  {{! ============== HISTORIAL COMPLETO DEL DOCUMENTO ============== }}
+  {{#if eventos}}
+  <div class="container-fluid mt-4">
+    <div class="row">
+      <div class="col-12">
+        {{> historial-universal eventos=eventos}}
+      </div>
+    </div>
+  </div>
+  {{/if}}
+  {{! ============== FIN HISTORIAL ============== }}
 
   {{! ============== SECCIÓN ESPECÍFICA DE ARCHIVO: NOTIFICACIONES GRUPALES ============== }}
   {{#if esDocumentoPropio}}

@@ -18,7 +18,7 @@ const NotificacionEnviada = require('../models/NotificacionEnviada');
 const NotificacionGrupal = require('../models/NotificacionGrupal');
 
 // Importar servicios de notificación
-const notificationService = require('../services/notificationService');
+const NotificationService = require('../services/notificationService');
 const { obtenerHistorialUniversal } = require('../utils/historialUniversal');
 const notificacionController = require('./notificacionController');
 
@@ -449,20 +449,25 @@ const archivoController = {
         });
       }
 
-      // 🆕 NUEVO: Usar historial universal
+      // 🆕 NUEVO: Usar historial universal con formato completo para archivo
       const eventos = await obtenerHistorialUniversal(documentoId, 'archivo', {
         incluirInformacionCompleta: true,
-        mostrarDetallesArchivo: true
+        mostrarDetallesArchivo: true,
+        formatoCompleto: true,
+        incluirColores: true,
+        incluirIconos: true
       });
 
       // Verificar si es documento propio (puede editar) o ajeno (solo lectura)
       const esDocumentoPropio = documento.idMatrizador === req.matrizador.id;
 
+      console.log(`📋 [ARCHIVO] Detalle documento ${documentoId}: ${eventos?.length || 0} eventos cargados`);
+
       res.render('archivo/documentos/detalle', {
         layout: 'archivo',
         title: `Documento ${documento.codigoBarras || documento.id}`,
         documento,
-        eventos,
+        eventos: eventos || [], // Asegurar que siempre sea un array
         esDocumentoPropio,
         userRole: req.matrizador?.rol,
         userName: req.matrizador?.nombre,
@@ -1096,7 +1101,7 @@ const archivoController = {
           // Recargar documento con datos actualizados para notificación
           const documentoActualizado = await Documento.findByPk(documentoId);
           
-          const resultadoNotificacion = await notificationService.enviarNotificacionDocumentoListo(documentoActualizado.id);
+          const resultadoNotificacion = await NotificationService.enviarNotificacionDocumentoListo(documentoActualizado.id);
           
           console.log('✅ [ARCHIVO] Notificación procesada para documento', documentoActualizado.codigoBarras);
           console.log('   Canales enviados:', resultadoNotificacion.canalesEnviados || 'ninguno');
@@ -1271,7 +1276,7 @@ const archivoController = {
       // Enviar notificación de entrega (fuera de la transacción)
       try {
         // ✅ CORRECCIÓN: Usar función correcta del servicio centralizado
-        await notificationService.enviarNotificacionEntrega(documento.id, {
+        await NotificationService.enviarNotificacionEntrega(documento.id, {
           nombreReceptor,
           identificacionReceptor,
           relacionReceptor,
