@@ -309,7 +309,7 @@ const archivoController = {
   listarMisDocumentos: async (req, res) => {
     try {
       const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 25;
+      const limit = parseInt(req.query.limit) || 20;  // ← CORREGIDO: 20 documentos por página
       const offset = (page - 1) * limit;
 
       // ✨ NUEVO: Parámetros de ordenamiento
@@ -1208,6 +1208,15 @@ const archivoController = {
         });
       }
 
+      // ✅ CORREGIDO: Primero extraer datos del body, luego validar
+      const {
+        nombreReceptor,
+        identificacionReceptor,
+        relacionReceptor,
+        observacionesEntrega,
+        codigoVerificacion
+      } = req.body;
+
       // VALIDACIÓN CRÍTICA: Verificar código de verificación
       if (!codigoVerificacion) {
         await transaction.rollback();
@@ -1231,14 +1240,6 @@ const archivoController = {
       }
 
       console.log(`✅ Código de verificación correcto para documento ${documento.codigoBarras}: ${codigoVerificacion}`);
-
-      const {
-        nombreReceptor,
-        identificacionReceptor,
-        relacionReceptor,
-        observacionesEntrega,
-        codigoVerificacion
-      } = req.body;
 
       // Actualizar documento como entregado
       await documento.update({

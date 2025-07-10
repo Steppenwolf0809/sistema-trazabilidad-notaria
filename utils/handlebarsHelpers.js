@@ -1111,6 +1111,96 @@ const helpers = {
   hayPagosNoRevertidos: (pagos) => {
     if (!pagos || !Array.isArray(pagos)) return false;
     return pagos.some(pago => !pago.revertido);
+  },
+
+  /**
+   * ✅ NUEVO: Helper para construir acciones disponibles para el rol archivo
+   * Usado en el componente universal de detalle de documento
+   */
+  buildAccionesArchivo: (documento, esDocumentoPropio) => {
+    if (!documento) return [];
+    
+    const acciones = [];
+    
+    // Solo si es documento propio
+    if (esDocumentoPropio) {
+      // Editar - solo si está en proceso
+      if (documento.estado === 'en_proceso') {
+        acciones.push({
+          tipo: 'editar',
+          texto: 'Editar',
+          enlace: `/archivo/documentos/editar/${documento.id}`,
+          icono: 'fas fa-edit',
+          clase: 'btn-primary'
+        });
+      }
+      
+      // Marcar como listo - solo si está en proceso
+      if (documento.estado === 'en_proceso') {
+        acciones.push({
+          tipo: 'marcar_listo',
+          texto: 'Marcar Listo',
+          enlace: '#',
+          icono: 'fas fa-check',
+          clase: 'btn-success',
+          onclick: `marcarListo(${documento.id})`
+        });
+      }
+      
+      // Entregar - solo si está listo para entrega
+      if (documento.estado === 'listo_para_entrega') {
+        acciones.push({
+          tipo: 'entregar',
+          texto: 'Entregar',
+          enlace: `/archivo/documentos/entrega/${documento.id}`,
+          icono: 'fas fa-hand-holding',
+          clase: 'btn-warning'
+        });
+      }
+    }
+    
+    return acciones;
+  },
+
+  /**
+   * ✅ HELPER CRÍTICO: Define para partials internos en templates
+   * Usado por el componente universal para definir partials como estado-badge
+   */
+  define: function(name, options) {
+    if (!this._partials) this._partials = {};
+    this._partials[name] = options.fn(this);
+    return '';
+  },
+
+  /**
+   * ✅ HELPER CRÍTICO: Object para crear objetos en templates Handlebars
+   * Usado para pasar permisos al componente universal
+   */
+  object: function(...args) {
+    // El último argumento son las opciones de Handlebars
+    const options = args.pop();
+    const obj = {};
+    
+    // Procesar argumentos de la forma key=value
+    for (let i = 0; i < args.length; i++) {
+      const arg = args[i];
+      if (typeof arg === 'string' && arg.includes('=')) {
+        const [key, value] = arg.split('=');
+        obj[key] = value === 'true' ? true : value === 'false' ? false : value;
+      }
+    }
+    
+    return obj;
+  },
+
+  /**
+   * ✅ HELPER AUXILIAR: and para operaciones lógicas complejas
+   * Usado en el componente universal para evaluaciones de permisos
+   */
+  and: function(...args) {
+    // El último argumento son las opciones de Handlebars
+    args.pop();
+    return args.every(arg => !!arg);
   }
 };
 

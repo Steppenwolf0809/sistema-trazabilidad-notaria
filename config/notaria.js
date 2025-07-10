@@ -14,19 +14,17 @@ const configNotaria = {
   // Plantillas de mensajes
   plantillas: {
     documentoListo: {
-      whatsapp: `🏛️ *NOTARÍA 18*
+      // ✅ NUEVO: Plantilla para documentos PAGADOS
+      whatsappPagado: "🏛️ *NOTARÍA 18*\n\n¡Su documento está listo para retirar!\n\n📄 *Trámite:* {{tipoDocumento}}{{contextoTramite}}\n📋 *Documento:* {{codigoBarras}}\n👤 *Cliente:* {{nombreCliente}}\n\n✅ *PAGO CONFIRMADO*\n🔢 *Código de retiro:* {{codigoVerificacion}}\n\n📋 *PARA RETIRAR:*\n• Presentar código de retiro\n• Presentar identificación\n\n📍 *Ubicación:* Notaría Décima Octava\n🕒 *Horario:* Lunes a Viernes 8:00-17:00\n\nGracias por confiar en nosotros.",
 
-¡Su documento está listo para retirar!
+      // ✅ NUEVO: Plantilla para documentos NO PAGADOS
+      whatsappNoPagado: "🏛️ *NOTARÍA 18*\n\n¡Su documento está listo para retirar!\n\n📄 *Trámite:* {{tipoDocumento}}{{contextoTramite}}\n📋 *Documento:* {{codigoBarras}}\n👤 *Cliente:* {{nombreCliente}}\n\n⚠️ *IMPORTANTE: PAGO PENDIENTE*\n💰 *Valor a pagar:* ${{valorFactura}}\n🔢 *Código de retiro:* {{codigoVerificacion}}\n\n📋 *PASOS PARA RETIRAR:*\n1️⃣ Realizar el pago en caja\n2️⃣ Presentar código de retiro\n3️⃣ Retirar documento\n\n📍 *Ubicación:* Notaría Décima Octava\n🕒 *Horario:* Lunes a Viernes 8:00-17:00\n\nGracias por confiar en nosotros.",
 
-📄 *Trámite:* {{tipoDocumento}}{{contextoTramite}}
-📋 *Documento:* {{codigoBarras}}
-🔢 *Código de verificación:* {{codigoVerificacion}}
-👤 *Cliente:* {{nombreCliente}}
+      // ✅ NUEVO: Plantilla para documentos con PAGO PARCIAL
+      whatsappPagoParcial: "🏛️ *NOTARÍA 18*\n\n¡Su documento está listo para retirar!\n\n📄 *Trámite:* {{tipoDocumento}}{{contextoTramite}}\n📋 *Documento:* {{codigoBarras}}\n👤 *Cliente:* {{nombreCliente}}\n\n⚠️ *PAGO PARCIAL REALIZADO*\n💰 *Saldo pendiente:* ${{valorPendiente}}\n🔢 *Código de retiro:* {{codigoVerificacion}}\n\n📋 *PASOS PARA RETIRAR:*\n1️⃣ Completar el pago del saldo\n2️⃣ Presentar código de retiro\n3️⃣ Retirar documento\n\n📍 *Ubicación:* Notaría Décima Octava\n🕒 *Horario:* Lunes a Viernes 8:00-17:00\n\nGracias por confiar en nosotros.",
 
-📍 Retírelo en: Notaría Décima Octava
-🕒 Horario: Lunes a Viernes 8:00-17:00
-
-⚠️ *IMPORTANTE:* Presente el código de verificación y su cédula para el retiro.`,
+      // ✅ PLANTILLA GENÉRICA DE RESPALDO (sin información de pago)
+      whatsapp: "🏛️ *NOTARÍA 18*\n\n¡Su documento está listo para retirar!\n\n📄 *Trámite:* {{tipoDocumento}}{{contextoTramite}}\n📋 *Documento:* {{codigoBarras}}\n🔢 *Código de verificación:* {{codigoVerificacion}}\n👤 *Cliente:* {{nombreCliente}}\n\n📍 Retírelo en: Notaría Décima Octava\n🕒 Horario: Lunes a Viernes 8:00-17:00\n\n⚠️ *IMPORTANTE:* Presente el código de verificación y su cédula para el retiro.",
 
       email: {
         subject: "Documento listo para retiro - Notaría 18",

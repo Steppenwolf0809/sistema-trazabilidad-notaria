@@ -142,7 +142,58 @@ const generarCodigoVerificacion = () => {
 };
 
 /**
- * Genera el mensaje para documento listo usando las plantillas de la notaría
+ * ✅ NUEVO: Determina el estado de pago de un documento
+ * @param {Object} documento - Datos del documento
+ * @returns {Object} Información del estado de pago
+ */
+const determinarEstadoPago = (documento) => {
+  const estadoPago = documento.estadoPago || 'pendiente';
+  const valorFactura = parseFloat(documento.valorFactura) || 0;
+  const valorPagado = parseFloat(documento.valorPagado) || 0;
+  const valorPendiente = valorFactura - valorPagado;
+  
+  return {
+    estado: estadoPago,
+    valorFactura: valorFactura,
+    valorPagado: valorPagado,
+    valorPendiente: Math.max(0, valorPendiente),
+    estaPagado: estadoPago === 'pagado_completo' || estadoPago === 'pagado_con_retencion',
+    esPagoParcial: estadoPago === 'pago_parcial',
+    tieneValor: valorFactura > 0
+  };
+};
+
+/**
+ * ✅ NUEVO: Selecciona la plantilla apropiada según el estado de pago
+ * @param {Object} infoPago - Información del estado de pago
+ * @returns {string|null} Plantilla de mensaje o null si no hay plantilla
+ */
+const seleccionarPlantillaPorPago = (infoPago) => {
+  const plantillas = configNotaria.plantillas?.documentoListo;
+  
+  if (!plantillas) return null;
+  
+  // Documento pagado completamente (incluye pagado con retención)
+  if (infoPago.estaPagado) {
+    return plantillas.whatsappPagado;
+  }
+  
+  // Documento con pago parcial
+  if (infoPago.esPagoParcial && infoPago.valorPendiente > 0) {
+    return plantillas.whatsappPagoParcial;
+  }
+  
+  // Documento no pagado (pero con valor)
+  if (!infoPago.estaPagado && infoPago.tieneValor) {
+    return plantillas.whatsappNoPagado;
+  }
+  
+  // Documento sin valor o estado no determinado - usar plantilla genérica
+  return plantillas.whatsapp;
+};
+
+/**
+ * ✅ ACTUALIZADO: Genera el mensaje para documento listo según estado de pago
  * @param {Object} documento - Datos del documento
  * @returns {string} Mensaje formateado
  */
@@ -155,19 +206,33 @@ const generarMensajeDocumentoListo = (documento) => {
   if (documento.notas && typeof documento.notas === 'string' && documento.notas.trim().length > 0) {
     contextoTramite = ` - ${documento.notas.trim()}`;
   }
-
-  // Usar plantilla centralizada de la notaría
-  if (configNotaria.plantillas?.documentoListo?.whatsapp) {
-    return configNotaria.plantillas.documentoListo.whatsapp
+  
+  // ✅ NUEVA LÓGICA: Determinar estado de pago y seleccionar plantilla
+  const infoPago = determinarEstadoPago(documento);
+  const plantilla = seleccionarPlantillaPorPago(infoPago);
+  
+  if (plantilla) {
+    console.log(`📱 [WHATSAPP] Usando plantilla para estado: ${infoPago.estado} (pagado: ${infoPago.estaPagado})`);
+    
+    // Reemplazar variables en la plantilla seleccionada
+    return plantilla
       .replace('{{tipoDocumento}}', documento.tipoDocumento || 'Documento')
       .replace('{{contextoTramite}}', contextoTramite)
       .replace('{{codigoBarras}}', documento.codigoBarras || 'N/A')
       .replace('{{codigoVerificacion}}', codigoVerificacion)
-      .replace('{{nombreCliente}}', documento.nombreCliente || 'Cliente');
+      .replace('{{nombreCliente}}', documento.nombreCliente || 'Cliente')
+      .replace('{{valorFactura}}', infoPago.valorFactura.toFixed(2))
+      .replace('{{valorPendiente}}', infoPago.valorPendiente.toFixed(2));
   }
 
-  // Mensaje de respaldo si no hay plantilla
-  return `🏛️ *NOTARÍA DÉCIMA OCTAVA*
+  // ✅ MENSAJE DE RESPALDO MEJORADO si no hay plantillas
+  console.log('⚠️ [WHATSAPP] No se encontraron plantillas, usando mensaje de respaldo');
+  
+  const estadoTexto = infoPago.estaPagado ? 
+    '✅ PAGO CONFIRMADO - Listo para retiro' : 
+    (infoPago.tieneValor ? `⚠️ PAGO PENDIENTE - Valor: $${infoPago.valorFactura.toFixed(2)}` : 'Listo para retiro');
+  
+  return `🏛️ *NOTARÍA 18*
 
 Su documento está listo para retiro:
 
@@ -175,9 +240,10 @@ Su documento está listo para retiro:
 👤 *Cliente:* ${documento.nombreCliente || 'Cliente'}
 🔢 *Código de verificación:* ${codigoVerificacion}
 
-📍 *Dirección:* ${process.env.NOTARIA_DIRECCION || 'Consultar en la notaría'}
-⏰ *Horario:* ${process.env.NOTARIA_HORARIO || 'Horario de oficina'}
-📞 *Consultas:* ${process.env.NOTARIA_TELEFONO || 'Teléfono de la notaría'}
+${estadoTexto}
+
+📍 *Dirección:* Notaría Décima Octava, Quito
+⏰ *Horario:* Lunes a Viernes 8:00-17:00
 
 Presente este código al retirar su documento.`;
 };
@@ -659,6 +725,10 @@ module.exports = {
   inicializar,
   validarTelefono,
   generarCodigoVerificacion,
+  // ✅ NUEVAS FUNCIONES PARA ESTADO DE PAGO
+  determinarEstadoPago,
+  seleccionarPlantillaPorPago,
+  // Funciones existentes actualizadas
   generarMensajeDocumentoListo,
   generarMensajeEntregaConfirmada,
   generarMensajeNotificacionGrupal,
