@@ -1,13 +1,67 @@
 /**
  * Middleware de autenticación y autorización
  * Verifica tokens JWT y roles de usuario para proteger rutas
+ * 🔧 OPTIMIZADO: Reducir consultas DB y mejorar rendimiento
  */
 
 const jwt = require('jsonwebtoken');
 const Matrizador = require('../models/Matrizador');
 
+// 🚀 CACHE DE USUARIOS PARA REDUCIR CONSULTAS DB
+const userCache = new Map();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
+
+/**
+ * Limpiar cache de usuarios expirados
+ */
+const limpiarCacheExpirado = () => {
+  const ahora = Date.now();
+  for (const [key, data] of userCache.entries()) {
+    if (ahora - data.timestamp > CACHE_DURATION) {
+      userCache.delete(key);
+    }
+  }
+};
+
+/**
+ * Obtener usuario desde cache o base de datos
+ */
+const obtenerUsuario = async (id) => {
+  const cacheKey = `user_${id}`;
+  const cached = userCache.get(cacheKey);
+  
+  // Si está en cache y no ha expirado
+  if (cached && (Date.now() - cached.timestamp < CACHE_DURATION)) {
+    return cached.user;
+  }
+  
+  // Consultar base de datos
+  try {
+    const matrizador = await Matrizador.findByPk(id);
+    
+    if (matrizador) {
+      // Guardar en cache
+      userCache.set(cacheKey, {
+        user: matrizador,
+        timestamp: Date.now()
+      });
+      
+      // Limpiar cache expirado periódicamente
+      if (userCache.size > 100) {
+        limpiarCacheExpirado();
+      }
+    }
+    
+    return matrizador;
+  } catch (error) {
+    console.error('Error al obtener usuario:', error);
+    return null;
+  }
+};
+
 /**
  * Middleware para verificar token JWT
+ * 🔧 OPTIMIZADO: Menos consultas DB, mejor manejo de errores
  * @param {Object} req - Objeto de solicitud Express
  * @param {Object} res - Objeto de respuesta Express
  * @param {Function} next - Función para continuar al siguiente middleware
@@ -48,11 +102,15 @@ const verificarToken = async (req, res, next) => {
       return res.redirect('/login?error=token_invalido&redirect=' + encodeURIComponent(req.originalUrl));
     }
     
-    // Buscar matrizador en la base de datos
-    const matrizador = await Matrizador.findByPk(decoded.id);
+    // 🚀 OPTIMIZACIÓN: Buscar matrizador con cache
+    const matrizador = await obtenerUsuario(decoded.id);
     
     if (!matrizador || !matrizador.activo) {
       console.error(`Matrizador no encontrado o inactivo. ID: ${decoded.id}`);
+      
+      // Limpiar cache para este usuario
+      userCache.delete(`user_${decoded.id}`);
+      
       if (req.path.startsWith('/api/')) {
         return res.status(401).json({
           exito: false,
@@ -80,28 +138,44 @@ const verificarToken = async (req, res, next) => {
       req.usuario = { ...req.matrizador };
     }
     
-    // Renovar el token si está a punto de expirar (menos de 2 días)
+    // 🔧 OPTIMIZACIÓN: Renovación de token más conservadora
     const ahora = Math.floor(Date.now() / 1000);
-    const dosDisEnSegundos = 2 * 24 * 60 * 60;
+    const unDiaEnSegundos = 24 * 60 * 60;
     
-    if (decoded.exp && (decoded.exp - ahora < dosDisEnSegundos)) {
-      console.log('Renovando token próximo a expirar');
+    // Solo renovar si está a punto de expirar (menos de 1 día) y no se ha renovado recientemente
+    if (decoded.exp && (decoded.exp - ahora < unDiaEnSegundos)) {
+      const ultimaRenovacion = req.cookies?.token_renovado;
+      const tiempoDesdeRenovacion = ultimaRenovacion ? (ahora - parseInt(ultimaRenovacion)) : unDiaEnSegundos;
       
-      // Crear nuevo token
-      const nuevoToken = jwt.sign(
-        { id: matrizador.id, rol: matrizador.rol },
-        process.env.JWT_SECRET || 'clave_secreta_notaria_2024',
-        { expiresIn: '7d' }
-      );
-      
-      // Establecer el nuevo token en la cookie
-      res.cookie('token', nuevoToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 días
-        path: '/',
-        sameSite: 'lax'
-      });
+      // Solo renovar si han pasado al menos 1 hora desde la última renovación
+      if (tiempoDesdeRenovacion > 3600) { // 1 hora
+        console.log('Renovando token próximo a expirar');
+        
+        // Crear nuevo token
+        const nuevoToken = jwt.sign(
+          { id: matrizador.id, rol: matrizador.rol },
+          process.env.JWT_SECRET || 'clave_secreta_notaria_2024',
+          { expiresIn: '24h' } // 🔧 CONSISTENCIA: Siempre 24 horas
+        );
+        
+        // Establecer el nuevo token en la cookie
+        res.cookie('token', nuevoToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          maxAge: 24 * 60 * 60 * 1000, // 🔧 CONSISTENCIA: 24 horas
+          path: '/',
+          sameSite: 'lax'
+        });
+        
+        // Marcar tiempo de renovación
+        res.cookie('token_renovado', ahora.toString(), {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          maxAge: 24 * 60 * 60 * 1000,
+          path: '/',
+          sameSite: 'lax'
+        });
+      }
     }
     
     // Agregar rol a locals para acceso en las vistas
@@ -122,6 +196,7 @@ const verificarToken = async (req, res, next) => {
     
     // Limpiar cookie de sesión ante error de JWT
     res.clearCookie('token');
+    res.clearCookie('token_renovado');
     
     return res.redirect('/login?error=sesion_expirada&redirect=' + encodeURIComponent(req.originalUrl));
   }
@@ -475,6 +550,15 @@ const requireAdmin = (req, res, next) => {
   next();
 };
 
+/**
+ * Limpiar cache de usuario específico
+ */
+const limpiarCacheUsuario = (userId) => {
+  const cacheKey = `user_${userId}`;
+  userCache.delete(cacheKey);
+  console.log(`🧹 Cache limpiado para usuario ${userId}`);
+};
+
 module.exports = {
   verificarToken,
   esAdmin,
@@ -486,5 +570,6 @@ module.exports = {
   logAuditoria,
   validarAccesoConAuditoria,
   obtenerDashboardPorRol,
-  requireAdmin
+  requireAdmin,
+  limpiarCacheUsuario // 🔧 NUEVO: Función para limpiar cache
 }; 

@@ -1504,7 +1504,7 @@ const matrizadorController = {
       // ✅ LOGIN EXITOSO: Generar token y continuar
       console.log(`✅ Login exitoso: ${email} (${matrizador.rol}) - IP: ${req.ip || 'unknown'}`);
       
-      // Generar token JWT para sesión
+      // 🔧 OPTIMIZADO: Generar token JWT más consistente
       const token = jwt.sign(
         { 
           id: matrizador.id,
@@ -1513,24 +1513,27 @@ const matrizadorController = {
           rol: matrizador.rol  // Incluir el rol en el token
         },
         process.env.JWT_SECRET || 'clave_secreta_notaria_2024',
-        { expiresIn: process.env.JWT_EXPIRATION || '24h' }
+        { expiresIn: '24h' } // 🔧 CONSISTENCIA: Siempre 24 horas
       );
       
-      // Actualizar fecha de último acceso
-      try {
-        await matrizador.update({ ultimoAcceso: new Date() });
-      } catch (updateError) {
-        console.warn(`⚠️ No se pudo actualizar último acceso para ${email}:`, updateError.message);
-        // No afectar el login si falla la actualización
-      }
+      // Actualizar fecha de último acceso (sin bloquear el login)
+      setImmediate(async () => {
+        try {
+          await matrizador.update({ ultimoAcceso: new Date() });
+        } catch (updateError) {
+          console.warn(`⚠️ No se pudo actualizar último acceso para ${email}:`, updateError.message);
+        }
+      });
       
       // Si es una vista, establecer cookies y redirigir
       if (!req.path.startsWith('/api/')) {
-        // Establecer cookie con el token
+        // 🔧 OPTIMIZADO: Establecer cookie con configuración consistente
         res.cookie('token', token, { 
           httpOnly: true, 
           secure: process.env.NODE_ENV === 'production',
-          maxAge: 24 * 60 * 60 * 1000 // 24 horas
+          maxAge: 24 * 60 * 60 * 1000, // 24 horas
+          path: '/',
+          sameSite: 'lax'
         });
         // Obtener datos del matrizador para redirigir según rol
         req.matrizador = {

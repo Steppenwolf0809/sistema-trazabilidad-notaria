@@ -261,17 +261,19 @@ app.use(bodyParser.json()); // Parsea cuerpos de solicitud en formato JSON
 app.use(bodyParser.urlencoded({ extended: true })); // Parsea cuerpos de solicitud desde formularios
 app.use(cookieParser()); // Parse cookies
 
-// 🔧 CONFIGURACIÓN SESIONES PERSISTENTES POSTGRESQL
+// 🔧 CONFIGURACIÓN SESIONES SIMPLIFICADA
+// 🚨 CORRECCIÓN: Eliminar conflicto entre JWT y express-session
+// Solo usar express-session para flash messages, no para autenticación
 let sessionStore;
 
 if (process.env.DATABASE_URL) {
-  console.log('🔧 Configurando sesiones persistentes en PostgreSQL (Railway)...');
+  console.log('🔧 Configurando sesiones ligeras en PostgreSQL (solo para flash messages)...');
   
   // Pool de conexiones PostgreSQL específico para sesiones
   const sessionPool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-    max: 5, // Máximo 5 conexiones para sesiones
+    max: 3, // 🔧 REDUCIDO: Solo 3 conexiones para sesiones ligeras
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 2000,
   });
@@ -289,31 +291,32 @@ if (process.env.DATABASE_URL) {
   sessionStore = new pgSession({
     pool: sessionPool,
     tableName: 'user_sessions',
-    createTableIfMissing: true, // Crear tabla automáticamente
-    pruneSessionInterval: 60 * 15, // Limpiar sesiones expiradas cada 15 min
+    createTableIfMissing: true,
+    pruneSessionInterval: 60 * 30, // 🔧 OPTIMIZADO: Limpiar cada 30 min
     errorLog: console.error
   });
   
 } else {
-  console.log('🔧 Configurando sesiones en MemoryStore (localhost)...');
+  console.log('🔧 Configurando sesiones ligeras en MemoryStore (localhost)...');
   sessionStore = undefined; // Usar MemoryStore por defecto
 }
 
-// Configuración de sesión
+// 🔧 CONFIGURACIÓN DE SESIÓN OPTIMIZADA
+// Solo para flash messages, no para autenticación (JWT maneja eso)
 app.use(session({
   store: sessionStore,
-    secret: process.env.SESSION_SECRET || process.env.JWT_SECRET || 'clave-secreta-notaria',
+  secret: process.env.SESSION_SECRET || process.env.JWT_SECRET || 'clave-secreta-notaria',
   resave: false,
   saveUninitialized: false,
-  name: 'notaria.sid', // Nombre personalizado para la cookie
+  name: 'notaria.flash', // 🔧 CAMBIO: Nombre específico para flash messages
   cookie: {
-    maxAge: 24 * 60 * 60 * 1000, // 24 horas (más seguro que 7 días)
-    httpOnly: true, // Prevenir acceso desde JavaScript
-    secure: process.env.NODE_ENV === 'production', // HTTPS en producción
+    maxAge: 10 * 60 * 1000, // 🔧 REDUCIDO: 10 minutos (solo para flash messages)
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
     path: '/',
-    sameSite: 'lax' // Protección CSRF manteniendo funcionalidad
+    sameSite: 'lax'
   },
-  rolling: true // Renueva el tiempo de expiración en cada request
+  rolling: false // 🔧 DESACTIVADO: No renovar automáticamente
 }));
 
 // Configuración de flash messages
@@ -807,9 +810,19 @@ app.get('/', (req, res) => {
 
 // Ruta de logout global mejorada
 app.get('/logout', (req, res) => {
-  console.log('🚪 Logout iniciado para usuario:', req.user?.nombre || 'Anónimo');
+  console.log('🚪 Logout iniciado para usuario:', req.matrizador?.nombre || 'Anónimo');
   
-  // Destruir sesión en PostgreSQL
+  // 🔧 OPTIMIZADO: Limpiar cache de usuario si existe
+  if (req.matrizador?.id) {
+    try {
+      const { limpiarCacheUsuario } = require('./middlewares/auth');
+      limpiarCacheUsuario(req.matrizador.id);
+    } catch (error) {
+      console.warn('⚠️ No se pudo limpiar cache del usuario:', error.message);
+    }
+  }
+  
+  // Destruir sesión en PostgreSQL (solo para flash messages)
   req.session.destroy((err) => {
     if (err) {
       console.error('❌ Error al destruir sesión:', err);
@@ -818,9 +831,11 @@ app.get('/logout', (req, res) => {
       console.log('✅ Sesión destruida correctamente');
     }
     
-    // Limpiar todas las cookies relacionadas
+    // 🔧 OPTIMIZADO: Limpiar todas las cookies relacionadas
     res.clearCookie('token');
-    res.clearCookie('notaria.sid'); // Cookie de sesión personalizada
+    res.clearCookie('token_renovado'); // Nueva cookie de renovación
+    res.clearCookie('notaria.flash'); // Cookie de sesión para flash messages
+    res.clearCookie('notaria.sid'); // Cookie de sesión anterior (por compatibilidad)
     res.clearCookie('connect.sid'); // Cookie por defecto de express-session
     
     console.log('🧹 Cookies limpiadas, redirigiendo a login');
