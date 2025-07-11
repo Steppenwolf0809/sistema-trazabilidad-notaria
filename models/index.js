@@ -15,6 +15,8 @@ const NotificacionEnviada = require('./NotificacionEnviada');
 const AutorizacionUrgente = require('./AutorizacionUrgente');
 const NotificacionGrupal = require('./NotificacionGrupal');
 const Pago = require('./Pago'); // 🚨 AGREGADO: Modelo crítico para sistema de pagos
+const ContactoLocal = require('./ContactoLocal'); // 🚨 AGREGADO: Sistema inteligente de contactos
+const ReversionAuditoria = require('./ReversionAuditoria'); // 🚨 AGREGADO: Sistema de auditoría de reversiones
 
 // Relaciones entre modelos
 
@@ -328,6 +330,38 @@ Pago.belongsTo(Matrizador, {
   as: 'usuario'
 });
 
+// ============== RELACIONES PARA SISTEMA DE AUDITORÍA DE REVERSIONES ==============
+
+// Relación Documento - ReversionAuditoria (Un documento puede tener muchas reversiones)
+Documento.hasMany(ReversionAuditoria, {
+  foreignKey: 'documento_id',
+  as: 'reversiones'
+});
+ReversionAuditoria.belongsTo(Documento, {
+  foreignKey: 'documento_id',
+  as: 'documento'
+});
+
+// Relación Matrizador - ReversionAuditoria (Un usuario puede realizar muchas reversiones)
+Matrizador.hasMany(ReversionAuditoria, {
+  foreignKey: 'usuario_id',
+  as: 'reversionesRealizadas'
+});
+ReversionAuditoria.belongsTo(Matrizador, {
+  foreignKey: 'usuario_id',
+  as: 'usuario'
+});
+
+// Relación Pago - ReversionAuditoria (Un pago puede tener reversiones)
+Pago.hasMany(ReversionAuditoria, {
+  foreignKey: 'pago_id',
+  as: 'reversiones'
+});
+ReversionAuditoria.belongsTo(Pago, {
+  foreignKey: 'pago_id',
+  as: 'pago'
+});
+
 // NOTA: Las relaciones para el sistema de notificaciones están definidas en models/Documento.js
 // para evitar conflictos de alias duplicados
 
@@ -348,5 +382,7 @@ module.exports = {
   NotificacionEnviada,
   AutorizacionUrgente,
   NotificacionGrupal,
-  Pago // 🚨 EXPORTADO: Modelo crítico para sistema de pagos
+  Pago, // 🚨 EXPORTADO: Modelo crítico para sistema de pagos
+  ContactoLocal, // 🚨 EXPORTADO: Sistema inteligente de contactos
+  ReversionAuditoria // 🚨 EXPORTADO: Sistema de auditoría de reversiones
 }; 

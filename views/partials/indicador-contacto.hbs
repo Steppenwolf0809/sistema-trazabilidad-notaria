@@ -1,0 +1,303 @@
+{{!-- 
+  Indicador Contextual de Contacto Inteligente
+  Se muestra cuando hay conflicto entre número XML y base de datos local
+--}}
+
+{{#if contactoConflicto}}
+<div class="alerta-contacto mb-3" id="alerta-contacto-{{id}}">
+  <div class="card border-warning">
+    <div class="card-header bg-warning bg-opacity-10 border-warning">
+      <div class="d-flex align-items-center">
+        <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+        <h6 class="mb-0 text-warning">
+          <strong>⚠️ Verificar Contacto del Cliente</strong>
+        </h6>
+        <button type="button" class="btn-close ms-auto" aria-label="Cerrar" onclick="ocultarIndicadorContacto('{{id}}')"></button>
+      </div>
+    </div>
+    
+    <div class="card-body py-3">
+      <div class="row align-items-center">
+        <!-- Información del conflicto -->
+        <div class="col-md-8">
+          <div class="comparacion-contactos">
+            <div class="row g-2">
+              <div class="col-6">
+                <div class="contacto-option border rounded p-2 bg-light">
+                  <div class="d-flex align-items-center">
+                    <i class="fas fa-file-code text-primary me-2"></i>
+                    <div>
+                      <small class="text-muted d-block">XML del Consejo</small>
+                      <strong class="text-primary">{{contactoDatosAnalisis.datos_adicionales.numeroXML}}</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="col-6">
+                <div class="contacto-option border rounded p-2 bg-light">
+                  <div class="d-flex align-items-center">
+                    <i class="fas fa-database text-success me-2"></i>
+                    <div>
+                      <small class="text-muted d-block">
+                        Frecuente ({{contactoDatosAnalisis.datos_adicionales.vecesUsadoPrincipal}} usos)
+                      </small>
+                      <strong class="text-success">{{contactoDatosAnalisis.datos_adicionales.contactoPrincipal}}</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {{#if contactoDatosAnalisis.datos_adicionales.numeroEnHistorico}}
+          <div class="mt-2">
+            <small class="text-info">
+              <i class="fas fa-info-circle me-1"></i>
+              El número del XML ya se usó {{contactoDatosAnalisis.datos_adicionales.numeroEnHistorico.vecesUsado}} veces anteriormente
+            </small>
+          </div>
+          {{/if}}
+          
+          {{#if contactoDatosAnalisis.datos_adicionales.recomendacion}}
+          <div class="mt-2">
+            <small class="text-muted">
+              <i class="fas fa-lightbulb me-1"></i>
+              <strong>Recomendación:</strong>
+              {{#eq contactoDatosAnalisis.datos_adicionales.recomendacion 'mantener_principal'}}
+                Mantener número frecuente (más confiable)
+              {{else}}
+                Considerar número del XML (más reciente)
+              {{/eq}}
+            </small>
+          </div>
+          {{/if}}
+        </div>
+        
+        <!-- Botones de acción -->
+        <div class="col-md-4">
+          <div class="acciones-contacto d-flex flex-column gap-2">
+            <button type="button" 
+                    class="btn btn-success btn-sm" 
+                    onclick="resolverContacto('{{id}}', '{{contactoDatosAnalisis.datos_adicionales.contactoPrincipal}}', 'frecuente')"
+                    title="Usar el número que más se ha utilizado">
+              <i class="fas fa-check me-1"></i>
+              Usar Frecuente
+            </button>
+            
+            <button type="button" 
+                    class="btn btn-primary btn-sm" 
+                    onclick="resolverContacto('{{id}}', '{{contactoDatosAnalisis.datos_adicionales.numeroXML}}', 'xml')"
+                    title="Usar el número que viene en el XML del Consejo">
+              <i class="fas fa-file-import me-1"></i>
+              Usar XML
+            </button>
+            
+            <button type="button" 
+                    class="btn btn-outline-secondary btn-sm" 
+                    onclick="mostrarEditorContacto('{{id}}')"
+                    title="Editar manualmente el número de contacto">
+              <i class="fas fa-edit me-1"></i>
+              Editar
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Editor manual (oculto por defecto) -->
+      <div id="editor-contacto-{{id}}" class="editor-contacto mt-3" style="display: none;">
+        <div class="row">
+          <div class="col-md-8">
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-phone"></i>
+              </span>
+              <input type="tel" 
+                     class="form-control" 
+                     id="contacto-manual-{{id}}"
+                     placeholder="Ingrese número de 10 dígitos"
+                     pattern="[0-9]{10}"
+                     maxlength="10">
+            </div>
+            <small class="text-muted">Formato: 0999123456 (10 dígitos)</small>
+          </div>
+          <div class="col-md-4">
+            <button type="button" 
+                    class="btn btn-success btn-sm me-2" 
+                    onclick="guardarContactoManual('{{id}}')">
+              <i class="fas fa-save me-1"></i>
+              Guardar
+            </button>
+            <button type="button" 
+                    class="btn btn-outline-secondary btn-sm" 
+                    onclick="cancelarEdicionContacto('{{id}}')">
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Funciones específicas para el indicador de contacto
+window.resolverContacto = function(documentoId, numeroElegido, origen) {
+  console.log('🔄 Resolviendo conflicto de contacto:', { documentoId, numeroElegido, origen });
+  
+  // Mostrar loading
+  const alerta = document.getElementById(`alerta-contacto-${documentoId}`);
+  if (alerta) {
+    alerta.innerHTML = `
+      <div class="card border-info">
+        <div class="card-body text-center py-3">
+          <i class="fas fa-spinner fa-spin text-info me-2"></i>
+          <span class="text-info">Actualizando contacto...</span>
+        </div>
+      </div>
+    `;
+  }
+  
+  // Llamar al servidor para resolver el conflicto
+  fetch(`/documentos/${documentoId}/resolver-contacto`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      numeroElegido: numeroElegido,
+      origen: origen
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.exito) {
+      // Mostrar éxito y ocultar indicador
+      mostrarExitoContacto(documentoId, numeroElegido, origen);
+      setTimeout(() => {
+        ocultarIndicadorContacto(documentoId);
+        // Recargar la página para mostrar el contacto actualizado
+        location.reload();
+      }, 2000);
+    } else {
+      throw new Error(data.mensaje || 'Error al resolver contacto');
+    }
+  })
+  .catch(error => {
+    console.error('❌ Error resolviendo contacto:', error);
+    alert('Error al actualizar el contacto: ' + error.message);
+    // Recargar la página para restaurar el estado original
+    location.reload();
+  });
+};
+
+window.mostrarEditorContacto = function(documentoId) {
+  const editor = document.getElementById(`editor-contacto-${documentoId}`);
+  if (editor) {
+    editor.style.display = 'block';
+    // Enfocar el input
+    const input = document.getElementById(`contacto-manual-${documentoId}`);
+    if (input) {
+      input.focus();
+    }
+  }
+};
+
+window.cancelarEdicionContacto = function(documentoId) {
+  const editor = document.getElementById(`editor-contacto-${documentoId}`);
+  if (editor) {
+    editor.style.display = 'none';
+    // Limpiar el input
+    const input = document.getElementById(`contacto-manual-${documentoId}`);
+    if (input) {
+      input.value = '';
+    }
+  }
+};
+
+window.guardarContactoManual = function(documentoId) {
+  const input = document.getElementById(`contacto-manual-${documentoId}`);
+  if (!input) return;
+  
+  const numeroManual = input.value.trim();
+  
+  // Validar formato
+  if (!/^[0-9]{10}$/.test(numeroManual)) {
+    alert('El número debe tener exactamente 10 dígitos numéricos');
+    input.focus();
+    return;
+  }
+  
+  // Resolver con el número manual
+  resolverContacto(documentoId, numeroManual, 'manual');
+};
+
+window.ocultarIndicadorContacto = function(documentoId) {
+  const alerta = document.getElementById(`alerta-contacto-${documentoId}`);
+  if (alerta) {
+    alerta.style.display = 'none';
+  }
+};
+
+window.mostrarExitoContacto = function(documentoId, numero, origen) {
+  const alerta = document.getElementById(`alerta-contacto-${documentoId}`);
+  if (alerta) {
+    const origenTexto = origen === 'frecuente' ? 'frecuente' : 
+                       origen === 'xml' ? 'XML' : 'manual';
+    
+    alerta.innerHTML = `
+      <div class="card border-success">
+        <div class="card-body text-center py-3">
+          <i class="fas fa-check-circle text-success me-2"></i>
+          <span class="text-success">
+            <strong>Contacto actualizado:</strong> ${numero} (${origenTexto})
+          </span>
+        </div>
+      </div>
+    `;
+  }
+};
+
+// Validación en tiempo real para el input manual
+document.addEventListener('DOMContentLoaded', function() {
+  // Buscar todos los inputs de contacto manual
+  const inputs = document.querySelectorAll('[id^="contacto-manual-"]');
+  inputs.forEach(input => {
+    input.addEventListener('input', function() {
+      // Solo permitir números
+      this.value = this.value.replace(/[^0-9]/g, '');
+      
+      // Limitar a 10 dígitos
+      if (this.value.length > 10) {
+        this.value = this.value.slice(0, 10);
+      }
+    });
+    
+    input.addEventListener('keypress', function(e) {
+      // Permitir Enter para guardar
+      if (e.key === 'Enter') {
+        const documentoId = this.id.replace('contacto-manual-', '');
+        guardarContactoManual(documentoId);
+      }
+    });
+  });
+});
+</script>
+{{/if}}
+
+{{!-- 
+  Indicador cuando el contacto está validado (sin conflicto)
+--}}
+{{#if contactoValidado}}
+{{#unless contactoConflicto}}
+<div class="contacto-validado mb-2">
+  <div class="d-flex align-items-center text-success">
+    <i class="fas fa-check-circle me-2"></i>
+    <span>
+      <strong>📱 {{telefonoWhatsapp}}</strong>
+      <small class="text-muted ms-2">(Contacto validado automáticamente)</small>
+    </span>
+  </div>
+</div>
+{{/unless}}
+{{/if}} 

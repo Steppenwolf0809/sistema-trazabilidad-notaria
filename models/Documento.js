@@ -118,6 +118,53 @@ const Documento = sequelize.define('Documento', {
     allowNull: true,
     defaultValue: []
   },
+
+  // ============== SISTEMA INTELIGENTE DE CONTACTOS ==============
+  
+  // Número de teléfono/WhatsApp validado para notificaciones
+  telefonoWhatsapp: {
+    type: DataTypes.STRING(15),
+    field: 'telefono_whatsapp',
+    allowNull: true,
+    validate: {
+      // Validar formato de teléfono ecuatoriano si se proporciona
+      isValidPhone(value) {
+        if (value && value.trim()) {
+          const phoneRegex = /^[0-9]{10}$/;
+          if (!phoneRegex.test(value.trim())) {
+            throw new Error('El teléfono WhatsApp debe tener 10 dígitos numéricos');
+          }
+        }
+      }
+    },
+    comment: 'Número de teléfono validado para notificaciones WhatsApp'
+  },
+  
+  // Indica si el contacto ha sido validado por el sistema inteligente
+  contactoValidado: {
+    type: DataTypes.BOOLEAN,
+    field: 'contacto_validado',
+    allowNull: false,
+    defaultValue: false,
+    comment: 'Indica si el contacto ha sido validado por el sistema inteligente'
+  },
+  
+  // Indica si hay conflicto entre contacto XML y base de datos local
+  contactoConflicto: {
+    type: DataTypes.BOOLEAN,
+    field: 'contacto_conflicto',
+    allowNull: false,
+    defaultValue: false,
+    comment: 'Indica si hay conflicto entre contacto XML y base de datos local'
+  },
+  
+  // Datos del análisis de contacto (JSON)
+  contactoDatosAnalisis: {
+    type: DataTypes.JSON,
+    field: 'contacto_datos_analisis',
+    allowNull: true,
+    comment: 'Datos del análisis del sistema inteligente de contactos'
+  },
   
   // ============== INFORMACIÓN DE ENTREGA ==============
   

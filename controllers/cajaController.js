@@ -2266,6 +2266,66 @@ const cajaController = {
         order: [['nombre', 'ASC']]
       });
 
+      // ============== ANÁLISIS INTELIGENTE DE CONTACTOS ==============
+      let analisisContacto = null;
+      let telefonoWhatsappFinal = null;
+      let contactoValidado = false;
+      let contactoConflicto = false;
+      
+      // Solo analizar si hay celular y datos del cliente
+      if (datosExtraidos.celularCliente && datosExtraidos.identificacionCliente && datosExtraidos.nombreCliente) {
+        try {
+          console.log('🔍 Iniciando análisis inteligente de contacto...');
+          
+          const { analizarContactoCliente } = require('../utils/contactoAnalyzer');
+          
+          analisisContacto = await analizarContactoCliente(
+            null, // tipoId - se determinará automáticamente
+            datosExtraidos.identificacionCliente,
+            datosExtraidos.nombreCliente,
+            datosExtraidos.celularCliente,
+            req.matrizador?.nombre || 'Sistema'
+          );
+          
+          console.log('📊 Resultado análisis contacto:', analisisContacto);
+          
+          // Determinar el número a usar según el análisis
+          if (analisisContacto.accion === 'usar_xml_automatico' || analisisContacto.accion === 'usar_principal_automatico') {
+            telefonoWhatsappFinal = analisisContacto.numeroUsar;
+            contactoValidado = true;
+            contactoConflicto = false;
+          } else if (analisisContacto.accion === 'mostrar_conflicto') {
+            telefonoWhatsappFinal = null; // Requiere decisión manual
+            contactoValidado = false;
+            contactoConflicto = true;
+          } else {
+            // Fallback - usar el número del XML
+            telefonoWhatsappFinal = datosExtraidos.celularCliente;
+            contactoValidado = false;
+            contactoConflicto = false;
+          }
+          
+        } catch (contactoError) {
+          console.error('⚠️ Error en análisis de contacto:', contactoError);
+          // Fallback - usar el número del XML
+          telefonoWhatsappFinal = datosExtraidos.celularCliente;
+          contactoValidado = false;
+          contactoConflicto = false;
+          
+          analisisContacto = {
+            accion: 'error_fallback',
+            mensaje: 'Error en análisis - usando número del XML',
+            error: contactoError.message
+          };
+        }
+      } else {
+        console.log('⚠️ No se puede analizar contacto - faltan datos requeridos');
+        // Si no hay celular, usar teléfono cliente como fallback
+        telefonoWhatsappFinal = datosExtraidos.telefonoCliente || null;
+        contactoValidado = false;
+        contactoConflicto = false;
+      }
+
       // Limpiar archivo temporal
       fs.unlinkSync(req.file.path);
       console.log('🗑️ Archivo temporal eliminado');
@@ -2285,6 +2345,13 @@ const cajaController = {
           identificacionCliente: datosExtraidos.identificacionCliente || '',
           emailCliente: datosExtraidos.emailCliente || '',
           telefonoCliente: datosExtraidos.telefonoCliente || '',
+          
+          // ============== SISTEMA INTELIGENTE DE CONTACTOS ==============
+          celularCliente: datosExtraidos.celularCliente || '',
+          telefonoWhatsapp: telefonoWhatsappFinal,
+          contactoValidado: contactoValidado,
+          contactoConflicto: contactoConflicto,
+          analisisContacto: analisisContacto,
           
           // Información financiera
           numeroFactura: datosExtraidos.numeroFactura || '',
@@ -2906,8 +2973,17 @@ const cajaController = {
         console.log('🔄 Iniciando transacción de eliminación...');
 
         // 1. Marcar documento como eliminado (SOFT DELETE)
+        // CORRECCIÓN: Determinar estado correcto según motivo
+        let estadoFinal = 'eliminado';
+        let motivoLegacy = 'otro';
+        
+        if (motivo === 'solicitud_nota_credito') {
+          estadoFinal = 'nota_credito';
+          motivoLegacy = 'nota_credito';
+        }
+        
         await documento.update({
-          // Soft delete principal
+          // Soft delete principal - CRÍTICO: Siempre marcar como eliminado para liberar XML
           deletedAt: new Date(),
           deletedBy: req.matrizador.id,
           deletionReason: motivo,
@@ -2915,8 +2991,8 @@ const cajaController = {
           paymentHandling: paymentHandling,
           
           // También actualizar campos legacy para compatibilidad
-          estado: 'eliminado',
-          motivoEliminacion: 'otro', // Mapear a enum legacy
+          estado: estadoFinal,
+          motivoEliminacion: motivoLegacy,
           eliminadoPor: req.matrizador.id,
           justificacionEliminacion: justificacion.trim()
         }, { transaction });
@@ -3283,6 +3359,10 @@ function extraerDatosFactura(factura) {
           case 'TELEFONO':
             datos.telefonoCliente = valor;
             console.log('✅ Teléfono cliente encontrado:', valor);
+            break;
+          case 'CELULAR':
+            datos.celularCliente = valor;
+            console.log('✅ Celular cliente encontrado:', valor);
             break;
         }
       }
