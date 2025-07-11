@@ -120,8 +120,10 @@ const Documento = sequelize.define('Documento', {
   },
 
   // ============== SISTEMA INTELIGENTE DE CONTACTOS ==============
+  // TEMPORALMENTE DESHABILITADO - CAMPOS NO EXISTEN EN PRODUCCIÓN
   
-  // Número de teléfono/WhatsApp validado para notificaciones
+  // TEMPORALMENTE DESHABILITADO - telefonoWhatsapp:
+  /*
   telefonoWhatsapp: {
     type: DataTypes.STRING(15),
     field: 'telefono_whatsapp',
@@ -139,8 +141,10 @@ const Documento = sequelize.define('Documento', {
     },
     comment: 'Número de teléfono validado para notificaciones WhatsApp'
   },
+  */
   
-  // Indica si el contacto ha sido validado por el sistema inteligente
+  // TEMPORALMENTE DESHABILITADO - contactoValidado:
+  /*
   contactoValidado: {
     type: DataTypes.BOOLEAN,
     field: 'contacto_validado',
@@ -148,8 +152,10 @@ const Documento = sequelize.define('Documento', {
     defaultValue: false,
     comment: 'Indica si el contacto ha sido validado por el sistema inteligente'
   },
+  */
   
-  // Indica si hay conflicto entre contacto XML y base de datos local
+  // TEMPORALMENTE DESHABILITADO - contactoConflicto:
+  /*
   contactoConflicto: {
     type: DataTypes.BOOLEAN,
     field: 'contacto_conflicto',
@@ -157,14 +163,17 @@ const Documento = sequelize.define('Documento', {
     defaultValue: false,
     comment: 'Indica si hay conflicto entre contacto XML y base de datos local'
   },
+  */
   
-  // Datos del análisis de contacto (JSON)
+  // TEMPORALMENTE DESHABILITADO - contactoDatosAnalisis:
+  /*
   contactoDatosAnalisis: {
     type: DataTypes.JSON,
     field: 'contacto_datos_analisis',
     allowNull: true,
     comment: 'Datos del análisis del sistema inteligente de contactos'
   },
+  */
   
   // ============== INFORMACIÓN DE ENTREGA ==============
   
