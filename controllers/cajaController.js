@@ -2266,16 +2266,21 @@ const cajaController = {
         order: [['nombre', 'ASC']]
       });
 
-      // ============== ANÁLISIS INTELIGENTE DE CONTACTOS ==============
-      let analisisContacto = null;
-      let telefonoWhatsappFinal = null;
-      let contactoValidado = false;
-      let contactoConflicto = false;
+      // ============== PROCESAMIENTO SEGURO DE CONTACTOS ==============
+      const { procesarCamposContacto } = require('../utils/procesarCamposContacto');
       
-      // Solo analizar si hay celular y datos del cliente
-      if (datosExtraidos.celularCliente && datosExtraidos.identificacionCliente && datosExtraidos.nombreCliente) {
-        try {
-          console.log('🔍 Iniciando análisis inteligente de contacto...');
+      // Procesar campos de contacto de forma segura
+      const camposContacto = procesarCamposContacto(datosExtraidos);
+      
+      console.log('📱 Campos de contacto procesados:', camposContacto);
+      
+      // Intentar análisis inteligente solo si está disponible
+      let analisisContacto = null;
+      
+      try {
+        // Solo analizar si hay datos suficientes y el analizador está disponible
+        if (camposContacto.telefonoWhatsapp && datosExtraidos.identificacionCliente && datosExtraidos.nombreCliente) {
+          console.log('🔍 Intentando análisis inteligente de contacto...');
           
           const { analizarContactoCliente } = require('../utils/contactoAnalyzer');
           
@@ -2283,47 +2288,37 @@ const cajaController = {
             null, // tipoId - se determinará automáticamente
             datosExtraidos.identificacionCliente,
             datosExtraidos.nombreCliente,
-            datosExtraidos.celularCliente,
+            camposContacto.telefonoWhatsapp,
             req.matrizador?.nombre || 'Sistema'
           );
           
           console.log('📊 Resultado análisis contacto:', analisisContacto);
           
-          // Determinar el número a usar según el análisis
+          // Actualizar campos según el análisis
           if (analisisContacto.accion === 'usar_xml_automatico' || analisisContacto.accion === 'usar_principal_automatico') {
-            telefonoWhatsappFinal = analisisContacto.numeroUsar;
-            contactoValidado = true;
-            contactoConflicto = false;
+            camposContacto.telefonoWhatsapp = analisisContacto.numeroUsar;
+            camposContacto.contactoValidado = true;
+            camposContacto.contactoConflicto = false;
           } else if (analisisContacto.accion === 'mostrar_conflicto') {
-            telefonoWhatsappFinal = null; // Requiere decisión manual
-            contactoValidado = false;
-            contactoConflicto = true;
-          } else {
-            // Fallback - usar el número del XML
-            telefonoWhatsappFinal = datosExtraidos.celularCliente;
-            contactoValidado = false;
-            contactoConflicto = false;
+            camposContacto.contactoConflicto = true;
+            camposContacto.contactoValidado = false;
           }
           
-        } catch (contactoError) {
-          console.error('⚠️ Error en análisis de contacto:', contactoError);
-          // Fallback - usar el número del XML
-          telefonoWhatsappFinal = datosExtraidos.celularCliente;
-          contactoValidado = false;
-          contactoConflicto = false;
-          
-          analisisContacto = {
-            accion: 'error_fallback',
-            mensaje: 'Error en análisis - usando número del XML',
-            error: contactoError.message
+          // Actualizar datos de análisis
+          camposContacto.contactoDatosAnalisis = {
+            ...camposContacto.contactoDatosAnalisis,
+            analisisInteligente: analisisContacto,
+            fechaAnalisisInteligente: new Date().toISOString()
           };
         }
-      } else {
-        console.log('⚠️ No se puede analizar contacto - faltan datos requeridos');
-        // Si no hay celular, usar teléfono cliente como fallback
-        telefonoWhatsappFinal = datosExtraidos.telefonoCliente || null;
-        contactoValidado = false;
-        contactoConflicto = false;
+      } catch (contactoError) {
+        console.log('⚠️ Análisis inteligente no disponible o falló:', contactoError.message);
+        // Continuar con el procesamiento básico
+        analisisContacto = {
+          accion: 'procesamiento_basico',
+          mensaje: 'Usando procesamiento básico de contactos',
+          error: contactoError.message
+        };
       }
 
       // Limpiar archivo temporal
@@ -2348,9 +2343,9 @@ const cajaController = {
           
           // ============== SISTEMA INTELIGENTE DE CONTACTOS ==============
           celularCliente: datosExtraidos.celularCliente || '',
-          telefonoWhatsapp: telefonoWhatsappFinal,
-          contactoValidado: contactoValidado,
-          contactoConflicto: contactoConflicto,
+          telefonoWhatsapp: camposContacto.telefonoWhatsapp,
+          contactoValidado: camposContacto.contactoValidado,
+          contactoConflicto: camposContacto.contactoConflicto,
           analisisContacto: analisisContacto,
           
           // Información financiera
@@ -2552,8 +2547,8 @@ const cajaController = {
           nombreCliente
         });
 
-        // 1. Crear el documento
-        const nuevoDocumento = await Documento.create({
+        // 1. Crear el documento de forma segura
+        const nuevoDocumento = await crearDocumentoSeguro({
           codigoBarras: codigoBarras,
           tipoDocumento: tipoDocumento,
           nombreCliente: nombreCliente,
@@ -2566,8 +2561,13 @@ const cajaController = {
           estado: 'en_proceso',
           estadoPago: pagoInmediato ? 'pendiente' : 'pendiente', // Se actualizará si hay pago
           idMatrizador: idMatrizador,
-          observaciones: observaciones || 'Documento registrado desde XML mediante vista previa'
-        }, { transaction });
+          observaciones: observaciones || 'Documento registrado desde XML mediante vista previa',
+          // Campos del sistema de contactos (se agregarán solo si existen)
+          telefonoWhatsapp: req.body.telefonoWhatsapp || null,
+          contactoValidado: req.body.contactoValidado || false,
+          contactoConflicto: req.body.contactoConflicto || false,
+          contactoDatosAnalisis: req.body.contactoDatosAnalisis || null
+        }, transaction);
 
         console.log('✅ [CAJA-XML] DOCUMENTO CREADO:');
         console.log('   🆔 ID:', nuevoDocumento.id);
@@ -4804,6 +4804,85 @@ function calcularEstadoPago(documento) {
     return 'pago_parcial';
   } else {
     return 'pendiente';
+  }
+}
+
+/**
+ * FUNCIÓN AUXILIAR: Crear documento de forma segura
+ * Maneja la creación con o sin campos del sistema de contactos
+ */
+async function crearDocumentoSeguro(datosDocumento, transaction = null) {
+  try {
+    // Verificar si los campos del sistema de contactos existen
+    const { verificarCampoExiste } = require('../ejecutar-migracion-contactos');
+    
+    const camposContacto = [
+      'telefono_whatsapp',
+      'contacto_validado', 
+      'contacto_conflicto',
+      'contacto_datos_analisis'
+    ];
+    
+    // Verificar qué campos existen
+    const camposExistentes = {};
+    for (const campo of camposContacto) {
+      camposExistentes[campo] = await verificarCampoExiste('documentos', campo);
+    }
+    
+    console.log('🔍 Campos del sistema de contactos:', camposExistentes);
+    
+    // Preparar datos base del documento (siempre presentes)
+    const datosBase = {
+      codigoBarras: datosDocumento.codigoBarras,
+      tipoDocumento: datosDocumento.tipoDocumento,
+      nombreCliente: datosDocumento.nombreCliente,
+      identificacionCliente: datosDocumento.identificacionCliente,
+      emailCliente: datosDocumento.emailCliente || null,
+      telefonoCliente: datosDocumento.telefonoCliente || null,
+      numeroFactura: datosDocumento.numeroFactura || null,
+      valorFactura: datosDocumento.valorFactura || 0,
+      fechaFactura: datosDocumento.fechaFactura,
+      estado: datosDocumento.estado || 'en_proceso',
+      estadoPago: datosDocumento.estadoPago || 'pendiente',
+      idMatrizador: datosDocumento.idMatrizador,
+      observaciones: datosDocumento.observaciones || null
+    };
+    
+    // Agregar campos del sistema de contactos solo si existen en la BD
+    if (camposExistentes.telefono_whatsapp) {
+      datosBase.telefonoWhatsapp = datosDocumento.telefonoWhatsapp || null;
+    }
+    
+    if (camposExistentes.contacto_validado) {
+      datosBase.contactoValidado = datosDocumento.contactoValidado || false;
+    }
+    
+    if (camposExistentes.contacto_conflicto) {
+      datosBase.contactoConflicto = datosDocumento.contactoConflicto || false;
+    }
+    
+    if (camposExistentes.contacto_datos_analisis) {
+      datosBase.contactoDatosAnalisis = datosDocumento.contactoDatosAnalisis || null;
+    }
+    
+    console.log('📝 Creando documento con datos:', Object.keys(datosBase));
+    
+    // Crear el documento
+    const documento = await Documento.create(datosBase, { transaction });
+    
+    // Log informativo sobre el modo de compatibilidad
+    const todosCamposPresentes = Object.values(camposExistentes).every(existe => existe);
+    if (todosCamposPresentes) {
+      console.log('✅ Documento creado con sistema de contactos inteligente completo');
+    } else {
+      console.log('⚠️ Documento creado en modo de compatibilidad (sin algunos campos de contactos)');
+    }
+    
+    return documento;
+    
+  } catch (error) {
+    console.error('❌ Error en creación segura de documento:', error);
+    throw error;
   }
 }
 

@@ -113,14 +113,39 @@ function crearFechaValidada(año, mes, dia, fechaOriginal) {
 
 /**
  * Formatea una fecha a DD/MM/YYYY para mostrar en vistas
- * CRÍTICO: Maneja fechas de BD (YYYY-MM-DD) y Date objects sin problemas de timezone
- * @param {Date|string} fecha - Fecha a formatear
- * @returns {string} - Fecha en formato DD/MM/YYYY o 'Sin fecha'
+ * MEJORADO: Maneja todos los casos posibles de fechas problemáticas
+ * @param {Date|string|null|undefined} fecha - Fecha a formatear
+ * @returns {string} - Fecha en formato DD/MM/YYYY o mensaje apropiado
  */
 function formatearFecha(fecha) {
   try {
-    if (!fecha) {
+    // Casos donde no hay fecha
+    if (!fecha || fecha === null || fecha === undefined) {
       return 'Sin fecha';
+    }
+
+    // Casos de strings vacíos o solo espacios
+    if (typeof fecha === 'string' && fecha.trim() === '') {
+      return 'Sin fecha';
+    }
+
+    // Casos especiales de strings problemáticos
+    if (typeof fecha === 'string') {
+      const fechaLimpia = fecha.trim();
+      
+      // Verificar si es una fecha válida en string
+      if (fechaLimpia === 'null' || fechaLimpia === 'undefined' || fechaLimpia === 'Invalid Date') {
+        return 'Sin fecha';
+      }
+      
+      // Verificar si es un timestamp en string
+      if (/^\d+$/.test(fechaLimpia)) {
+        const timestamp = parseInt(fechaLimpia);
+        if (timestamp < 946684800000) { // Antes del año 2000
+          return 'Fecha inválida';
+        }
+        fecha = new Date(timestamp);
+      }
     }
 
     let fechaObj;
@@ -128,20 +153,49 @@ function formatearFecha(fecha) {
     if (fecha instanceof Date) {
       fechaObj = fecha;
     } else if (typeof fecha === 'string') {
-      // Intenta parsear la fecha. Moment.js es bueno para manejar varios formatos.
-      fechaObj = moment(fecha, [
+      // Usar moment.js para parsear con múltiples formatos
+      const momentDate = moment(fecha, [
         moment.ISO_8601,
         'YYYY-MM-DD HH:mm:ss.SSSZ',
         'YYYY-MM-DD HH:mm:ss',
         'YYYY-MM-DD',
-        'DD/MM/YYYY'
-      ]).toDate();
+        'DD/MM/YYYY HH:mm:ss',
+        'DD/MM/YYYY',
+        'MM/DD/YYYY',
+        'YYYY/MM/DD'
+      ], true);
+
+      if (momentDate.isValid()) {
+        // Para fechas solo de fecha (sin hora), usar UTC para evitar problemas de timezone
+        if (fecha.includes('T') || fecha.includes(' ')) {
+          fechaObj = momentDate.toDate();
+        } else {
+          // Para fechas solo de fecha, crear objeto Date local
+          fechaObj = new Date(momentDate.year(), momentDate.month(), momentDate.date());
+        }
+      } else {
+        console.warn('⚠️ Formato de fecha no reconocido:', fecha);
+        return 'Formato inválido';
+      }
+    } else if (typeof fecha === 'number') {
+      // Timestamp numérico
+      fechaObj = new Date(fecha);
     } else {
+      console.warn('⚠️ Tipo de fecha no soportado:', typeof fecha, fecha);
       return 'Formato no soportado';
     }
 
-    if (isNaN(fechaObj.getTime())) {
+    // Verificar que la fecha resultante sea válida
+    if (!fechaObj || isNaN(fechaObj.getTime())) {
+      console.warn('⚠️ Fecha inválida después de conversión:', fecha);
       return 'Fecha inválida';
+    }
+
+    // Verificar que la fecha esté en un rango razonable
+    const año = fechaObj.getFullYear();
+    if (año < 2000 || año > 2050) {
+      console.warn('⚠️ Fecha fuera de rango esperado:', año);
+      return 'Fecha fuera de rango';
     }
 
     // Formatear a DD/MM/YYYY
@@ -154,6 +208,7 @@ function formatearFecha(fecha) {
   } catch (error) {
     console.error('❌ Error formateando fecha:', {
       valor: fecha,
+      tipo: typeof fecha,
       error: error.message
     });
     return 'Error en fecha';

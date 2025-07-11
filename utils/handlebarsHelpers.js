@@ -18,15 +18,31 @@ const helpers = {
     if (date === 'now') return moment().format('DD/MM/YYYY HH:mm');
     
     try {
-      // 🔧 FIX: Mejorar manejo de fechas para evitar "Fecha inválida"
-      const momentDate = moment(date, ['YYYY-MM-DD HH:mm:ss', 'YYYY-MM-DD', 'DD/MM/YYYY', moment.ISO_8601], true);
+      // Usar la función mejorada de formatearFecha para la parte de fecha
+      const fechaFormateada = formatearFecha(date);
       
-      if (!momentDate.isValid()) {
-        console.error('❌ formatDateTime: Fecha inválida:', date);
-        return 'Fecha inválida';
+      // Si la fecha es inválida, retornar el mensaje apropiado
+      if (fechaFormateada === 'Sin fecha' || fechaFormateada === 'Fecha inválida' || fechaFormateada === 'Error en fecha') {
+        return fechaFormateada;
       }
       
-      return momentDate.format('DD/MM/YYYY HH:mm');
+      // Intentar obtener la hora
+      const momentDate = moment(date, [
+        moment.ISO_8601,
+        'YYYY-MM-DD HH:mm:ss.SSSZ',
+        'YYYY-MM-DD HH:mm:ss',
+        'YYYY-MM-DD',
+        'DD/MM/YYYY HH:mm:ss',
+        'DD/MM/YYYY'
+      ], true);
+      
+      if (momentDate.isValid()) {
+        return momentDate.format('DD/MM/YYYY HH:mm');
+      } else {
+        // Si no se puede obtener la hora, retornar solo la fecha
+        return fechaFormateada;
+      }
+      
     } catch (error) {
       console.error('❌ formatDateTime: Error procesando fecha:', error, 'Fecha:', date);
       return 'Error en fecha';
