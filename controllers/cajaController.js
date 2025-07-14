@@ -2901,7 +2901,7 @@ const cajaController = {
       }
 
       // Validar longitud mínima de justificación
-      if (justificacion.trim().length < 20) {
+      if (justificacion.trim().length < 5) {
         return res.status(400).json({
           success: false,
           message: 'La justificación debe tener al menos 20 caracteres'
@@ -4167,10 +4167,10 @@ cajaController.deshacerPago = async (req, res) => {
     const { motivoCategoria, justificacion } = req.body;
     
     // Validaciones iniciales
-    if (!justificacion || justificacion.length < 20) {
+    if (!justificacion || justificacion.length < 5) {
       return res.status(400).json({
         error: 'Justificación requerida',
-        mensaje: 'La justificación debe tener al menos 20 caracteres'
+        mensaje: 'La justificación debe tener al menos 5 caracteres'
       });
     }
     
@@ -4314,10 +4314,10 @@ cajaController.corregirPago = async (req, res) => {
     const { tipoCorreccion, nuevoMetodo, nuevoMonto, motivoCategoria, justificacion } = req.body;
     
     // Validaciones iniciales
-    if (!justificacion || justificacion.length < 20) {
+    if (!justificacion || justificacion.length < 5) {
       return res.status(400).json({
         error: 'Justificación requerida',
-        mensaje: 'La justificación debe tener al menos 20 caracteres'
+        mensaje: 'La justificación debe tener al menos 5 caracteres'
       });
     }
     
@@ -4477,10 +4477,10 @@ cajaController.deshacerRetencion = async (req, res) => {
     const { motivoCategoria, justificacion } = req.body;
     
     // Validaciones iniciales
-    if (!justificacion || justificacion.length < 20) {
+    if (!justificacion || justificacion.length < 5) {
       return res.status(400).json({
         error: 'Justificación requerida',
-        mensaje: 'La justificación debe tener al menos 20 caracteres'
+        mensaje: 'La justificación debe tener al menos 5 caracteres'
       });
     }
     
@@ -4607,10 +4607,10 @@ cajaController.corregirPagoVirtual = async (req, res) => {
     const { tipoCorreccion, nuevoMetodo, nuevoMonto, montoAnterior, metodoAnterior, motivoCategoria, justificacion } = req.body;
     
     // Validaciones iniciales
-    if (!justificacion || justificacion.length < 20) {
+    if (!justificacion || justificacion.length < 5) {
       return res.status(400).json({
         error: 'Justificación requerida',
-        mensaje: 'La justificación debe tener al menos 20 caracteres'
+        mensaje: 'La justificación debe tener al menos 5 caracteres'
       });
     }
     
@@ -4713,10 +4713,10 @@ cajaController.deshacerPagoVirtual = async (req, res) => {
     const { montoOriginal, metodoOriginal, motivoCategoria, justificacion } = req.body;
     
     // Validaciones iniciales
-    if (!justificacion || justificacion.length < 20) {
+    if (!justificacion || justificacion.length < 5) {
       return res.status(400).json({
         error: 'Justificación requerida',
-        mensaje: 'La justificación debe tener al menos 20 caracteres'
+        mensaje: 'La justificación debe tener al menos 5 caracteres'
       });
     }
     
@@ -4751,7 +4751,7 @@ cajaController.deshacerPagoVirtual = async (req, res) => {
       // Registrar en auditoría
       const ReversionAuditoria = require('../models/ReversionAuditoria');
       await ReversionAuditoria.create({
-        tipoReversion: 'reversion_pago_virtual',
+        tipoReversion: 'deshacer_pago',
         documentoId: documento.id,
         usuarioId: req.matrizador.id,
         rolUsuario: req.matrizador.rol,
@@ -4768,7 +4768,7 @@ cajaController.deshacerPagoVirtual = async (req, res) => {
       await EventoDocumento.create({
         documentoId: documento.id,
         usuarioId: req.matrizador.id,
-        tipo: 'reversion_pago_virtual',
+        tipo: 'reversion_pago',
         categoria: 'financiero',
         titulo: 'Pago original revertido',
         descripcion: `Caja ${req.matrizador.nombre} revirtió pago de $${montoOriginal} registrado al crear documento. Motivo: ${motivoCategoria}`,

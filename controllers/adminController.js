@@ -4205,10 +4205,10 @@ exports.revertirEstadoDocumento = async (req, res) => {
       });
     }
     
-    if (!justificacion || justificacion.length < 20) {
+    if (!justificacion || justificacion.length < 5) {
       return res.status(400).json({
         error: 'Justificación requerida',
-        mensaje: 'La justificación debe tener al menos 20 caracteres'
+        mensaje: 'La justificación debe tener al menos 5 caracteres'
       });
     }
     
