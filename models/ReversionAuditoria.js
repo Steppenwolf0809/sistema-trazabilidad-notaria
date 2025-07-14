@@ -118,7 +118,7 @@ const ReversionAuditoria = sequelize.define('ReversionAuditoria', {
     type: DataTypes.TEXT,
     allowNull: false,
     validate: {
-      len: [20, 1000]
+      len: [5, 1000]
     },
     comment: 'Justificación detallada de por qué se necesita la reversión'
   },

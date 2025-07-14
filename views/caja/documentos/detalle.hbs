@@ -1038,7 +1038,7 @@
         <div class="mb-4">
           <label for="justificacionReversionCaja" class="form-label">
             <i class="fas fa-edit text-danger"></i> 
-            <strong>Justificación Detallada (Obligatorio - Mínimo 20 caracteres)</strong>
+            <strong>Justificación Detallada (Obligatorio - Mínimo 5 caracteres)</strong>
           </label>
           <textarea 
             class="form-control" 
@@ -1046,12 +1046,12 @@
             name="justificacionReversionCaja" 
             rows="4" 
             required 
-            minlength="20"
+            minlength="5"
             maxlength="1000"
             placeholder="Explique detalladamente el motivo de la reversión financiera. Esta información será registrada permanentemente para auditoría."
           ></textarea>
           <div class="form-text">
-            <span id="contadorCaracteresCaja" class="text-danger">0</span>/20 caracteres mínimos requeridos
+            <span id="contadorCaracteresCaja" class="text-danger">0</span>/5 caracteres mínimos requeridos
           </div>
         </div>
 
@@ -1205,7 +1205,7 @@
           <div class="mb-4">
             <label for="justificacion" class="form-label">
               <i class="fas fa-edit text-danger"></i> 
-              <strong>Justificación Detallada (Obligatorio - Mínimo 20 caracteres)</strong>
+              <strong>Justificación Detallada (Obligatorio - Mínimo 5 caracteres)</strong>
             </label>
             <textarea 
               class="form-control" 
@@ -1213,12 +1213,12 @@
               name="justificacion" 
               rows="4" 
               required 
-              minlength="20"
+              minlength="5"
               aria-describedby="contador-caracteres"
               placeholder="Explique detalladamente el motivo de la eliminación. Esta información será registrada permanentemente para auditoría."
             ></textarea>
             <div class="form-text" id="contador-caracteres-wrapper">
-              <span id="contador-caracteres" aria-live="polite">0</span>/20 caracteres mínimos requeridos
+              <span id="contador-caracteres" aria-live="polite">0</span>/5 caracteres mínimos requeridos
             </div>
           </div>
 
@@ -2152,9 +2152,9 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
       }
       
-      if (!justificacion || justificacion.length < 20) {
+      if (!justificacion || justificacion.length < 5) {
         console.error('❌ Justificación insuficiente');
-        alert('La justificación debe tener al menos 20 caracteres');
+        alert('La justificación debe tener al menos 5 caracteres');
         return;
       }
       
@@ -2589,12 +2589,12 @@ document.addEventListener('DOMContentLoaded', function() {
     if (contadorCaracteres) {
       contadorCaracteres.textContent = valorBruto.length;
       
-      if (justificacion.length >= 20) {
+      if (justificacion.length >= 5) {
         contadorCaracteres.className = 'text-success fw-bold';
         console.log('✅ Justificación válida:', justificacion.length, 'caracteres (limpio)');
       } else {
         contadorCaracteres.className = 'text-danger';
-        console.log('❌ Justificación insuficiente:', justificacion.length, 'caracteres (limpio), mínimo 20');
+        console.log('❌ Justificación insuficiente:', justificacion.length, 'caracteres (limpio), mínimo 5');
       }
       
       console.log('📊 Contador actualizado:', {
@@ -2617,7 +2617,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Habilitar/deshabilitar botón
     const esValido = motivoSeleccionado && 
-                     justificacion.length >= 20 && 
+                     justificacion.length >= 5 && 
                      confirmado && 
                      manejosPagoValido;
     
@@ -2625,7 +2625,7 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('📊 Estado de validación final:', {
       esValido: esValido,
       motivoSeleccionado: !!motivoSeleccionado,
-      justificacionValida: justificacion.length >= 20,
+      justificacionValida: justificacion.length >= 5,
       confirmado: confirmado,
       manejosPagoValido: manejosPagoValido
     });
@@ -2907,10 +2907,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     const longitud = textarea.value.length;
     
-    console.log('📊 Actualizando contador:', { longitud, minimo: 20 });
+    console.log('📊 Actualizando contador:', { longitud, minimo: 5 });
     
     contador.textContent = longitud;
-    if (longitud >= 20) {
+    if (longitud >= 5) {
       contador.className = 'text-success fw-bold';
     } else {
       contador.className = 'text-danger fw-bold';
@@ -2930,7 +2930,7 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
     
-    const esValido = motivo && justificacion.length >= 20 && confirmacion;
+    const esValido = motivo && justificacion.length >= 5 && confirmacion;
     
     console.log('🔍 Validando formulario:', {
       motivo: !!motivo,
@@ -2952,7 +2952,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
   
-  function ejecutarReversionCaja() {
+  window.ejecutarReversionCaja = function() {
     const motivo = document.getElementById('motivoReversionCaja').value;
     const justificacion = document.getElementById('justificacionReversionCaja').value;
     const pagoData = window.currentPagoData;
@@ -2960,8 +2960,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // CRÍTICO: Obtener el ID del documento correctamente
     const documentoId = '{{documento.id}}';
     
-    if (!motivo || justificacion.length < 20 || !pagoData) {
-      alert('Por favor complete todos los campos requeridos');
+    if (!motivo || justificacion.length < 5 || !pagoData) {
+      alert('Por favor complete todos los campos requeridos (mínimo 5 caracteres en justificación)');
       return;
     }
     
@@ -3058,7 +3058,7 @@ document.addEventListener('DOMContentLoaded', function() {
       btn.disabled = false;
       btn.innerHTML = '<i class="fas fa-undo"></i> Ejecutar Reversión';
     });
-  }
+  };
   
   // ============================================================================
   // INICIALIZACIÓN DE EVENT LISTENERS PARA REVERSIONES FINANCIERAS
@@ -3109,8 +3109,8 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   if (btnEjecutar) {
-    btnEjecutar.addEventListener('click', ejecutarReversionCaja);
-    console.log('✅ Event listener agregado a botón de ejecución');
+    // NOTA: No agregar event listener aquí porque ya tiene onclick en HTML
+    console.log('✅ Botón de ejecución encontrado (usando onclick del HTML)');
   } else {
     console.warn('❌ No se encontró botón de ejecución');
   }

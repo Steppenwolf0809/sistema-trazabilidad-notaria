@@ -539,10 +539,10 @@
         <div class="mb-3">
           <label class="form-label fw-bold">Justificación detallada: <span class="text-danger">*</span></label>
           <textarea id="justificacionReversionAdmin" class="form-control" rows="4" 
-                    placeholder="Explique detalladamente por qué es necesaria esta reversión. Incluya contexto, responsable del error original y impacto. Mínimo 20 caracteres."
-                    minlength="20" maxlength="1000" required></textarea>
+                    placeholder="Explique detalladamente por qué es necesaria esta reversión. Incluya contexto, responsable del error original y impacto. Mínimo 5 caracteres."
+                    minlength="5" maxlength="1000" required></textarea>
           <div class="form-text">
-            <span id="contadorCaracteresAdmin">0</span>/20 caracteres mínimos (máximo 1000)
+            <span id="contadorCaracteresAdmin">0</span>/5 caracteres mínimos (máximo 1000)
           </div>
         </div>
         
@@ -619,7 +619,7 @@ function actualizarContadorAdmin() {
   const longitud = textarea.value.length;
   
   contador.textContent = longitud;
-  contador.className = longitud >= 20 ? 'text-success' : 'text-danger';
+  contador.className = longitud >= 5 ? 'text-success' : 'text-danger';
   
   validarFormularioAdmin();
 }
@@ -629,7 +629,7 @@ function validarFormularioAdmin() {
   const justificacion = document.getElementById('justificacionReversionAdmin').value;
   const confirmacion = document.getElementById('confirmarReversionAdmin').checked;
   
-  const esValido = motivo && justificacion.length >= 20 && confirmacion;
+  const esValido = motivo && justificacion.length >= 5 && confirmacion;
   document.getElementById('btnEjecutarReversionAdmin').disabled = !esValido;
 }
 
@@ -637,8 +637,8 @@ function ejecutarReversionAdmin() {
   const motivo = document.getElementById('motivoReversionAdmin').value;
   const justificacion = document.getElementById('justificacionReversionAdmin').value;
   
-  if (!motivo || justificacion.length < 20) {
-    alert('Por favor complete todos los campos requeridos');
+  if (!motivo || justificacion.length < 5) {
+    alert('Por favor complete todos los campos requeridos (mínimo 5 caracteres en justificación)');
     return;
   }
   
