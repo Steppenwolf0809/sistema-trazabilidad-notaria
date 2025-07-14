@@ -2957,6 +2957,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const justificacion = document.getElementById('justificacionReversionCaja').value;
     const pagoData = window.currentPagoData;
     
+    // CRÍTICO: Obtener el ID del documento correctamente
+    const documentoId = '{{documento.id}}';
+    
     if (!motivo || justificacion.length < 20 || !pagoData) {
       alert('Por favor complete todos los campos requeridos');
       return;
@@ -2977,7 +2980,7 @@ document.addEventListener('DOMContentLoaded', function() {
       
       if (pagoData.tipo === 'corregir_virtual') {
         // Para pagos virtuales, usar ruta especial que actualiza directamente el documento
-        url = `/caja/documentos/{{documento.id}}/corregir-pago-virtual`;
+        url = `/caja/documentos/${documentoId}/corregir-pago-virtual`;
         body = {
           tipoCorreccion,
           nuevoMetodo,
@@ -3007,7 +3010,7 @@ document.addEventListener('DOMContentLoaded', function() {
       };
     } else if (pagoData.tipo === 'deshacer_virtual') {
       // Deshacer pago virtual - actualiza directamente el documento
-      url = `/caja/documentos/{{documento.id}}/deshacer-pago-virtual`;
+      url = `/caja/documentos/${documentoId}/deshacer-pago-virtual`;
       body = {
         montoOriginal: parseFloat(pagoData.monto),
         metodoOriginal: pagoData.metodo,

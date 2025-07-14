@@ -110,7 +110,8 @@
           </div>
           <div class="col-md-4">
             <label for="valorFactura" class="form-label">Valor de Factura</label>
-            <input type="number" class="form-control" id="valorFactura" name="valorFactura" step="0.01">
+            <input type="number" class="form-control" id="valorFactura" name="valorFactura" step="0.01" readonly style="background-color: #f8f9fa;">
+            <small class="text-muted">El valor de factura se obtiene automáticamente del XML y no se puede modificar</small>
           </div>
           <div class="col-md-4">
             <label for="fechaFactura" class="form-label">Fecha de Factura</label>
@@ -742,9 +743,28 @@ document.addEventListener('DOMContentLoaded', function() {
       formateado: valorFacturaFormatted
     });
     
+    // ============== PROTECCIÓN: VALOR DE FACTURA READONLY ==============
+    const valorFacturaInput = document.getElementById('valorFactura');
+    
+    // HACER READONLY DEFINITIVO: Prevenir cualquier cambio
+    valorFacturaInput.setAttribute('readonly', true);
+    valorFacturaInput.style.pointerEvents = 'none';
+    valorFacturaInput.style.userSelect = 'none';
+    
+    // Prevenir edición programática
+    valorFacturaInput.addEventListener('input', function(e) {
+      e.preventDefault();
+      console.log('❌ Intento de edición bloqueado - El valor de factura no se puede modificar');
+      return false;
+    });
+    
+    valorFacturaInput.addEventListener('keydown', function(e) {
+      e.preventDefault();
+      return false;
+    });
+
     // ============== VALIDACIÓN CRÍTICA: VALOR DE FACTURA ==============
     // Verificar que el valor de factura no sea $0
-    const valorFacturaInput = document.getElementById('valorFactura');
     
     console.log('🔍 Analizando valor de factura:', {
       valorOriginal: datos.valorFactura,

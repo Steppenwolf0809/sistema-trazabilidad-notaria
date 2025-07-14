@@ -3357,12 +3357,15 @@ function extraerDatosFactura(factura) {
             break;
           case 'TELÉFONO':
           case 'TELEFONO':
-            datos.telefonoCliente = valor;
-            console.log('✅ Teléfono cliente encontrado:', valor);
+            // TEMPORAL: Guardar teléfono fijo por separado
+            datos.telefonoFijo = valor;
+            console.log('✅ Teléfono fijo encontrado:', valor);
             break;
           case 'CELULAR':
-            datos.celularCliente = valor;
-            console.log('✅ Celular cliente encontrado:', valor);
+            // PRIORIDAD 1: CELULAR va al campo principal de contacto
+            datos.telefonoCliente = valor;  // Campo principal para notificaciones
+            datos.celularCliente = valor;   // Campo específico para celular
+            console.log('✅ CELULAR encontrado (PRIORIDAD ALTA):', valor);
             break;
         }
       }
@@ -3371,6 +3374,18 @@ function extraerDatosFactura(factura) {
     console.log('⚠️ No se encontró sección infoAdicional en el XML');
   }
   
+  // LÓGICA DE CONTACTO INTELIGENTE: Priorizar CELULAR sobre TELÉFONO
+  if (!datos.telefonoCliente && datos.telefonoFijo) {
+    // Solo hay teléfono fijo, usarlo como última opción
+    datos.telefonoCliente = datos.telefonoFijo;
+    console.log('⚠️ No hay celular, usando teléfono fijo como contacto principal:', datos.telefonoFijo);
+  } else if (datos.telefonoCliente && datos.telefonoFijo) {
+    console.log('✅ CELULAR tiene prioridad sobre teléfono fijo:', {
+      celularUsado: datos.telefonoCliente,
+      telefonoFijoIgnorado: datos.telefonoFijo
+    });
+  }
+
   console.log('📊 Datos finales extraídos:', datos);
   
   // VALIDACIÓN FINAL MEJORADA: Distinguir entre facturas exentas y errores
