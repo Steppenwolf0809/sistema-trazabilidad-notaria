@@ -763,13 +763,162 @@ app.use('/api/admin', verificarToken, eliminacionRoutes);
 // Rutas de autorización urgente
 app.use('/api/autorizaciones-urgentes', verificarToken, autorizacionUrgenteRoutes);
 
-// Ruta de login
+// ============== RUTAS DE AUTENTICACIÓN ==============
+
+// GET - Mostrar formulario de login
 app.get('/login', (req, res) => {
   res.render('login', {
     layout: false, // Desactivar layout para login
     title: 'Iniciar Sesión',
     error: req.query.error
   });
+});
+
+// POST - Procesar login (NUEVA RUTA CRÍTICA)
+app.post('/login', async (req, res) => {
+  console.log('🔐 POST /login recibido');
+  console.log('1. Email recibido:', req.body.email);
+  console.log('2. Content-Type:', req.headers['content-type']);
+  console.log('3. User-Agent:', req.headers['user-agent']?.substring(0, 50));
+  
+  try {
+    const { email, password } = req.body;
+    
+    // STEP 1: Validar entrada
+    if (!email || !password) {
+      console.log('❌ LOGIN STEP 1 FAIL: Credenciales faltantes');
+      return res.status(400).json({
+        success: false,
+        message: 'Email y contraseña son requeridos'
+      });
+    }
+    
+    console.log('✅ LOGIN STEP 1 OK: Credenciales recibidas');
+    
+    // STEP 2: Buscar usuario
+    const Matrizador = require('./models/Matrizador');
+    const matrizador = await Matrizador.findOne({
+      where: { 
+        email: email.toLowerCase().trim(),
+        activo: true 
+      }
+    });
+    
+    console.log('2. Usuario encontrado:', !!matrizador);
+    if (!matrizador) {
+      console.log('❌ LOGIN STEP 2 FAIL: Usuario no encontrado');
+      return res.status(401).json({
+        success: false,
+        message: 'Credenciales inválidas'
+      });
+    }
+    
+    console.log('✅ LOGIN STEP 2 OK: Usuario encontrado -', matrizador.nombre);
+    
+    // STEP 3: Verificar contraseña
+    const bcrypt = require('bcryptjs');
+    let passwordValido = false;
+    try {
+      passwordValido = await bcrypt.compare(password, matrizador.password);
+      console.log('3. Password comparison:', passwordValido);
+    } catch (bcryptError) {
+      console.error('❌ LOGIN STEP 3 ERROR: bcrypt.compare falló:', bcryptError.message);
+      return res.status(500).json({
+        success: false,
+        message: 'Error en verificación de contraseña'
+      });
+    }
+    
+    if (!passwordValido) {
+      console.log('❌ LOGIN STEP 3 FAIL: Contraseña incorrecta');
+      return res.status(401).json({
+        success: false,
+        message: 'Credenciales inválidas'
+      });
+    }
+    
+    console.log('✅ LOGIN STEP 3 OK: Contraseña válida');
+    
+    // STEP 4: Generar JWT
+    const jwt = require('jsonwebtoken');
+    const token = jwt.sign(
+      { 
+        id: matrizador.id,
+        email: matrizador.email,
+        nombre: matrizador.nombre,
+        rol: matrizador.rol
+      },
+      process.env.JWT_SECRET || 'clave_secreta_notaria_2024',
+      { expiresIn: '24h' }
+    );
+    
+    console.log('4. JWT generado:', !!token);
+    
+    // STEP 5: Establecer cookie y responder
+    res.cookie('token', token, { 
+      httpOnly: true, 
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 24 * 60 * 60 * 1000, // 24 horas
+      path: '/',
+      sameSite: 'lax'
+    });
+    
+    // Actualizar último acceso
+    try {
+      await matrizador.update({ ultimoAcceso: new Date() });
+    } catch (updateError) {
+      console.warn('⚠️ No se pudo actualizar último acceso:', updateError.message);
+    }
+    
+    console.log('✅ LOGIN COMPLETO EXITOSO:', matrizador.nombre, '->', matrizador.rol);
+    
+    // Determinar URL de redirección
+    let redirectUrl = '/';
+    switch (matrizador.rol) {
+      case 'admin':
+        redirectUrl = '/admin';
+        break;
+      case 'matrizador':
+        redirectUrl = '/matrizador';
+        break;
+      case 'recepcion':
+        redirectUrl = '/recepcion';
+        break;
+      case 'caja':
+      case 'caja_archivo':
+        redirectUrl = '/caja';
+        break;
+      case 'archivo':
+        redirectUrl = '/archivo';
+        break;
+      default:
+        redirectUrl = '/login';
+    }
+    
+    console.log('5. Session set: URL redirección =', redirectUrl);
+    
+    return res.json({
+      success: true,
+      message: 'Login exitoso',
+      redirectUrl: redirectUrl,
+      user: {
+        nombre: matrizador.nombre,
+        rol: matrizador.rol
+      }
+    });
+    
+  } catch (error) {
+    console.error('💥 LOGIN ERROR CRÍTICO:', {
+      message: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString()
+    });
+    
+    return res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor'
+    });
+  }
 });
 
 // Ruta principal (redirección según rol)

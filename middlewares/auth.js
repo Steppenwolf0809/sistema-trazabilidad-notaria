@@ -295,25 +295,51 @@ const esConsulta = (req, res, next) => {
   next();
 };
 
-// Modificación: función para redirigir según rol después del login
+// Función mejorada para redirigir según rol después del login
 function redirigirSegunRol(req, res) {
+  console.log('🔀 REDIRECT: Determinando redirección según rol...');
+  console.log('   req.matrizador existe:', !!req.matrizador);
+  
   if (!req.matrizador) {
+    console.log('❌ REDIRECT: Sin matrizador, redirigiendo a login');
     return res.redirect('/login');
   }
-  switch (req.matrizador.rol) {
+  
+  const usuario = req.matrizador;
+  console.log(`👤 REDIRECT: Usuario ${usuario.nombre} (${usuario.rol})`);
+  
+  let redirectUrl = '/login'; // fallback por defecto
+  
+  switch (usuario.rol) {
     case 'admin':
-      return res.redirect('/admin');
+      redirectUrl = '/admin';
+      break;
     case 'matrizador':
-      return res.redirect('/matrizador');
+      redirectUrl = '/matrizador';
+      break;
     case 'recepcion':
-      return res.redirect('/recepcion');
+      redirectUrl = '/recepcion';
+      break;
     case 'caja':
     case 'caja_archivo':
-      return res.redirect('/caja');
+      redirectUrl = '/caja';
+      break;
     case 'archivo':
-      return res.redirect('/archivo');
+      redirectUrl = '/archivo';
+      break;
     default:
-      return res.redirect('/login');
+      console.log(`⚠️ REDIRECT: Rol desconocido '${usuario.rol}', usando login como fallback`);
+      redirectUrl = '/login';
+  }
+  
+  console.log(`✅ REDIRECT: ${usuario.nombre} (${usuario.rol}) → ${redirectUrl}`);
+  
+  try {
+    return res.redirect(redirectUrl);
+  } catch (redirectError) {
+    console.error('❌ REDIRECT ERROR:', redirectError);
+    // Fallback de emergencia
+    return res.redirect('/login');
   }
 }
 

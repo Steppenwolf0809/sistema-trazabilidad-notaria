@@ -215,26 +215,24 @@ LoginModule.saveRememberMe = function() {
 };
 
 /**
- * Manejar envío del formulario
+ * Manejar envío del formulario con AJAX robusto
  */
 LoginModule.handleSubmit = function(event) {
-  // NO prevenir el envío del formulario - permitir envío tradicional
-  // event.preventDefault(); // COMENTADO para permitir envío normal
+  // PREVENIR envío tradicional - usar AJAX
+  event.preventDefault();
   
   // Prevenir envíos múltiples
   if (this.state.isSubmitting) {
-    event.preventDefault();
+    console.log('⚠️ LOGIN: Envío ya en progreso, ignorando...');
     return false;
   }
   
-  console.log('📝 Validando formulario antes del envío...');
+  console.log('📝 AJAX LOGIN: Iniciando proceso de login...');
   
   // Validar todos los campos
   const isValid = this.validateAllFields();
   
   if (!isValid) {
-    // Solo prevenir envío si hay errores de validación
-    event.preventDefault();
     this.showAlert('Por favor, corrija los errores antes de continuar', 'error');
     return false;
   }
@@ -242,14 +240,102 @@ LoginModule.handleSubmit = function(event) {
   // Guardar email si "Recordarme" está marcado
   this.saveRememberMe();
   
-  // Mostrar estado de carga (visual)
+  // Mostrar estado de carga
   this.setLoadingState(true);
   
-  // Permitir que el formulario se envíe de manera tradicional
-  console.log('✅ Formulario válido - enviando de manera tradicional...');
+  // Obtener datos del formulario
+  const formData = {
+    email: this.elements.emailInput.value.trim(),
+    password: this.elements.passwordInput.value
+  };
   
-  // El formulario se enviará automáticamente al servidor
-  return true;
+  console.log('🚀 AJAX LOGIN: Enviando credenciales para:', formData.email);
+  
+  // Envío AJAX con timeout y manejo de errores robusto
+  this.sendLoginRequest(formData);
+  
+  return false;
+};
+
+/**
+ * Enviar petición de login con AJAX y timeout
+ */
+LoginModule.sendLoginRequest = function(formData) {
+  // Crear AbortController para timeout
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+    console.error('❌ LOGIN TIMEOUT: Petición cancelada por timeout');
+  }, 15000); // 15 segundos de timeout
+  
+  // Petición fetch con timeout
+  fetch('/login', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify(formData),
+    signal: controller.signal
+  })
+  .then(response => {
+    clearTimeout(timeoutId);
+    console.log('📡 LOGIN RESPONSE:', response.status, response.statusText);
+    
+    if (!response.ok) {
+      // Manejar errores HTTP específicos
+      if (response.status === 401) {
+        throw new Error('Credenciales inválidas. Verifique su email y contraseña.');
+      } else if (response.status === 500) {
+        throw new Error('Error interno del servidor. Intente nuevamente en unos momentos.');
+      } else if (response.status === 400) {
+        throw new Error('Datos de login inválidos.');
+      } else {
+        throw new Error(`Error del servidor (${response.status}): ${response.statusText}`);
+      }
+    }
+    
+    return response.json();
+  })
+  .then(data => {
+    console.log('✅ LOGIN SUCCESS:', data);
+    
+    if (data.success) {
+      this.setLoadingState(false);
+      this.showAlert(`¡Bienvenido, ${data.user?.nombre || 'Usuario'}!`, 'success');
+      
+      // Redirigir después de un breve delay para mostrar el mensaje
+      setTimeout(() => {
+        window.location.href = data.redirectUrl || '/';
+      }, 1000);
+    } else {
+      throw new Error(data.message || 'Error desconocido en el login');
+    }
+  })
+  .catch(error => {
+    clearTimeout(timeoutId);
+    this.setLoadingState(false);
+    
+    console.error('❌ LOGIN ERROR:', error);
+    
+    let errorMessage = 'Error de conexión. Verifique su conexión a internet.';
+    
+    if (error.name === 'AbortError') {
+      errorMessage = 'La conexión ha tardado demasiado. Verifique su conexión e intente nuevamente.';
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
+    this.showAlert(errorMessage, 'error');
+    
+    // Reactivar el botón después de 3 segundos
+    setTimeout(() => {
+      this.state.isSubmitting = false;
+      if (this.elements.submitButton) {
+        this.elements.submitButton.disabled = false;
+      }
+    }, 3000);
+  });
 };
 
 /**
