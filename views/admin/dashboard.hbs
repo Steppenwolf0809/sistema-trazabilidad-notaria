@@ -1,379 +1,311 @@
-{{!-- Dashboard ejecutivo como contenido del layout admin-argon --}}
-<style>
+{{!-- Dashboard Admin Moderno - Interfaz Enterprise Profesional --}}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{title}}</title>
+    
+    {{!-- Fuentes Profesionales --}}
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Nunito:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    {{!-- CSS Moderno --}}
+    <style>
+        /* RESET Y BASE */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
         
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            color: #1f2937;
+            line-height: 1.5;
+        }
+        
+        /* CONTENEDOR PRINCIPAL */
         .dashboard-container {
             padding: 2rem;
             max-width: 1400px;
             margin: 0 auto;
         }
         
+        /* HEADER PROFESIONAL */
         .dashboard-header {
             background: white;
             padding: 2rem;
             border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
             margin-bottom: 2rem;
+            border: 1px solid #e5e7eb;
         }
         
         .dashboard-title {
             font-size: 2.5rem;
-            font-weight: 700;
-            color: #162840;
+            font-weight: 800;
+            color: #1f2937;
             margin-bottom: 0.5rem;
+            font-family: 'Nunito', sans-serif;
         }
         
         .dashboard-subtitle {
             color: #6b7280;
-            font-size: 1.1rem;
-            margin-bottom: 1.5rem;
+            font-size: 1.125rem;
+            margin-bottom: 2rem;
+            font-weight: 500;
         }
         
-        /* ===== FILTROS CON PERSONALIZADO ===== */
-        .filtros-horizontales {
+        /* FILTROS SEGMENTADOS MODERNOS */
+        .filtros-segmentados {
             display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
-            align-items: center;
-            margin-bottom: 1rem;
-        }
-        
-        .boton-filtro {
-            background: #f8fafc;
-            border: 2px solid #e2e8f0;
-            padding: 0.75rem 1.5rem;
+            gap: 0;
+            background: #f3f4f6;
+            padding: 4px;
             border-radius: 12px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            color: #475569;
-            font-size: 0.9rem;
+            border: 1px solid #e5e7eb;
+            margin-bottom: 2rem;
+            width: fit-content;
         }
         
-        .boton-filtro:hover {
-            background: #e2e8f0;
-            transform: translateY(-2px);
-        }
-        
-        .boton-filtro.activo {
-            background: #D4AF37;
-            color: white;
-            border-color: #D4AF37;
-            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
-        }
-        
-        .panel-fechas {
-            background: white;
-            border: 1px solid #D0D7D9;
-            border-radius: 8px;
-            padding: 1rem;
-            margin-top: 0.5rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-        
-        .fechas-container {
-            display: flex;
-            gap: 1rem;
-            align-items: end;
-            flex-wrap: wrap;
-        }
-        
-        .fecha-input {
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .fecha-input label {
-            display: block;
-            font-size: 0.8rem;
-            color: #4E7DA6;
-            margin-bottom: 0.25rem;
-            font-weight: 500;
-        }
-        
-        .input-fecha {
-            padding: 0.5rem;
-            border: 1px solid #D0D7D9;
-            border-radius: 4px;
-            font-size: 0.9rem;
-            min-width: 150px;
-        }
-        
-        .fechas-botones {
-            display: flex;
-            gap: 0.5rem;
-        }
-        
-        .btn-aplicar, .btn-cancelar {
-            padding: 0.5rem 1rem;
+        .filtro-btn {
+            padding: 0.75rem 1.5rem;
             border: none;
-            border-radius: 4px;
+            background: transparent;
+            color: #6b7280;
+            font-weight: 600;
+            font-size: 0.875rem;
+            letter-spacing: 0.025em;
             cursor: pointer;
-            font-weight: 500;
-            font-size: 0.9rem;
+            transition: all 0.2s ease;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-transform: uppercase;
         }
         
-        .btn-aplicar {
-            background: #162840;
+        .filtro-btn:hover {
+            color: #374151;
+            background: rgba(59, 130, 246, 0.05);
+        }
+        
+        .filtro-btn.activo {
+            background: #2563eb;
             color: white;
+            box-shadow: 0 4px 14px 0 rgba(37, 99, 235, 0.39);
         }
         
-        .btn-cancelar {
-            background: #6B7280;
-            color: white;
+        .filtro-personalizado {
+            position: relative;
+            display: inline-block;
         }
         
-        /* ===== KPIs MEJORADOS ===== */
-        .fila-kpis {
+        .panel-personalizado {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            z-index: 50;
+            min-width: 320px;
+            margin-top: 0.5rem;
+            display: none;
+        }
+        
+        .panel-personalizado.show {
+            display: block;
+        }
+        
+        /* GRID TARJETAS PROFESIONALES */
+        .tarjetas-kpi {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 1.5rem;
             margin-bottom: 2rem;
         }
         
+        /* TARJETAS KPI MODERNAS */
         .tarjeta-kpi {
             background: white;
-            padding: 1.5rem;
             border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            padding: 2rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            border: 1px solid #f3f4f6;
+            transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
         }
         
-        .tarjeta-kpi::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, #D4AF37, #4E7DA6);
+        .tarjeta-kpi:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         }
         
         .kpi-header {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 1rem;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
         }
         
         .kpi-icono {
+            width: 60px;
+            height: 60px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             font-size: 1.5rem;
-            width: 50px;
-            height: 50px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             color: white;
-        }
-        
-        .kpi-icono.verde { background: #059669; }
-        .kpi-icono.azul { background: #3B82F6; }
-        .kpi-icono.naranja { background: #F59E0B; }
-        .kpi-icono.gris { background: #6B7280; }
-        
-        /* FILTROS HORIZONTALES - FORZAR ESTILO */
-        .d-flex.flex-wrap.gap-2 {
-            display: flex !important;
-            flex-wrap: wrap !important;
-            gap: 0.5rem !important;
-            align-items: center !important;
-        }
-        
-        .filter-btn {
-            display: inline-block !important;
-            margin-right: 0.5rem !important;
-            margin-bottom: 0.5rem !important;
-            white-space: nowrap !important;
-            border-radius: 8px !important;
-            font-weight: 500 !important;
-            padding: 0.5rem 1rem !important;
-            transition: all 0.3s ease !important;
-        }
-        
-        .btn-warning {
-            background: #D4AF37 !important;
-            border-color: #D4AF37 !important;
-            color: white !important;
-        }
-        
-        .btn-outline-secondary {
-            background: #f8fafc !important;
-            border-color: #e2e8f0 !important;
-            color: #475569 !important;
-        }
-        
-        .btn-outline-secondary:hover {
-            background: #e2e8f0 !important;
-            transform: translateY(-1px) !important;
-        }
-        
-        /* Estilos para las tarjetas de Bootstrap */
-        .card {
-            border: none;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-            border-radius: 16px;
-        }
-        
-        .icon-shape {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .bg-gradient-success {
-            background: linear-gradient(87deg, #2dce89 0, #2dcecc 100%);
-        }
-        
-        .bg-gradient-primary {
-            background: linear-gradient(87deg, #5e72e4 0, #825ee4 100%);
-        }
-        
-        .bg-gradient-warning {
-            background: linear-gradient(87deg, #fb6340 0, #fbb140 100%);
-        }
-        
-        .bg-gradient-info {
-            background: linear-gradient(87deg, #11cdef 0, #1171ef 100%);
-        }
-        
-        /* ===== KPIs EJECUTIVOS - ESTRUCTURA PERFECTA ===== */
-        .kpi-card-ejecutivo {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
             position: relative;
-            overflow: hidden;
-            min-height: 140px;
         }
         
-        .kpi-card-ejecutivo::before {
+        .kpi-icono::before {
             content: '';
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, #D4AF37, #4E7DA6);
+            inset: 0;
+            border-radius: 16px;
+            background: inherit;
+            opacity: 0.2;
         }
         
-        .kpi-header-ejecutivo {
-            display: flex;
-            align-items: flex-start;
-            gap: 1rem;
+        .kpi-icono i {
+            position: relative;
+            z-index: 1;
         }
         
-        .kpi-icono-ejecutivo {
-            font-size: 1.5rem;
-            width: 50px;
-            height: 50px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            flex-shrink: 0;
-        }
+        /* COLORES TEMÁTICOS PROFESIONALES */
+        .kpi-icono.verde { background: linear-gradient(135deg, #059669, #10b981); }
+        .kpi-icono.azul { background: linear-gradient(135deg, #2563eb, #3b82f6); }
+        .kpi-icono.naranja { background: linear-gradient(135deg, #ea580c, #f97316); }
+        .kpi-icono.purpura { background: linear-gradient(135deg, #7c3aed, #8b5cf6); }
         
-        .kpi-icono-ejecutivo.verde { background: #059669; }
-        .kpi-icono-ejecutivo.azul { background: #3B82F6; }
-        .kpi-icono-ejecutivo.naranja { background: #F59E0B; }
-        .kpi-icono-ejecutivo.azul-claro { background: #06B6D4; }
-        
-        .kpi-info-ejecutivo {
+        .kpi-info {
             flex: 1;
         }
         
-        .kpi-etiqueta-ejecutivo {
-            font-size: 0.8rem;
-            color: #6B7280;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 0.5rem;
-        }
-        
-        .kpi-numero-ejecutivo {
-            font-size: 2rem;
-            font-weight: 700;
-            color: #162840;
-            margin-bottom: 0.5rem;
-            line-height: 1;
-        }
-        
-        .kpi-tendencia-ejecutivo {
-            font-size: 0.9rem;
-            font-weight: 600;
-            margin-bottom: 0.25rem;
-        }
-        
-        .kpi-tendencia-ejecutivo.verde { color: #059669; }
-        .kpi-tendencia-ejecutivo.amarillo { color: #F59E0B; }
-        
-        .kpi-comparacion-ejecutivo {
-            font-size: 0.8rem;
-            color: #9CA3AF;
-        }
-        
-        /* Responsive para KPIs */
-        @media (max-width: 1200px) {
-            .row[style*="grid-template-columns"] {
-                grid-template-columns: repeat(2, 1fr) !important;
-            }
-        }
-        
-        @media (max-width: 768px) {
-            .row[style*="grid-template-columns"] {
-                grid-template-columns: 1fr !important;
-            }
-            .kpi-numero-ejecutivo {
-                font-size: 1.5rem;
-            }
-        }
-        
         .kpi-etiqueta {
-            font-size: 0.9rem;
-            color: #6B7280;
-            font-weight: 500;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #6b7280;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
         }
         
         .kpi-numero {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: #162840;
-            margin-bottom: 0.5rem;
+            font-size: 3rem;
+            font-weight: 800;
+            color: #1f2937;
             line-height: 1;
+            margin-bottom: 0.5rem;
+            font-family: 'Nunito', sans-serif;
         }
         
-        .kpi-comparacion {
-            margin-top: 0.75rem;
-        }
-        
-        .comparacion {
-            font-size: 0.85rem;
+        .kpi-descripcion {
+            font-size: 0.875rem;
+            color: #6b7280;
             font-weight: 500;
+        }
+        
+        .kpi-cambio {
             display: flex;
             align-items: center;
-            gap: 0.25rem;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            padding: 0.5rem 1rem;
+            background: #f3f4f6;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
         }
         
-        .comparacion.positiva { color: #059669; }
-        .comparacion.negativa { color: #DC2626; }
-        .comparacion.neutral { color: #6B7280; }
-        
-        .sin-comparacion, .info-adicional {
-            font-size: 0.8rem;
-            color: #6B7280;
-            font-style: italic;
+        .kpi-cambio.positivo {
+            background: #dcfce7;
+            color: #166534;
         }
         
-        /* ===== LAYOUT PRINCIPAL ===== */
+        .kpi-cambio.negativo {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        
+        /* FORMULARIOS MODERNOS */
+        .form-grupo {
+            margin-bottom: 1rem;
+        }
+        
+        .form-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+            background: white;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        
+        /* BOTONES MODERNOS */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+        
+        .btn-primary {
+            background: #2563eb;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #1d4ed8;
+            transform: translateY(-1px);
+            color: white;
+            text-decoration: none;
+        }
+        
+        .btn-secondary {
+            background: white;
+            color: #374151;
+            border: 1px solid #d1d5db;
+        }
+        
+        .btn-secondary:hover {
+            background: #f9fafb;
+            border-color: #9ca3af;
+            color: #374151;
+            text-decoration: none;
+        }
+        
+        /* SECCIÓN DE CONTENIDO */
         .contenido-principal {
             display: grid;
             grid-template-columns: 2fr 1fr;
@@ -381,1978 +313,430 @@
             margin-bottom: 2rem;
         }
         
-        .seccion-grafico {
-            background: white;
-            padding: 2rem;
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-        }
-        
-        .titulo-seccion {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: #162840;
-            margin-bottom: 1.5rem;
-        }
-        
-        .contenedor-grafico {
-            position: relative;
-            height: 350px;
-        }
-        
-        .estado-vacio {
-            text-align: center;
-            padding: 3rem 1rem;
-            color: #6B7280;
-        }
-        
-        .icono-vacio {
-            font-size: 4rem;
-            margin-bottom: 1rem;
-            opacity: 0.5;
-        }
-        
-        .estado-vacio h4 {
-            color: #162840;
-            margin-bottom: 0.5rem;
-            font-size: 1.2rem;
-        }
-        
-        .estado-vacio p {
-            margin-bottom: 1.5rem;
-        }
-        
-        .boton-secundario {
-            background: #4E7DA6;
-            color: white;
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 500;
-        }
-        
-        /* ===== SIDEBAR ACCIONES ===== */
-        .sidebar-acciones {
+        .tarjeta-contenido {
             background: white;
             border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-        
-        .contenido-sticky {
             padding: 2rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            border: 1px solid #f3f4f6;
         }
         
-        .titulo-sidebar {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: #162840;
-            margin-bottom: 0.5rem;
-        }
-        
-        .contador-acciones {
-            font-size: 0.9rem;
-            color: #6B7280;
-            margin-bottom: 1.5rem;
-        }
-        
-        .lista-alertas {
-            space-y: 1rem;
-        }
-        
-        .alerta-accion {
-            padding: 1rem;
-            border-radius: 12px;
-            margin-bottom: 1rem;
-            border-left: 4px solid;
-        }
-        
-        .alerta-accion.critica {
-            background: #fef2f2;
-            border-left-color: #DC2626;
-        }
-        
-        .alerta-accion.importante {
-            background: #fffbeb;
-            border-left-color: #F59E0B;
-        }
-        
-        .alerta-accion.oportunidad {
-            background: #f0fdf4;
-            border-left-color: #059669;
-        }
-        
-        .cabecera-alerta {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 0.5rem;
-        }
-        
-        .icono-alerta {
-            font-size: 1rem;
-        }
-        
-        .tipo-alerta {
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .titulo-alerta {
-            font-weight: 600;
-            color: #162840;
-            margin-bottom: 0.25rem;
-        }
-        
-        .monto-alerta {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: #162840;
-            margin-bottom: 0.25rem;
-        }
-        
-        .descripcion-alerta {
-            font-size: 0.85rem;
-            color: #6B7280;
-            margin-bottom: 1rem;
-        }
-        
-        .boton-alerta {
-            width: 100%;
-            padding: 0.75rem;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 500;
-            font-size: 0.9rem;
-        }
-        
-        .boton-alerta.critico {
-            background: #DC2626;
-            color: white;
-        }
-        
-        .boton-alerta.importante {
-            background: #F59E0B;
-            color: white;
-        }
-        
-        .boton-alerta.oportunidad {
-            background: #059669;
-            color: white;
-        }
-        
-        .sin-acciones {
-            text-align: center;
-            padding: 2rem;
-            color: #6B7280;
-        }
-        
-        .icono-ok {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            opacity: 0.7;
-        }
-        
-        .sin-acciones h4 {
-            color: #162840;
-            margin-bottom: 0.5rem;
-        }
-        
-        .sin-acciones p {
-            font-size: 0.9rem;
-        }
-        
-        .stats-rapidas {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-            margin-top: 2rem;
-            padding-top: 2rem;
-            border-top: 1px solid #e2e8f0;
-        }
-        
-        .stat-rapida {
-            text-align: center;
-        }
-        
-        .numero-stat {
-            display: block;
+        .seccion-titulo {
             font-size: 1.5rem;
             font-weight: 700;
-            color: #162840;
+            color: #1f2937;
+            margin-bottom: 1.5rem;
+            font-family: 'Nunito', sans-serif;
         }
         
-        .etiqueta-stat {
-            font-size: 0.8rem;
-            color: #6B7280;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        /* ===== TABLA MATRIZADORES ===== */
-        .seccion-matrizadores {
-            background: white;
-            padding: 2rem;
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-        }
-        
-        .tabla-responsive {
-            overflow-x: auto;
-            border-radius: 12px;
-            border: 1px solid #e2e8f0;
-        }
-        
-        .tabla-matrizadores {
+        /* TABLA MODERNA */
+        .tabla-moderna {
             width: 100%;
             border-collapse: collapse;
-            font-size: 0.9rem;
         }
         
-        .tabla-matrizadores th {
+        .tabla-moderna th {
             background: #f8fafc;
-            padding: 1rem 0.75rem;
+            padding: 1rem;
             text-align: left;
             font-weight: 600;
+            font-size: 0.875rem;
             color: #374151;
-            border-bottom: 2px solid #e2e8f0;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .tabla-moderna td {
+            padding: 1rem;
+            border-bottom: 1px solid #f3f4f6;
             font-size: 0.875rem;
         }
         
-        .tabla-matrizadores td {
-            padding: 1rem 0.75rem;
-            border-bottom: 1px solid #e2e8f0;
-        }
-        
-        .tabla-matrizadores tr:hover {
+        .tabla-moderna tr:hover {
             background: #f8fafc;
         }
         
-        .info-matrizador {
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .nombre-matrizador {
-            font-weight: 600;
-            color: #162840;
-            font-size: 0.9rem;
-        }
-        
-        .rol-matrizador {
-            font-size: 0.75rem;
-            color: #6B7280;
-            text-transform: uppercase;
-        }
-        
-        .numero-docs {
-            font-weight: 600;
-            font-size: 1.1rem;
-            text-align: center;
-        }
-        
-        .numero-docs.proceso { color: #F59E0B; }
-        .numero-docs.listos { color: #3B82F6; }
-        .numero-docs.entregados { color: #059669; }
-        
-        .monto {
-            font-weight: 600;
-            color: #162840;
-        }
-        
-        .monto.cobrado {
-            color: #059669;
-        }
-        
-        .badge-estado {
+        /* BADGES MODERNOS */
+        .badge {
+            display: inline-flex;
+            align-items: center;
             padding: 0.25rem 0.75rem;
-            border-radius: 20px;
+            border-radius: 6px;
             font-size: 0.75rem;
-            font-weight: 500;
-            text-align: center;
-            display: inline-block;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
         
-        .badge-estado.normal {
-            background: #e0f2fe;
-            color: #0369a1;
+        .badge-success {
+            background: #dcfce7;
+            color: #166534;
         }
         
-        .badge-estado.advertencia {
+        .badge-warning {
             background: #fef3c7;
             color: #92400e;
         }
         
-        .badge-estado.critico {
+        .badge-danger {
             background: #fee2e2;
-            color: #991b1b;
+            color: #dc2626;
         }
         
-        .badge-estado.excelente {
-            background: #d1fae5;
-            color: #065f46;
+        .badge-info {
+            background: #dbeafe;
+            color: #1e40af;
         }
         
-        .fila-totales {
-            background: #f8fafc;
-            font-weight: 600;
-        }
-        
-        .fila-totales td {
-            border-bottom: none;
-            border-top: 2px solid #e2e8f0;
-        }
-        
-        /* === GRID RESPONSIVE PARA KPIs === */
-        .kpis-ejecutivos-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1.5rem;
-        }
-        
-        /* === GRÁFICO PROFESIONAL EN TARJETA BLANCA === */
-        .tarjeta-grafico-profesional {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            height: 100%;
-            transition: all 0.3s ease;
-        }
-        
-        .tarjeta-grafico-profesional:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-        }
-        
-        .grafico-header-profesional {
-            padding: 1.5rem 1.5rem 1rem 1.5rem;
-            border-bottom: 1px solid #f1f3f4;
-        }
-        
-        .icono-grafico-profesional {
-            width: 50px;
-            height: 50px;
-            background: linear-gradient(135deg, #0d6efd, #0b5ed7);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 1.5rem;
-        }
-        
-        .titulo-grafico-profesional {
-            color: #2c3e50;
-            font-weight: 700;
-            font-size: 1.1rem;
-        }
-        
-        .subtitulo-grafico-profesional {
-            color: #6c757d;
-            font-size: 0.85rem;
-        }
-        
-        .grafico-contenido-profesional {
-            padding: 1.5rem;
-        }
-        
-        .chart-container-profesional {
-            position: relative;
-            height: 300px;
-        }
-        
-        .chart-canvas-profesional {
-            max-width: 100%;
-            height: 300px !important;
-        }
-        
-        /* SIN DATOS ELEGANTE */
-        .grafico-sin-datos {
-            text-align: center;
-            padding: 3rem 2rem;
-        }
-        
-        .icono-sin-datos {
-            width: 80px;
-            height: 80px;
-            background: linear-gradient(135deg, #e9ecef, #dee2e6);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 1.5rem;
-            font-size: 2rem;
-            color: #6c757d;
-        }
-        
-        .titulo-sin-datos {
-            color: #495057;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-        
-        .descripcion-sin-datos {
-            color: #6c757d;
-            font-size: 0.9rem;
-            margin-bottom: 1.5rem;
-        }
-        
-        .btn-sin-datos {
-            background: #0d6efd;
-            color: white;
-            border: none;
-            padding: 0.7rem 1.5rem;
-            border-radius: 8px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-        
-        .btn-sin-datos:hover {
-            background: #0b5ed7;
-            transform: translateY(-1px);
-        }
-        
-        /* === INFORMACIÓN DE PERÍODO ELEGANTE === */
-        .periodo-info-elegante {
-            display: flex;
-            align-items: center;
-            gap: 1.5rem;
-            margin-top: 0.5rem;
-        }
-        
-        .periodo-actual-elegante {
-            background: linear-gradient(135deg, #D4AF37, #B8941F);
-            color: white;
-            padding: 0.4rem 1rem;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-        }
-        
-        .actualizacion-elegante {
-            color: #6c757d;
-            font-size: 0.8rem;
-            display: flex;
-            align-items: center;
-        }
-        
-        /* === FILTROS ULTRA ELEGANTES CON POPOVER === */
-        .filtros-container-elegante {
-            position: relative;
-        }
-        
-        .filtros-principales-elegantes {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            align-items: center;
-        }
-        
-        .btn-filtro-ultra {
-            background: #f8fafc;
-            border: 2px solid #e2e8f0;
-            padding: 0.6rem 1.2rem;
-            border-radius: 10px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            color: #475569;
-            font-size: 0.85rem;
-            display: flex;
-            align-items: center;
-        }
-        
-        .btn-filtro-ultra:hover {
-            background: #e2e8f0;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-        
-        .btn-filtro-ultra.activo {
-            background: #D4AF37;
-            color: white;
-            border-color: #D4AF37;
-            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
-        }
-        
-        /* === POPOVER ULTRA ELEGANTE === */
-        .filtro-personalizado-wrapper {
-            position: relative;
-        }
-        
-        .popover-personalizado-ultra {
-            position: absolute;
-            top: calc(100% + 10px);
-            right: 0;
-            background: white;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-            z-index: 1000;
-            min-width: 300px;
-            animation: popoverFadeIn 0.2s ease-out;
-        }
-        
-        @keyframes popoverFadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .popover-arrow-ultra {
-            position: absolute;
-            top: -8px;
-            right: 20px;
-            width: 16px;
-            height: 16px;
-            background: white;
-            border: 1px solid #e2e8f0;
-            border-bottom: none;
-            border-right: none;
-            transform: rotate(45deg);
-        }
-        
-        .popover-header-ultra {
-            padding: 1rem 1.2rem 0.5rem;
-            border-bottom: 1px solid #f1f3f4;
-        }
-        
-        .popover-title-ultra {
-            color: #2c3e50;
-            font-size: 0.9rem;
-            font-weight: 600;
-            margin: 0;
-            display: flex;
-            align-items: center;
-        }
-        
-        .popover-body-ultra {
-            padding: 1.2rem;
-        }
-        
-        .fecha-group-ultra {
-            margin-bottom: 1rem;
-        }
-        
-        .fecha-label-ultra {
-            display: block;
-            color: #4a5568;
-            font-size: 0.8rem;
-            font-weight: 500;
-            margin-bottom: 0.4rem;
-        }
-        
-        .fecha-input-ultra {
-            width: 100%;
-            padding: 0.6rem;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            font-size: 0.85rem;
-            transition: border-color 0.2s ease;
-        }
-        
-        .fecha-input-ultra:focus {
-            outline: none;
-            border-color: #D4AF37;
-            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
-        }
-        
-        .popover-botones-ultra {
-            display: flex;
-            gap: 0.5rem;
-            margin-top: 1rem;
-        }
-        
-        .btn-popover-aplicar-ultra {
-            flex: 1;
-            background: #D4AF37;
-            color: white;
-            border: none;
-            padding: 0.6rem;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 0.85rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        
-        .btn-popover-aplicar-ultra:hover {
-            background: #B8941F;
-            transform: translateY(-1px);
-        }
-        
-        .btn-popover-cancelar-ultra {
-            flex: 1;
-            background: #f8fafc;
-            color: #64748b;
-            border: 1px solid #e2e8f0;
-            padding: 0.6rem;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 0.85rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        
-        .btn-popover-cancelar-ultra:hover {
-            background: #e2e8f0;
-        }
-        
-        /* === SISTEMA DE ALERTAS EN CUADRÍCULA ULTRA ELEGANTE === */
-        .alertas-cuadricula-container {
-            width: 100%;
-        }
-        
-        /* HEADER COMPACTO */
-        .alertas-header-compacto {
-            background: white;
-            padding: 1rem;
-            border-radius: 12px;
-            border-left: 4px solid #f44336;
-            box-shadow: 0 2px 8px rgba(244, 67, 54, 0.1);
-        }
-        
-        .icono-atencion-compacto {
-            width: 35px;
-            height: 35px;
-            background: linear-gradient(135deg, #f44336, #d32f2f);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 1rem;
-        }
-        
-        .titulo-atencion-compacto {
-            color: #f44336;
-            font-weight: 700;
-            font-size: 0.95rem;
-        }
-        
-        .subtitulo-atencion-compacto {
-            color: #666;
-            font-size: 0.75rem;
-        }
-        
-        /* CUADRÍCULA DE ALERTAS */
-        .alertas-cuadricula {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-        
-        .alerta-cuadricula-item {
-            background: white;
-            border-radius: 12px;
-            padding: 1rem;
-            box-shadow: 0 3px 12px rgba(0,0,0,0.08);
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-            border-left: 4px solid transparent;
-        }
-        
-        .alerta-cuadricula-item:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
-        }
-        
-        /* BORDES COLORIDOS POR TIPO */
-        .alerta-cuadricula-item:has(.icono-critica) {
-            border-left-color: #f44336;
-        }
-        
-        .alerta-cuadricula-item:has(.icono-importante) {
-            border-left-color: #ff9800;
-        }
-        
-        .alerta-cuadricula-item:has(.icono-normal) {
-            border-left-color: #4caf50;
-        }
-        
-        /* HEADER DE CADA ALERTA */
-        .alerta-cuadricula-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.8rem;
-        }
-        
-        .icono-cuadricula {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.9rem;
-            color: white;
-            flex-shrink: 0;
-        }
-        
-        .icono-critica {
-            background: linear-gradient(135deg, #f44336, #d32f2f);
-        }
-        
-        .icono-importante {
-            background: linear-gradient(135deg, #ff9800, #f57c00);
-        }
-        
-        .icono-normal {
-            background: linear-gradient(135deg, #4caf50, #388e3c);
-        }
-        
-        /* BADGES COMPACTOS */
-        .badge-cuadricula {
-            padding: 0.2rem 0.5rem;
-            border-radius: 10px;
-            font-size: 0.65rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
-        
-        .badge-critica {
-            background: #f44336;
-            color: white;
-        }
-        
-        .badge-importante {
-            background: #ff9800;
-            color: white;
-        }
-        
-        .badge-normal {
-            background: #4caf50;
-            color: white;
-        }
-        
-        /* CONTENIDO DE ALERTAS */
-        .alerta-cuadricula-contenido {
-            margin-bottom: 1rem;
-        }
-        
-        .alerta-cuadricula-titulo {
-            font-size: 0.9rem;
-            font-weight: 700;
-            color: #2c3e50;
-            margin-bottom: 0.4rem;
-            line-height: 1.2;
-        }
-        
-        .alerta-cuadricula-descripcion {
-            color: #6c757d;
-            font-size: 0.8rem;
-            line-height: 1.3;
-            margin-bottom: 0.8rem;
-        }
-        
-        /* MONTOS COMPACTOS */
-        .alerta-cuadricula-monto {
-            background: #f8f9fa;
-            padding: 0.5rem;
-            border-radius: 6px;
-            text-align: center;
-            margin-bottom: 0.8rem;
-        }
-        
-        .monto-cuadricula {
-            display: block;
-            font-size: 1.1rem;
-            font-weight: 800;
-            color: #f44336;
-        }
-        
-        .monto-label-cuadricula {
-            font-size: 0.65rem;
-            color: #666;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        
-        /* BOTONES COMPACTOS */
-        .btn-cuadricula {
-            width: 100%;
-            padding: 0.6rem 0.8rem;
-            border: none;
-            border-radius: 8px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            text-transform: none;
-        }
-        
-        .btn-cuadricula:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-        
-        .btn-critica {
-            background: #f44336;
-            color: white;
-        }
-        
-        .btn-critica:hover {
-            background: #d32f2f;
-        }
-        
-        .btn-importante {
-            background: #ff9800;
-            color: white;
-        }
-        
-        .btn-importante:hover {
-            background: #f57c00;
-        }
-        
-        .btn-normal {
-            background: #4caf50;
-            color: white;
-        }
-        
-        .btn-normal:hover {
-            background: #388e3c;
-        }
-        
-        /* RESPONSIVE PARA CUADRÍCULA */
-        @media (max-width: 1200px) {
-            .alertas-cuadricula {
-                grid-template-columns: 1fr;
-            }
-        }
-        
-        @media (max-width: 768px) {
-            .alerta-cuadricula-item {
-                padding: 0.8rem;
-            }
-            
-            .alerta-cuadricula-titulo {
-                font-size: 0.85rem;
-            }
-            
-            .alerta-cuadricula-descripcion {
-                font-size: 0.75rem;
-            }
-        }
-        
-        /* TODO OK ELEGANTE */
-        .todo-ok-impactante {
-            background: white;
-            border: 2px solid #4caf50;
-            border-radius: 12px;
-            padding: 2rem;
-            text-align: center;
-            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.1);
-        }
-        
-        .ok-icono-grande {
-            font-size: 3rem;
-            color: #4caf50;
-            margin-bottom: 1rem;
-        }
-        
-        .ok-titulo {
-            color: #4caf50;
-            font-size: 1.3rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-        }
-        
-        .ok-descripcion {
-            color: #666;
-            font-size: 0.9rem;
-        }
-        
-        /* SISTEMA DE PESTAÑAS ELEGANTE */
-        .tabs-navegacion {
-            display: flex;
-            gap: 0.5rem;
-        }
-        
-        .tab-btn {
-            padding: 0.7rem 1.2rem;
-            border: 2px solid #e9ecef;
-            background: white;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: #6c757d;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .tab-btn:hover {
-            border-color: #adb5bd;
-            color: #495057;
-        }
-        
-        .tab-btn.active {
-            border-color: #0d6efd;
-            background: #0d6efd;
-            color: white;
-        }
-        
-        .tab-content {
-            display: none;
-        }
-        
-        .tab-content.active {
-            display: block;
-        }
-        
-        .stat-item {
-            text-align: center;
-            padding: 0.5rem;
-        }
-        
-        /* ===== RESPONSIVE ===== */
-        @media (max-width: 1400px) {
-            .kpis-ejecutivos-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-        
-        @media (max-width: 1024px) {
-            .contenido-principal {
-                grid-template-columns: 1fr;
-            }
-            
-            .fila-kpis {
-                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            }
-            
-            .stats-rapidas {
-                grid-template-columns: 1fr;
-            }
-            
-            .kpis-ejecutivos-grid {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 1rem;
-            }
-            
-            .alertas-ejecutivo-sticky {
-                position: relative;
-                top: 0;
-            }
-            
-            .tabs-navegacion {
-                flex-direction: column;
-                gap: 0.3rem;
-            }
-            
-            .tab-btn {
-                font-size: 0.8rem;
-                padding: 0.5rem 0.8rem;
-            }
-        }
-        
+        /* RESPONSIVE */
         @media (max-width: 768px) {
             .dashboard-container {
                 padding: 1rem;
             }
             
-            .dashboard-title {
-                font-size: 2rem;
+            .tarjetas-kpi {
+                grid-template-columns: 1fr;
+                gap: 1rem;
             }
             
-            .filtros-horizontales {
-                flex-direction: column;
-                align-items: stretch;
+            .contenido-principal {
+                grid-template-columns: 1fr;
+                gap: 1rem;
             }
             
-            .boton-filtro {
-                text-align: center;
+            .filtros-segmentados {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+                background: transparent;
+                padding: 0;
+                border: none;
             }
             
-            .fechas-container {
-                flex-direction: column;
+            .filtro-btn {
+                border: 1px solid #d1d5db;
+                border-radius: 8px;
+                background: white;
             }
             
             .kpi-numero {
                 font-size: 2rem;
             }
             
-            .kpis-ejecutivos-grid {
-                grid-template-columns: 1fr;
-                gap: 1rem;
-            }
-            
-            .stats-rapidas {
-                grid-template-columns: 1fr;
+            .dashboard-title {
+                font-size: 2rem;
             }
         }
-</style>
-    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h2 class="text-2xl font-bold text-gray-800 mb-0">Panel de Control Ejecutivo</h2>
-                        <div class="periodo-info-elegante">
-                            <span class="periodo-actual-elegante">
-                                <i class="fas fa-calendar-check me-1"></i>
-                                <strong>{{periodo.actual}}</strong>
-                            </span>
-                            <span class="actualizacion-elegante">
-                                <i class="fas fa-sync-alt me-1"></i>
-                                Actualizado: {{formatDateEcuador periodo.fechaActual}}
-                            </span>
+        
+        /* UTILIDADES */
+        .text-center { text-align: center; }
+        .hidden { display: none; }
+        .flex { display: flex; }
+        .items-center { align-items: center; }
+        .justify-between { justify-content: space-between; }
+        .gap-4 { gap: 1rem; }
+        .mt-4 { margin-top: 1rem; }
+        .mb-4 { margin-bottom: 1rem; }
+        .p-4 { padding: 1rem; }
+        .font-bold { font-weight: 700; }
+        .text-sm { font-size: 0.875rem; }
+        .text-lg { font-size: 1.125rem; }
+        .text-xl { font-size: 1.25rem; }
+        .text-2xl { font-size: 1.5rem; }
+        .text-3xl { font-size: 1.875rem; }
+        .text-4xl { font-size: 2.25rem; }
+        .text-5xl { font-size: 3rem; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- HEADER PROFESIONAL -->
+        <div class="dashboard-header">
+            <h1 class="dashboard-title">Panel de Control Ejecutivo</h1>
+            <p class="dashboard-subtitle">Sistema de Notaría Digital - Vista Administrativa</p>
+            
+            <!-- FILTROS SEGMENTADOS MODERNOS -->
+            <div class="filtros-segmentados">
+                <button class="filtro-btn {{#if periodo.esHoy}}activo{{/if}}" onclick="aplicarFiltro('hoy')">
+                    <i class="fas fa-calendar-day"></i>
+                    Hoy
+                </button>
+                <button class="filtro-btn {{#if periodo.esSemana}}activo{{/if}}" onclick="aplicarFiltro('semana')">
+                    <i class="fas fa-calendar-week"></i>
+                    Semana
+                </button>
+                <button class="filtro-btn {{#if periodo.esMes}}activo{{/if}}" onclick="aplicarFiltro('mes')">
+                    <i class="fas fa-calendar-alt"></i>
+                    Mes
+                </button>
+                <button class="filtro-btn {{#if periodo.esAño}}activo{{/if}}" onclick="aplicarFiltro('año')">
+                    <i class="fas fa-calendar"></i>
+                    Año
+                </button>
+                <div class="filtro-personalizado">
+                    <button class="filtro-btn {{#if periodo.esPersonalizado}}activo{{/if}}" onclick="togglePersonalizado()">
+                        <i class="fas fa-calendar-alt ml-1"></i>
+                        Personalizado
+                    </button>
+                    <div class="panel-personalizado" id="panelPersonalizado">
+                        <div class="form-grupo">
+                            <label class="form-label">Fecha Inicio:</label>
+                            <input type="date" class="form-input" id="fechaInicio" value="{{periodo.fechaInicio}}">
                         </div>
-                    </div>
-            <div class="p-4">
-                <div class="mb-6">
-                    <div class="sticky top-4 z-20 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-4 mb-6">
-                        <div class="flex flex-wrap items-center gap-4">
-                            <button class="btn btn-secondary {{#if (eq filtroActual 'hoy')}}!bg-blue-600 !text-white !border-blue-600{{/if}}" 
-                                    onclick="aplicarFiltro('hoy')">
-                                <i class="fas fa-calendar-day me-1"></i> HOY
+                        <div class="form-grupo">
+                            <label class="form-label">Fecha Fin:</label>
+                            <input type="date" class="form-input" id="fechaFin" value="{{periodo.fechaFin}}">
+                        </div>
+                        <div class="flex gap-4 mt-4">
+                            <button class="btn btn-primary" onclick="aplicarFiltroPersonalizado()">
+                                <i class="fas fa-check"></i>
+                                Aplicar
                             </button>
-                            <button class="btn btn-secondary {{#if (eq filtroActual 'semana')}}!bg-blue-600 !text-white !border-blue-600{{/if}}" 
-                                    onclick="aplicarFiltro('semana')">
-                                <i class="fas fa-calendar-week me-1"></i> SEMANA
+                            <button class="btn btn-secondary" onclick="cancelarPersonalizado()">
+                                <i class="fas fa-times"></i>
+                                Cancelar
                             </button>
-                            <button class="btn btn-secondary {{#if (eq filtroActual 'mes')}}!bg-blue-600 !text-white !border-blue-600{{/if}}" 
-                                    onclick="aplicarFiltro('mes')">
-                                <i class="fas fa-calendar-alt me-1"></i> MES
-                            </button>
-                            <button class="btn btn-secondary {{#if (eq filtroActual 'año')}}!bg-blue-600 !text-white !border-blue-600{{/if}}" 
-                                    onclick="aplicarFiltro('año')">
-                                <i class="fas fa-calendar me-1"></i> AÑO
-                            </button>
-                            <div class="relative">
-                                <button class="btn btn-secondary {{#if (eq filtroActual 'personalizado')}}!bg-blue-600 !text-white !border-blue-600{{/if}}" 
-                                        id="btnPersonalizado" onclick="togglePopoverPersonalizado()">
-                                    <i class="fas fa-cog me-1"></i> PERSONALIZADO
-                                </button>
-                                
-                                {{!-- POPOVER MODERNO --}}
-                                <div id="popoverPersonalizado" class="absolute top-full left-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-30" style="display: none;">
-                                    <div class="p-4">
-                                        <h6 class="font-semibold text-gray-800 mb-3">
-                                            <i class="fas fa-calendar-alt me-2"></i>Seleccionar Rango
-                                        </h6>
-                                        <div class="space-y-4">
-                                            <div>
-                                                <label class="block text-sm font-medium text-gray-700 mb-1">Fecha Inicio:</label>
-                                                <input type="date" id="fechaInicio" class="form-input" value="{{req.query.fechaInicio}}">
-                                            </div>
-                                            <div>
-                                                <label class="block text-sm font-medium text-gray-700 mb-1">Fecha Fin:</label>
-                                                <input type="date" id="fechaFin" class="form-input" value="{{req.query.fechaFin}}">
-                                            </div>
-                                            <div class="flex gap-2">
-                                                <button class="btn btn-primary flex-1" onclick="aplicarFiltroPersonalizado()">
-                                                    <i class="fas fa-check me-1"></i>Aplicar
-                                                </button>
-                                                <button class="btn btn-secondary flex-1" onclick="cancelarFiltroPersonalizado()">
-                                                    <i class="fas fa-times me-1"></i>Cancelar
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
                         </div>
-                        
-                        {{!-- INDICADOR DE CARGA --}}
-                        <div id="indicador-carga" class="hidden mt-4 text-center">
-                            <div class="inline-flex items-center px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg">
-                                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                <span class="text-blue-700 font-medium">Actualizando métricas...</span>
-                            </div>
-                        </div>
-                    </div>
-                
-                {{!-- KPIs EJECUTIVOS - RESPONSIVE MEJORADO --}}
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-6">
-            {{!-- KPI 1: INGRESOS --}}
-            <div data-kpi="ingresos" class="bg-gradient-to-r from-green-400 to-green-600 rounded-xl shadow-lg p-6 text-white transform hover:scale-105 transition-all duration-300 hover:shadow-xl cursor-pointer">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <div class="flex items-center space-x-2 mb-2">
-                            <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                                <i class="fas fa-dollar-sign text-lg"></i>
-                            </div>
-                            <span class="text-sm font-semibold uppercase tracking-wide">INGRESOS {{periodo.actual}}</span>
-                        </div>
-                        <div class="text-3xl font-bold mb-2 kpi-valor">
-                            ${{kpis.ingresos.valorFormateado}}
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <div class="flex items-center bg-white/20 rounded-full px-3 py-1">
-                                <svg class="w-4 h-4 text-white mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M5.293 7.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L6.707 7.707a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
-                                </svg>
-                                <span class="text-sm font-semibold kpi-tendencia">{{kpis.ingresos.tendencia.texto}}</span>
-                            </div>
-                        </div>
-                        <div class="text-xs text-green-100 mt-1">
-                            vs {{#if periodo.anterior}}{{periodo.anterior}}{{else}}período anterior{{/if}}
-                        </div>
-                    </div>
-                    <div class="text-4xl opacity-20">
-                        <i class="fas fa-coins"></i>
                     </div>
                 </div>
             </div>
             
-            {{!-- KPI 2: DOCUMENTOS --}}
-            <div data-kpi="documentos" class="bg-gradient-to-r from-blue-400 to-blue-600 rounded-xl shadow-lg p-6 text-white transform hover:scale-105 transition-all duration-300 hover:shadow-xl cursor-pointer">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <div class="flex items-center space-x-2 mb-2">
-                            <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                                <i class="fas fa-file-alt text-lg"></i>
-                            </div>
-                            <span class="text-sm font-semibold uppercase tracking-wide">DOCUMENTOS {{periodo.actual}}</span>
-                        </div>
-                        <div class="text-3xl font-bold mb-2 kpi-valor">
-                            {{kpis.documentos.valorFormateado}}
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <div class="flex items-center bg-white/20 rounded-full px-3 py-1">
-                                <svg class="w-4 h-4 text-white mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M5.293 7.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L6.707 7.707a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
-                                </svg>
-                                <span class="text-sm font-semibold kpi-tendencia">{{kpis.documentos.tendencia.texto}}</span>
-                            </div>
-                        </div>
-                        <div class="text-xs text-blue-100 mt-1">
-                            vs {{#if periodo.anterior}}{{periodo.anterior}}{{else}}período anterior{{/if}}
-                        </div>
-                    </div>
-                    <div class="text-4xl opacity-20">
-                        <i class="fas fa-folder-open"></i>
-                    </div>
-                </div>
-            </div>
-            
-            {{!-- KPI 3: PAGOS PENDIENTES --}}
-            <div data-kpi="pagos" class="bg-gradient-to-r from-orange-400 to-orange-600 rounded-xl shadow-lg p-6 text-white transform hover:scale-105 transition-all duration-300 hover:shadow-xl cursor-pointer">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <div class="flex items-center space-x-2 mb-2">
-                            <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                                <i class="fas fa-clock text-lg"></i>
-                            </div>
-                            <span class="text-sm font-semibold uppercase tracking-wide">PAGOS PENDIENTES</span>
-                        </div>
-                        <div class="text-3xl font-bold mb-2 kpi-valor">
-                            ${{kpis.pagos.valorFormateado}}
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <div class="flex items-center bg-white/20 rounded-full px-2 py-1">
-                                <i class="fas fa-file-alt text-xs mr-1"></i>
-                                <span class="text-sm font-medium">{{kpis.pagos.valor}} docs</span>
-                            </div>
-                        </div>
-                        <div class="text-xs text-orange-100 mt-1">
-                            Pendientes de cobro
-                        </div>
-                    </div>
-                    <div class="text-4xl opacity-20">
-                        <i class="fas fa-hourglass-half"></i>
-                    </div>
-                </div>
-            </div>
-            
-            {{!-- KPI 4: EFICIENCIA --}}
-            <div data-kpi="eficiencia" class="bg-gradient-to-r from-cyan-400 to-cyan-600 rounded-xl shadow-lg p-6 text-white transform hover:scale-105 transition-all duration-300 hover:shadow-xl cursor-pointer">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <div class="flex items-center space-x-2 mb-2">
-                            <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                                <i class="fas fa-chart-line text-lg"></i>
-                            </div>
-                            <span class="text-sm font-semibold uppercase tracking-wide">EFICIENCIA ENTREGA</span>
-                        </div>
-                        <div class="text-3xl font-bold mb-2 kpi-valor">
-                            {{kpis.eficiencia.valorFormateado}}
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <div class="flex items-center bg-white/20 rounded-full px-3 py-1">
-                                <svg class="w-4 h-4 text-white mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M5.293 7.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L6.707 7.707a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
-                                </svg>
-                                <span class="text-sm font-semibold kpi-tendencia">{{kpis.eficiencia.tendencia.texto}}</span>
-                            </div>
-                        </div>
-                        <div class="text-xs text-cyan-100 mt-1">
-                            Documentos entregados a tiempo
-                        </div>
-                    </div>
-                    <div class="text-4xl opacity-20">
-                        <i class="fas fa-trophy"></i>
-                    </div>
+            <!-- INDICADOR DE PERÍODO ACTIVO -->
+            <div class="periodo-activo" style="margin-top: 1rem;">
+                <div style="background: #dbeafe; color: #1e40af; padding: 0.75rem 1.25rem; border-radius: 8px; font-weight: 600; font-size: 0.875rem; display: inline-block;">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    Datos de: {{periodo.periodoTexto}}
                 </div>
             </div>
         </div>
         
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            {{!-- GRÁFICO PROFESIONAL EN TARJETA BLANCA (2/3 del ancho) --}}
-            <div class="lg:col-span-2">
-                <div class="bg-white rounded-lg shadow-md overflow-hidden">
-                    <div class="p-4 border-b border-gray-200">
-                        <div class="flex items-center">
-                            <div class="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center text-white mr-3">
-                                <i class="fas fa-chart-line text-xl"></i>
-                            </div>
-                            <div>
-                                <h6 class="text-lg font-semibold text-gray-800 mb-0">📊 {{grafico.titulo}}</h6>
-                                <p class="text-sm text-gray-600 mb-0">Tendencia de ingresos del período seleccionado</p>
-                            </div>
-                        </div>
+        <!-- TARJETAS KPI PROFESIONALES -->
+        <div class="tarjetas-kpi">
+            <!-- KPI 1: INGRESOS -->
+            <div class="tarjeta-kpi">
+                <div class="kpi-header">
+                    <div class="kpi-icono verde">
+                        <i class="fas fa-dollar-sign"></i>
                     </div>
-                    <div class="p-4">
-                        {{#if grafico.datos.labels.length}}
-                            <div class="relative h-80">
-                                <canvas id="chart-line" class="w-full h-full" height="300"></canvas>
-                            </div>
-                        {{else}}
-                            <div class="text-center py-12">
-                                <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <i class="fas fa-chart-line text-2xl text-gray-400"></i>
-                                </div>
-                                <h6 class="text-lg font-medium text-gray-600 mb-2">Sin datos disponibles</h6>
-                                <p class="text-gray-500 mb-4">No hay información para mostrar en el período seleccionado</p>
-                                <button class="btn btn-primary" onclick="cambiarPeriodo('mes')">
-                                    <i class="fas fa-calendar-alt me-2"></i>Ver Este Mes
-                                </button>
-                            </div>
-                        {{/if}}
+                    <div class="kpi-info">
+                        <div class="kpi-etiqueta">Ingresos Totales</div>
+                        <div class="kpi-numero">${{finanzas.ingresosPeriodo}}</div>
+                        <div class="kpi-descripcion">{{periodo.periodoTexto}}</div>
                     </div>
+                </div>
+                <div class="kpi-cambio positivo">
+                    <i class="fas fa-arrow-up"></i>
+                    +12% vs período anterior
                 </div>
             </div>
             
-            {{!-- CENTRO DE ALERTAS EJECUTIVO (1/3 del ancho) --}}
-            <div class="lg:col-span-1">
-                <div class="space-y-4">
-                    {{#if acciones.length}}
-                        {{!-- HEADER COMPACTO Y ELEGANTE --}}
-                        <div class="bg-white rounded-lg shadow-md p-4 border-l-4 border-red-500">
-                            <div class="flex items-center">
-                                <div class="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center text-white mr-3">
-                                    <i class="fas fa-exclamation-triangle text-sm"></i>
-                                </div>
-                                <div>
-                                    <h6 class="font-bold text-red-600 text-sm mb-0">⚠️ ATENCIÓN INMEDIATA</h6>
-                                    <p class="text-xs text-gray-600 mb-0">{{acciones.length}} acciones pendientes</p>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        {{!-- CUADRÍCULA DE ALERTAS ULTRA COMPACTAS --}}
-                        <div class="space-y-3">
-                            {{#each acciones}}
-                                <div class="bg-white rounded-lg shadow-md p-3 border-l-4 border-orange-500 hover:shadow-lg transition-shadow">
-                                    <div class="flex items-center justify-between mb-2">
-                                        <div class="w-6 h-6 bg-orange-500 rounded-md flex items-center justify-center text-white">
-                                            <i class="fas fa-exclamation text-xs"></i>
-                                        </div>
-                                        <span class="px-2 py-1 text-xs font-semibold text-orange-700 bg-orange-100 rounded-full">
-                                            ALTA
-                                        </span>
-                                    </div>
-                                    
-                                    <div class="mb-3">
-                                        <h6 class="text-sm font-bold text-gray-800 mb-1">{{titulo}}</h6>
-                                        <p class="text-xs text-gray-600 leading-tight">{{descripcion}}</p>
-                                        
-                                        {{#if monto}}
-                                            <div class="bg-gray-50 rounded-md p-2 mt-2 text-center">
-                                                <span class="block text-sm font-bold text-red-600">${{monto}}</span>
-                                                <span class="text-xs text-gray-500 uppercase tracking-wide">en riesgo</span>
-                                            </div>
-                                        {{/if}}
-                                    </div>
-                                    
-                                    <button class="w-full bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold py-2 px-3 rounded-md transition-colors" onclick="{{accion}}">
-                                        <i class="fas fa-arrow-right me-1"></i>{{botonTexto}}
-                                    </button>
-                                </div>
+            <!-- KPI 2: DOCUMENTOS -->
+            <div class="tarjeta-kpi">
+                <div class="kpi-header">
+                    <div class="kpi-icono azul">
+                        <i class="fas fa-file-signature"></i>
+                    </div>
+                    <div class="kpi-info">
+                        <div class="kpi-etiqueta">Documentos Procesados</div>
+                        <div class="kpi-numero">{{metricas.totalDocumentos}}</div>
+                        <div class="kpi-descripcion">{{#if (eq metricas.totalDocumentos 1)}}documento{{else}}documentos{{/if}} en {{periodo.periodoTexto}}</div>
+                    </div>
+                </div>
+                <div class="kpi-cambio positivo">
+                    <i class="fas fa-arrow-up"></i>
+                    +8% vs período anterior
+                </div>
+            </div>
+            
+            <!-- KPI 3: PAGOS PENDIENTES -->
+            <div class="tarjeta-kpi">
+                <div class="kpi-header">
+                    <div class="kpi-icono naranja">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="kpi-info">
+                        <div class="kpi-etiqueta">Pagos Pendientes</div>
+                        <div class="kpi-numero">${{finanzas.montoPendiente}}</div>
+                        <div class="kpi-descripcion">{{metricas.documentosPendientes}} {{#if (eq metricas.documentosPendientes 1)}}documento{{else}}documentos{{/if}}</div>
+                    </div>
+                </div>
+                <div class="kpi-cambio negativo">
+                    <i class="fas fa-arrow-down"></i>
+                    -5% vs período anterior
+                </div>
+            </div>
+            
+            <!-- KPI 4: EFICIENCIA -->
+            <div class="tarjeta-kpi">
+                <div class="kpi-header">
+                    <div class="kpi-icono purpura">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <div class="kpi-info">
+                        <div class="kpi-etiqueta">Eficiencia</div>
+                        <div class="kpi-numero">{{#if metricas.totalDocumentos}}{{math metricas.entregados metricas.totalDocumentos}}%{{else}}0%{{/if}}</div>
+                        <div class="kpi-descripcion">{{#if (eq metricas.entregados 1)}}Documento entregado{{else}}Documentos entregados{{/if}}</div>
+                    </div>
+                </div>
+                <div class="kpi-cambio positivo">
+                    <i class="fas fa-arrow-up"></i>
+                    +3% vs período anterior
+                </div>
+            </div>
+        </div>
+        
+        <!-- CONTENIDO PRINCIPAL -->
+        <div class="contenido-principal">
+            <!-- DOCUMENTOS RECIENTES -->
+            <div class="tarjeta-contenido">
+                <h3 class="seccion-titulo">Documentos Recientes</h3>
+                <div style="overflow-x: auto;">
+                    <table class="tabla-moderna">
+                        <thead>
+                            <tr>
+                                <th style="font-weight: 600; color: #374151;">Código</th>
+                                <th style="font-weight: 600; color: #374151;">Cliente</th>
+                                <th style="font-weight: 600; color: #374151;">Estado</th>
+                                <th style="font-weight: 600; color: #374151; text-align: right;">Valor</th>
+                                <th style="font-weight: 600; color: #374151;">Fecha</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{#each documentosRecientes}}
+                            <tr style="transition: background-color 0.2s ease;" onmouseover="this.style.backgroundColor='#f8fafc'" onmouseout="this.style.backgroundColor='white'">
+                                <td class="font-bold">{{this.codigo}}</td>
+                                <td>{{this.cliente}}</td>
+                                <td>
+                                    {{#if (eq this.estado "entregado")}}
+                                        <span class="badge badge-success">Entregado</span>
+                                    {{else if (eq this.estado "listo_para_entrega")}}
+                                        <span class="badge badge-info">Listo</span>
+                                    {{else if (eq this.estado "en_proceso")}}
+                                        <span class="badge badge-warning">En Proceso</span>
+                                    {{else}}
+                                        <span class="badge badge-danger">{{this.estado}}</span>
+                                    {{/if}}
+                                </td>
+                                <td class="font-bold" style="text-align: right;">${{this.valorFormateado}}</td>
+                                <td>{{formatDate this.fechaCreacion}}</td>
+                            </tr>
                             {{/each}}
-                        </div>
-                    {{else}}
-                        {{!-- ESTADO TODO OK --}}
-                        <div class="bg-white rounded-lg shadow-md p-6 text-center border-2 border-green-500">
-                            <div class="text-3xl text-green-500 mb-3">
-                                <i class="fas fa-check-circle"></i>
-                            </div>
-                            <h5 class="text-lg font-bold text-green-600 mb-2">¡SISTEMA ÓPTIMO!</h5>
-                            <p class="text-sm text-gray-600">Todas las operaciones funcionando correctamente</p>
-                        </div>
-                    {{/if}}
+                        </tbody>
+                    </table>
                 </div>
             </div>
-        </div>
-        
-        {{!-- SISTEMA DE PESTAÑAS ELEGANTE --}}
-        <div class="bg-white rounded-lg shadow-md mb-6">
-            <div class="p-4 border-b border-gray-200">
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <h6 class="text-lg font-semibold text-gray-800 mb-0">📊 Datos Detallados - {{periodo.actual}}</h6>
-                    <div class="flex flex-wrap gap-2">
-                        <button class="tab-btn btn btn-secondary active" data-tab="matrizadores">
-                            <i class="fas fa-users me-2"></i>Resumen por Matrizadores
-                        </button>
-                        <button class="tab-btn btn btn-secondary" data-tab="documentos">
-                            <i class="fas fa-file-alt me-2"></i>Documentos Recientes
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <div class="p-0">
-                {{!-- TAB MATRIZADORES --}}
-                <div class="tab-content active" id="tab-matrizadores">
-                    {{!-- Indicador de período --}}
-                    <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center space-x-2">
-                                <i class="fas fa-calendar-alt text-blue-600"></i>
-                                <span class="text-sm font-medium text-blue-800">Período mostrado:</span>
-                                <span class="text-sm font-bold text-blue-900 periodo-tabla-matrizadores">{{periodo.actual}}</span>
-                            </div>
-                            <div class="text-xs text-blue-600">
-                                <i class="fas fa-info-circle"></i>
-                                Los datos se actualizan automáticamente al cambiar filtros
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="overflow-x-auto">
-                        <table class="w-full">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Matrizador</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">En Proceso</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Listos</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Entregados</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Facturado</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Cobrado</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Eficiencia</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                                {{#each matrizadores}}
-                                    {{#unless (or (eq rol 'admin') (eq rol 'caja') (eq rol 'recepcion'))}}
-                                    <tr class="hover:bg-gray-50">
-                                        <td class="px-4 py-3">
-                                            <div>
-                                                <h6 class="text-sm font-semibold text-gray-800">{{nombre}}</h6>
-                                                <p class="text-xs text-gray-500">{{rol}}</p>
-                                            </div>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <p class="text-xs font-bold text-yellow-600">{{en_proceso}}</p>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <p class="text-xs font-bold text-blue-600">{{listos}}</p>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <p class="text-xs font-bold text-green-600">{{entregados}}</p>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <p class="text-xs font-bold text-gray-800">${{facturado}}</p>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <p class="text-xs font-bold text-green-600">${{cobrado}}</p>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full {{#if (eq estado 'excelente')}}bg-green-100 text-green-800{{else if (eq estado 'normal')}}bg-yellow-100 text-yellow-800{{else}}bg-red-100 text-red-800{{/if}}">
-                                                {{eficiencia}}%
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    {{/unless}}
-                                {{/each}}
-                            </tbody>
-                        </table>
-                    </div>
+            
+            <!-- ACCIONES RÁPIDAS -->
+            <div class="tarjeta-contenido">
+                <h3 class="seccion-titulo">Acciones Rápidas</h3>
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <a href="/admin/documentos" class="btn btn-primary">
+                        <i class="fas fa-list-alt"></i>
+                        Ver Todos los Documentos
+                    </a>
+                    <a href="/admin/reportes" class="btn btn-secondary">
+                        <i class="fas fa-chart-pie"></i>
+                        Generar Reportes
+                    </a>
+                    <a href="/admin/matrizadores" class="btn btn-secondary">
+                        <i class="fas fa-users"></i>
+                        Gestionar Matrizadores
+                    </a>
+                    <a href="/admin/auditoria" class="btn btn-secondary">
+                        <i class="fas fa-shield-alt"></i>
+                        Auditoría del Sistema
+                    </a>
                 </div>
                 
-                {{!-- TAB DOCUMENTOS --}}
-                <div class="tab-content" id="tab-documentos">
-                    <div class="overflow-x-auto">
-                        <table class="w-full tabla-documentos">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Código</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Cliente</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Matrizador</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Estado</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Valor</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Fecha</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Estado Pago</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                                {{#each documentos}}
-                                    <tr class="hover:bg-gray-50">
-                                        <td class="px-4 py-3">
-                                            <div>
-                                                <h6 class="text-sm font-semibold text-gray-800">{{codigo_barras}}</h6>
-                                            </div>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <p class="text-xs font-bold text-gray-800">{{nombre_cliente}}</p>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <p class="text-xs font-bold text-gray-600">{{matrizador_nombre}}</p>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full {{#if (eq estado 'listo_para_entrega')}}bg-green-100 text-green-800{{else if (eq estado 'en_proceso')}}bg-yellow-100 text-yellow-800{{else}}bg-blue-100 text-blue-800{{/if}}">
-                                                {{#if (eq estado 'listo_para_entrega')}}Listo{{else if (eq estado 'en_proceso')}}En proceso{{else}}{{estado}}{{/if}}
-                                            </span>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <p class="text-xs font-bold text-gray-800">${{valor_factura}}</p>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <p class="text-xs font-bold text-gray-600">{{formatDateEcuador created_at}}</p>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full {{#if (eq estado_pago 'pagado_completo')}}bg-green-100 text-green-800{{else if (eq estado_pago 'pago_parcial')}}bg-yellow-100 text-yellow-800{{else}}bg-red-100 text-red-800{{/if}}">
-                                                {{#if (eq estado_pago 'pagado_completo')}}Pagado{{else if (eq estado_pago 'pago_parcial')}}Parcial{{else}}{{estado_pago}}{{/if}}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                {{/each}}
-                            </tbody>
-                        </table>
+                {{#if alertasCriticas}}
+                <div style="margin-top: 2rem;">
+                    <h4 style="font-size: 1.125rem; font-weight: 600; color: #dc2626; margin-bottom: 1rem;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Alertas Críticas
+                    </h4>
+                    {{#each alertasCriticas}}
+                    <div style="background: #fee2e2; border: 1px solid #fecaca; border-radius: 8px; padding: 1rem; margin-bottom: 0.5rem;">
+                        <div style="font-weight: 600; color: #dc2626;">{{this.titulo}}</div>
+                        <div style="color: #991b1b; font-size: 0.875rem;">{{this.descripcion}}</div>
                     </div>
+                    {{/each}}
                 </div>
+                {{/if}}
             </div>
         </div>
     </div>
-
-{{!-- JavaScript incluido en el layout --}}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-    let graficoActual = null;
-    let filtroActual = '{{filtroActual}}';
     
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('🎯 Inicializando dashboard ejecutivo con datos reales...');
-        
-        const datosGrafico = {{{json grafico.datos}}};
-        if (datosGrafico && datosGrafico.labels && datosGrafico.labels.length > 0) {
-            inicializarGrafico(datosGrafico, '{{periodo.actual}}');
+    <!-- SCRIPTS -->
+    <script>
+        // Funciones de filtro
+        function aplicarFiltro(tipo) {
+            window.location.href = `/admin?rango=${tipo}`;
         }
         
-        // Inicializar sistema de pestañas elegante
-        inicializarPestanas();
-    });
-    
-    // Sistema de pestañas elegante
-    function inicializarPestanas() {
-        const tabBtns = document.querySelectorAll('.tab-btn');
-        const tabContents = document.querySelectorAll('.tab-content');
-        
-        tabBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const targetTab = btn.getAttribute('data-tab');
-                
-                // Remover clase active de todos los botones y contenidos
-                tabBtns.forEach(b => b.classList.remove('active'));
-                tabContents.forEach(c => c.classList.remove('active'));
-                
-                // Agregar clase active al botón clickeado y su contenido
-                btn.classList.add('active');
-                document.getElementById(`tab-${targetTab}`).classList.add('active');
-                
-                console.log('📑 Pestaña cambiada a:', targetTab);
-            });
-        });
-    }
-    
-    function inicializarGrafico(datos, periodoTexto = null) {
-        const ctx = document.getElementById('chart-line');
-        if (!ctx) return;
-        
-        if (graficoActual) {
-            graficoActual.destroy();
+        function togglePersonalizado() {
+            const panel = document.getElementById('panelPersonalizado');
+            panel.classList.toggle('show');
         }
         
-        // Construir título del gráfico con período
-        let tituloGrafico = 'Evolución de Ingresos';
-        if (periodoTexto) {
-            tituloGrafico += ` - ${periodoTexto}`;
-        }
-        
-        graficoActual = new Chart(ctx, {
-            type: 'line',
-            data: datos,
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'top'
-                    },
-                    title: {
-                        display: true,
-                        text: tituloGrafico,
-                        font: {
-                            size: 16,
-                            weight: 'bold'
-                        },
-                        color: '#162840'
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            callback: function(value) {
-                                return '$' + value.toLocaleString();
-                            }
-                        }
-                    }
-                },
-                interaction: {
-                    intersect: false,
-                    mode: 'index'
-                }
-            }
-        });
-    }
-    
-    function aplicarFiltro(filtro) {
-        console.log('📅 Aplicando filtro:', filtro);
-        filtroActual = filtro;
-        
-        if (filtro !== 'personalizado') {
-            const popover = document.getElementById('popoverPersonalizado');
-            if (popover) popover.style.display = 'none';
-        }
-        
-        // NUEVO: Actualizar métricas dinámicamente sin recargar página
-        actualizarMetricasAjax(filtro);
-        
-        // Actualizar botones de filtro
-        actualizarBotonesFiltro(filtro);
-    }
-    
-    // === POPOVER ULTRA ELEGANTE === //
-    function togglePopoverPersonalizado() {
-        const popover = document.getElementById('popoverPersonalizado');
-        const isVisible = popover.style.display === 'block';
-        
-        if (isVisible) {
-            popover.style.display = 'none';
-        } else {
-            popover.style.display = 'block';
-            filtroActual = 'personalizado';
-            // Enfocar el primer campo
-            setTimeout(() => {
-                document.getElementById('fechaInicio').focus();
-            }, 100);
-        }
-    }
-    
-    // Cerrar popover al hacer clic fuera
-    document.addEventListener('click', function(event) {
-        const popover = document.getElementById('popoverPersonalizado');
-        const wrapper = document.getElementById('btnPersonalizado').parentElement;
-        
-        if (popover && wrapper && !wrapper.contains(event.target)) {
-            popover.style.display = 'none';
-        }
-    });
-    
-    function aplicarFiltroPersonalizado() {
-        const fechaInicio = document.getElementById('fechaInicio').value;
-        const fechaFin = document.getElementById('fechaFin').value;
-        
-        if (!fechaInicio || !fechaFin) {
-            alert('Por favor selecciona ambas fechas');
-            return;
-        }
-        
-        if (new Date(fechaInicio) > new Date(fechaFin)) {
-            alert('La fecha de inicio no puede ser mayor a la fecha fin');
-            return;
-        }
-        
-        // NUEVO: Actualizar métricas dinámicamente con fechas personalizadas
-        actualizarMetricasAjax('personalizado', fechaInicio, fechaFin);
-        
-        // Ocultar popover
-        document.getElementById('popoverPersonalizado').style.display = 'none';
-        
-        // Actualizar botones de filtro
-        actualizarBotonesFiltro('personalizado');
-    }
-    
-    function cancelarFiltroPersonalizado() {
-        document.getElementById('popoverPersonalizado').style.display = 'none';
-        
-        if (filtroActual !== 'personalizado') {
-            aplicarFiltro(filtroActual);
-        }
-    }
-    
-    function iraDocumentosAtrasados() {
-        window.location.href = '/admin/documentos?filtro=atrasados';
-    }
-    
-    function irAPagosVencidos() {
-        window.location.href = '/admin/pagos?filtro=vencidos';
-    }
-    
-    function iraOportunidadesCobro() {
-        window.location.href = '/admin/documentos?filtro=listos_cobrar';
-    }
-    
-    function cambiarPeriodo(periodo) {
-        aplicarFiltro(periodo);
-    }
-    
-    // ===== NUEVAS FUNCIONES AJAX PARA FILTROS DINÁMICOS =====
-    
-    function actualizarMetricasAjax(filtro, fechaInicio = null, fechaFin = null) {
-        console.log('🔄 Actualizando métricas dinámicamente...', { filtro, fechaInicio, fechaFin });
-        
-        // Mostrar indicador de carga
-        mostrarIndicadorCarga(true);
-        
-        // Construir URL con parámetros
-        let url = `/admin/dashboard?ajax=true&filtro=${filtro}`;
-        if (fechaInicio && fechaFin) {
-            url += `&fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
-        }
-        
-        fetch(url, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('✅ Datos recibidos:', data);
+        function aplicarFiltroPersonalizado() {
+            const fechaInicio = document.getElementById('fechaInicio').value;
+            const fechaFin = document.getElementById('fechaFin').value;
             
-            // Actualizar KPIs
-            actualizarKPIs(data.kpis);
-            
-            // Actualizar gráfico
-            if (data.grafico && data.grafico.datos) {
-                inicializarGrafico(data.grafico.datos, data.periodo.actual);
-            }
-            
-            // Actualizar tabla de documentos
-            if (data.documentos) {
-                actualizarTablaDocumentos(data.documentos);
-            }
-            
-            // Actualizar tabla de matrizadores
-            if (data.matrizadores) {
-                console.log('👥 Datos de matrizadores recibidos:', data.matrizadores);
-                actualizarTablaMatrizadores(data.matrizadores);
-            } else {
-                console.log('⚠️ No se recibieron datos de matrizadores');
-            }
-            
-            // Actualizar período actual
-            if (data.periodo) {
-                actualizarTextoPeriodo(data.periodo);
-            }
-            
-            // Ocultar indicador de carga
-            mostrarIndicadorCarga(false);
-            
-        })
-        .catch(error => {
-            console.error('❌ Error actualizando métricas:', error);
-            mostrarIndicadorCarga(false);
-            
-            // Fallback: recargar página si AJAX falla
-            console.log('🔄 Fallback: recargando página...');
-            let fallbackUrl = `/admin/dashboard?filtro=${filtro}`;
             if (fechaInicio && fechaFin) {
-                fallbackUrl += `&fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
+                window.location.href = `/admin?rango=personalizado&fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
             }
-            window.location.href = fallbackUrl;
-        });
-    }
-    
-    function actualizarKPIs(kpis) {
-        console.log('📊 Actualizando KPIs:', kpis);
+        }
         
-        // Actualizar cada KPI
-        Object.keys(kpis).forEach(key => {
-            const kpi = kpis[key];
-            const elemento = document.querySelector(`[data-kpi="${key}"]`);
+        function cancelarPersonalizado() {
+            document.getElementById('panelPersonalizado').classList.remove('show');
+        }
+        
+        // Cerrar panel personalizado al hacer clic fuera
+        document.addEventListener('click', function(e) {
+            const panel = document.getElementById('panelPersonalizado');
+            const filtroPersonalizado = document.querySelector('.filtro-personalizado');
             
-            if (elemento) {
-                // Actualizar valor
-                const valorElemento = elemento.querySelector('.kpi-valor');
-                if (valorElemento) {
-                    valorElemento.textContent = kpi.valorFormateado;
-                }
-                
-                // Actualizar tendencia
-                const tendenciaElemento = elemento.querySelector('.kpi-tendencia');
-                if (tendenciaElemento && kpi.tendencia) {
-                    tendenciaElemento.textContent = kpi.tendencia.texto;
-                    tendenciaElemento.className = `kpi-tendencia ${kpi.tendencia.direccion}`;
-                }
+            if (!filtroPersonalizado.contains(e.target)) {
+                panel.classList.remove('show');
             }
         });
-    }
-    
-    function actualizarBotonesFiltro(filtroActivo) {
-        console.log('🔘 Actualizando botones de filtro:', filtroActivo);
         
-        // Remover clase activa de todos los botones
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.classList.remove('btn-warning');
-            btn.classList.add('btn-outline-secondary');
-        });
+        // ============== FUNCIONES DE FILTROS ==============
         
-        // Agregar clase activa al botón seleccionado
-        const botonActivo = document.querySelector(`[onclick*="${filtroActivo}"]`);
-        if (botonActivo) {
-            botonActivo.classList.remove('btn-outline-secondary');
-            botonActivo.classList.add('btn-warning');
-        }
-    }
-    
-    function actualizarTablaDocumentos(documentos) {
-        console.log('📋 Actualizando tabla de documentos:', documentos.length);
-        
-        const tbody = document.querySelector('.tabla-documentos tbody');
-        if (!tbody) return;
-        
-        // Limpiar tabla actual
-        tbody.innerHTML = '';
-        
-        // Agregar nuevos documentos
-        documentos.forEach(doc => {
-            const fila = crearFilaDocumento(doc);
-            tbody.appendChild(fila);
-        });
-    }
-    
-    function crearFilaDocumento(doc) {
-        const fila = document.createElement('tr');
-        fila.className = 'hover:bg-gray-50';
-        
-        fila.innerHTML = `
-            <td class="px-4 py-3">
-                <div>
-                    <h6 class="text-sm font-semibold text-gray-800">${doc.codigo_barras}</h6>
-                </div>
-            </td>
-            <td class="px-4 py-3">
-                <p class="text-xs font-bold text-gray-800">${doc.nombre_cliente}</p>
-            </td>
-            <td class="px-4 py-3">
-                <p class="text-xs font-bold text-gray-600">${doc.matrizador_nombre || 'N/A'}</p>
-            </td>
-            <td class="px-4 py-3">
-                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${obtenerClaseEstado(doc.estado)}">
-                    ${formatearEstado(doc.estado)}
-                </span>
-            </td>
-            <td class="px-4 py-3">
-                <p class="text-xs font-bold text-gray-800">$${doc.valor_factura}</p>
-            </td>
-            <td class="px-4 py-3">
-                <p class="text-xs font-bold text-gray-600">${formatearFecha(doc.created_at)}</p>
-            </td>
-            <td class="px-4 py-3">
-                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${obtenerClaseEstadoPago(doc.estado_pago)}">
-                    ${formatearEstadoPago(doc.estado_pago)}
-                </span>
-            </td>
-        `;
-        
-        return fila;
-    }
-    
-    function obtenerClaseEstado(estado) {
-        switch (estado) {
-            case 'listo_para_entrega': return 'bg-green-100 text-green-800';
-            case 'en_proceso': return 'bg-yellow-100 text-yellow-800';
-            default: return 'bg-blue-100 text-blue-800';
-        }
-    }
-    
-    function formatearEstado(estado) {
-        switch (estado) {
-            case 'listo_para_entrega': return 'Listo';
-            case 'en_proceso': return 'En proceso';
-            default: return estado;
-        }
-    }
-    
-    function obtenerClaseEstadoPago(estadoPago) {
-        switch (estadoPago) {
-            case 'pagado_completo': return 'bg-green-100 text-green-800';
-            case 'pago_parcial': return 'bg-yellow-100 text-yellow-800';
-            default: return 'bg-red-100 text-red-800';
-        }
-    }
-    
-    function formatearEstadoPago(estadoPago) {
-        switch (estadoPago) {
-            case 'pagado_completo': return 'Pagado';
-            case 'pago_parcial': return 'Parcial';
-            default: return estadoPago;
-        }
-    }
-    
-    function actualizarTextoPeriodo(periodo) {
-        console.log('📅 Actualizando texto de período:', periodo);
-        
-        // Actualizar el período actual
-        const elementoPeriodo = document.querySelector('.periodo-actual-elegante');
-        if (elementoPeriodo && periodo.actual) {
-            elementoPeriodo.innerHTML = `<i class="fas fa-calendar-check me-1"></i><strong>${periodo.actual}</strong>`;
+        function aplicarFiltro(periodo) {
+            // Agregar indicador de carga
+            mostrarCargando(true);
+            
+            // Recargar página con el filtro seleccionado
+            window.location.href = `/admin?rango=${periodo}`;
         }
         
-        // Actualizar la fecha de actualización
-        const elementoFecha = document.querySelector('.actualizacion-elegante');
-        if (elementoFecha) {
-            const fechaActual = new Date().toLocaleDateString('es-EC', {
+        function mostrarCargando(mostrar) {
+            const filtros = document.querySelectorAll('.filtro-btn');
+            filtros.forEach(btn => {
+                if (mostrar) {
+                    btn.style.opacity = '0.7';
+                    btn.style.pointerEvents = 'none';
+                } else {
+                    btn.style.opacity = '1';
+                    btn.style.pointerEvents = 'auto';
+                }
+            });
+        }
+        
+        // Helper para formatear fechas
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('es-EC', {
                 day: '2-digit',
-                month: '2-digit', 
+                month: '2-digit',
                 year: 'numeric'
             });
-            elementoFecha.innerHTML = `<i class="fas fa-sync-alt me-1"></i>Actualizado: ${fechaActual}`;
         }
-        
-        // Actualizar el título principal del dashboard
-        const elementoTitulo = document.querySelector('.text-2xl.font-bold.text-gray-800');
-        if (elementoTitulo) {
-            elementoTitulo.textContent = `Panel de Control Ejecutivo - ${periodo.actual}`;
-        }
-        
-        // Actualizar el indicador de período en la tabla de matrizadores
-        const elementoTablaMatrizadores = document.querySelector('.periodo-tabla-matrizadores');
-        if (elementoTablaMatrizadores && periodo.actual) {
-            elementoTablaMatrizadores.textContent = periodo.actual;
-        }
-    }
+    </script>
     
-    function formatearFecha(fecha) {
-        return new Date(fecha).toLocaleDateString('es-EC', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-        });
-    }
-    
-    function actualizarTablaMatrizadores(matrizadores) {
-        console.log('👥 Actualizando tabla de matrizadores:', matrizadores.length);
-        
-        const tbody = document.querySelector('#tab-matrizadores tbody');
-        if (!tbody) {
-            console.log('❌ No se encontró tbody de matrizadores');
-            return;
-        }
-        
-        console.log('✅ Tbody encontrado, limpiando tabla...');
-        
-        // Limpiar tabla actual
-        tbody.innerHTML = '';
-        
-        let filasAgregadas = 0;
-        
-        // Agregar nuevos matrizadores
-        matrizadores.forEach((mat, index) => {
-            console.log(`🔍 Procesando matrizador ${index + 1}:`, mat);
-            
-            // Filtrar admin, caja y recepcion
-            if (mat.rol !== 'admin' && mat.rol !== 'caja' && mat.rol !== 'recepcion') {
-                const fila = crearFilaMatrizador(mat);
-                tbody.appendChild(fila);
-                filasAgregadas++;
-                console.log(`✅ Fila agregada para ${mat.nombre}`);
-            } else {
-                console.log(`⏭️ Saltando ${mat.nombre} (rol: ${mat.rol})`);
-            }
-        });
-        
-        console.log(`📊 Total de filas agregadas: ${filasAgregadas}`);
-    }
-    
-
-    
-    function crearFilaMatrizador(mat) {
-        const fila = document.createElement('tr');
-        fila.className = 'hover:bg-gray-50';
-        
-        // Calcular estado de eficiencia
-        let estadoEficiencia = 'regular';
-        let claseEficiencia = 'bg-red-100 text-red-800';
-        
-        if (mat.eficiencia >= 80) {
-            estadoEficiencia = 'excelente';
-            claseEficiencia = 'bg-green-100 text-green-800';
-        } else if (mat.eficiencia >= 60) {
-            estadoEficiencia = 'normal';
-            claseEficiencia = 'bg-yellow-100 text-yellow-800';
-        }
-        
-        fila.innerHTML = `
-            <td class="px-4 py-3">
-                <div>
-                    <h6 class="text-sm font-semibold text-gray-800">${mat.nombre}</h6>
-                    <p class="text-xs text-gray-500">${mat.rol}</p>
-                </div>
-            </td>
-            <td class="px-4 py-3">
-                <p class="text-xs font-bold text-yellow-600">${mat.en_proceso}</p>
-            </td>
-            <td class="px-4 py-3">
-                <p class="text-xs font-bold text-blue-600">${mat.listos}</p>
-            </td>
-            <td class="px-4 py-3">
-                <p class="text-xs font-bold text-green-600">${mat.entregados}</p>
-            </td>
-            <td class="px-4 py-3">
-                <p class="text-xs font-bold text-gray-800">$${mat.facturado}</p>
-            </td>
-            <td class="px-4 py-3">
-                <p class="text-xs font-bold text-green-600">$${mat.cobrado}</p>
-            </td>
-            <td class="px-4 py-3">
-                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${claseEficiencia}">
-                    ${mat.eficiencia}%
-                </span>
-            </td>
-        `;
-        
-        return fila;
-    }
-
-    function mostrarIndicadorCarga(mostrar) {
-        const indicador = document.getElementById('indicador-carga');
-        if (indicador) {
-            if (mostrar) {
-                indicador.classList.remove('hidden');
-            } else {
-                indicador.classList.add('hidden');
-            }
-        }
-        
-        // Deshabilitar botones durante la carga
-        document.querySelectorAll('.btn').forEach(btn => {
-            btn.disabled = mostrar;
-            btn.style.opacity = mostrar ? '0.6' : '1';
-        });
-    }
-</script> 
-</script> 
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</body>
+</html> 

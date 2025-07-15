@@ -782,9 +782,9 @@ exports.dashboard = async (req, res) => {
       req.query.fechaFin
     );
     
-    // MÉTRICAS BÁSICAS PARA COMPATIBILIDAD CON TEMPLATE EXISTENTE
+    // MÉTRICAS BÁSICAS PARA COMPATIBILIDAD CON TEMPLATE EXISTENTE - USAR FECHA_FACTURA
     const whereBasePeriodo = {
-      created_at: {
+      fecha_factura: {
         [Op.between]: [fechaInicio.toDate(), fechaFin.toDate()]
       },
       estado: { [Op.notIn]: ['eliminado', 'nota_credito'] }
@@ -827,7 +827,7 @@ exports.dashboard = async (req, res) => {
     const [ingresosPeriodoResult] = await sequelize.query(`
       SELECT COALESCE(SUM(CASE WHEN estado_pago IN ('pagado_completo', 'pagado_con_retencion', 'pago_parcial') THEN valor_pagado ELSE 0 END), 0) as total
       FROM documentos
-      WHERE created_at BETWEEN :fechaInicio AND :fechaFin
+      WHERE fecha_factura BETWEEN :fechaInicio AND :fechaFin
       AND estado NOT IN ('eliminado', 'nota_credito')
     `, {
       replacements: { fechaInicio: fechaInicioSQL, fechaFin: fechaFinSQL },
@@ -867,11 +867,11 @@ exports.dashboard = async (req, res) => {
       }
     });
     
-    // Facturación del período (mantener lógica existente)
+    // Facturación del período (CORREGIDO: usar fecha_factura)
     const [facturacionPeriodoResult] = await sequelize.query(`
       SELECT COALESCE(SUM(valor_factura), 0) as total
       FROM documentos
-      WHERE created_at BETWEEN :fechaInicio AND :fechaFin
+      WHERE fecha_factura BETWEEN :fechaInicio AND :fechaFin
       AND numero_factura IS NOT NULL
       AND estado NOT IN ('eliminado', 'nota_credito')
     `, {
@@ -895,11 +895,11 @@ exports.dashboard = async (req, res) => {
       `;
       totalPendienteReplacements = {};
     } else {
-      // Para otros rangos, filtrar por período de creación
+      // Para otros rangos, filtrar por período de facturación
       totalPendienteQuery = `
         SELECT COALESCE(SUM(valor_factura - valor_pagado - COALESCE(valor_retenido, 0)), 0) as total
         FROM documentos
-        WHERE created_at BETWEEN :fechaInicio AND :fechaFin
+        WHERE fecha_factura BETWEEN :fechaInicio AND :fechaFin
         AND numero_factura IS NOT NULL
         AND estado NOT IN ('eliminado', 'nota_credito')
         AND (valor_factura - valor_pagado - COALESCE(valor_retenido, 0)) > 0
@@ -928,11 +928,11 @@ exports.dashboard = async (req, res) => {
       `;
       totalRetenidoReplacements = {};
     } else {
-      // Para otros rangos, filtrar por período de creación
+      // Para otros rangos, filtrar por período de facturación
       totalRetenidoQuery = `
         SELECT COALESCE(SUM(valor_retenido), 0) as total
         FROM documentos
-        WHERE created_at BETWEEN :fechaInicio AND :fechaFin
+        WHERE fecha_factura BETWEEN :fechaInicio AND :fechaFin
         AND numero_factura IS NOT NULL
         AND estado NOT IN ('eliminado', 'nota_credito')
       `;
@@ -1226,6 +1226,16 @@ exports.dashboard = async (req, res) => {
     const crecimientoMensual = ingresosMesAnterior > 0 ? 
       (((metricasFinancieras.cobrado - ingresosMesAnterior) / ingresosMesAnterior) * 100).toFixed(1) : '0.0';
     
+    // ============== OBTENER DOCUMENTOS PENDIENTES ==============
+    
+    // Documentos pendientes de pago (sin duplicar otras variables)
+    const documentosPendientes = await Documento.count({
+      where: {
+        estadoPago: 'pendiente',
+        estado: { [Op.notIn]: ['eliminado', 'nota_credito'] }
+      }
+    });
+    
     // ============== PREPARAR DATOS PARA LA VISTA ==============
     
     const dashboardData = {
@@ -1250,10 +1260,6 @@ exports.dashboard = async (req, res) => {
       // Acciones inmediatas
       accionesInmediatas,
       
-      // Métricas optimizadas para componentes universales
-      metricas: metricasOptimizadas.metricas,
-      periodo: metricasOptimizadas.periodo,
-      
       // Métricas principales (CORREGIDAS para el template)
       metricas: {
         totalDocumentos,
@@ -1263,12 +1269,7 @@ exports.dashboard = async (req, res) => {
         entregadosHoy,
         documentosAtrasados,
         documentosUrgentes: documentosUrgentes.length,
-        documentosPendientes: await Documento.count({
-          where: {
-            estadoPago: 'pendiente',
-            estado: { [Op.notIn]: ['eliminado', 'nota_credito'] }
-          }
-        })
+        documentosPendientes
       },
       
       // Métricas financieras (CORREGIDAS PARA EL TEMPLATE)

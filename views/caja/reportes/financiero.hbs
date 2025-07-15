@@ -133,8 +133,6 @@
         <div class="card">
           <div class="card-header">
             <i class="fas fa-chart-line me-2"></i> Tendencia Financiera
-            <!-- DEBUG: Mostrar información del gráfico -->
-            <span class="badge bg-warning ms-2">Debug: graficoTendencia.fechas.length = {{graficoTendencia.fechas.length}}</span>
           </div>
           <div class="card-body">
             {{#if graficoTendencia.fechas.length}}
@@ -155,8 +153,6 @@
     <div class="card">
       <div class="card-header">
         <i class="fas fa-table me-2"></i> Resumen Diario
-        <!-- DEBUG: Mostrar información de datosTabla -->
-        <span class="badge bg-info ms-2">Debug: datosTabla.length = {{datosTabla.length}}</span>
       </div>
       <div class="card-body">
         {{#if datosTabla.length}}
@@ -215,19 +211,6 @@
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    // DEBUG: Verificar datos recibidos en el frontend
-    console.log('🔍 DEBUG Frontend - Datos recibidos:');
-    console.log('datosTabla:', {{{json datosTabla}}});
-    console.log('graficoTendencia:', {{{json graficoTendencia}}});
-    console.log('stats:', {{{json stats}}});
-    
-    // DEBUG EXPANDIDO: Mostrar estructura detallada
-    const datosTablaDebug = {{{json datosTabla}}};
-    const graficoDebug = {{{json graficoTendencia}}};
-    console.log('📊 ESTRUCTURA DETALLADA:');
-    console.log('datosTabla[0]:', datosTablaDebug && datosTablaDebug[0] ? datosTablaDebug[0] : 'UNDEFINED');
-    console.log('graficoTendencia.fechas:', graficoDebug && graficoDebug.fechas ? graficoDebug.fechas : 'UNDEFINED');
-    console.log('graficoTendencia.facturado:', graficoDebug && graficoDebug.facturado ? graficoDebug.facturado : 'UNDEFINED');
     
     // Función para mostrar/ocultar fechas personalizadas
     window.toggleFechasPersonalizadas = function() {

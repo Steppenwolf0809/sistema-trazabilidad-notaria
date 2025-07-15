@@ -7,61 +7,13 @@
 const jwt = require('jsonwebtoken');
 const Matrizador = require('../models/Matrizador');
 
-// 🚀 CACHE DE USUARIOS PARA REDUCIR CONSULTAS DB
-const userCache = new Map();
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
-
-/**
- * Limpiar cache de usuarios expirados
- */
-const limpiarCacheExpirado = () => {
-  const ahora = Date.now();
-  for (const [key, data] of userCache.entries()) {
-    if (ahora - data.timestamp > CACHE_DURATION) {
-      userCache.delete(key);
-    }
-  }
-};
-
-/**
- * Obtener usuario desde cache o base de datos
- */
-const obtenerUsuario = async (id) => {
-  const cacheKey = `user_${id}`;
-  const cached = userCache.get(cacheKey);
-  
-  // Si está en cache y no ha expirado
-  if (cached && (Date.now() - cached.timestamp < CACHE_DURATION)) {
-    return cached.user;
-  }
-  
-  // Consultar base de datos
-  try {
-    const matrizador = await Matrizador.findByPk(id);
-    
-    if (matrizador) {
-      // Guardar en cache
-      userCache.set(cacheKey, {
-        user: matrizador,
-        timestamp: Date.now()
-      });
-      
-      // Limpiar cache expirado periódicamente
-      if (userCache.size > 100) {
-        limpiarCacheExpirado();
-      }
-    }
-    
-    return matrizador;
-  } catch (error) {
-    console.error('Error al obtener usuario:', error);
-    return null;
-  }
-};
+// 🔧 SIMPLIFICADO: Sin cache de usuarios para evitar problemas
+// El cache puede causar condiciones de carrera y cuelgues
+// Se usará consulta directa a DB para mayor estabilidad
 
 /**
  * Middleware para verificar token JWT
- * 🔧 OPTIMIZADO: Menos consultas DB, mejor manejo de errores
+ * 🔧 SIMPLIFICADO: Evitar cuelgues y optimizar rendimiento
  * @param {Object} req - Objeto de solicitud Express
  * @param {Object} res - Objeto de respuesta Express
  * @param {Function} next - Función para continuar al siguiente middleware
@@ -102,14 +54,17 @@ const verificarToken = async (req, res, next) => {
       return res.redirect('/login?error=token_invalido&redirect=' + encodeURIComponent(req.originalUrl));
     }
     
-    // 🚀 OPTIMIZACIÓN: Buscar matrizador con cache
-    const matrizador = await obtenerUsuario(decoded.id);
+    // 🔧 SIMPLIFICADO: Buscar matrizador directamente sin cache para evitar problemas
+    let matrizador;
+    try {
+      matrizador = await Matrizador.findByPk(decoded.id);
+    } catch (dbError) {
+      console.error('Error de base de datos al buscar matrizador:', dbError);
+      return res.redirect('/login?error=error_sistema&redirect=' + encodeURIComponent(req.originalUrl));
+    }
     
     if (!matrizador || !matrizador.activo) {
       console.error(`Matrizador no encontrado o inactivo. ID: ${decoded.id}`);
-      
-      // Limpiar cache para este usuario
-      userCache.delete(`user_${decoded.id}`);
       
       if (req.path.startsWith('/api/')) {
         return res.status(401).json({
@@ -138,45 +93,8 @@ const verificarToken = async (req, res, next) => {
       req.usuario = { ...req.matrizador };
     }
     
-    // 🔧 OPTIMIZACIÓN: Renovación de token más conservadora
-    const ahora = Math.floor(Date.now() / 1000);
-    const unDiaEnSegundos = 24 * 60 * 60;
-    
-    // Solo renovar si está a punto de expirar (menos de 1 día) y no se ha renovado recientemente
-    if (decoded.exp && (decoded.exp - ahora < unDiaEnSegundos)) {
-      const ultimaRenovacion = req.cookies?.token_renovado;
-      const tiempoDesdeRenovacion = ultimaRenovacion ? (ahora - parseInt(ultimaRenovacion)) : unDiaEnSegundos;
-      
-      // Solo renovar si han pasado al menos 1 hora desde la última renovación
-      if (tiempoDesdeRenovacion > 3600) { // 1 hora
-        console.log('Renovando token próximo a expirar');
-        
-        // Crear nuevo token
-        const nuevoToken = jwt.sign(
-          { id: matrizador.id, rol: matrizador.rol },
-          process.env.JWT_SECRET || 'clave_secreta_notaria_2024',
-          { expiresIn: '24h' } // 🔧 CONSISTENCIA: Siempre 24 horas
-        );
-        
-        // Establecer el nuevo token en la cookie
-        res.cookie('token', nuevoToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          maxAge: 24 * 60 * 60 * 1000, // 🔧 CONSISTENCIA: 24 horas
-          path: '/',
-          sameSite: 'lax'
-        });
-        
-        // Marcar tiempo de renovación
-        res.cookie('token_renovado', ahora.toString(), {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          maxAge: 24 * 60 * 60 * 1000,
-          path: '/',
-          sameSite: 'lax'
-        });
-      }
-    }
+    // 🔧 SIMPLIFICADO: No renovar tokens automáticamente para evitar problemas
+    // La renovación automática puede causar condiciones de carrera
     
     // Agregar rol a locals para acceso en las vistas
     res.locals.userRole = matrizador.rol;
@@ -449,23 +367,33 @@ const validarAccesoConAuditoria = (rolesPermitidos) => {
           });
         }
 
-        // ✅ CORRECCIÓN: Solo redirigir admin si NO está en sus propias rutas administrativas
-        if (req.matrizador.rol === 'admin' && !req.path.startsWith('/admin/')) {
-          console.log(`🔐 REDIRECCIÓN: Admin ${req.matrizador.nombre} intentó acceder a ruta de ROL [${rolesPermitidos.join(', ')}] - Redirigiendo a /admin`);
-          req.flash('error', `Acceso restringido. Como administrador, debe usar las funcionalidades desde el panel administrativo. Para acceder a funcionalidades de ${rolesPermitidos.join(' o ')}, debe hacerlo desde su panel correspondiente.`);
-          return res.redirect('/admin');
+        // 🔧 SIMPLIFICADO: Redirigir según el rol sin usar flash messages complicados
+        let dashboardUrl = '/login';
+        switch (req.matrizador.rol) {
+          case 'admin':
+            dashboardUrl = '/admin';
+            break;
+          case 'matrizador':
+            dashboardUrl = '/matrizador';
+            break;
+          case 'recepcion':
+            dashboardUrl = '/recepcion';
+            break;
+          case 'caja':
+          case 'caja_archivo':
+            dashboardUrl = '/caja';
+            break;
+          case 'archivo':
+            dashboardUrl = '/archivo';
+            break;
         }
-
-        // Para usuarios de otros roles, redirigir a su dashboard correspondiente
-        const dashboardUrl = obtenerDashboardPorRol(req.matrizador.rol);
-        req.flash('error', `No tiene permisos para acceder a esa página. Se requiere rol: ${rolesPermitidos.join(' o ')}`);
+        
+        console.log(`🔐 REDIRECCIÓN: Usuario ${req.matrizador.nombre} (${req.matrizador.rol}) redirigido a ${dashboardUrl}`);
         return res.redirect(dashboardUrl);
       }
 
-      // ✅ CORRECCIÓN: Si es admin accediendo a funciones de otros roles (no sus propias rutas), registrar auditoría
-      if (req.matrizador.rol === 'admin' && !rolesPermitidos.includes('admin') && !req.path.startsWith('/admin/')) {
-        console.log(`🔍 AUDITORÍA: Admin ${req.matrizador.nombre} (ID: ${req.matrizador.id}) accedió a funcionalidad de ROL [${rolesPermitidos.join(', ')}] en la ruta: ${req.originalUrl} - Método: ${req.method} - IP: ${req.ip || req.connection.remoteAddress} - Timestamp: ${new Date().toISOString()}`);
-      }
+      // ✅ ACCESO PERMITIDO
+      console.log(`✅ ACCESO AUTORIZADO: Usuario ${req.matrizador.nombre} (ROL: ${req.matrizador.rol}) accedió a ruta: ${req.originalUrl}`);
 
       next();
     } catch (error) {
@@ -551,12 +479,12 @@ const requireAdmin = (req, res, next) => {
 };
 
 /**
- * Limpiar cache de usuario específico
+ * Función placeholder para compatibilidad
+ * 🔧 SIMPLIFICADO: Sin cache, no hay nada que limpiar
  */
 const limpiarCacheUsuario = (userId) => {
-  const cacheKey = `user_${userId}`;
-  userCache.delete(cacheKey);
-  console.log(`🧹 Cache limpiado para usuario ${userId}`);
+  // No hacer nada - el cache fue eliminado por estabilidad
+  console.log(`🧹 Cache simplificado - no hay nada que limpiar para usuario ID: ${userId}`);
 };
 
 module.exports = {

@@ -1216,6 +1216,21 @@ const helpers = {
     // El último argumento son las opciones de Handlebars
     args.pop();
     return args.every(arg => !!arg);
+  },
+
+  /**
+   * ✅ HELPER CRÍTICO: math para calcular porcentajes
+   * Usado en dashboard admin para calcular eficiencia
+   * Uso: {{math numerador denominador}} -> retorna porcentaje redondeado
+   */
+  math: function(numerador, denominador) {
+    const num = parseFloat(numerador) || 0;
+    const den = parseFloat(denominador) || 0;
+    
+    if (den === 0) return 0;
+    
+    const porcentaje = (num / den) * 100;
+    return Math.round(porcentaje);
   }
 };
 

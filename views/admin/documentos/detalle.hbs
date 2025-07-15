@@ -1,484 +1,814 @@
-{{!-- VISTA DE SUPERVISIÓN - DETALLE SOLO LECTURA PARA ADMIN --}}
+{{!-- VISTA DE SUPERVISIÓN - DETALLE CON DISEÑO DASHBOARD PROFESIONAL --}}
 {{!-- SEGREGACIÓN DE FUNCIONES: Admin solo puede VER detalles, no editar/procesar/entregar --}}
 
 {{#if documento}}
-<div class="card">
-  <div class="card-header d-flex justify-content-between align-items-center">
-    <div>
-      <i class="fas fa-binoculars me-2"></i> 
-      {{#if soloLectura}}
-      Supervisión de Documento - Solo Lectura
-      {{else}}
-      Detalle de Documento
-      {{/if}}
-    </div>
-    <div>
-      <a href="/admin/documentos/listado" class="btn btn-sm btn-outline-secondary">
-        <i class="fas fa-arrow-left me-1"></i> Volver al Listado
-      </a>
-      
-      {{!-- SEGREGACIÓN: Admin NO puede editar documentos --}}
-      {{#unless soloLectura}}
-      <a href="/admin/documentos/editar/{{documento.id}}" class="btn btn-sm btn-primary ms-1">
-        <i class="fas fa-edit me-1"></i> Editar
-      </a>
-      
-      {{#if (eq documento.estado "en_proceso")}}
-      <button type="button" class="btn btn-sm btn-success ms-1" onclick="marcarListo({{documento.id}})">
-        <i class="fas fa-check me-1"></i> Marcar como listo
-      </button>
-      {{/if}}
-      
-      {{#if (eq documento.estado "listo_para_entrega")}}
-      <a href="/admin/documentos/entrega/{{documento.id}}" class="btn btn-sm btn-info ms-1">
-        <i class="fas fa-hand-holding me-1"></i> Entrega
-      </a>
-      {{/if}}
-      {{/unless}}
-      
-      {{#if soloLectura}}
-      <div class="btn-group ms-2">
-        <button type="button" class="btn btn-sm btn-outline-info" onclick="exportarDocumento()">
-          <i class="fas fa-download me-1"></i> Exportar
-        </button>
-        <button type="button" class="btn btn-sm btn-outline-success" onclick="verHistorialCompleto()">
-          <i class="fas fa-history me-1"></i> Historial Completo
-        </button>
-      </div>
-      {{/if}}
-    </div>
-  </div>
-  
-
-  <div class="card-body">
-    <!-- Información general -->
-    <div class="row mb-4">
-      <div class="col-md-4">
-        <div class="mb-3">
-          <h5 class="border-bottom pb-2">Información General</h5>
-          <p><strong>Código:</strong> <span class="badge bg-primary">{{documento.codigoBarras}}</span></p>
-          <p><strong>Tipo:</strong> {{documento.tipoDocumento}}</p>
-          <p><strong>Estado:</strong> 
-            {{#if (eq documento.estado "en_proceso")}}
-            <span class="badge bg-warning text-dark">En Proceso</span>
-            {{else if (eq documento.estado "listo_para_entrega")}}
-            <span class="badge bg-info">Listo para Entrega</span>
-            {{else if (eq documento.estado "entregado")}}
-            <span class="badge bg-success">Entregado</span>
-            {{else if (eq documento.estado "nota_credito")}}
-            <span class="badge bg-secondary">Nota de Crédito</span>
-            {{else if (eq documento.estado "eliminado")}}
-            <span class="badge bg-danger">Eliminado</span>
-            {{else}}
-            <span class="badge bg-secondary">{{translateEstado documento.estado}}</span>
-            {{/if}}
-          </p>
-          <p><strong>📅 Fecha Registro Sistema:</strong> {{formatDate documento.created_at}}</p>
-          <small class="text-muted">Cuándo se subió al sistema</small>
-          {{#if documento.fechaFactura}}
-<p><strong>📄 Fecha Documento:</strong> {{formatDate documento.fechaFactura}}</p>
-          <small class="text-muted">Fecha original del documento (XML)</small>
-          {{/if}}
-          {{#if documento.fechaEntrega}}
-          <p><strong>🚀 Fecha Entrega:</strong> {{formatDate documento.fechaEntrega}}</p>
-          {{/if}}
-        </div>
-      </div>
-      
-      <div class="col-md-4">
-        <div class="mb-3">
-          <h5 class="border-bottom pb-2">Cliente</h5>
-          <p><strong>Nombre:</strong> {{documento.nombreCliente}}</p>
-          <p><strong>Identificación:</strong> {{documento.identificacionCliente}}</p>
-          {{#if documento.emailCliente}}
-          <p><strong>Email:</strong> {{documento.emailCliente}}</p>
-          {{/if}}
-          {{#if documento.telefonoCliente}}
-          <p><strong>Teléfono:</strong> {{documento.telefonoCliente}}</p>
-          {{/if}}
-        </div>
-      </div>
-      
-      <div class="col-md-4">
-        <div class="mb-3">
-          <h5 class="border-bottom pb-2">Matrizador Asignado</h5>
-          {{#if documento.matrizador}}
-          <p><strong>Nombre:</strong> {{documento.matrizador.nombre}}</p>
-          <p><strong>Email:</strong> {{documento.matrizador.email}}</p>
-          <p><strong>Estado del Proceso:</strong> 
-            {{#if (eq documento.estado "en_proceso")}}
-            <span class="badge bg-warning text-dark fs-6">⚠️ En proceso</span>
-            {{else if (eq documento.estado "listo_para_entrega")}}
-            <span class="badge bg-success fs-6">✅ Listo para entrega</span>
-            {{else if (eq documento.estado "entregado")}}
-            <span class="badge bg-info fs-6">📦 Entregado</span>
-            {{else}}
-            <span class="badge bg-secondary fs-6">{{translateEstado documento.estado}}</span>
-            {{/if}}
-          </p>
-          {{#if (eq documento.estado "listo_para_entrega")}}
-          <p><strong>🔑 Código de Entrega:</strong> 
-            <span class="badge bg-success fs-4">{{documento.codigoVerificacion}}</span>
-          </p>
-          {{/if}}
-          {{else}}
-          <p>No hay matrizador asignado</p>
-          <div class="alert alert-warning py-2">
-            <small><i class="fas fa-exclamation-triangle me-1"></i>Este documento requiere asignación de matrizador</small>
-          </div>
-          {{/if}}
-        </div>
-      </div>
-    </div>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalle Documento - {{documento.codigoBarras}}</title>
     
-    <!-- Información de facturación y pagos -->
-    <div class="row mb-4">
-      <div class="col-12">
-        <div class="card">
-          <div class="card-header">
-            <h5 class="mb-0"><i class="fas fa-money-bill-wave me-2"></i>Información de Facturación y Pagos</h5>
-          </div>
-          <div class="card-body">
-            <!-- Información básica de facturación -->
-            <div class="row mb-3">
-              <div class="col-md-6">
-                <div class="card border-primary">
-                  <div class="card-header bg-primary text-white py-2">
-                    <h6 class="mb-0"><i class="fas fa-file-invoice me-1"></i>Datos de Facturación</h6>
-                  </div>
-                  <div class="card-body">
-                    <div class="row">
-                      <div class="col-12 mb-2">
-                        <strong>📄 N° Factura:</strong> 
-                        <span class="badge bg-secondary">{{#if documento.numeroFactura}}{{documento.numeroFactura}}{{else}}No registrado{{/if}}</span>
-                      </div>
-                      <div class="col-12 mb-2">
-                        <strong>💰 Valor Total:</strong> 
-                        <span class="fs-5 text-primary">${{#if documento.valorFactura}}{{formatMoney documento.valorFactura}}{{else}}0.00{{/if}}</span>
-                      </div>
-                      {{#if documento.fechaFactura}}
-                      <div class="col-12">
-                        <strong>📅 Fecha Factura:</strong> {{formatDate documento.fechaFactura}}
-                      </div>
-                      {{/if}}
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div class="col-md-6">
-                <div class="card border-{{#if (eq documento.estadoPago "pagado_completo")}}success{{else if (eq documento.estadoPago "pagado_con_retencion")}}info{{else if (eq documento.estadoPago "pago_parcial")}}warning{{else}}danger{{/if}}">
-                  <div class="card-header bg-{{#if (eq documento.estadoPago "pagado_completo")}}success{{else if (eq documento.estadoPago "pagado_con_retencion")}}info{{else if (eq documento.estadoPago "pago_parcial")}}warning{{else}}danger{{/if}} text-white py-2">
-                    <h6 class="mb-0"><i class="fas fa-credit-card me-1"></i>Estado de Pago</h6>
-                  </div>
-                  <div class="card-body">
-                    <div class="row">
-                      <div class="col-12 mb-2">
-                        <strong>🏷️ Estado:</strong> 
-                        {{#if (eq documento.estadoPago "pagado_completo")}}
-                        <span class="badge bg-success fs-6">✅ Pagado Completo</span>
-                        {{else if (eq documento.estadoPago "pagado_con_retencion")}}
-                        <span class="badge bg-info fs-6">🧾 Pagado con Retención</span>
-                        {{else if (eq documento.estadoPago "pago_parcial")}}
-                        <span class="badge bg-warning text-dark fs-6">⚠️ Pago Parcial</span>
-                        {{else}}
-                        <span class="badge bg-danger fs-6">❌ Pendiente</span>
-                        {{/if}}
-                      </div>
-                      <div class="col-12 mb-2">
-                        <strong>💳 Método:</strong> 
-                        <span class="badge bg-secondary">{{#if documento.metodoPago}}{{documento.metodoPago}}{{else}}No registrado{{/if}}</span>
-                      </div>
-                      {{#if (or (eq documento.estadoPago "pagado_completo") (eq documento.estadoPago "pagado_con_retencion") (eq documento.estadoPago "pago_parcial"))}}
-                      <div class="col-12">
-                        <strong>📅 Último Pago:</strong> 
-                        <span class="badge bg-success-subtle text-success-emphasis px-2 py-1">
-                          {{#if documento.fechaUltimoPago}}
-                          {{formatDateTime documento.fechaUltimoPago}}
-                          {{else if documento.fechaPago}}
-                          {{formatDateTime documento.fechaPago}}
-                          {{else}}
-                          No registrada
-                          {{/if}}
-                        </span>
-                      </div>
-                      {{/if}}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+    {{!-- Fuentes Profesionales --}}
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Nunito:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    {{!-- Bootstrap 5 --}}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    {{!-- CSS Moderno Dashboard --}}
+    <style>
+        /* RESET Y BASE */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            color: #1f2937;
+            line-height: 1.5;
+        }
+        
+        /* CONTENEDOR PRINCIPAL */
+        .detalle-container {
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        /* HEADER PROFESIONAL */
+        .detalle-header {
+            background: white;
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            margin-bottom: 2rem;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .detalle-title {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #1f2937;
+            margin-bottom: 0.5rem;
+            font-family: 'Nunito', sans-serif;
+        }
+        
+        .detalle-subtitle {
+            color: #6b7280;
+            font-size: 1rem;
+            margin-bottom: 1.5rem;
+            font-weight: 500;
+        }
+        
+        /* PANELES INFORMATIVOS */
+        .panel-info {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            border: 1px solid #f3f4f6;
+            transition: all 0.3s ease;
+            height: 100%;
+        }
+        
+        .panel-info:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        .panel-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #f3f4f6;
+        }
+        
+        .panel-icono {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            color: white;
+        }
+        
+        .panel-icono.verde { background: linear-gradient(135deg, #059669, #10b981); }
+        .panel-icono.azul { background: linear-gradient(135deg, #2563eb, #3b82f6); }
+        .panel-icono.naranja { background: linear-gradient(135deg, #ea580c, #f97316); }
+        .panel-icono.purpura { background: linear-gradient(135deg, #7c3aed, #8b5cf6); }
+        .panel-icono.rojo { background: linear-gradient(135deg, #dc2626, #ef4444); }
+        
+        .panel-titulo {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #1f2937;
+            font-family: 'Nunito', sans-serif;
+        }
+        
+        .info-item {
+            margin-bottom: 1rem;
+        }
+        
+        .info-label {
+            font-weight: 600;
+            color: #4b5563;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+            margin-bottom: 0.25rem;
+        }
+        
+        .info-value {
+            font-size: 1rem;
+            color: #1f2937;
+            font-weight: 500;
+        }
+        
+        /* BADGES MODERNOS */
+        .badge-modern {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            gap: 0.5rem;
+        }
+        
+        .badge-success { background: #dcfce7; color: #166534; }
+        .badge-warning { background: #fef3c7; color: #92400e; }
+        .badge-danger { background: #fee2e2; color: #dc2626; }
+        .badge-info { background: #dbeafe; color: #1e40af; }
+        .badge-primary { background: #e0e7ff; color: #3730a3; }
+        
+        /* BOTONES MODERNOS */
+        .btn-dashboard {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+        
+        .btn-dashboard.primary {
+            background: #2563eb;
+            color: white;
+        }
+        
+        .btn-dashboard.primary:hover {
+            background: #1d4ed8;
+            transform: translateY(-1px);
+            color: white;
+        }
+        
+        .btn-dashboard.secondary {
+            background: white;
+            color: #374151;
+            border: 1px solid #d1d5db;
+        }
+        
+        .btn-dashboard.secondary:hover {
+            background: #f9fafb;
+            border-color: #9ca3af;
+            color: #374151;
+        }
+        
+        .btn-dashboard.success {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-dashboard.success:hover {
+            background: #059669;
+            color: white;
+        }
+        
+        .btn-dashboard.danger {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .btn-dashboard.danger:hover {
+            background: #dc2626;
+            color: white;
+        }
+        
+        /* SECCIÓN DE ACCIONES */
+        .acciones-container {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            border: 1px solid #f3f4f6;
+            margin-top: 2rem;
+        }
+        
+        .acciones-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: flex-start;
+        }
+        
+        /* DESGLOSE FINANCIERO */
+        .desglose-financiero {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-top: 1.5rem;
+        }
+        
+        .desglose-item {
+            text-align: center;
+            padding: 1rem;
+        }
+        
+        .desglose-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+        
+        .desglose-valor {
+            font-size: 1.5rem;
+            font-weight: 800;
+            font-family: 'Nunito', sans-serif;
+        }
+        
+        .valor-total { color: #2563eb; }
+        .valor-pagado { color: #10b981; }
+        .valor-pendiente { color: #ef4444; }
+        .valor-retenido { color: #f59e0b; }
+        
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            .detalle-container {
+                padding: 1rem;
+            }
             
-            <!-- Desglose financiero detallado -->
-            {{#if (neq documento.estadoPago "pendiente")}}
-            <div class="row">
-              <div class="col-12">
-                <div class="card border-info">
-                  <div class="card-header bg-info text-white py-2">
-                    <h6 class="mb-0"><i class="fas fa-calculator me-1"></i>Desglose Financiero</h6>
-                  </div>
-                  <div class="card-body">
-                    <div class="row text-center">
-                      <div class="col-md-3">
-                        <div class="border-end">
-                          <div class="text-muted small">VALOR TOTAL</div>
-                          <div class="fs-4 text-primary">${{#if documento.valorFactura}}{{formatMoney documento.valorFactura}}{{else}}0.00{{/if}}</div>
-                        </div>
-                      </div>
-                      <div class="col-md-3">
-                        <div class="border-end">
-                          <div class="text-muted small">PAGADO</div>
-                          <div class="fs-4 text-success">${{#if documento.valorPagado}}{{formatMoney documento.valorPagado}}{{else}}0.00{{/if}}</div>
-                        </div>
-                      </div>
-                      <div class="col-md-3">
-                        <div class="{{#if documento.tieneRetencion}}border-end{{/if}}">
-                          <div class="text-muted small">PENDIENTE</div>
-                          <div class="fs-4 text-danger">${{#if documento.valorPendiente}}{{formatMoney documento.valorPendiente}}{{else}}0.00{{/if}}</div>
-                        </div>
-                      </div>
-                      {{#if documento.tieneRetencion}}
-                      <div class="col-md-3">
-                        <div class="text-muted small">RETENCIÓN</div>
-                        <div class="fs-4 text-warning">${{#if documento.valorRetenido}}{{formatMoney documento.valorRetenido}}{{else}}0.00{{/if}}</div>
-                        {{#if documento.numeroComprobanteRetencion}}
-                        <div class="small text-muted">Comp: {{documento.numeroComprobanteRetencion}}</div>
+            .panel-info {
+                padding: 1.5rem;
+            }
+            
+            .acciones-grid {
+                flex-direction: column;
+            }
+            
+            .btn-dashboard {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+        
+        /* TABLA MODERNA */
+        .tabla-moderna {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        .tabla-moderna thead th {
+            background: #f8fafc;
+            color: #374151;
+            font-weight: 600;
+            padding: 1rem;
+            border: none;
+        }
+        
+        .tabla-moderna tbody td {
+            padding: 1rem;
+            border-color: #f3f4f6;
+            vertical-align: middle;
+        }
+        
+        .tabla-moderna tbody tr:hover {
+            background: #f8fafc;
+        }
+    </style>
+</head>
+<body>
+    <div class="detalle-container">
+        <!-- HEADER PROFESIONAL -->
+        <div class="detalle-header">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h1 class="detalle-title">
+                        <i class="fas fa-file-signature me-3"></i>
+                        {{#if soloLectura}}Supervisión de Documento{{else}}Detalle de Documento{{/if}}
+                    </h1>
+                    <p class="detalle-subtitle">
+                        Código: <strong>{{documento.codigoBarras}}</strong> | 
+                        Tipo: <strong>{{documento.tipoDocumento}}</strong> |
+                        Estado: 
+                        {{#if (eq documento.estado "en_proceso")}}
+                            <span class="badge-modern badge-warning"><i class="fas fa-clock"></i> En Proceso</span>
+                        {{else if (eq documento.estado "listo_para_entrega")}}
+                            <span class="badge-modern badge-info"><i class="fas fa-check-circle"></i> Listo para Entrega</span>
+                        {{else if (eq documento.estado "entregado")}}
+                            <span class="badge-modern badge-success"><i class="fas fa-handshake"></i> Entregado</span>
+                        {{else if (eq documento.estado "nota_credito")}}
+                            <span class="badge-modern badge-secondary"><i class="fas fa-receipt"></i> Nota de Crédito</span>
+                        {{else if (eq documento.estado "eliminado")}}
+                            <span class="badge-modern badge-danger"><i class="fas fa-trash"></i> Eliminado</span>
+                        {{else}}
+                            <span class="badge-modern badge-primary">{{documento.estado}}</span>
                         {{/if}}
-                      </div>
-                      {{/if}}
+                    </p>
+                </div>
+                
+                <!-- ACCIONES HEADER -->
+                <div class="acciones-grid">
+                    <a href="/admin/documentos/listado" class="btn-dashboard secondary">
+                        <i class="fas fa-arrow-left"></i> Volver al Listado
+                    </a>
+                    
+                    {{#if soloLectura}}
+                    <button type="button" class="btn-dashboard secondary" onclick="exportarDocumento()">
+                        <i class="fas fa-download"></i> Exportar
+                    </button>
+                    <button type="button" class="btn-dashboard secondary" onclick="verHistorialCompleto()">
+                        <i class="fas fa-history"></i> Historial Completo
+                    </button>
+                    {{else}}
+                    <a href="/admin/documentos/editar/{{documento.id}}" class="btn-dashboard primary">
+                        <i class="fas fa-edit"></i> Editar
+                    </a>
+                    
+                    {{#if (eq documento.estado "en_proceso")}}
+                    <button type="button" class="btn-dashboard success" onclick="marcarListo({{documento.id}})">
+                        <i class="fas fa-check"></i> Marcar como listo
+                    </button>
+                    {{/if}}
+                    
+                    {{#if (eq documento.estado "listo_para_entrega")}}
+                    <a href="/admin/documentos/entrega/{{documento.id}}" class="btn-dashboard primary">
+                        <i class="fas fa-hand-holding"></i> Entrega
+                    </a>
+                    {{/if}}
+                    {{/if}}
+                </div>
+            </div>
+        </div>
+        
+        <!-- PANELES INFORMATIVOS PRINCIPALES -->
+        <div class="row g-4 mb-4">
+            <!-- PANEL 1: INFORMACIÓN GENERAL -->
+            <div class="col-lg-3 col-md-6">
+                <div class="panel-info">
+                    <div class="panel-header">
+                        <div class="panel-icono azul">
+                            <i class="fas fa-info-circle"></i>
+                        </div>
+                        <div class="panel-titulo">Información General</div>
                     </div>
                     
-                    <!-- Información del usuario que registró el pago -->
-                    {{#if usuarioPago}}
-                    <hr class="my-3">
-                    <div class="text-center">
-                      <small class="text-muted">
-                        <i class="fas fa-user me-1"></i><strong>Registrado por:</strong> 
-                        <span class="badge bg-info-subtle text-info-emphasis px-2 py-1">
-                          {{usuarioPago.nombre}} ({{usuarioPago.rol}})
-                        </span>
-                      </small>
+                    <div class="info-item">
+                        <div class="info-label">Código de Barras</div>
+                        <div class="info-value">{{documento.codigoBarras}}</div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label">Tipo de Documento</div>
+                        <div class="info-value">{{documento.tipoDocumento}}</div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label">Fecha Registro Sistema</div>
+                        <div class="info-value">{{formatDate documento.created_at}}</div>
+                        <small class="text-muted">Cuándo se subió al sistema</small>
+                    </div>
+                    
+                    {{#if documento.fechaFactura}}
+                    <div class="info-item">
+                        <div class="info-label">Fecha Documento</div>
+                        <div class="info-value">{{formatDate documento.fechaFactura}}</div>
+                        <small class="text-muted">Fecha original del documento</small>
                     </div>
                     {{/if}}
-                  </div>
-                </div>
-              </div>
-            </div>
-            {{/if}}
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Notas -->
-    {{#if documento.notas}}
-    <div class="row mb-4">
-      <div class="col-12">
-        <div class="card">
-          <div class="card-header">
-            <h5 class="mb-0">Notas</h5>
-          </div>
-          <div class="card-body">
-            <p>{{documento.notas}}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-    {{/if}}
-    
-    <!-- Comparecientes -->
-    {{#if documento.comparecientes.length}}
-    <div class="row mb-4">
-      <div class="col-12">
-        <div class="card">
-          <div class="card-header">
-            <h5 class="mb-0">Comparecientes</h5>
-          </div>
-          <div class="card-body">
-            <div class="table-responsive">
-              <table class="table table-hover">
-                <thead>
-                  <tr>
-                    <th>Nombre</th>
-                    <th>Identificación</th>
-                    <th>Rol</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {{#each documento.comparecientes}}
-                  <tr>
-                    <td>{{this.nombre}}</td>
-                    <td>{{this.identificacion}}</td>
-                    <td>{{this.rol}}</td>
-                  </tr>
-                  {{/each}}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    {{/if}}
-    
-    <!-- Información de entrega (solo si está entregado) -->
-    {{#if (eq documento.estado "entregado")}}
-    <div class="row mb-4">
-      <div class="col-12">
-        <div class="card">
-          <div class="card-header">
-            <h5 class="mb-0">Datos de Entrega</h5>
-          </div>
-          <div class="card-body">
-            <div class="row">
-              <div class="col-md-6">
-                <div class="mb-3">
-                  <label class="fw-bold">Receptor:</label>
-                  <div>{{documento.nombreReceptor}}</div>
-                </div>
-                
-                <div class="mb-3">
-                  <label class="fw-bold">Identificación:</label>
-                  <div>{{documento.identificacionReceptor}}</div>
-                </div>
-              </div>
-              
-              <div class="col-md-6">
-                <div class="mb-3">
-                  <label class="fw-bold">Relación:</label>
-                  <div>
-                    {{#if (eq documento.relacionReceptor "titular")}}
-                    Titular
-                    {{else if (eq documento.relacionReceptor "familiar")}}
-                    Familiar
-                    {{else if (eq documento.relacionReceptor "mandatario")}}
-                    Mandatario
-                    {{else}}
-                    {{documento.relacionReceptor}}
+                    
+                    {{#if documento.fechaEntrega}}
+                    <div class="info-item">
+                        <div class="info-label">Fecha Entrega</div>
+                        <div class="info-value">{{formatDate documento.fechaEntrega}}</div>
+                    </div>
                     {{/if}}
-                  </div>
+                </div>
+            </div>
+            
+            <!-- PANEL 2: CLIENTE -->
+            <div class="col-lg-3 col-md-6">
+                <div class="panel-info">
+                    <div class="panel-header">
+                        <div class="panel-icono verde">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div class="panel-titulo">Cliente</div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label">Nombre Completo</div>
+                        <div class="info-value">{{documento.nombreCliente}}</div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label">Identificación</div>
+                        <div class="info-value">{{documento.identificacionCliente}}</div>
+                    </div>
+                    
+                    {{#if documento.emailCliente}}
+                    <div class="info-item">
+                        <div class="info-label">Email</div>
+                        <div class="info-value">{{documento.emailCliente}}</div>
+                    </div>
+                    {{/if}}
+                    
+                    {{#if documento.telefonoCliente}}
+                    <div class="info-item">
+                        <div class="info-label">Teléfono</div>
+                        <div class="info-value">{{documento.telefonoCliente}}</div>
+                    </div>
+                    {{/if}}
+                </div>
+            </div>
+            
+            <!-- PANEL 3: INFORMACIÓN FINANCIERA -->
+            <div class="col-lg-3 col-md-6">
+                <div class="panel-info">
+                    <div class="panel-header">
+                        <div class="panel-icono naranja">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                        <div class="panel-titulo">Información Financiera</div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label">N° Factura</div>
+                        <div class="info-value">
+                            {{#if documento.numeroFactura}}
+                                <span class="badge-modern badge-primary">{{documento.numeroFactura}}</span>
+                            {{else}}
+                                <span class="text-muted">No registrado</span>
+                            {{/if}}
+                        </div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label">Valor Total</div>
+                        <div class="info-value valor-total" style="font-size: 1.25rem; font-weight: 700;">
+                            ${{#if documento.valorFactura}}{{formatMoney documento.valorFactura}}{{else}}0.00{{/if}}
+                        </div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label">Estado de Pago</div>
+                        <div class="info-value">
+                            {{#if (eq documento.estadoPago "pagado_completo")}}
+                                <span class="badge-modern badge-success"><i class="fas fa-check-circle"></i> Pagado Completo</span>
+                            {{else if (eq documento.estadoPago "pagado_con_retencion")}}
+                                <span class="badge-modern badge-info"><i class="fas fa-receipt"></i> Pagado con Retención</span>
+                            {{else if (eq documento.estadoPago "pago_parcial")}}
+                                <span class="badge-modern badge-warning"><i class="fas fa-exclamation-triangle"></i> Pago Parcial</span>
+                            {{else}}
+                                <span class="badge-modern badge-danger"><i class="fas fa-times-circle"></i> Pendiente</span>
+                            {{/if}}
+                        </div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label">Método de Pago</div>
+                        <div class="info-value">
+                            {{#if documento.metodoPago}}
+                                <span class="badge-modern badge-primary">{{documento.metodoPago}}</span>
+                            {{else}}
+                                <span class="text-muted">No registrado</span>
+                            {{/if}}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- PANEL 4: PROCESO/MATRIZADOR -->
+            <div class="col-lg-3 col-md-6">
+                <div class="panel-info">
+                    <div class="panel-header">
+                        <div class="panel-icono purpura">
+                            <i class="fas fa-user-tie"></i>
+                        </div>
+                        <div class="panel-titulo">Proceso/Matrizador</div>
+                    </div>
+                    
+                    {{#if documento.matrizador}}
+                    <div class="info-item">
+                        <div class="info-label">Matrizador Asignado</div>
+                        <div class="info-value">{{documento.matrizador.nombre}}</div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label">Email</div>
+                        <div class="info-value">{{documento.matrizador.email}}</div>
+                    </div>
+                    
+                    {{#if (eq documento.estado "listo_para_entrega")}}
+                    <div class="info-item">
+                        <div class="info-label">Código de Entrega</div>
+                        <div class="info-value">
+                            <span class="badge-modern badge-success" style="font-size: 1.1rem; font-weight: 800;">
+                                <i class="fas fa-key"></i> {{documento.codigoVerificacion}}
+                            </span>
+                        </div>
+                    </div>
+                    {{/if}}
+                    {{else}}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Sin Asignar</strong><br>
+                        <small>Este documento requiere asignación de matrizador</small>
+                    </div>
+                    {{/if}}
+                </div>
+            </div>
+        </div>
+        
+        <!-- DESGLOSE FINANCIERO DETALLADO -->
+        {{#if (neq documento.estadoPago "pendiente")}}
+        <div class="panel-info mb-4">
+            <div class="panel-header">
+                <div class="panel-icono naranja">
+                    <i class="fas fa-calculator"></i>
+                </div>
+                <div class="panel-titulo">Desglose Financiero Detallado</div>
+            </div>
+            
+            <div class="desglose-financiero">
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <div class="desglose-item">
+                            <div class="desglose-label">VALOR TOTAL</div>
+                            <div class="desglose-valor valor-total">
+                                ${{#if documento.valorFactura}}{{formatMoney documento.valorFactura}}{{else}}0.00{{/if}}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="desglose-item">
+                            <div class="desglose-label">PAGADO</div>
+                            <div class="desglose-valor valor-pagado">
+                                ${{#if documento.valorPagado}}{{formatMoney documento.valorPagado}}{{else}}0.00{{/if}}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="desglose-item">
+                            <div class="desglose-label">PENDIENTE</div>
+                            <div class="desglose-valor valor-pendiente">
+                                ${{#if documento.valorPendiente}}{{formatMoney documento.valorPendiente}}{{else}}0.00{{/if}}
+                            </div>
+                        </div>
+                    </div>
+                    {{#if documento.tieneRetencion}}
+                    <div class="col-md-3">
+                        <div class="desglose-item">
+                            <div class="desglose-label">RETENCIÓN</div>
+                            <div class="desglose-valor valor-retenido">
+                                ${{#if documento.valorRetenido}}{{formatMoney documento.valorRetenido}}{{else}}0.00{{/if}}
+                            </div>
+                            {{#if documento.numeroComprobanteRetencion}}
+                            <div class="small text-muted mt-1">Comp: {{documento.numeroComprobanteRetencion}}</div>
+                            {{/if}}
+                        </div>
+                    </div>
+                    {{/if}}
                 </div>
                 
-                <div class="mb-3">
-                  <label class="fw-bold">Fecha de Entrega:</label>
-                  <div>{{formatDate documento.fechaEntrega}}</div>
+                {{#if usuarioPago}}
+                <hr class="my-3">
+                <div class="text-center">
+                    <small class="text-muted">
+                        <i class="fas fa-user me-1"></i><strong>Registrado por:</strong> 
+                        <span class="badge-modern badge-info">
+                            {{usuarioPago.nombre}} ({{usuarioPago.rol}})
+                        </span>
+                    </small>
                 </div>
-              </div>
+                {{/if}}
             </div>
-          </div>
         </div>
-      </div>
-    </div>
-    {{/if}}
-    
-    <!-- ============================================================================ -->
-    <!-- PANEL DE REVERSIONES - SOLO ADMIN -->
-    <!-- ============================================================================ -->
-    {{#if (eq userRole "admin")}}
-    <div class="row mb-4">
-      <div class="col-12">
-        <div class="card border-warning">
-          <div class="card-header bg-warning text-dark">
-            <h5 class="mb-0">
-              <i class="fas fa-undo me-2"></i>REVERSIONES DE EMERGENCIA - ADMIN
-            </h5>
-            <small>Solo usar en casos confirmados de error - Se registra en auditoría</small>
-          </div>
-          <div class="card-body">
-            <div class="alert alert-warning">
-              <i class="fas fa-exclamation-triangle me-2"></i>
-              <strong>Importante:</strong> Las reversiones son operaciones críticas que modifican el estado del documento. 
-              Requieren justificación detallada y quedan registradas permanentemente en auditoría.
+        {{/if}}
+        
+        <!-- NOTAS -->
+        {{#if documento.notas}}
+        <div class="panel-info mb-4">
+            <div class="panel-header">
+                <div class="panel-icono azul">
+                    <i class="fas fa-sticky-note"></i>
+                </div>
+                <div class="panel-titulo">Notas</div>
+            </div>
+            <div class="info-value">{{documento.notas}}</div>
+        </div>
+        {{/if}}
+        
+        <!-- COMPARECIENTES -->
+        {{#if documento.comparecientes.length}}
+        <div class="panel-info mb-4">
+            <div class="panel-header">
+                <div class="panel-icono verde">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="panel-titulo">Comparecientes</div>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="tabla-moderna table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Identificación</th>
+                            <th>Rol</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{#each documento.comparecientes}}
+                        <tr>
+                            <td>{{this.nombre}}</td>
+                            <td>{{this.identificacion}}</td>
+                            <td><span class="badge-modern badge-primary">{{this.rol}}</span></td>
+                        </tr>
+                        {{/each}}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {{/if}}
+        
+        <!-- INFORMACIÓN DE ENTREGA -->
+        {{#if (eq documento.estado "entregado")}}
+        <div class="panel-info mb-4">
+            <div class="panel-header">
+                <div class="panel-icono verde">
+                    <i class="fas fa-handshake"></i>
+                </div>
+                <div class="panel-titulo">Datos de Entrega</div>
             </div>
             
             <div class="row">
-              <!-- Reversiones de Estado disponibles según el estado actual -->
-              {{#if (eq documento.estado "listo_para_entrega")}}
-              <div class="col-md-6 mb-3">
-                <div class="card h-100 border-info">
-                  <div class="card-body text-center">
-                    <i class="fas fa-arrow-left fa-2x text-info mb-2"></i>
-                    <h6>Desmarcar como Listo</h6>
-                    <p class="small text-muted">Devolver a estado "en proceso"</p>
-                    <button class="btn btn-info btn-sm" onclick="abrirModalReversion('desmarcar_listo', '{{documento.id}}')">
-                      <i class="fas fa-undo"></i> Ejecutar
-                    </button>
-                  </div>
+                <div class="col-md-6">
+                    <div class="info-item">
+                        <div class="info-label">Receptor</div>
+                        <div class="info-value">{{documento.nombreReceptor}}</div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label">Identificación</div>
+                        <div class="info-value">{{documento.identificacionReceptor}}</div>
+                    </div>
                 </div>
-              </div>
-              {{/if}}
-              
-              {{#if (eq documento.estado "entregado")}}
-              <div class="col-md-6 mb-3">
-                <div class="card h-100 border-danger">
-                  <div class="card-body text-center">
-                    <i class="fas fa-hand-paper fa-2x text-danger mb-2"></i>
-                    <h6>Deshacer Entrega</h6>
-                    <p class="small text-muted">Marcar como "listo para entrega"</p>
-                    <button class="btn btn-danger btn-sm" onclick="abrirModalReversion('deshacer_entrega', '{{documento.id}}')">
-                      <i class="fas fa-undo"></i> Ejecutar
-                    </button>
-                  </div>
+                
+                <div class="col-md-6">
+                    <div class="info-item">
+                        <div class="info-label">Relación</div>
+                        <div class="info-value">
+                            {{#if (eq documento.relacionReceptor "titular")}}
+                                <span class="badge-modern badge-success">Titular</span>
+                            {{else if (eq documento.relacionReceptor "familiar")}}
+                                <span class="badge-modern badge-info">Familiar</span>
+                            {{else if (eq documento.relacionReceptor "mandatario")}}
+                                <span class="badge-modern badge-warning">Mandatario</span>
+                            {{else}}
+                                <span class="badge-modern badge-primary">{{documento.relacionReceptor}}</span>
+                            {{/if}}
+                        </div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label">Fecha de Entrega</div>
+                        <div class="info-value">{{formatDate documento.fechaEntrega}}</div>
+                    </div>
                 </div>
-              </div>
-              {{/if}}
-              
-              {{#if documento.notificacionGrupalId}}
-              <div class="col-md-6 mb-3">
-                <div class="card h-100 border-primary">
-                  <div class="card-body text-center">
-                    <i class="fas fa-unlink fa-2x text-primary mb-2"></i>
-                    <h6>Separar de Grupo</h6>
-                    <p class="small text-muted">Remover de notificación grupal</p>
-                    <button class="btn btn-primary btn-sm" onclick="abrirModalReversion('separar_grupo', '{{documento.id}}')">
-                      <i class="fas fa-unlink"></i> Ejecutar
-                    </button>
-                  </div>
+            </div>
+        </div>
+        {{/if}}
+        
+        <!-- PANEL DE REVERSIONES - SOLO ADMIN -->
+        {{#if (eq userRole "admin")}}
+        <div class="panel-info mb-4" style="border: 2px solid #f59e0b;">
+            <div class="panel-header" style="background: linear-gradient(135deg, #f59e0b, #f97316); margin: -2rem -2rem 1.5rem -2rem; padding: 1.5rem 2rem; border-radius: 14px 14px 0 0;">
+                <div class="panel-icono" style="background: rgba(255,255,255,0.2);">
+                    <i class="fas fa-undo"></i>
                 </div>
-              </div>
-              {{/if}}
-              
-              {{#if (and documento.eliminado (esReciente documento.fechaEliminacion))}}
-              <div class="col-md-6 mb-3">
-                <div class="card h-100 border-success">
-                  <div class="card-body text-center">
-                    <i class="fas fa-recycle fa-2x text-success mb-2"></i>
-                    <h6>Reactivar Documento</h6>
-                    <p class="small text-muted">Restaurar documento eliminado</p>
-                    <button class="btn btn-success btn-sm" onclick="abrirModalReversion('reactivar_documento', '{{documento.id}}')">
-                      <i class="fas fa-recycle"></i> Ejecutar
-                    </button>
-                  </div>
+                <div>
+                    <div class="panel-titulo" style="color: white;">REVERSIONES DE EMERGENCIA - ADMIN</div>
+                    <small style="color: rgba(255,255,255,0.9);">Solo usar en casos confirmados de error - Se registra en auditoría</small>
                 </div>
-              </div>
-              {{/if}}
-              
-              <!-- Si no hay reversiones disponibles -->
-              {{#unless (or (eq documento.estado "listo_para_entrega") (eq documento.estado "entregado") documento.notificacionGrupalId (and documento.eliminado (esReciente documento.fechaEliminacion)))}}
-              <div class="col-12">
-                <div class="alert alert-info text-center">
-                  <i class="fas fa-info-circle me-2"></i>
-                  No hay reversiones disponibles para el estado actual del documento.
+            </div>
+            
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Importante:</strong> Las reversiones son operaciones críticas que modifican el estado del documento. 
+                Requieren justificación detallada y quedan registradas permanentemente en auditoría.
+            </div>
+            
+            <div class="row">
+                {{#if (eq documento.estado "listo_para_entrega")}}
+                <div class="col-md-6 mb-3">
+                    <div class="panel-info text-center" style="border: 2px solid #3b82f6;">
+                        <i class="fas fa-arrow-left fa-2x text-primary mb-3"></i>
+                        <h6>Desmarcar como Listo</h6>
+                        <p class="small text-muted">Devolver a estado "en proceso"</p>
+                        <button class="btn-dashboard primary" onclick="abrirModalReversion('desmarcar_listo', '{{documento.id}}')">
+                            <i class="fas fa-undo"></i> Ejecutar
+                        </button>
+                    </div>
                 </div>
-              </div>
-              {{/unless}}
+                {{/if}}
+                
+                {{#if (eq documento.estado "entregado")}}
+                <div class="col-md-6 mb-3">
+                    <div class="panel-info text-center" style="border: 2px solid #ef4444;">
+                        <i class="fas fa-hand-paper fa-2x text-danger mb-3"></i>
+                        <h6>Deshacer Entrega</h6>
+                        <p class="small text-muted">Marcar como "listo para entrega"</p>
+                        <button class="btn-dashboard danger" onclick="abrirModalReversion('deshacer_entrega', '{{documento.id}}')">
+                            <i class="fas fa-undo"></i> Ejecutar
+                        </button>
+                    </div>
+                </div>
+                {{/if}}
+                
+                {{#if documento.notificacionGrupalId}}
+                <div class="col-md-6 mb-3">
+                    <div class="panel-info text-center" style="border: 2px solid #2563eb;">
+                        <i class="fas fa-unlink fa-2x text-primary mb-3"></i>
+                        <h6>Separar de Grupo</h6>
+                        <p class="small text-muted">Remover de notificación grupal</p>
+                        <button class="btn-dashboard primary" onclick="abrirModalReversion('separar_grupo', '{{documento.id}}')">
+                            <i class="fas fa-unlink"></i> Ejecutar
+                        </button>
+                    </div>
+                </div>
+                {{/if}}
+                
+                {{#if (and documento.eliminado (esReciente documento.fechaEliminacion))}}
+                <div class="col-md-6 mb-3">
+                    <div class="panel-info text-center" style="border: 2px solid #10b981;">
+                        <i class="fas fa-recycle fa-2x text-success mb-3"></i>
+                        <h6>Reactivar Documento</h6>
+                        <p class="small text-muted">Restaurar documento eliminado</p>
+                        <button class="btn-dashboard success" onclick="abrirModalReversion('reactivar_documento', '{{documento.id}}')">
+                            <i class="fas fa-recycle"></i> Ejecutar
+                        </button>
+                    </div>
+                </div>
+                {{/if}}
+                
+                {{#unless (or (eq documento.estado "listo_para_entrega") (eq documento.estado "entregado") documento.notificacionGrupalId (and documento.eliminado (esReciente documento.fechaEliminacion)))}}
+                <div class="col-12">
+                    <div class="alert alert-info text-center">
+                        <i class="fas fa-info-circle me-2"></i>
+                        No hay reversiones disponibles para el estado actual del documento.
+                    </div>
+                </div>
+                {{/unless}}
             </div>
             
             <div class="text-end mt-3">
-              <a href="/admin/reversiones/auditoria" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-history me-1"></i> Ver Auditoría de Reversiones
-              </a>
+                <a href="/admin/reversiones/auditoria" class="btn-dashboard secondary">
+                    <i class="fas fa-history"></i> Ver Auditoría de Reversiones
+                </a>
             </div>
-          </div>
         </div>
-      </div>
+        {{/if}}
+        
+        <!-- HISTORIAL UNIVERSAL -->
+        <div class="panel-info">
+            <div class="panel-header">
+                <div class="panel-icono azul">
+                    <i class="fas fa-history"></i>
+                </div>
+                <div class="panel-titulo">Historial de Eventos</div>
+            </div>
+            
+            {{> historial-universal eventos=eventos esAdmin=true userRole="admin"}}
+        </div>
     </div>
-    {{/if}}
-    
-    <!-- 🆕 HISTORIAL UNIVERSAL -->
-    {{> historial-universal eventos=eventos esAdmin=true userRole="admin"}}
-  </div>
-</div>
 
 <!-- Modal de confirmación para marcar como listo -->
 <div class="modal fade" id="marcarListoModal" tabindex="-1" aria-hidden="true">
@@ -503,9 +833,7 @@
   </div>
 </div>
 
-<!-- ============================================================================ -->
 <!-- MODAL DE JUSTIFICACIÓN PARA REVERSIONES - ADMIN -->
-<!-- ============================================================================ -->
 <div class="modal fade" id="modalReversionAdmin" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
@@ -580,10 +908,7 @@
 </div>
 
 <script>
-// ============================================================================
 // SISTEMA DE REVERSIONES - ADMIN
-// ============================================================================
-
 let tipoReversionActual = '';
 let documentoIdActual = '';
 
@@ -715,8 +1040,15 @@ function marcarListo(id) {
   modal.show();
 }
 
-console.log('📖 Vista admin limpia cargada para documento {{documento.codigoBarras}}');
+console.log('📖 Vista admin rediseñada cargada para documento {{documento.codigoBarras}}');
 </script>
+
+<!-- Bootstrap 5 JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</body>
+</html>
 {{else}}
 <div class="alert alert-warning">
   <i class="fas fa-exclamation-triangle me-2"></i> El documento solicitado no existe o no tienes permisos para verlo.
