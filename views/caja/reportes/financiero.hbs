@@ -79,7 +79,7 @@
             <div class="d-flex justify-content-between">
               <div>
                 <h6 class="card-title mb-0">Total Facturado</h6>
-                <h2 class="display-6 mb-0">${{formatMoney stats.totalFacturado}}</h2>
+                <h2 class="display-6 mb-0">${{stats.totalFacturado}}</h2>
               </div>
               <i class="fas fa-file-invoice-dollar fa-3x opacity-50"></i>
             </div>
@@ -92,7 +92,7 @@
             <div class="d-flex justify-content-between">
               <div>
                 <h6 class="card-title mb-0">Total Cobrado</h6>
-                <h2 class="display-6 mb-0">${{formatMoney stats.totalCobrado}}</h2>
+                <h2 class="display-6 mb-0">${{stats.totalCobrado}}</h2>
               </div>
               <i class="fas fa-money-bill-wave fa-3x opacity-50"></i>
             </div>
@@ -105,7 +105,7 @@
             <div class="d-flex justify-content-between">
               <div>
                 <h6 class="card-title mb-0">Pendiente de Cobro</h6>
-                <h2 class="display-6 mb-0">${{formatMoney stats.totalPendiente}}</h2>
+                <h2 class="display-6 mb-0">${{stats.totalPendiente}}</h2>
               </div>
               <i class="fas fa-clock fa-3x opacity-50"></i>
             </div>
@@ -133,6 +133,8 @@
         <div class="card">
           <div class="card-header">
             <i class="fas fa-chart-line me-2"></i> Tendencia Financiera
+            <!-- DEBUG: Mostrar información del gráfico -->
+            <span class="badge bg-warning ms-2">Debug: graficoTendencia.fechas.length = {{graficoTendencia.fechas.length}}</span>
           </div>
           <div class="card-body">
             {{#if graficoTendencia.fechas.length}}
@@ -153,6 +155,8 @@
     <div class="card">
       <div class="card-header">
         <i class="fas fa-table me-2"></i> Resumen Diario
+        <!-- DEBUG: Mostrar información de datosTabla -->
+        <span class="badge bg-info ms-2">Debug: datosTabla.length = {{datosTabla.length}}</span>
       </div>
       <div class="card-body">
         {{#if datosTabla.length}}
@@ -171,9 +175,9 @@
               {{#each datosTabla}}
               <tr>
                 <td>{{this.fecha}}</td>
-                <td class="text-end">${{formatMoney this.facturado}}</td>
-                <td class="text-end">${{formatMoney this.cobrado}}</td>
-                <td class="text-end">${{formatMoney this.pendiente}}</td>
+                <td class="text-end">${{this.facturado}}</td>
+                <td class="text-end">${{this.cobrado}}</td>
+                <td class="text-end">${{this.pendiente}}</td>
                 <td class="text-end">
                   <span class="badge {{#if (gte this.porcentaje 80)}}bg-success{{else if (gte this.porcentaje 50)}}bg-warning{{else}}bg-danger{{/if}}">
                     {{this.porcentaje}}%
@@ -185,7 +189,9 @@
             <tfoot class="table-light">
               <tr>
                 <th>TOTAL</th>
-                                <th class="text-end">${{formatMoney stats.totalFacturado}}</th>                <th class="text-end">${{formatMoney stats.totalCobrado}}</th>                <th class="text-end">${{formatMoney stats.totalPendiente}}</th>
+                <th class="text-end">${{stats.totalFacturado}}</th>
+                <th class="text-end">${{stats.totalCobrado}}</th>
+                <th class="text-end">${{stats.totalPendiente}}</th>
                 <th class="text-end">
                   <span class="badge {{#if (gte stats.porcentajeRecuperacion 80)}}bg-success{{else if (gte stats.porcentajeRecuperacion 50)}}bg-warning{{else}}bg-danger{{/if}}">
                     {{stats.porcentajeRecuperacion}}%
@@ -209,6 +215,20 @@
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
+    // DEBUG: Verificar datos recibidos en el frontend
+    console.log('🔍 DEBUG Frontend - Datos recibidos:');
+    console.log('datosTabla:', {{{json datosTabla}}});
+    console.log('graficoTendencia:', {{{json graficoTendencia}}});
+    console.log('stats:', {{{json stats}}});
+    
+    // DEBUG EXPANDIDO: Mostrar estructura detallada
+    const datosTablaDebug = {{{json datosTabla}}};
+    const graficoDebug = {{{json graficoTendencia}}};
+    console.log('📊 ESTRUCTURA DETALLADA:');
+    console.log('datosTabla[0]:', datosTablaDebug && datosTablaDebug[0] ? datosTablaDebug[0] : 'UNDEFINED');
+    console.log('graficoTendencia.fechas:', graficoDebug && graficoDebug.fechas ? graficoDebug.fechas : 'UNDEFINED');
+    console.log('graficoTendencia.facturado:', graficoDebug && graficoDebug.facturado ? graficoDebug.facturado : 'UNDEFINED');
+    
     // Función para mostrar/ocultar fechas personalizadas
     window.toggleFechasPersonalizadas = function() {
       const rango = document.getElementById('rango').value;

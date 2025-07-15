@@ -1626,58 +1626,211 @@ const cajaController = {
       const fechaInicioSQL = fechaInicio.format('YYYY-MM-DD HH:mm:ss');
       const fechaFinSQL = fechaFin.format('YYYY-MM-DD HH:mm:ss');
       
-      // Obtener estadísticas financieras generales usando Sequelize ORM
-      const whereClause = {
-        valor_factura: { [Op.not]: null },
-        estado: { [Op.ne]: 'cancelado' },
-        created_at: {
-          [Op.between]: [fechaInicioSQL, fechaFinSQL]
-        }
-      };
+      // CORREGIDO: Usar el mismo cálculo que el dashboard para consistencia
+      // MÉTRICA 1: FACTURADO - Total de facturas emitidas del período filtrado
+      // CAMBIO: Usar fecha_factura en lugar de created_at para mayor precisión contable
+      const [facturacionResult] = await sequelize.query(`
+        SELECT COALESCE(SUM(valor_factura), 0) as total
+        FROM documentos
+        WHERE fecha_factura BETWEEN :fechaInicio AND :fechaFin
+        AND numero_factura IS NOT NULL
+        AND estado NOT IN ('eliminado', 'nota_credito')
+        ${idMatrizador && idMatrizador !== 'todos' && idMatrizador !== '' ? 'AND id_matrizador = :idMatrizador' : ''}
+      `, {
+        replacements: { 
+          fechaInicio: fechaInicioSQL, 
+          fechaFin: fechaFinSQL,
+          ...(idMatrizador && idMatrizador !== 'todos' && idMatrizador !== '' ? { idMatrizador: parseInt(idMatrizador, 10) } : {})
+        },
+        type: sequelize.QueryTypes.SELECT
+      });
+      const totalFacturado = parseFloat(facturacionResult.total);
       
-      // Añadir filtro por matrizador si se seleccionó uno
-      if (idMatrizador && idMatrizador !== 'todos' && idMatrizador !== '') {
-        whereClause.id_matrizador = parseInt(idMatrizador, 10);
-      }
+      // MÉTRICA 2: COBRADO - Dinero efectivamente recibido del período filtrado
+      // CAMBIO: Usar fecha_factura en lugar de created_at para mayor precisión contable
+      const [cobradoResult] = await sequelize.query(`
+        SELECT COALESCE(SUM(CASE WHEN estado_pago IN ('pagado_completo', 'pagado_con_retencion', 'pago_parcial') THEN valor_pagado ELSE 0 END), 0) as total
+        FROM documentos
+        WHERE fecha_factura BETWEEN :fechaInicio AND :fechaFin
+        AND estado NOT IN ('eliminado', 'nota_credito')
+        ${idMatrizador && idMatrizador !== 'todos' && idMatrizador !== '' ? 'AND id_matrizador = :idMatrizador' : ''}
+      `, {
+        replacements: { 
+          fechaInicio: fechaInicioSQL, 
+          fechaFin: fechaFinSQL,
+          ...(idMatrizador && idMatrizador !== 'todos' && idMatrizador !== '' ? { idMatrizador: parseInt(idMatrizador, 10) } : {})
+        },
+        type: sequelize.QueryTypes.SELECT
+      });
+      const totalCobrado = parseFloat(cobradoResult.total);
       
-      const totalFacturado = await Documento.sum('valor_factura', {
-        where: whereClause
-      }) || 0;
+      // MÉTRICA 3: PENDIENTE - Calculado como Facturado - Cobrado (igual que la tabla)
+      const totalPendiente = totalFacturado - totalCobrado;
       
-      const totalCobrado = await Documento.sum('valor_pagado', {
-        where: {
-          ...whereClause,
-          estado_pago: { [Op.in]: ['pagado_completo', 'pagado_con_retencion', 'pago_parcial'] }
-        }
-      }) || 0;
-      
-      const totalPendiente = await Documento.sum('valor_pendiente', {
-        where: whereClause
-      }) || 0;
-      
-      // Calcular porcentaje de recuperación
+      // MÉTRICA 4: % RECUPERACIÓN - (Total Cobrado / Total Facturado) * 100
       const porcentajeRecuperacion = totalFacturado > 0 ? 
         Math.round((totalCobrado / totalFacturado) * 100) : 0;
       
-      // CORREGIDO: Obtener datos diarios usando nombres de columna correctos
-      const documentosPorDia = await Documento.findAll({
-        where: whereClause,
-        attributes: [
-          [sequelize.fn('DATE', sequelize.col('created_at')), 'fecha'],
-          [sequelize.fn('SUM', sequelize.col('valor_factura')), 'totalFacturado'],
-          [sequelize.fn('SUM', sequelize.col('valor_pagado')), 'totalCobrado']
-        ],
-        group: [sequelize.fn('DATE', sequelize.col('created_at'))],
-        order: [[sequelize.fn('DATE', sequelize.col('created_at')), 'ASC']],
-        raw: true
+      // CORREGIDO: Obtener datos diarios usando la misma lógica que las tarjetas
+      // CAMBIO: Usar fecha_factura en lugar de created_at para mayor precisión contable
+      let documentosPorDiaQuery = `
+        SELECT 
+          DATE(fecha_factura) as fecha,
+          COALESCE(SUM(CASE WHEN numero_factura IS NOT NULL THEN valor_factura ELSE 0 END), 0) as totalFacturado,
+          COALESCE(SUM(CASE WHEN estado_pago IN ('pagado_completo', 'pagado_con_retencion', 'pago_parcial') THEN valor_pagado ELSE 0 END), 0) as totalCobrado
+        FROM documentos
+        WHERE fecha_factura BETWEEN :fechaInicio AND :fechaFin
+        AND estado NOT IN ('eliminado', 'nota_credito')`;
+      
+      // Agregar filtro de matrizador si es necesario
+      if (idMatrizador && idMatrizador !== 'todos' && idMatrizador !== '') {
+        documentosPorDiaQuery += ' AND id_matrizador = :idMatrizador';
+      }
+      
+      documentosPorDiaQuery += `
+        GROUP BY DATE(fecha_factura)
+        ORDER BY DATE(fecha_factura) ASC
+      `;
+      
+      const documentosPorDia = await sequelize.query(documentosPorDiaQuery, {
+        replacements: { 
+          fechaInicio: fechaInicioSQL, 
+          fechaFin: fechaFinSQL,
+          ...(idMatrizador && idMatrizador !== 'todos' && idMatrizador !== '' ? { idMatrizador: parseInt(idMatrizador, 10) } : {})
+        },
+        type: sequelize.QueryTypes.SELECT
       });
+      
+      // DEBUG: Log para diagnosticar problema
+      console.log('🔍 DEBUG Reporte Financiero:', {
+        rango,
+        fechaInicio: fechaInicioSQL,
+        fechaFin: fechaFinSQL,
+        idMatrizador,
+        documentosPorDiaCount: documentosPorDia.length,
+        primerosRegistros: documentosPorDia.slice(0, 5),
+        queryEjecutada: documentosPorDiaQuery
+      });
+      
+      // DEBUG ADICIONAL: Contar documentos totales en el rango para verificar
+      // CAMBIO: Usar fecha_factura en lugar de created_at
+      const [countResult] = await sequelize.query(`
+        SELECT COUNT(*) as total,
+               MIN(DATE(fecha_factura)) as fechaMinima,
+               MAX(DATE(fecha_factura)) as fechaMaxima
+        FROM documentos
+        WHERE fecha_factura BETWEEN :fechaInicio AND :fechaFin
+        AND estado NOT IN ('eliminado', 'nota_credito')
+      `, {
+        replacements: { fechaInicio: fechaInicioSQL, fechaFin: fechaFinSQL },
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      console.log('📊 Verificación de documentos en rango:', countResult);
+      
+      // DEBUG: Ver documentos específicos del 14 y 15 de julio (TODOS los estados)
+      const documentosDebugTodos = await sequelize.query(`
+        SELECT DATE(created_at) as fecha,
+               codigo_barras,
+               numero_factura,
+               valor_factura,
+               valor_pagado,
+               estado_pago,
+               estado,
+               CASE WHEN numero_factura IS NOT NULL THEN 'SI' ELSE 'NO' END as tiene_factura,
+               CASE WHEN estado IN ('eliminado', 'nota_credito') THEN '❌ EXCLUIDO' ELSE '✅ INCLUIDO' END as inclusion_reporte
+        FROM documentos
+        WHERE DATE(created_at) IN ('2025-07-14', '2025-07-15')
+        ORDER BY created_at
+      `, {
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      console.log('🔍 Documentos del 14-15 julio (TODOS los estados):', documentosDebugTodos);
+      
+      // DEBUG: Solo documentos NO eliminados - CAMBIO: Usar fecha_factura
+      const documentosDebug = await sequelize.query(`
+        SELECT DATE(fecha_factura) as fecha_documento,
+               DATE(created_at) as fecha_creacion,
+               codigo_barras,
+               numero_factura,
+               valor_factura,
+               valor_pagado,
+               estado_pago,
+               estado,
+               CASE WHEN numero_factura IS NOT NULL THEN 'SI' ELSE 'NO' END as tiene_factura
+        FROM documentos
+        WHERE DATE(fecha_factura) IN ('2025-07-14', '2025-07-15')
+        AND estado NOT IN ('eliminado', 'nota_credito')
+        ORDER BY fecha_factura
+        LIMIT 10
+      `, {
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      console.log('✅ Documentos del 14-15 julio (NO eliminados):', documentosDebug);
+      
+      // DEBUG: Verificar específicamente la query de resumen diario - CAMBIO: Usar fecha_factura
+      const debugResumenDiario = await sequelize.query(`
+        SELECT 
+          DATE(fecha_factura) as fecha,
+          COUNT(*) as total_documentos,
+          COUNT(CASE WHEN numero_factura IS NOT NULL THEN 1 END) as con_factura,
+          COALESCE(SUM(CASE WHEN numero_factura IS NOT NULL THEN valor_factura ELSE 0 END), 0) as totalFacturado,
+          COALESCE(SUM(CASE WHEN estado_pago IN ('pagado_completo', 'pagado_con_retencion', 'pago_parcial') THEN valor_pagado ELSE 0 END), 0) as totalCobrado
+        FROM documentos
+        WHERE DATE(fecha_factura) IN ('2025-07-14', '2025-07-15')
+        AND estado NOT IN ('eliminado', 'nota_credito')
+        GROUP BY DATE(fecha_factura)
+        ORDER BY DATE(fecha_factura) ASC
+      `, {
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      console.log('📋 Debug resumen diario específico:', debugResumenDiario);
+      
+      // DEBUG CRÍTICO: Verificar fechas de factura vs fechas de creación
+      const fechasComparacion = await sequelize.query(`
+        SELECT 
+          codigo_barras,
+          DATE(created_at) as fecha_creacion,
+          DATE(fecha_factura) as fecha_documento,
+          numero_factura,
+          valor_factura,
+          estado,
+          CASE WHEN estado IN ('eliminado', 'nota_credito') THEN '❌ EXCLUIDO' ELSE '✅ INCLUIDO' END as inclusion_reporte,
+          CASE 
+            WHEN DATE(fecha_factura) = '2025-07-14' THEN '🎯 DEBERÍA APARECER EN 14/07'
+            WHEN DATE(fecha_factura) = '2025-07-15' THEN '🎯 DEBERÍA APARECER EN 15/07'
+            ELSE '❓ FUERA DE RANGO'
+          END as filtro_nuevo
+        FROM documentos
+        WHERE (DATE(created_at) = '2025-07-14' OR DATE(created_at) = '2025-07-15' 
+               OR DATE(fecha_factura) = '2025-07-14' OR DATE(fecha_factura) = '2025-07-15')
+        ORDER BY fecha_factura DESC, created_at DESC
+      `, {
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      console.log('📅 COMPARACIÓN: Fechas de creación vs fechas de documento:', fechasComparacion);
+      
+      // DEBUG CRÍTICO: Mostrar estructura exacta de documentosPorDia
+      console.log('📋 DEBUG documentosPorDia RAW:', documentosPorDia);
+      console.log('📋 DEBUG primer elemento:', documentosPorDia[0]);
       
       // Preparar datos para la tabla
       const datosTabla = documentosPorDia.map(item => {
-        const facturado = parseFloat(item.totalFacturado) || 0;
-        const cobrado = parseFloat(item.totalCobrado) || 0;
+        console.log('🔍 DEBUG item individual:', item);
+        console.log('🔍 item.totalfacturado (lowercase):', item.totalfacturado, 'typeof:', typeof item.totalfacturado);
+        console.log('🔍 item.totalcobrado (lowercase):', item.totalcobrado, 'typeof:', typeof item.totalcobrado);
+        
+        // PostgreSQL devuelve columnas en lowercase
+        const facturado = parseFloat(item.totalfacturado) || 0;
+        const cobrado = parseFloat(item.totalcobrado) || 0;
         const pendiente = facturado - cobrado;
         const porcentaje = facturado > 0 ? Math.round((cobrado / facturado) * 100) : 0;
+        
+        console.log('🔍 Procesados - facturado:', facturado, 'cobrado:', cobrado, 'pendiente:', pendiente);
         
         return {
           fecha: moment(item.fecha).format('DD/MM/YYYY'),
@@ -1688,15 +1841,48 @@ const cajaController = {
         };
       });
       
+      // FALLBACK: Si no hay datos por día pero sí hay totales, crear entrada sintética
+      if (datosTabla.length === 0 && (totalFacturado > 0 || totalCobrado > 0)) {
+        console.log('⚠️ No hay datos diarios, pero sí totales. Creando entrada sintética...');
+        datosTabla.push({
+          fecha: periodoTexto,
+          facturado: totalFacturado.toFixed(2),
+          cobrado: totalCobrado.toFixed(2),
+          pendiente: totalPendiente.toFixed(2),
+          porcentaje: porcentajeRecuperacion
+        });
+      }
+      
       // Preparar datos para el gráfico de tendencia
-      const graficoTendencia = {
+      let graficoTendencia = {
         fechas: documentosPorDia.map(item => moment(item.fecha).format('DD/MM/YYYY')),
-        facturado: documentosPorDia.map(item => parseFloat(item.totalFacturado) || 0),
-        cobrado: documentosPorDia.map(item => parseFloat(item.totalCobrado) || 0),
+        facturado: documentosPorDia.map(item => parseFloat(item.totalfacturado) || 0),
+        cobrado: documentosPorDia.map(item => parseFloat(item.totalcobrado) || 0),
         pendiente: documentosPorDia.map(item => 
-          (parseFloat(item.totalFacturado) || 0) - (parseFloat(item.totalCobrado) || 0)
+          (parseFloat(item.totalfacturado) || 0) - (parseFloat(item.totalcobrado) || 0)
         )
       };
+      
+      // FALLBACK: Si no hay datos para el gráfico, usar datos de la tabla
+      if (graficoTendencia.fechas.length === 0 && datosTabla.length > 0) {
+        console.log('⚠️ Usando datos de tabla para gráfico...');
+        graficoTendencia = {
+          fechas: datosTabla.map(item => item.fecha),
+          facturado: datosTabla.map(item => parseFloat(item.facturado) || 0),
+          cobrado: datosTabla.map(item => parseFloat(item.cobrado) || 0),
+          pendiente: datosTabla.map(item => parseFloat(item.pendiente) || 0)
+        };
+      }
+      
+      // DEBUG: Log datos finales
+      console.log('📊 DEBUG Datos finales:', {
+        datosTablaCount: datosTabla.length,
+        graficoTendenciaFechas: graficoTendencia.fechas.length,
+        totalFacturado,
+        totalCobrado,
+        totalPendiente,
+        porcentajeRecuperacion
+      });
       
       // Obtener todos los matrizadores para el dropdown
       const matrizadores = await Matrizador.findAll({
