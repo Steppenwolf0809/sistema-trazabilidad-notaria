@@ -8,7 +8,12 @@
 (function() {
   'use strict';
   
-  console.log('🔧 Iniciando corrección automática de badges ENTREGADO...');
+  // Sistema de logging condicional para producción
+  window.DEBUG_MODE = window.DEBUG_MODE || false;
+  
+  if (window.DEBUG_MODE) {
+    console.log('🔧 Iniciando corrección automática de badges ENTREGADO...');
+  }
   
   // ✅ CONFIGURACIÓN OPTIMIZADA
   const ESTILOS_OPTIMIZADOS = {
@@ -59,11 +64,13 @@
         badge.classList.add('badge-optimizado-automatico');
         
         badgesCorregidos++;
-        console.log(`✅ Badge corregido: "${texto}" -> ${ESTILOS_OPTIMIZADOS.minWidth}`);
+        if (window.DEBUG_MODE) {
+          console.log(`✅ Badge corregido: "${texto}" -> ${ESTILOS_OPTIMIZADOS.minWidth}`);
+        }
       }
     });
     
-    if (badgesCorregidos > 0) {
+    if (badgesCorregidos > 0 && window.DEBUG_MODE) {
       console.log(`🎯 Se corrigieron ${badgesCorregidos} badges automáticamente`);
     }
     
@@ -150,7 +157,9 @@
     `;
     
     document.head.insertAdjacentHTML('beforeend', css);
-    console.log('💉 CSS de respaldo inyectado');
+    if (window.DEBUG_MODE) {
+      console.log('💉 CSS de respaldo inyectado');
+    }
   }
   
   /**
@@ -188,7 +197,9 @@
       subtree: true
     });
     
-    console.log('👀 Observador de mutaciones configurado');
+    if (window.DEBUG_MODE) {
+      console.log('👀 Observador de mutaciones configurado');
+    }
     return observer;
   }
   
@@ -196,7 +207,9 @@
    * Función de inicialización
    */
   function inicializar() {
-    console.log('🚀 Iniciando corrección de badges...');
+    if (window.DEBUG_MODE) {
+      console.log('🚀 Iniciando corrección de badges...');
+    }
     
     // 1. Inyectar CSS de respaldo
     inyectarCSSRespaldo();
@@ -213,7 +226,9 @@
       corregirBadgesEntregado();
     }, 2000);
     
-    console.log(`✅ Corrección de badges completada. ${corregidos} badges corregidos inicialmente.`);
+    if (window.DEBUG_MODE) {
+      console.log(`✅ Corrección de badges completada. ${corregidos} badges corregidos inicialmente.`);
+    }
   }
   
   /**

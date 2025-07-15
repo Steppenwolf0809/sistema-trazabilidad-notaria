@@ -2961,7 +2961,7 @@ const cajaController = {
       
       let paymentHandling = 'sin_pago_registrado';
       
-      const tienePago = documento.valorPagado > 0 || 
+      const tienePago = parseFloat(documento.valorPagado || 0) > 0 || 
                        ['pagado_completo', 'pagado_con_retencion', 'pago_parcial'].includes(documento.estadoPago);
 
       if (tienePago) {
@@ -2977,6 +2977,11 @@ const cajaController = {
       try {
         console.log('🔄 Iniciando transacción de eliminación...');
 
+        // NUEVO: Cambiar código para liberar el original antes de marcar como eliminado
+        const codigoOriginal = documento.codigoBarras;
+        const timestamp = new Date().toISOString().slice(0,10).replace(/-/g,'');
+        const nuevoCodigo = `${codigoOriginal}-DEL-${timestamp}`;
+
         // 1. Marcar documento como eliminado (SOFT DELETE)
         // CORRECCIÓN: Determinar estado correcto según motivo
         let estadoFinal = 'eliminado';
@@ -2988,6 +2993,9 @@ const cajaController = {
         }
         
         await documento.update({
+          // CRÍTICO: Cambiar código para liberar el original
+          codigoBarras: nuevoCodigo,
+          
           // Soft delete principal - CRÍTICO: Siempre marcar como eliminado para liberar XML
           deletedAt: new Date(),
           deletedBy: req.matrizador.id,
@@ -3015,7 +3023,7 @@ const cajaController = {
             tipo: 'eliminacion',
             categoria: 'financiero',
             titulo: '💰 Pago Registrado en Eliminación',
-            descripcion: `Documento eliminado tenía pago de $${(documento.valorPagado || 0).toFixed(2)} que aparecerá en reportes financieros`,
+            descripcion: `Documento eliminado tenía pago de $${parseFloat(documento.valorPagado || 0).toFixed(2)} que aparecerá en reportes financieros`,
             detalles: JSON.stringify({
               valorPagado: documento.valorPagado || 0,
               metodoPago: documento.metodoPago,
@@ -3045,7 +3053,7 @@ const cajaController = {
           tipo: 'eliminacion',
           categoria: 'eliminacion',
           titulo: '🗑️ Documento Eliminado por Caja',
-          descripcion: `Documento eliminado por ${req.matrizador.nombre}. Motivo: ${motivo}`,
+          descripcion: `Documento eliminado por ${req.matrizador.nombre}. Motivo: ${motivo}. Código original: ${codigoOriginal}`,
           detalles: JSON.stringify({
             motivoDetallado: motivo,
             justificacion: justificacion.trim(),
@@ -3053,7 +3061,8 @@ const cajaController = {
             
             // Snapshot del documento antes de eliminar
             documentoSnapshot: {
-              codigoBarras: documento.codigoBarras,
+              codigoBarrasOriginal: codigoOriginal,
+              codigoBarrasModificado: nuevoCodigo,
               tipoDocumento: documento.tipoDocumento,
               nombreCliente: documento.nombreCliente,
               identificacionCliente: documento.identificacionCliente,
@@ -3113,7 +3122,7 @@ const cajaController = {
             paymentHandling: paymentHandling,
             auditoriaCompleta: true,
             teniaPago: tienePago,
-            valorEliminado: tienePago ? documento.valorPagado : 0
+            valorEliminado: tienePago ? parseFloat(documento.valorPagado || 0) : 0
           }
         });
 

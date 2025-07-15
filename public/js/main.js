@@ -5,7 +5,12 @@
 
 // Cuando el documento este listo
 document.addEventListener('DOMContentLoaded', function() {
-  console.log('Sistema de Trazabilidad Documental - Frontend cargado');
+  // Sistema de logging condicional
+  window.DEBUG_MODE = window.DEBUG_MODE || false;
+  
+  if (window.DEBUG_MODE) {
+    console.log('Sistema de Trazabilidad Documental - Frontend cargado');
+  }
   
   // Actualizar ano en el pie de pagina
   actualizarAnioPiePagina();
@@ -14,7 +19,9 @@ document.addEventListener('DOMContentLoaded', function() {
   inicializarFormularioVerificacion();
   
   // Inicializar ordenamiento de tablas
-  console.log('Llamando a inicializarOrdenamientoTablas...');
+  if (window.DEBUG_MODE) {
+    console.log('Llamando a inicializarOrdenamientoTablas...');
+  }
   setTimeout(() => {
     inicializarOrdenamientoTablas();
   }, 100);
@@ -156,7 +163,9 @@ let estadoOrdenamientoGlobal = {
  * Funcion principal que configura todas las tablas ordenables
  */
 function inicializarOrdenamientoTablas() {
-  console.log('ORDENAMIENTO v2.0 Inicializando sistema corregido...');
+  if (window.DEBUG_MODE) {
+    console.log('ORDENAMIENTO v2.0 Inicializando sistema corregido...');
+  }
   
   try {
     // Inyectar CSS corregido primero
@@ -166,7 +175,9 @@ function inicializarOrdenamientoTablas() {
     const tablasOrdenables = document.querySelectorAll('.tabla-ordenable');
     
     if (tablasOrdenables.length === 0) {
-      console.log('ORDENAMIENTO No se encontraron tablas ordenables en esta pagina');
+      if (window.DEBUG_MODE) {
+        console.log('ORDENAMIENTO No se encontraron tablas ordenables en esta pagina');
+      }
       return;
     }
     
@@ -181,7 +192,9 @@ function inicializarOrdenamientoTablas() {
       }
     });
     
-    console.log(`ORDENAMIENTO Sistema configurado exitosamente para ${tablasConfiguradas}/${tablasOrdenables.length} tabla(s)`);
+    if (window.DEBUG_MODE) {
+      console.log(`ORDENAMIENTO Sistema configurado exitosamente para ${tablasConfiguradas}/${tablasOrdenables.length} tabla(s)`);
+    }
     
     // Restaurar estado si existe
     restaurarEstadoOrdenamiento();
@@ -782,7 +795,9 @@ if (document.readyState === 'loading') {
   setTimeout(inicializarOrdenamientoTablas, 100);
 }
 
-console.log('ORDENAMIENTO v2.0 Sistema universal cargado y listo');
+    if (window.DEBUG_MODE) {
+      console.log('ORDENAMIENTO v2.0 Sistema universal cargado y listo');
+    }
 
 // ============== SISTEMA DE NOTIFICACIONES GRUPALES - SPRINT 3 ==============
 
@@ -796,4 +811,6 @@ console.log('ORDENAMIENTO v2.0 Sistema universal cargado y listo');
  * El sistema de notificaciones grupales ahora se maneja completamente en su propio archivo.
  */
 
-console.log('MAIN.JS Sistema principal cargado correctamente');
+if (window.DEBUG_MODE) {
+  console.log('MAIN.JS Sistema principal cargado correctamente');
+}

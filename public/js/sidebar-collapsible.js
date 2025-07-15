@@ -13,6 +13,9 @@ class SidebarManager {
     this.isMobile = false;
     this.storageKey = 'notaria_sidebar_collapsed';
     
+    // Sistema de logging condicional para producción
+    window.DEBUG_MODE = window.DEBUG_MODE || false;
+    
     this.init();
   }
 
@@ -25,7 +28,9 @@ class SidebarManager {
   }
 
   setup() {
-    console.log('🔧 Iniciando setup del sidebar...');
+    if (window.DEBUG_MODE) {
+      console.log('🔧 Iniciando setup del sidebar...');
+    }
     
     this.findElements();
     if (!this.sidebar) {
@@ -42,17 +47,21 @@ class SidebarManager {
     this.updateToggleIcon(); // Asegurar que el ícono sea correcto
     this.handleResize();
     
-    console.log('✅ Sidebar colapsible inicializada correctamente');
+    if (window.DEBUG_MODE) {
+      console.log('✅ Sidebar colapsible inicializada correctamente');
+    }
   }
 
   findElements() {
     this.sidebar = document.querySelector('.sidebar');
     this.mainContent = document.querySelector('.main-content');
     
-    console.log('🔍 Elementos encontrados:', {
-      sidebar: !!this.sidebar,
-      mainContent: !!this.mainContent
-    });
+    if (window.DEBUG_MODE) {
+      console.log('🔍 Elementos encontrados:', {
+        sidebar: !!this.sidebar,
+        mainContent: !!this.mainContent
+      });
+    }
     
     if (!this.sidebar || !this.mainContent) {
       console.warn('⚠️ Elementos de sidebar no encontrados');
@@ -244,7 +253,9 @@ class SidebarManager {
     this.isMobile = window.innerWidth <= 768;
     
     if (wasMobile !== this.isMobile) {
-      console.log(`📱 Cambio de modo: ${this.isMobile ? 'móvil' : 'desktop'}`);
+      if (window.DEBUG_MODE) {
+        console.log(`📱 Cambio de modo: ${this.isMobile ? 'móvil' : 'desktop'}`);
+      }
       
       if (this.isMobile) {
         this.setupMobile();
@@ -264,7 +275,9 @@ class SidebarManager {
   setupMobile() {
     if (!this.sidebar || !this.mainContent) return;
     
-    console.log('📱 Configurando modo móvil');
+    if (window.DEBUG_MODE) {
+      console.log('📱 Configurando modo móvil');
+    }
     
     this.sidebar.classList.remove('collapsed');
     this.sidebar.classList.remove('mobile-active');
@@ -275,7 +288,9 @@ class SidebarManager {
   setupDesktop() {
     if (!this.sidebar || !this.mainContent) return;
     
-    console.log('🖥️ Configurando modo desktop');
+    if (window.DEBUG_MODE) {
+      console.log('🖥️ Configurando modo desktop');
+    }
     
     this.sidebar.classList.remove('mobile-active');
     this.overlay.classList.remove('active');

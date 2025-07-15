@@ -101,14 +101,20 @@ exports.eliminarDocumento = async (req, res) => {
       userAgent: req.get('User-Agent')
     }, { transaction });
     
+    // NUEVO: Cambiar código para liberar el original antes de marcar como eliminado
+    const codigoOriginal = documento.codigoBarras;
+    const timestamp = new Date().toISOString().slice(0,10).replace(/-/g,'');
+    const nuevoCodigo = `${codigoOriginal}-DEL-${timestamp}`;
+    
     // Determinar el nuevo estado según el motivo
     let nuevoEstado = 'eliminado';
     if (motivo === 'nota_credito') {
       nuevoEstado = 'nota_credito';
     }
     
-    // Actualizar el documento con información de eliminación
+    // Actualizar el documento con información de eliminación y código modificado
     await documento.update({
+      codigoBarras: nuevoCodigo, // Cambiar código para liberar el original
       estado: nuevoEstado,
       motivoEliminacion: motivo,
       eliminadoPor: req.user.id,
@@ -124,7 +130,7 @@ exports.eliminarDocumento = async (req, res) => {
       resultado: 'exitoso',
       ip: req.ip || req.connection.remoteAddress,
       userAgent: req.get('User-Agent'),
-      detalles: `Documento eliminado definitivamente. Motivo: ${motivo}. Código: ${documento.codigoBarras}`
+      detalles: `Documento eliminado definitivamente. Motivo: ${motivo}. Código original: ${codigoOriginal}. Código modificado: ${nuevoCodigo}`
     }, { transaction });
     
     await transaction.commit();
