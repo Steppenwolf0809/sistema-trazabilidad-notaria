@@ -1,0 +1,678 @@
+/* ========================================
+   PRONOTARY MOBILE RESPONSIVE SYSTEM
+   Sistema Completo Mobile-First Responsive
+   ======================================== */
+
+/* ===================================================
+   VARIABLES CSS Y BREAKPOINTS ESTÁNDAR
+   ================================================== */
+:root {
+  /* Breakpoints estándar mobile-first */
+  --bp-xs: 0px;        /* Extra small devices */
+  --bp-sm: 576px;      /* Small devices (landscape phones) */
+  --bp-md: 768px;      /* Medium devices (tablets) */
+  --bp-lg: 992px;      /* Large devices (desktops) */
+  --bp-xl: 1200px;     /* Extra large devices */
+  
+  /* Sidebar dimensions */
+  --sidebar-width-desktop: 280px;
+  --sidebar-width-collapsed: 80px;
+  --sidebar-mobile-width: 280px;
+  
+  /* Animation variables */
+  --transition-speed: 0.3s;
+  --transition-easing: cubic-bezier(0.4, 0.0, 0.2, 1);
+  
+  /* Z-index layers */
+  --z-backdrop: 40;
+  --z-sidebar: 50;
+  --z-hamburger: 60;
+  
+  /* Touch target sizes (Apple HIG compliance) */
+  --touch-target-min: 44px;
+  --touch-target-comfortable: 48px;
+}
+
+/* ===================================================
+   RESET Y BASE STYLES MOBILE-FIRST
+   ================================================== */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  touch-action: manipulation;
+}
+
+/* ===================================================
+   HAMBURGER MENU BUTTON - MOBILE FIRST
+   ================================================== */
+.hamburger-menu {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: var(--z-hamburger);
+  
+  /* Touch-friendly size */
+  width: var(--touch-target-comfortable);
+  height: var(--touch-target-comfortable);
+  
+  /* Styling */
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  cursor: pointer;
+  
+  /* Flex centering */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  /* Animations */
+  transition: all var(--transition-speed) var(--transition-easing);
+  
+  /* Shadow */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.hamburger-menu:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.hamburger-menu:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.hamburger-menu i {
+  font-size: 18px;
+  transition: transform var(--transition-speed) var(--transition-easing);
+}
+
+/* Hide hamburger on desktop */
+@media (min-width: 992px) {
+  .hamburger-menu {
+    display: none !important;
+  }
+}
+
+/* Ensure hamburger is visible on mobile */
+@media (max-width: 991px) {
+  .hamburger-menu {
+    display: flex !important;
+    position: fixed !important;
+    top: 1rem !important;
+    left: 1rem !important;
+    z-index: var(--z-hamburger) !important;
+  }
+}
+
+/* ===================================================
+   MOBILE BACKDROP OVERLAY
+   ================================================== */
+.mobile-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: var(--z-backdrop);
+  opacity: 0;
+  visibility: hidden;
+  transition: all var(--transition-speed) var(--transition-easing);
+  backdrop-filter: blur(4px);
+}
+
+.mobile-backdrop.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* ===================================================
+   SIDEBAR RESPONSIVE SYSTEM
+   ================================================== */
+
+/* Base sidebar styles - Mobile first */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: var(--sidebar-mobile-width);
+  z-index: var(--z-sidebar);
+  
+  /* Mobile: Hidden by default */
+  transform: translateX(-100%);
+  transition: transform var(--transition-speed) var(--transition-easing);
+  
+  /* Preserve existing styling or set default */
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  overflow-y: auto;
+  overflow-x: hidden;
+  
+  /* Improved scrolling on mobile */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Ensure sidebar content is visible */
+.sidebar * {
+  color: inherit;
+}
+
+/* Fix for different sidebar structures */
+.sidebar .nav,
+.sidebar ul.nav,
+.sidebar .nav-link,
+.sidebar .nav-text,
+.sidebar .sidebar-text,
+.sidebar .logo-text,
+.sidebar .sidebar-heading {
+  color: white !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Logo and branding visibility */
+.sidebar .logo,
+.sidebar .logo-icon,
+.sidebar .logo-text {
+  color: white !important;
+  display: flex !important;
+  align-items: center;
+}
+
+/* Navigation items visibility */
+.sidebar .nav-item,
+.sidebar .nav-link {
+  display: flex !important;
+  color: white !important;
+}
+
+/* Icons visibility */
+.sidebar i,
+.sidebar .fas,
+.sidebar .far,
+.sidebar .fab {
+  color: white !important;
+}
+
+/* Mobile sidebar open state */
+.sidebar.mobile-open {
+  transform: translateX(0);
+}
+
+/* Ensure all content is visible when sidebar is open */
+.sidebar.mobile-open .nav,
+.sidebar.mobile-open .nav-item,
+.sidebar.mobile-open .nav-link,
+.sidebar.mobile-open .nav-text,
+.sidebar.mobile-open .sidebar-text,
+.sidebar.mobile-open .logo,
+.sidebar.mobile-open .logo-text,
+.sidebar.mobile-open .sidebar-heading,
+.sidebar.mobile-open .sidebar-footer {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  color: white !important;
+}
+
+/* Fix flex layouts */
+.sidebar.mobile-open .nav-item,
+.sidebar.mobile-open .nav-link,
+.sidebar.mobile-open .logo {
+  display: flex !important;
+  align-items: center;
+}
+
+/* Ensure proper spacing and layout */
+.sidebar.mobile-open .nav-text,
+.sidebar.mobile-open .sidebar-text {
+  margin-left: 0.75rem;
+  white-space: nowrap;
+}
+
+/* Desktop sidebar styles */
+@media (min-width: 992px) {
+  .sidebar {
+    position: fixed;
+    transform: translateX(0);
+    width: var(--sidebar-width-desktop);
+    transition: width var(--transition-speed) var(--transition-easing);
+  }
+  
+  .sidebar.collapsed {
+    width: var(--sidebar-width-collapsed);
+  }
+}
+
+/* ===================================================
+   MAIN CONTENT RESPONSIVE LAYOUT
+   ================================================== */
+
+/* Mobile: Full width main content */
+.main-content {
+  width: 100%;
+  min-height: 100vh;
+  padding: 1rem;
+  margin-left: 0;
+  transition: margin-left var(--transition-speed) var(--transition-easing);
+}
+
+/* Desktop: Adjusted for sidebar */
+@media (min-width: 992px) {
+  .main-content {
+    margin-left: var(--sidebar-width-desktop);
+    padding: 2rem;
+  }
+  
+  .main-content.expanded {
+    margin-left: var(--sidebar-width-collapsed);
+  }
+}
+
+/* ===================================================
+   HEADER RESPONSIVE ADJUSTMENTS
+   ================================================== */
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  z-index: 30;
+  padding: 0 1rem;
+  
+  /* Mobile adjustments */
+  padding-left: calc(var(--touch-target-comfortable) + 2rem);
+}
+
+@media (min-width: 992px) {
+  .navbar {
+    left: var(--sidebar-width-desktop);
+    padding-left: 2rem;
+  }
+  
+  .navbar.expanded {
+    left: var(--sidebar-width-collapsed);
+  }
+}
+
+/* Adjust main content top padding for fixed header */
+.main-content {
+  padding-top: calc(64px + 1rem);
+}
+
+/* ===================================================
+   SIDEBAR NAVIGATION MOBILE OPTIMIZATIONS
+   ================================================== */
+
+/* Navigation items touch-friendly */
+.sidebar-item {
+  min-height: var(--touch-target-min);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  border-radius: 8px;
+  margin: 4px 8px;
+  transition: all var(--transition-speed) var(--transition-easing);
+  text-decoration: none;
+  color: inherit;
+  position: relative;
+}
+
+.sidebar-item:hover,
+.sidebar-item:focus {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateX(4px);
+  color: inherit;
+  text-decoration: none;
+}
+
+.sidebar-item.active {
+  background: rgba(255, 255, 255, 0.2);
+  border-left: 4px solid #fbbf24;
+}
+
+/* Icon spacing */
+.sidebar-item i {
+  min-width: 20px;
+  margin-right: 12px;
+  font-size: 16px;
+}
+
+/* Section headers */
+.sidebar-section-header {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 16px 16px 8px 16px;
+  margin-top: 24px;
+}
+
+.sidebar-section-header:first-child {
+  margin-top: 8px;
+}
+
+/* ===================================================
+   COLLAPSE BUTTON RESPONSIVE
+   ================================================== */
+.collapse-btn {
+  display: none;
+}
+
+@media (min-width: 992px) {
+  .collapse-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--touch-target-min);
+    height: var(--touch-target-min);
+    border: none;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all var(--transition-speed) var(--transition-easing);
+  }
+  
+  .collapse-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.05);
+  }
+}
+
+/* ===================================================
+   RESPONSIVE CARDS AND COMPONENTS
+   ================================================== */
+
+/* Cards responsive stacking */
+.card-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 576px) {
+  .card-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 992px) {
+  .card-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+@media (min-width: 1200px) {
+  .card-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2rem;
+  }
+}
+
+/* ===================================================
+   RESPONSIVE TABLES
+   ================================================== */
+.table-responsive-mobile {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 991px) {
+  .table-responsive-mobile table {
+    min-width: 700px;
+  }
+  
+  /* Scroll indicators */
+  .table-responsive-mobile::after {
+    content: "← Desliza para ver más →";
+    display: block;
+    text-align: center;
+    font-size: 12px;
+    color: #666;
+    padding: 8px;
+    background: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+  }
+}
+
+/* ===================================================
+   RESPONSIVE FORMS
+   ================================================== */
+@media (max-width: 767px) {
+  .form-control,
+  .form-select,
+  .btn {
+    font-size: 16px; /* Prevents zoom on iOS */
+    min-height: var(--touch-target-min);
+  }
+  
+  .input-group .form-control {
+    border-radius: 8px;
+  }
+  
+  .btn {
+    padding: 12px 20px;
+    font-weight: 500;
+  }
+}
+
+/* ===================================================
+   RESPONSIVE UTILITIES
+   ================================================== */
+
+/* Display utilities for different breakpoints */
+.d-mobile-none {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .d-mobile-none {
+    display: block;
+  }
+}
+
+.d-desktop-none {
+  display: block;
+}
+
+@media (min-width: 768px) {
+  .d-desktop-none {
+    display: none;
+  }
+}
+
+/* Text size adjustments for mobile */
+@media (max-width: 767px) {
+  h1 { font-size: 1.75rem; }
+  h2 { font-size: 1.5rem; }
+  h3 { font-size: 1.25rem; }
+  h4 { font-size: 1.125rem; }
+  h5 { font-size: 1rem; }
+  h6 { font-size: 0.875rem; }
+  
+  .lead {
+    font-size: 1.125rem;
+  }
+}
+
+/* ===================================================
+   TOUCH GESTURE ENHANCEMENTS
+   ================================================== */
+
+/* Improved touch targets */
+.touch-target {
+  min-width: var(--touch-target-min);
+  min-height: var(--touch-target-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ===================================================
+   LANDSCAPE MOBILE OPTIMIZATIONS
+   ================================================== */
+@media (max-height: 600px) and (orientation: landscape) {
+  .sidebar {
+    overflow-y: auto;
+  }
+  
+  .main-content {
+    padding-top: calc(56px + 0.5rem);
+  }
+  
+  .navbar {
+    height: 56px;
+  }
+}
+
+/* ===================================================
+   HIGH DPI / RETINA OPTIMIZATIONS
+   ================================================== */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .hamburger-menu,
+  .sidebar-item,
+  .btn {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* ===================================================
+   ACCESSIBILITY IMPROVEMENTS
+   ================================================== */
+
+/* Focus states for keyboard navigation */
+.hamburger-menu:focus,
+.sidebar-item:focus,
+.collapse-btn:focus {
+  outline: 2px solid #fbbf24;
+  outline-offset: 2px;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .mobile-backdrop,
+  .hamburger-menu,
+  .sidebar-item {
+    transition: none;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .sidebar {
+    border-right: 2px solid #fff;
+  }
+  
+  .sidebar-item {
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+}
+
+/* ===================================================
+   FORCE VISIBILITY - HIGHEST PRIORITY
+   ================================================== */
+
+/* Override any CSS that might hide sidebar content */
+@media (max-width: 991px) {
+  .sidebar.mobile-open {
+    /* Ensure sidebar and all content is visible */
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    z-index: var(--z-sidebar) !important;
+  }
+  
+  .sidebar.mobile-open * {
+    /* Force all child elements to be visible */
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+  
+  .sidebar.mobile-open .nav,
+  .sidebar.mobile-open ul.nav,
+  .sidebar.mobile-open .nav-item,
+  .sidebar.mobile-open li.nav-item,
+  .sidebar.mobile-open .nav-link,
+  .sidebar.mobile-open a.nav-link {
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    color: white !important;
+  }
+  
+  .sidebar.mobile-open .nav-item,
+  .sidebar.mobile-open li.nav-item {
+    display: list-item !important;
+  }
+  
+  .sidebar.mobile-open .nav-link,
+  .sidebar.mobile-open a.nav-link {
+    display: flex !important;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    color: white !important;
+    text-decoration: none !important;
+  }
+  
+  .sidebar.mobile-open .nav-text,
+  .sidebar.mobile-open .sidebar-text,
+  .sidebar.mobile-open span {
+    display: inline !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    color: white !important;
+  }
+  
+  .sidebar.mobile-open .logo,
+  .sidebar.mobile-open .logo-text,
+  .sidebar.mobile-open .sidebar-heading {
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    color: white !important;
+  }
+  
+  .sidebar.mobile-open i,
+  .sidebar.mobile-open .fas,
+  .sidebar.mobile-open .far,
+  .sidebar.mobile-open .fab {
+    display: inline-block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    color: white !important;
+    margin-right: 0.75rem;
+  }
+} 

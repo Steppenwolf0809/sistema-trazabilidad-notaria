@@ -14,6 +14,9 @@
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
+  <!-- ProNotary Mobile Responsive System -->
+  <link rel="stylesheet" href="/css/mobile-responsive.css">
+  
   <!-- Estilos personalizados -->
   <style>
     /* Sidebar colapsable con gradientes vibrantes */
@@ -117,10 +120,7 @@
       </button>
     </div>
     
-    <!-- Mobile menu button -->
-    <button id="mobileMenuBtn" class="lg:hidden fixed top-4 left-4 z-50 bg-blue-600 text-white p-3 rounded-lg">
-      <i class="fas fa-bars"></i>
-    </button>
+    <!-- Mobile hamburger button (será creado dinámicamente por JS) -->
     
     <!-- Navigation -->
     <nav class="p-4 space-y-2">
@@ -222,62 +222,18 @@
     {{{body}}}
   </main>
   
-  <!-- Scripts -->
+  <!-- ProNotary Mobile Responsive System JS -->
+  <script src="/js/mobile-responsive.js"></script>
+  
+  <!-- Scripts adicionales -->
   <script>
-    // Sidebar collapse functionality
-    const sidebar = document.getElementById('sidebar');
-    const mainContent = document.getElementById('mainContent');
-    const header = document.getElementById('header');
-    const collapseBtn = document.getElementById('collapseBtn');
-    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-    
-    let isCollapsed = false;
-    
-    // Toggle sidebar
-    function toggleSidebar() {
-      isCollapsed = !isCollapsed;
-      
-      if (isCollapsed) {
-        sidebar.classList.add('collapsed');
-        mainContent.classList.add('expanded');
-        header.classList.add('expanded');
-        collapseBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
-      } else {
-        sidebar.classList.remove('collapsed');
-        mainContent.classList.remove('expanded');
-        header.classList.remove('expanded');
-        collapseBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
-      }
-    }
-    
-    // Mobile menu toggle
-    function toggleMobileMenu() {
-      sidebar.classList.toggle('mobile-open');
-    }
-    
-    // Event listeners
-    collapseBtn?.addEventListener('click', toggleSidebar);
-    mobileMenuBtn?.addEventListener('click', toggleMobileMenu);
-    
-    // Close mobile menu when clicking outside
-    document.addEventListener('click', function(event) {
-      if (window.innerWidth <= 1024) {
-        if (!sidebar.contains(event.target) && !mobileMenuBtn.contains(event.target)) {
-          sidebar.classList.remove('mobile-open');
-        }
-      }
-    });
-    
-    // Handle window resize
-    window.addEventListener('resize', function() {
-      if (window.innerWidth > 1024) {
-        sidebar.classList.remove('mobile-open');
-      }
-    });
-    
-    // Logout function
+    // Logout function (integrada con sistema móvil)
     function cerrarSesion() {
       if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
+        // Cerrar sidebar móvil si está abierto
+        if (window.ProNotaryMobile && window.ProNotaryMobile.isOpen()) {
+          window.ProNotaryMobile.closeSidebar();
+        }
         window.location.href = '/auth/logout';
       }
     }
