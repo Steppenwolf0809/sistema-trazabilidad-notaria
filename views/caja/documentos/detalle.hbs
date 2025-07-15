@@ -285,17 +285,7 @@
                             {{/if}}
                           </p>
                           <p class="mb-0 small text-muted">
-                            <i class="fas fa-clock me-1"></i>{{formatDateTime (or this.fecha_pago this.fechaPago)}}
-                            {{#if this.observaciones}}
-                            | <strong>Obs:</strong> {{this.observaciones}}
-                            {{/if}}
-                            {{#if this.esVirtual}}
-                            | <span class="{{#if this.fueAlCrear}}text-info{{else}}text-warning{{/if}}">
-                                <i class="fas fa-info-circle"></i> 
-                                {{#if this.fueAlCrear}}Registrado al crear documento{{else}}Registrado posteriormente{{/if}}
-                              </span>
-                            {{/if}}
-                          </p>
+                           </p>
                         </div>
                       </div>
                     </div>
@@ -309,10 +299,6 @@
                       {{else if this.esVirtual}}
                       <!-- Botones para pagos virtuales (registrados al crear) -->
                       <div class="btn-group" role="group">
-                        <button class="btn btn-outline-info btn-sm" 
-                                onclick="corregirPagoVirtual('{{this.id}}', '{{this.monto}}', '{{#if this.forma_pago}}{{this.forma_pago}}{{else}}{{this.formaPago}}{{/if}}')">
-                          <i class="fas fa-edit"></i> Corregir Datos
-                        </button>
                         <button class="btn btn-warning btn-sm" 
                                 onclick="deshacerPagoVirtual('{{this.id}}', '{{this.monto}}', '{{#if this.forma_pago}}{{this.forma_pago}}{{else}}{{this.formaPago}}{{/if}}')">
                           <i class="fas fa-undo"></i> Revertir Pago
@@ -321,10 +307,6 @@
                       {{else}}
                       <!-- Botones para pagos normales -->
                       <div class="btn-group" role="group">
-                        <button class="btn btn-outline-primary btn-sm" 
-                                onclick="corregirPago('{{this.id}}', '{{this.monto}}', '{{#if this.forma_pago}}{{this.forma_pago}}{{else}}{{this.formaPago}}{{/if}}')">
-                          <i class="fas fa-edit"></i> Corregir
-                        </button>
                         <button class="btn btn-warning btn-sm" 
                                 onclick="deshacerPago('{{this.id}}', '{{this.monto}}', '{{#if this.forma_pago}}{{this.forma_pago}}{{else}}{{this.formaPago}}{{/if}}')">
                           <i class="fas fa-undo"></i> Deshacer
@@ -987,33 +969,6 @@
 
         <!-- Campos de corrección (solo para corrección de pagos) -->
         <div id="camposCorreccion" style="display: none;">
-          <div class="card border-info mb-4">
-            <div class="card-header bg-info text-white py-2">
-              <h6 class="mb-0"><i class="fas fa-edit me-1"></i>Nuevos Datos</h6>
-            </div>
-            <div class="card-body">
-              <div class="row">
-                <div class="col-md-6">
-                  <label for="nuevoMetodo" class="form-label">Nuevo Método de Pago</label>
-                  <select class="form-select" id="nuevoMetodo" name="nuevoMetodo">
-                    <option value="efectivo">💵 Efectivo</option>
-                    <option value="tarjeta_credito">💳 Tarjeta de Crédito</option>
-                    <option value="tarjeta_debito">💳 Tarjeta de Débito</option>
-                    <option value="transferencia">🏦 Transferencia Bancaria</option>
-                    <option value="cheque">📝 Cheque</option>
-                  </select>
-                </div>
-                <div class="col-md-6">
-                  <label for="nuevoMonto" class="form-label">Nuevo Monto ($)</label>
-                  <div class="input-group">
-                    <span class="input-group-text">$</span>
-                    <input type="number" class="form-control" id="nuevoMonto" name="nuevoMonto" 
-                           step="0.01" min="0" placeholder="0.00">
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
 
         <!-- Motivo de la reversión (OBLIGATORIO) -->
@@ -2782,31 +2737,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const modal = new bootstrap.Modal(document.getElementById('modalReversionCaja'));
     modal.show();
   };
-  
-  window.corregirPago = function(pagoId, monto, metodo) {
-    window.currentPagoData = { id: pagoId, monto: monto, metodo: metodo, tipo: 'corregir' };
     
-    // Configurar modal para corrección
-    document.getElementById('tituloReversionCaja').textContent = 'Corregir Pago';
-    document.getElementById('descripcionReversionCaja').innerHTML = 
-      `<strong>Pago a corregir:</strong> $${monto} (${metodo})<br>` +
-      `<small class="text-muted">Puede cambiar el método de pago o ajustar el monto.</small>`;
-    
-    // IMPORTANTE: Limpiar formulario ANTES de mostrar campos específicos
-    limpiarFormularioReversionCajaBase();
-    
-    // Mostrar campos de corrección DESPUÉS de limpiar
-    document.getElementById('camposCorreccion').style.display = 'block';
-    document.getElementById('nuevoMetodo').value = metodo;
-    document.getElementById('nuevoMonto').value = monto;
-    
-    console.log('✅ Mostrando campos de corrección para pago normal');
-    
-    // Mostrar modal
-    const modal = new bootstrap.Modal(document.getElementById('modalReversionCaja'));
-    modal.show();
-  };
-  
   window.deshacerRetencion = function(retencionId, monto, tipo) {
     window.currentPagoData = { id: retencionId, monto: monto, tipo: 'retencion' };
     
@@ -3118,67 +3049,6 @@ document.addEventListener('DOMContentLoaded', function() {
   console.log('📖 Vista caja con modal de reversiones completo cargada para documento {{documento.codigoBarras}}');
 });
 
-// 🆕 NUEVO: Funciones para botones de corrección de pagos
-function corregirPagoVirtual(pagoId, monto, metodoPago) {
-  console.log('🔧 Corrigiendo pago virtual:', pagoId, monto, metodoPago);
-  
-  // Extraer ID del documento del pagoId virtual
-  const documentoId = pagoId.replace('virtual_', '');
-  
-  // Crear modal dinámico para corrección
-  const modalHtml = `
-    <div class="modal fade" id="modalCorregirPago" tabindex="-1">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Corregir Datos de Pago</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-          </div>
-          <form action="/caja/documentos/${documentoId}/corregir-pago" method="POST">
-            <div class="modal-body">
-              <div class="mb-3">
-                <label class="form-label">Método de Pago</label>
-                <select class="form-select" name="metodoPago" required>
-                  <option value="efectivo" ${metodoPago === 'efectivo' ? 'selected' : ''}>Efectivo</option>
-                  <option value="transferencia" ${metodoPago === 'transferencia' ? 'selected' : ''}>Transferencia</option>
-                  <option value="tarjeta" ${metodoPago === 'tarjeta' ? 'selected' : ''}>Tarjeta</option>
-                  <option value="cheque" ${metodoPago === 'cheque' ? 'selected' : ''}>Cheque</option>
-                </select>
-              </div>
-              <div class="mb-3">
-                <label class="form-label">Valor del Pago</label>
-                <input type="number" class="form-control" name="valorPago" step="0.01" value="${monto}" required>
-              </div>
-              <div class="mb-3">
-                <label class="form-label">Número de Comprobante (opcional)</label>
-                <input type="text" class="form-control" name="numeroComprobante">
-              </div>
-              <div class="mb-3">
-                <label class="form-label">Observaciones (opcional)</label>
-                <textarea class="form-control" name="observaciones" rows="3"></textarea>
-              </div>
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-              <button type="submit" class="btn btn-primary">Guardar Corrección</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  `;
-  
-  // Agregar modal al DOM y mostrarlo
-  document.body.insertAdjacentHTML('beforeend', modalHtml);
-  const modal = new bootstrap.Modal(document.getElementById('modalCorregirPago'));
-  modal.show();
-  
-  // Limpiar modal cuando se cierre
-  document.getElementById('modalCorregirPago').addEventListener('hidden.bs.modal', function() {
-    this.remove();
-  });
-}
-
 function deshacerPagoVirtual(pagoId, monto, metodoPago) {
   console.log('🔄 Revirtiendo pago virtual:', pagoId, monto, metodoPago);
   
@@ -3234,11 +3104,6 @@ function deshacerPagoVirtual(pagoId, monto, metodoPago) {
 }
 
 // Funciones para pagos normales (no virtuales)
-function corregirPago(pagoId, monto, metodoPago) {
-  console.log('🔧 Corrigiendo pago normal:', pagoId, monto, metodoPago);
-  // Reutilizar la función de pago virtual ya que la lógica es similar
-  corregirPagoVirtual(`virtual_{{documento.id}}`, monto, metodoPago);
-}
 
 function deshacerPago(pagoId, monto, metodoPago) {
   console.log('🔄 Revirtiendo pago normal:', pagoId, monto, metodoPago);
