@@ -89,6 +89,9 @@ router.post('/documentos/registrar-desde-xml', cajaController.registrarDocumento
 // Gestión de pagos (RESTAURADA)
 router.get('/pagos', cajaController.listarPagos);
 
+// ✅ NUEVO: Pago en lote
+router.post('/documentos/pago-lote', cajaController.registrarPagoLote);
+
 // Reportes (RESTAURADA)
 router.get('/reportes', (req, res) => {
   res.render('caja/reportes/index', {

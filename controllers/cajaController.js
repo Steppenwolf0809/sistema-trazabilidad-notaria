@@ -3330,6 +3330,227 @@ const cajaController = {
   },
 
   /**
+   * ✅ NUEVO: Registrar pago en lote para múltiples documentos
+   */
+  registrarPagoLote: async (req, res) => {
+    try {
+      console.log('💰 Procesando pago en lote...');
+      console.log('🔍 req.body completo:', req.body);
+      console.log('🔍 req.body keys:', Object.keys(req.body));
+
+      const {
+        documentosIds,
+        metodoPago,
+        montoRecibido,
+        numeroComprobante,
+        observaciones
+      } = req.body;
+
+      console.log('🔍 Variables extraídas:');
+      console.log('  - documentosIds:', documentosIds, 'tipo:', typeof documentosIds);
+      console.log('  - metodoPago:', metodoPago);
+      console.log('  - montoRecibido:', montoRecibido);
+
+      // Validaciones básicas
+      if (!documentosIds) {
+        return res.status(400).json({
+          success: false,
+          message: 'No se recibieron IDs de documentos'
+        });
+      }
+
+      if (!metodoPago) {
+        return res.status(400).json({
+          success: false,
+          message: 'Método de pago es requerido'
+        });
+      }
+
+      if (!montoRecibido || parseFloat(montoRecibido) <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Monto recibido debe ser mayor a 0'
+        });
+      }
+
+      // Parsear IDs de documentos
+      let idsDocumentos;
+      try {
+        idsDocumentos = typeof documentosIds === 'string' ? JSON.parse(documentosIds) : documentosIds;
+      } catch (error) {
+        return res.status(400).json({
+          success: false,
+          message: 'IDs de documentos inválidos'
+        });
+      }
+
+      if (!Array.isArray(idsDocumentos) || idsDocumentos.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Debe seleccionar al menos un documento'
+        });
+      }
+
+      console.log('📋 IDs de documentos a procesar:', idsDocumentos);
+
+      // Iniciar transacción
+      const transaction = await sequelize.transaction();
+
+      try {
+        // Obtener y validar documentos
+        const documentos = await Documento.findAll({
+          where: {
+            id: { [Op.in]: idsDocumentos },
+            estado: { [Op.notIn]: ['eliminado', 'nota_credito'] },
+            estadoPago: { [Op.in]: ['pendiente', 'pago_parcial'] },
+            numeroFactura: { [Op.not]: null }
+          },
+          transaction
+        });
+
+        if (documentos.length === 0) {
+          await transaction.rollback();
+          return res.status(400).json({
+            success: false,
+            message: 'No se encontraron documentos válidos para procesar'
+          });
+        }
+
+        if (documentos.length !== idsDocumentos.length) {
+          await transaction.rollback();
+          return res.status(400).json({
+            success: false,
+            message: `Solo ${documentos.length} de ${idsDocumentos.length} documentos son válidos para pago`
+          });
+        }
+
+        // Calcular total esperado
+        let totalEsperado = 0;
+        const detallesDocumentos = [];
+
+        documentos.forEach(doc => {
+          const valorFactura = parseFloat(doc.valorFactura) || 0;
+          const valorPagado = parseFloat(doc.valorPagado) || 0;
+          const valorPendiente = valorFactura - valorPagado;
+          
+          totalEsperado += valorPendiente;
+          detallesDocumentos.push({
+            id: doc.id,
+            codigo: doc.codigoBarras,
+            cliente: doc.nombreCliente,
+            valorFactura,
+            valorPagado,
+            valorPendiente
+          });
+        });
+
+        console.log('💵 Total esperado:', totalEsperado.toFixed(2));
+        console.log('💵 Monto recibido:', parseFloat(montoRecibido).toFixed(2));
+
+        // Validar que el monto coincida
+        const montoRecibidoNum = parseFloat(montoRecibido);
+        if (Math.abs(montoRecibidoNum - totalEsperado) > 0.01) {
+          await transaction.rollback();
+          return res.status(400).json({
+            success: false,
+            message: `El monto recibido ($${montoRecibidoNum.toFixed(2)}) no coincide con el total esperado ($${totalEsperado.toFixed(2)})`
+          });
+        }
+
+        // Procesar cada documento
+        const documentosProcesados = [];
+        const fechaPago = new Date();
+
+        for (const doc of documentos) {
+          const valorFactura = parseFloat(doc.valorFactura) || 0;
+          const valorPagadoAnterior = parseFloat(doc.valorPagado) || 0;
+          const valorPendiente = valorFactura - valorPagadoAnterior;
+          
+          // Actualizar documento
+          await doc.update({
+            estadoPago: 'pagado_completo',
+            metodoPago: metodoPago,
+            fechaPago: fechaPago,
+            fechaUltimoPago: fechaPago,
+            valorPagado: valorFactura, // Pago completo
+            valorPendiente: 0,
+            numeroComprobante: numeroComprobante || null,
+            observaciones: observaciones ? 
+              `${doc.observaciones || ''} | Pago Lote: ${observaciones}`.trim() : 
+              `${doc.observaciones || ''} | Pago procesado en lote`.trim()
+          }, { transaction });
+
+          // Crear evento de pago
+          await EventoDocumento.create({
+            documentoId: doc.id,
+            usuarioId: req.matrizador?.id || null,
+            tipo: 'pago',
+            categoria: 'financiero',
+            titulo: '💰 Pago en Lote Procesado',
+            descripcion: `Pago de $${valorPendiente.toFixed(2)} procesado en lote mediante ${metodoPago} por ${req.matrizador?.nombre || 'Sistema'}`,
+            detalles: JSON.stringify({
+              montoPago: valorPendiente,
+              metodoPago: metodoPago,
+              estadoPagoAnterior: doc.estadoPago,
+              estadoPagoNuevo: 'pagado_completo',
+              usuarioCaja: req.matrizador?.nombre || 'Sistema',
+              numeroComprobante: numeroComprobante,
+              observaciones: observaciones,
+              pagoEnLote: true,
+              totalDocumentosLote: documentos.length,
+              totalLote: totalEsperado
+            }),
+            usuario: req.matrizador?.nombre || 'Sistema',
+            metadatos: JSON.stringify({
+              montoPago: valorPendiente,
+              metodoPago: metodoPago,
+              procesadoPor: req.matrizador?.nombre || 'Sistema',
+              fechaProcesamiento: fechaPago.toISOString(),
+              origenPago: 'lote_caja',
+              tipoOperacion: 'pago_lote'
+            })
+          }, { transaction });
+
+          documentosProcesados.push({
+            id: doc.id,
+            codigo: doc.codigoBarras,
+            cliente: doc.nombreCliente,
+            montoPagado: valorPendiente
+          });
+        }
+
+        // Confirmar transacción
+        await transaction.commit();
+
+        console.log(`✅ Pago en lote completado: ${documentosProcesados.length} documentos procesados`);
+
+        // Respuesta exitosa
+        res.json({
+          success: true,
+          message: 'Pago en lote procesado exitosamente',
+          documentosProcesados: documentosProcesados.length,
+          totalProcesado: totalEsperado.toFixed(2),
+          metodoPago: metodoPago,
+          fechaProcesamiento: fechaPago.toISOString(),
+          detalles: documentosProcesados
+        });
+
+      } catch (transactionError) {
+        await transaction.rollback();
+        console.error('❌ Error en transacción de pago en lote:', transactionError);
+        throw transactionError;
+      }
+
+    } catch (error) {
+      console.error('❌ Error procesando pago en lote:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error interno del servidor: ' + error.message
+      });
+    }
+  },
+
+  /**
    * NUEVO: Listar documentos eliminados (para auditoría de caja)
    */
   listarDocumentosEliminados: async (req, res) => {

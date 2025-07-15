@@ -83,6 +83,15 @@
   <table class="table table-hover tabla-ordenable table-documentos" id="tablaDocumentosCaja">
     <thead>
       <tr>
+        <!-- ✅ NUEVA COLUMNA: Checkbox para selección múltiple -->
+        <th class="col-checkbox text-center" style="width: 60px;">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="selectAll" title="Seleccionar todos los documentos pagables">
+            <label class="form-check-label" for="selectAll">
+              <small>Todo</small>
+            </label>
+          </div>
+        </th>
         <th class="col-codigo ordenable" data-columna="codigoBarras" data-tipo="texto">
           <span>Código</span>
           <i class="fas fa-sort ms-1 sort-icon"></i>
@@ -117,6 +126,31 @@
     <tbody>
                   {{#each documentos}}
             <tr data-documento-id="{{this.id}}">
+              <!-- ✅ NUEVA COLUMNA: Checkbox individual -->
+              <td class="col-checkbox text-center">
+                {{#if (and this.numeroFactura (or (eq this.estadoPago "pendiente") (eq this.estadoPago "pago_parcial")))}}
+                  <div class="form-check">
+                    <input 
+                      class="form-check-input documento-checkbox" 
+                      type="checkbox" 
+                      id="doc_{{this.id}}"
+                      data-documento-id="{{this.id}}"
+                      data-valor="{{#if this.valorFactura}}{{this.valorFactura}}{{else}}0{{/if}}"
+                      data-valor-pendiente="{{#if this.valorFactura}}{{#if this.valorPagado}}{{subtract this.valorFactura this.valorPagado}}{{else}}{{this.valorFactura}}{{/if}}{{else}}0{{/if}}"
+                      data-codigo="{{this.codigoBarras}}"
+                      data-cliente="{{this.nombreCliente}}"
+                      title="Seleccionar para pago en lote">
+                  </div>
+                {{else}}
+                  <div class="form-check">
+                    <input 
+                      class="form-check-input" 
+                      type="checkbox" 
+                      disabled
+                      title="{{#if (not this.numeroFactura)}}Documento sin factura{{else}}Documento ya pagado{{/if}}">
+                  </div>
+                {{/if}}
+              </td>
               <!-- Código DESTACADO con fondo -->
               <td class="col-codigo">
                   {{{highlightCode this.codigoBarras}}}
@@ -195,7 +229,7 @@
       </tr>
       {{else}}
       <tr>
-        <td colspan="8" class="text-center py-5">
+        <td colspan="9" class="text-center py-5">
           <div class="sin-resultados">
             <i class="fas fa-search fa-2x mb-3 text-muted"></i>
             <h5 class="text-muted">No se encontraron documentos</h5>
@@ -206,6 +240,36 @@
       {{/each}}
     </tbody>
   </table>
+</div>
+
+<!-- ✅ PANEL DE PAGO EN LOTE -->
+<div id="panelPagoLote" class="mt-3" style="display: none;">
+  <div class="card border-success">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+      <div>
+        <i class="fas fa-credit-card text-success me-2"></i>
+        <strong>Pago en Lote</strong>
+        <span id="contadorSeleccionados" class="badge bg-success ms-2">0 documentos</span>
+      </div>
+      <button class="btn btn-sm btn-outline-secondary" onclick="limpiarSeleccion()" title="Limpiar selección">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="card-body py-2">
+      <div class="row align-items-center">
+        <div class="col-md-6">
+          <small class="text-muted">Total a pagar:</small>
+          <h5 class="mb-0 text-success" id="totalAPagar">$0.00</h5>
+        </div>
+        <div class="col-md-6 text-end">
+          <button id="btnPagoLote" class="btn btn-success" onclick="mostrarModalPagoLote()">
+            <i class="fas fa-money-bill-wave me-2"></i>
+            Procesar Pago en Lote
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ✨ PAGINACIÓN MEJORADA PARA CAJA -->
@@ -406,4 +470,364 @@
     document.getElementById('fechaHasta').value = '';
     document.getElementById('filtrosFormCaja').submit(); 
   }
-</script> 
+
+  // ✅ FUNCIONALIDAD DE PAGO EN LOTE
+  let documentosSeleccionados = [];
+
+  function inicializarPagoLote() {
+    console.log('🎯 Inicializando sistema de pago en lote...');
+    
+    // Event listener para "Seleccionar todos"
+    const selectAllCheckbox = document.getElementById('selectAll');
+    if (selectAllCheckbox) {
+      selectAllCheckbox.addEventListener('change', function() {
+        const checkboxes = document.querySelectorAll('.documento-checkbox:not(:disabled)');
+        checkboxes.forEach(checkbox => {
+          checkbox.checked = this.checked;
+        });
+        actualizarSeleccion();
+      });
+    }
+
+    // Event listeners para checkboxes individuales
+    document.addEventListener('change', function(e) {
+      if (e.target.classList.contains('documento-checkbox')) {
+        console.log('📋 Checkbox cambiado:', e.target.id, 'Checked:', e.target.checked);
+        actualizarSeleccion();
+        
+        // Actualizar estado del "Seleccionar todos"
+        const checkboxes = document.querySelectorAll('.documento-checkbox:not(:disabled)');
+        const checkedBoxes = document.querySelectorAll('.documento-checkbox:checked');
+        const selectAll = document.getElementById('selectAll');
+        
+        if (selectAll) {
+          selectAll.checked = checkboxes.length > 0 && checkedBoxes.length === checkboxes.length;
+          selectAll.indeterminate = checkedBoxes.length > 0 && checkedBoxes.length < checkboxes.length;
+        }
+      }
+    });
+
+    console.log('✅ Sistema de pago en lote inicializado');
+  }
+
+  // Función para limpiar y parsear valores monetarios
+  function limpiarValorMonetario(valor) {
+    if (!valor || valor === 'null' || valor === 'undefined') return 0;
+    // Remover símbolos de moneda, espacios y convertir comas a puntos
+    const valorLimpio = valor.toString().replace(/[$,\s]/g, '').replace(',', '.');
+    const numeroParseado = parseFloat(valorLimpio);
+    return isNaN(numeroParseado) ? 0 : numeroParseado;
+  }
+
+  function actualizarSeleccion() {
+    const checkboxesSeleccionados = document.querySelectorAll('.documento-checkbox:checked');
+    documentosSeleccionados = [];
+    let totalAPagar = 0;
+
+    checkboxesSeleccionados.forEach(checkbox => {
+      const valorRaw = checkbox.getAttribute('data-valor');
+      const valorPendienteRaw = checkbox.getAttribute('data-valor-pendiente');
+      
+      const valorLimpio = limpiarValorMonetario(valorRaw);
+      const valorPendienteLimpio = limpiarValorMonetario(valorPendienteRaw);
+      
+      console.log('🔍 Debug checkbox:', {
+        id: checkbox.getAttribute('data-documento-id'),
+        valorRaw: valorRaw,
+        valorPendienteRaw: valorPendienteRaw,
+        valorLimpio: valorLimpio,
+        valorPendienteLimpio: valorPendienteLimpio
+      });
+      
+      const documentoData = {
+        id: checkbox.getAttribute('data-documento-id'),
+        codigo: checkbox.getAttribute('data-codigo'),
+        cliente: checkbox.getAttribute('data-cliente'),
+        valorTotal: valorLimpio,
+        valorPendiente: valorPendienteLimpio
+      };
+      
+      documentosSeleccionados.push(documentoData);
+      totalAPagar += documentoData.valorPendiente;
+    });
+
+    // Actualizar UI
+    const panelPagoLote = document.getElementById('panelPagoLote');
+    const contadorSeleccionados = document.getElementById('contadorSeleccionados');
+    const totalAPagarElement = document.getElementById('totalAPagar');
+
+    // Validar que el total no sea NaN
+    if (isNaN(totalAPagar)) {
+      console.error('❌ Total calculado es NaN. Documentos:', documentosSeleccionados);
+      totalAPagar = 0;
+    }
+
+    if (documentosSeleccionados.length > 0) {
+      panelPagoLote.style.display = 'block';
+      contadorSeleccionados.textContent = `${documentosSeleccionados.length} documento${documentosSeleccionados.length !== 1 ? 's' : ''}`;
+      totalAPagarElement.textContent = `$${totalAPagar.toFixed(2)}`;
+    } else {
+      panelPagoLote.style.display = 'none';
+    }
+
+    console.log('📊 Selección actualizada:', documentosSeleccionados.length, 'documentos, Total:', totalAPagar.toFixed(2));
+  }
+
+  function limpiarSeleccion() {
+    const checkboxes = document.querySelectorAll('.documento-checkbox');
+    checkboxes.forEach(checkbox => checkbox.checked = false);
+    
+    const selectAll = document.getElementById('selectAll');
+    if (selectAll) {
+      selectAll.checked = false;
+      selectAll.indeterminate = false;
+    }
+    
+    actualizarSeleccion();
+  }
+
+  function mostrarModalPagoLote() {
+    if (documentosSeleccionados.length === 0) {
+      alert('No hay documentos seleccionados para pagar');
+      return;
+    }
+
+    // Actualizar contenido del modal
+    actualizarModalPagoLote();
+    
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('modalPagoLote'));
+    modal.show();
+  }
+
+  function actualizarModalPagoLote() {
+    const listaDocumentos = document.getElementById('listaDocumentosModal');
+    const totalModalElement = document.getElementById('totalModal');
+    
+    let html = '';
+    let total = 0;
+    
+    documentosSeleccionados.forEach(doc => {
+      html += `
+        <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+          <div>
+            <strong>${doc.codigo}</strong>
+            <br>
+            <small class="text-muted">${doc.cliente}</small>
+          </div>
+          <div class="text-end">
+            <span class="h6 mb-0 text-success">$${doc.valorPendiente.toFixed(2)}</span>
+          </div>
+        </div>
+      `;
+      total += doc.valorPendiente;
+    });
+    
+    listaDocumentos.innerHTML = html;
+    totalModalElement.textContent = `$${total.toFixed(2)}`;
+    
+    // Actualizar campo oculto de monto
+    document.getElementById('montoRecibidoModal').value = total.toFixed(2);
+  }
+
+  function procesarPagoLote() {
+    // Obtener valores del formulario directamente
+    const metodoPago = document.getElementById('metodoPagoModal').value;
+    const montoRecibido = parseFloat(document.getElementById('montoRecibidoModal').value);
+    const numeroComprobante = document.getElementById('numeroComprobanteModal').value;
+    const observaciones = document.getElementById('observacionesModal').value;
+    
+    // Agregar IDs de documentos
+    const idsDocumentos = documentosSeleccionados.map(doc => doc.id);
+    console.log('🔍 IDs de documentos a enviar:', idsDocumentos);
+    
+    // Preparar objeto de datos
+    const datosEnvio = {
+      documentosIds: idsDocumentos,
+      metodoPago: metodoPago,
+      montoRecibido: montoRecibido,
+      numeroComprobante: numeroComprobante || '',
+      observaciones: observaciones || ''
+    };
+    
+    console.log('🔍 Datos a enviar:', datosEnvio);
+    
+    // Validaciones
+    const totalEsperado = documentosSeleccionados.reduce((sum, doc) => sum + doc.valorPendiente, 0);
+    
+    if (!metodoPago) {
+      alert('Debe seleccionar un método de pago');
+      return;
+    }
+    
+    if (idsDocumentos.length === 0) {
+      alert('No hay documentos seleccionados para procesar');
+      return;
+    }
+    
+    if (Math.abs(montoRecibido - totalEsperado) > 0.01) {
+      alert(`El monto recibido ($${montoRecibido.toFixed(2)}) debe ser igual al total de documentos ($${totalEsperado.toFixed(2)})`);
+      return;
+    }
+    
+    // Mostrar loading
+    const btnProcesar = document.getElementById('btnProcesarPago');
+    const textoOriginal = btnProcesar.innerHTML;
+    btnProcesar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Procesando...';
+    btnProcesar.disabled = true;
+    
+    console.log('🚀 Enviando pago en lote...');
+    
+    // Enviar datos como JSON
+    fetch('/caja/documentos/pago-lote', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(datosEnvio)
+    })
+    .then(response => {
+      console.log('📥 Respuesta del servidor:', response.status, response.statusText);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      return response.json();
+    })
+    .then(data => {
+      console.log('📊 Datos recibidos:', data);
+      if (data.success) {
+        // Cerrar modal
+        bootstrap.Modal.getInstance(document.getElementById('modalPagoLote')).hide();
+        
+        // Mostrar mensaje de éxito
+        alert(`✅ Pago en lote procesado exitosamente!\n\n${data.documentosProcesados} documentos pagados\nTotal: $${data.totalProcesado}`);
+        
+        // Recargar página para actualizar estados
+        window.location.reload();
+      } else {
+        console.error('❌ Error del servidor:', data);
+        alert(`❌ Error al procesar pago: ${data.message}`);
+      }
+    })
+    .catch(error => {
+      console.error('❌ Error completo:', error);
+      alert(`❌ Error al procesar el pago: ${error.message}`);
+    })
+    .finally(() => {
+      // Restaurar botón
+      btnProcesar.innerHTML = textoOriginal;
+      btnProcesar.disabled = false;
+    });
+  }
+
+  // Inicializar al cargar página
+  document.addEventListener('DOMContentLoaded', function() {
+    inicializarPagoLote();
+  });
+</script>
+
+<!-- ✅ MODAL DE PAGO EN LOTE -->
+<div class="modal fade" id="modalPagoLote" tabindex="-1" aria-labelledby="modalPagoLoteLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title" id="modalPagoLoteLabel">
+          <i class="fas fa-credit-card me-2"></i>
+          Registrar Pago en Lote
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <form id="formPagoLote">
+          <!-- Lista de documentos seleccionados -->
+          <div class="mb-4">
+            <h6 class="fw-bold mb-3">
+              <i class="fas fa-list me-2 text-primary"></i>
+              Documentos Seleccionados
+            </h6>
+            <div class="border rounded p-3 bg-light" style="max-height: 300px; overflow-y: auto;">
+              <div id="listaDocumentosModal">
+                <!-- Se llena dinámicamente con JavaScript -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Total -->
+          <div class="row mb-4">
+            <div class="col-12">
+              <div class="card border-success">
+                <div class="card-body text-center py-3">
+                  <h6 class="card-title mb-2">Total a Pagar</h6>
+                  <h3 class="text-success mb-0" id="totalModal">$0.00</h3>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Campos del pago -->
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="metodoPagoModal" class="form-label fw-bold">
+                <i class="fas fa-money-bill-wave me-2 text-success"></i>
+                Método de Pago *
+              </label>
+              <select class="form-select" id="metodoPagoModal" name="metodoPago" required>
+                <option value="">Seleccione método...</option>
+                <option value="efectivo">💵 Efectivo</option>
+                <option value="transferencia">🏦 Transferencia Bancaria</option>
+                <option value="tarjeta_credito">💳 Tarjeta de Crédito</option>
+                <option value="tarjeta_debito">💳 Tarjeta de Débito</option>
+                <option value="cheque">📄 Cheque</option>
+              </select>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="montoRecibidoModal" class="form-label fw-bold">
+                <i class="fas fa-dollar-sign me-2 text-success"></i>
+                Monto Recibido *
+              </label>
+              <input type="number" class="form-control" id="montoRecibidoModal" name="montoRecibido" 
+                     step="0.01" min="0" required placeholder="0.00">
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="numeroComprobanteModal" class="form-label">
+                <i class="fas fa-receipt me-2 text-info"></i>
+                Número de Comprobante (Opcional)
+              </label>
+              <input type="text" class="form-control" id="numeroComprobanteModal" name="numeroComprobante" 
+                     placeholder="Ej: 001-001-000123456">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="observacionesModal" class="form-label">
+                <i class="fas fa-comment me-2 text-info"></i>
+                Observaciones (Opcional)
+              </label>
+              <input type="text" class="form-control" id="observacionesModal" name="observaciones" 
+                     placeholder="Información adicional del pago">
+            </div>
+          </div>
+
+          <!-- Advertencia de validación -->
+          <div class="alert alert-warning d-flex align-items-center" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <div>
+              <strong>Importante:</strong> El monto recibido debe ser exactamente igual al total de los documentos seleccionados.
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-2"></i>
+          Cancelar
+        </button>
+        <button type="button" class="btn btn-success" id="btnProcesarPago" onclick="procesarPagoLote()">
+          <i class="fas fa-check me-2"></i>
+          Procesar Pago en Lote
+        </button>
+      </div>
+    </div>
+  </div>
+</div> 

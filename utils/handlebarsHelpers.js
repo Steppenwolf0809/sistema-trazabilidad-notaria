@@ -123,8 +123,8 @@ const helpers = {
   
   // Helper para restar dos números
   subtract: (a, b) => {
-    const numA = parseInt(a) || 0;
-    const numB = parseInt(b) || 0;
+    const numA = parseFloat(a) || 0;
+    const numB = parseFloat(b) || 0;
     return numA - numB;
   },
 
@@ -567,7 +567,7 @@ const helpers = {
   },
   
   subtract: (a, b) => {
-    return parseInt(a) - parseInt(b);
+    return parseFloat(a || 0) - parseFloat(b || 0);
   },
   
   stringifyNumber: (num) => {
