@@ -517,9 +517,74 @@
         </h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <form id="formEditarMatrizador" method="POST">
+      <form id="formEditarMatrizador" method="POST" action="/admin/matrizadores/actualizar">
         <div class="modal-body">
-          <!-- Los campos se llenarán dinámicamente con JavaScript -->
+          <input type="hidden" id="editId" name="id">
+          
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="editNombre" class="form-label">Nombre Completo</label>
+                <input type="text" class="form-control" id="editNombre" name="nombre" required>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="editEmail" class="form-label">Email</label>
+                <input type="email" class="form-control" id="editEmail" name="email" required>
+              </div>
+            </div>
+          </div>
+          
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="editIdentificacion" class="form-label">Identificación</label>
+                <input type="text" class="form-control" id="editIdentificacion" name="identificacion" required>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="editCargo" class="form-label">Cargo</label>
+                <input type="text" class="form-control" id="editCargo" name="cargo" required>
+              </div>
+            </div>
+          </div>
+          
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="editRol" class="form-label">Rol</label>
+                <select class="form-select" id="editRol" name="rol" required>
+                  <option value="">Seleccionar rol</option>
+                  <option value="admin">Administrador</option>
+                  <option value="matrizador">Matrizador</option>
+                  <option value="recepcion">Recepción</option>
+                  <option value="caja">Caja</option>
+                  <option value="archivo">Archivo</option>
+                  <option value="caja_archivo">Caja + Archivo</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="editPassword" class="form-label">Nueva Contraseña (opcional)</label>
+                <input type="password" class="form-control" id="editPassword" name="password" placeholder="Dejar vacío para mantener la actual">
+              </div>
+            </div>
+          </div>
+          
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="editActivo" class="form-label">Estado</label>
+                <select class="form-select" id="editActivo" name="activo" required>
+                  <option value="1">Activo</option>
+                  <option value="0">Inactivo</option>
+                </select>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -564,8 +629,38 @@ function filtrarPorEstado(estado) {
 
 // Función para cargar datos del matrizador en modal de edición
 function cargarDatosMatrizador(id) {
-  // Aquí se haría una petición AJAX para obtener los datos del matrizador
-  console.log('Cargar datos del matrizador:', id);
+  console.log('🔍 Cargando datos del matrizador ID:', id);
+  
+  // Buscar los datos del matrizador en las tarjetas actuales
+  const matrizadorCard = document.querySelector(`[data-bs-target="#modalEditarMatrizador"][onclick*="${id}"]`).closest('.matrizador-card');
+  
+  if (!matrizadorCard) {
+    console.error('❌ No se encontró la tarjeta del matrizador');
+    alert('Error: No se pudieron cargar los datos del matrizador');
+    return;
+  }
+  
+  // Extraer datos de la tarjeta
+  const nombre = matrizadorCard.querySelector('.matrizador-info h3').textContent.trim();
+  const cargo = matrizadorCard.querySelector('.matrizador-info p').textContent.trim();
+  const email = matrizadorCard.querySelector('.detalle-item:has(.fa-envelope) span').textContent.trim();
+  const identificacion = matrizadorCard.querySelector('.detalle-item:has(.fa-id-card) span').textContent.trim();
+  const rol = matrizadorCard.getAttribute('data-rol');
+  const activo = matrizadorCard.getAttribute('data-estado') === 'activo' ? '1' : '0';
+  
+  // Llenar el formulario de edición
+  document.getElementById('editId').value = id;
+  document.getElementById('editNombre').value = nombre;
+  document.getElementById('editEmail').value = email;
+  document.getElementById('editIdentificacion').value = identificacion;
+  document.getElementById('editCargo').value = cargo;
+  document.getElementById('editRol').value = rol;
+  document.getElementById('editActivo').value = activo;
+  
+  // Limpiar campo de contraseña
+  document.getElementById('editPassword').value = '';
+  
+  console.log('✅ Datos cargados correctamente:', { id, nombre, email, rol, activo });
 }
 
 // Función para toggle del estado del matrizador
