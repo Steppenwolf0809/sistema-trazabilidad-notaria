@@ -35,6 +35,15 @@ const moment = require('moment');
     mostrarEn: ['admin', 'caja', 'archivo'],
     prioridad: 'alta'
   },
+  'pago_revertido': {
+    icono: '<i class="fas fa-undo"></i>',
+    titulo: 'Pago revertido',
+    color: 'warning',
+    categoria: 'financiero',
+    categoriaTexto: 'Financiero',
+    mostrarEn: ['admin', 'caja', 'archivo'],
+    prioridad: 'alta'
+  },
   'documento_entregado': {
     icono: '<i class="fas fa-handshake"></i>',
     titulo: 'Documento entregado',
@@ -142,6 +151,15 @@ const moment = require('moment');
      categoriaTexto: 'Eliminación',
      mostrarEn: ['admin', 'caja', 'archivo'],
      prioridad: 'muy_alta'
+   },
+   'reversion_admin': {
+     icono: '<i class="fas fa-shield-alt"></i>',
+     titulo: 'Reversión administrativa',
+     color: 'warning',
+     categoria: 'administracion',
+     categoriaTexto: 'Administración',
+     mostrarEn: ['admin', 'caja', 'archivo', 'matrizador', 'recepcion'],
+     prioridad: 'alta'
    }
 };
 
@@ -324,6 +342,8 @@ function determinarTipoEspecifico(eventoDB, documento) {
   
   const mapeoTipos = {
     'pago': 'pago_registrado',
+    'reversion_pago': 'pago_revertido',
+    'reversion_admin': 'reversion_admin',
     'entrega': 'documento_entregado',
     'asignacion': 'matrizador_asignado',
     'notificacion_enviada': 'notificacion_enviada',
@@ -342,6 +362,13 @@ function construirDescripcionEspecifica(tipoEvento, eventoDB, documento, detalle
       const monto = detalles.monto || documento.valorPagado || documento.valorFactura;
       const metodo = detalles.metodoPago || documento.metodoPago || 'método no especificado';
       return `Pago de $${monto} procesado mediante ${metodo}`;
+    
+    case 'pago_revertido':
+      const datosOriginales = detalles.datosOriginales || {};
+      const valorRevertido = datosOriginales.valorPagado || detalles.valorRevertido || 'valor no especificado';
+      const metodoRevertido = datosOriginales.metodoPago || detalles.metodoPago || 'método no especificado';
+      const justificacionReversion = detalles.justificacion || 'No especificada';
+      return `Pago de $${valorRevertido} (${metodoRevertido}) revertido. Motivo: ${justificacionReversion}`;
     
     case 'documento_entregado':
       // WORKAROUND: Parsear detalles directamente si no están parseados
@@ -458,6 +485,29 @@ function construirDescripcionEspecifica(tipoEvento, eventoDB, documento, detalle
       }
       
       return descripcionEliminacion;
+    
+    case 'reversion_admin':
+      const tipoReversionAdmin = detalles.tipoReversion || 'reversión no especificada';
+      const motivoCategoriaAdmin = detalles.motivoCategoria || 'motivo no especificado';
+      const estadoAnteriorAdmin = detalles.estadoAnterior || '';
+      const estadoNuevoAdmin = detalles.estadoNuevo || '';
+      
+      // Mapear tipos técnicos a texto legible
+      const tiposReversionMap = {
+        'desmarcar_listo': 'Desmarcar como listo',
+        'deshacer_entrega': 'Deshacer entrega',
+        'separar_grupo': 'Separar de grupo',
+        'reactivar_documento': 'Reactivar documento'
+      };
+      
+      const tipoTexto = tiposReversionMap[tipoReversionAdmin] || tipoReversionAdmin;
+      let descripcionAdmin = `${tipoTexto} ejecutada por administrador. Motivo: ${motivoCategoriaAdmin}`;
+      
+      if (estadoAnteriorAdmin && estadoNuevoAdmin && estadoAnteriorAdmin !== estadoNuevoAdmin) {
+        descripcionAdmin += ` (${estadoAnteriorAdmin} → ${estadoNuevoAdmin})`;
+      }
+      
+      return descripcionAdmin;
     
     default:
       return eventoDB.descripcion || eventoDB.titulo || 'Evento del sistema';

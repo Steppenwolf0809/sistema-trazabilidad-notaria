@@ -1036,15 +1036,20 @@ const cajaController = {
       
       // Registrar en eventos
       await EventoDocumento.create({
-        documento_id: id,
-        tipo_evento: 'reversion_pago',
-        descripcion: `Pago revertido. Valor original: $${datosOriginales.valorPagado}`,
-        usuario_id: req.matrizador.id,
-        detalles: JSON.stringify({
+        documentoId: id,
+        tipo: 'reversion_pago',
+        titulo: 'Pago revertido',
+        descripcion: `Pago de $${datosOriginales.valorPagado} (${datosOriginales.metodoPago}) revertido`,
+        usuarioId: req.matrizador.id,
+        usuario: req.matrizador.nombre,
+        categoria: 'financiero',
+        detalles: {
           datosOriginales: datosOriginales,
           justificacion: justificacion,
-          fechaReversion: new Date()
-        })
+          fechaReversion: new Date(),
+          valorRevertido: datosOriginales.valorPagado,
+          metodoPago: datosOriginales.metodoPago
+        }
       });
       
       console.log(`✅ [CAJA-REVERTIR] Documento ${id}: Pago revertido exitosamente`);

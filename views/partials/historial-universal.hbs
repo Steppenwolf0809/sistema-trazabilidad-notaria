@@ -158,6 +158,62 @@
               </div>
               {{/if}}
               
+              {{!-- REVERSIÓN DE PAGO: Información específica --}}
+              {{#if (eq this.tipoEvento "pago_revertido")}}
+              <div class="row g-2">
+                {{#if this.detalles.valorRevertido}}
+                <div class="col-auto">
+                  <span class="badge bg-warning">↩️ ${{this.detalles.valorRevertido}}</span>
+                </div>
+                {{/if}}
+                {{#if this.detalles.metodoPago}}
+                <div class="col-auto">
+                  <span class="badge bg-secondary">💳 {{this.detalles.metodoPago}}</span>
+                </div>
+                {{/if}}
+                {{#if this.detalles.justificacion}}
+                <div class="col-12 mt-2">
+                  <div class="alert alert-warning py-2 mb-0">
+                    <small><strong>Justificación:</strong> {{this.detalles.justificacion}}</small>
+                  </div>
+                </div>
+                {{/if}}
+              </div>
+              {{/if}}
+              
+              {{!-- REVERSIÓN ADMINISTRATIVA: Información específica --}}
+              {{#if (eq this.tipoEvento "reversion_admin")}}
+              <div class="row g-2">
+                {{#if this.detalles.tipoReversion}}
+                <div class="col-auto">
+                  <span class="badge bg-warning">🔧 {{this.detalles.tipoReversion}}</span>
+                </div>
+                {{/if}}
+                {{#if this.detalles.motivoCategoria}}
+                <div class="col-auto">
+                  <span class="badge bg-info">📋 {{this.detalles.motivoCategoria}}</span>
+                </div>
+                {{/if}}
+                {{#if this.detalles.estadoAnterior}}
+                <div class="col-auto">
+                  <span class="badge bg-secondary">📤 {{this.detalles.estadoAnterior}}</span>
+                </div>
+                {{/if}}
+                {{#if this.detalles.estadoNuevo}}
+                <div class="col-auto">
+                  <span class="badge bg-primary">📥 {{this.detalles.estadoNuevo}}</span>
+                </div>
+                {{/if}}
+                {{#if this.detalles.justificacion}}
+                <div class="col-12 mt-2">
+                  <div class="alert alert-warning py-2 mb-0">
+                    <small><strong>Justificación:</strong> {{this.detalles.justificacion}}</small>
+                  </div>
+                </div>
+                {{/if}}
+              </div>
+              {{/if}}
+              
               {{!-- INFORMACIÓN ADICIONAL: Observaciones --}}
               {{#if this.detalles.observaciones}}
               <div class="mt-2">
