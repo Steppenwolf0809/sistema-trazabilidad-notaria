@@ -1,236 +1,332 @@
-{{!-- Página de auditoría de documentos eliminados --}}
-<div class="container-fluid">
-  <!-- Header de la página -->
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="d-flex justify-content-between align-items-center">
+<!-- AUDITORÍA DE ELIMINACIONES - DISEÑO PROFESIONAL ELEGANTE -->
+<div class="min-h-screen bg-gray-50">
+  <!-- Header Profesional -->
+  <div class="bg-white border-b border-gray-200 mb-6">
+    <div class="px-6 py-8">
+      <div class="flex items-center justify-between">
         <div>
-          <h1 class="h3 mb-0">
-            <i class="fas fa-trash-alt text-danger me-2"></i>
+          <h1 class="text-4xl font-bold text-gray-900 mb-2">
+            <i class="fas fa-trash-alt text-slate-600 mr-3"></i>
             Auditoría de Eliminaciones
           </h1>
-          <p class="text-muted mb-0">Registro completo de documentos eliminados del sistema</p>
+          <p class="text-xl text-gray-600">
+            Registro completo de documentos eliminados del sistema
+          </p>
         </div>
-        <div>
-          <button class="btn btn-outline-secondary" onclick="exportarAuditoria()">
-            <i class="fas fa-download me-2"></i>Exportar
+        <div class="flex items-center space-x-3">
+          <button class="inline-flex items-center px-4 py-2 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 transition-colors" 
+                  onclick="exportarAuditoria()">
+            <i class="fas fa-download mr-2"></i>
+            Exportar
           </button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Filtros -->
-  <div class="card mb-4">
-    <div class="card-header">
-      <h5 class="mb-0">
-        <i class="fas fa-filter me-2"></i>Filtros de Búsqueda
-      </h5>
+  <div class="px-6">
+    <!-- Panel de Filtros Modernos -->
+    <div class="bg-white rounded-xl shadow-md mb-6 overflow-hidden border border-slate-200">
+      <div class="bg-slate-100 px-6 py-4 border-b border-slate-200">
+        <h3 class="text-lg font-semibold text-slate-700 flex items-center">
+          <i class="fas fa-filter mr-2"></i>
+          Filtros de Búsqueda
+        </h3>
+      </div>
+      
+      <div class="p-6">
+        <form id="formFiltros" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <label class="flex items-center text-sm font-medium text-slate-700 mb-2">
+              <i class="fas fa-exclamation-triangle text-slate-600 mr-2"></i>
+              Motivo
+            </label>
+            <select class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                    id="filtroMotivo" name="motivo">
+              <option value="">Todos los motivos</option>
+              <option value="documento_duplicado">Documento duplicado</option>
+              <option value="error_critico">Error crítico</option>
+              <option value="nota_credito">Nota de crédito</option>
+              <option value="cancelacion_cliente">Cancelación cliente</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+          
+          <div>
+            <label class="flex items-center text-sm font-medium text-slate-700 mb-2">
+              <i class="fas fa-calendar-day text-blue-500 mr-2"></i>
+              Fecha Inicio
+            </label>
+            <input type="date" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                   id="filtroFechaInicio" name="fechaInicio">
+          </div>
+          
+          <div>
+            <label class="flex items-center text-sm font-medium text-slate-700 mb-2">
+              <i class="fas fa-calendar-check text-blue-500 mr-2"></i>
+              Fecha Fin
+            </label>
+            <input type="date" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                   id="filtroFechaFin" name="fechaFin">
+          </div>
+          
+          <div>
+            <label class="flex items-center text-sm font-medium text-slate-700 mb-2">
+              <i class="fas fa-user-shield text-indigo-500 mr-2"></i>
+              Administrador
+            </label>
+            <input type="text" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                   id="filtroAdmin" name="administrador" placeholder="Buscar por administrador...">
+          </div>
+          
+          <div class="lg:col-span-4">
+            <div class="flex items-center space-x-3">
+              <button type="submit" class="inline-flex items-center px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                <i class="fas fa-search mr-2"></i>
+                Buscar
+              </button>
+              <button type="button" class="inline-flex items-center px-6 py-2 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 transition-colors" 
+                      onclick="limpiarFiltros()">
+                <i class="fas fa-times mr-2"></i>
+                Limpiar
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
     </div>
-    <div class="card-body">
-      <form id="formFiltros" class="row g-3">
-        <div class="col-md-3">
-          <label for="filtroMotivo" class="form-label">Motivo</label>
-          <select class="form-select" id="filtroMotivo" name="motivo">
-            <option value="">Todos los motivos</option>
-            <option value="documento_duplicado">Documento duplicado</option>
-            <option value="error_critico">Error crítico</option>
-            <option value="nota_credito">Nota de crédito</option>
-            <option value="cancelacion_cliente">Cancelación cliente</option>
-            <option value="otro">Otro</option>
-          </select>
-        </div>
-        <div class="col-md-3">
-          <label for="filtroFechaInicio" class="form-label">Fecha Inicio</label>
-          <input type="date" class="form-control" id="filtroFechaInicio" name="fechaInicio">
-        </div>
-        <div class="col-md-3">
-          <label for="filtroFechaFin" class="form-label">Fecha Fin</label>
-          <input type="date" class="form-control" id="filtroFechaFin" name="fechaFin">
-        </div>
-        <div class="col-md-3">
-          <label for="filtroAdmin" class="form-label">Administrador</label>
-          <input type="text" class="form-control" id="filtroAdmin" name="administrador" 
-                 placeholder="Buscar por administrador...">
-        </div>
-        <div class="col-12">
-          <button type="submit" class="btn btn-primary">
-            <i class="fas fa-search me-2"></i>Buscar
-          </button>
-          <button type="button" class="btn btn-outline-secondary ms-2" onclick="limpiarFiltros()">
-            <i class="fas fa-times me-2"></i>Limpiar
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
 
-  <!-- Estadísticas resumidas -->
-  <div class="row mb-4">
-    <div class="col-md-3">
-      <div class="card bg-danger text-white">
-        <div class="card-body text-center">
-          <i class="fas fa-trash-alt fa-2x mb-2"></i>
-          <h4 class="mb-0" id="totalEliminados">-</h4>
-          <small>Total Eliminados</small>
+    <!-- Estadísticas Principales -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+      <div class="bg-slate-50 rounded-xl shadow-md overflow-hidden transform hover:scale-105 transition-transform duration-200 border border-slate-200">
+        <div class="px-6 py-4">
+          <div class="flex items-center">
+            <div class="p-3 rounded-full bg-slate-100 mr-4">
+              <i class="fas fa-trash-alt text-slate-600 text-xl"></i>
+            </div>
+            <div>
+              <p class="text-slate-600 text-sm font-medium">Total Eliminados</p>
+              <p class="text-slate-800 text-2xl font-bold" id="totalEliminados">-</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="bg-amber-50 rounded-xl shadow-md overflow-hidden transform hover:scale-105 transition-transform duration-200 border border-amber-200">
+        <div class="px-6 py-4">
+          <div class="flex items-center">
+            <div class="p-3 rounded-full bg-amber-100 mr-4">
+              <i class="fas fa-dollar-sign text-amber-600 text-xl"></i>
+            </div>
+            <div>
+              <p class="text-amber-700 text-sm font-medium">Valor Impacto</p>
+              <p class="text-amber-800 text-2xl font-bold" id="valorImpacto">$-</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="bg-blue-50 rounded-xl shadow-md overflow-hidden transform hover:scale-105 transition-transform duration-200 border border-blue-200">
+        <div class="px-6 py-4">
+          <div class="flex items-center">
+            <div class="p-3 rounded-full bg-blue-100 mr-4">
+              <i class="fas fa-calendar text-blue-600 text-xl"></i>
+            </div>
+            <div>
+              <p class="text-blue-700 text-sm font-medium">Hoy</p>
+              <p class="text-blue-800 text-2xl font-bold" id="eliminacionesHoy">-</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="bg-indigo-50 rounded-xl shadow-md overflow-hidden transform hover:scale-105 transition-transform duration-200 border border-indigo-200">
+        <div class="px-6 py-4">
+          <div class="flex items-center">
+            <div class="p-3 rounded-full bg-indigo-100 mr-4">
+              <i class="fas fa-chart-pie text-indigo-600 text-xl"></i>
+            </div>
+            <div>
+              <p class="text-indigo-700 text-sm font-medium">Motivo Principal</p>
+              <p class="text-indigo-800 text-lg font-bold" id="motivoPrincipal">-</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-    <div class="col-md-3">
-      <div class="card bg-warning text-dark">
-        <div class="card-body text-center">
-          <i class="fas fa-dollar-sign fa-2x mb-2"></i>
-          <h4 class="mb-0" id="valorImpacto">$-</h4>
-          <small>Valor Impacto</small>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="card bg-info text-white">
-        <div class="card-body text-center">
-          <i class="fas fa-calendar fa-2x mb-2"></i>
-          <h4 class="mb-0" id="eliminacionesHoy">-</h4>
-          <small>Eliminaciones Hoy</small>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="card bg-secondary text-white">
-        <div class="card-body text-center">
-          <i class="fas fa-chart-pie fa-2x mb-2"></i>
-          <h4 class="mb-0" id="motivoPrincipal">-</h4>
-          <small>Motivo Principal</small>
-        </div>
-      </div>
-    </div>
-  </div>
 
-  <!-- Tabla de eliminaciones -->
-  <div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-      <h5 class="mb-0">
-        <i class="fas fa-list me-2"></i>Registro de Eliminaciones
-      </h5>
-      <div class="d-flex align-items-center">
-        <label class="form-label me-2 mb-0">Mostrar:</label>
-        <select class="form-select form-select-sm" id="limitePagina" style="width: auto;">
-          <option value="20">20</option>
-          <option value="50">50</option>
-          <option value="100">100</option>
-        </select>
-      </div>
-    </div>
-    
-    <div class="card-body">
-      <!-- Loader -->
-      <div id="loader" class="text-center py-4">
-        <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Cargando...</span>
+    <!-- Tabla de Eliminaciones -->
+    <div class="bg-white rounded-xl shadow-md overflow-hidden border border-slate-200">
+      <div class="bg-slate-100 px-6 py-4 border-b border-slate-200">
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-semibold text-slate-700 flex items-center">
+            <i class="fas fa-list mr-2"></i>
+            Registro de Eliminaciones
+          </h3>
+          <div class="flex items-center space-x-2">
+            <label class="text-slate-700 text-sm font-medium">Mostrar:</label>
+            <select class="px-3 py-1 border border-slate-300 bg-white text-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" id="limitePagina">
+              <option value="20">20</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
         </div>
-        <p class="mt-2">Cargando registros de eliminaciones...</p>
+      </div>
+      
+      <!-- Loader Mejorado -->
+      <div id="loader" class="text-center py-12">
+        <div class="flex flex-col items-center">
+          <div class="animate-spin rounded-full h-12 w-12 border-4 border-slate-300 border-t-transparent mb-4"></div>
+          <h5 class="text-lg font-medium text-gray-900 mb-2">Cargando registros...</h5>
+          <p class="text-gray-500">Obteniendo datos de eliminaciones</p>
+        </div>
       </div>
 
-      <!-- Tabla -->
+      <!-- Contenedor de Tabla -->
       <div id="tablaContainer" style="display: none;">
-        <div class="table-responsive">
-          <table class="table table-striped table-hover">
-            <thead class="table-dark">
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead class="bg-slate-50 border-b border-slate-200">
               <tr>
-                <th>Fecha/Hora</th>
-                <th>Código Documento</th>
-                <th>Tipo Documento</th>
-                <th>Cliente</th>
-                <th>Motivo</th>
-                <th>Valor Impacto</th>
-                <th>Administrador</th>
-                <th>Estado Pago</th>
-                <th>Acciones</th>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <i class="fas fa-clock text-blue-500 mr-1"></i>
+                  Fecha/Hora
+                </th>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <i class="fas fa-barcode text-slate-500 mr-1"></i>
+                  Código
+                </th>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <i class="fas fa-file-alt text-blue-500 mr-1"></i>
+                  Tipo
+                </th>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <i class="fas fa-user text-indigo-500 mr-1"></i>
+                  Cliente
+                </th>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <i class="fas fa-exclamation-triangle text-slate-500 mr-1"></i>
+                  Motivo
+                </th>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <i class="fas fa-dollar-sign text-amber-500 mr-1"></i>
+                  Impacto
+                </th>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <i class="fas fa-user-shield text-indigo-500 mr-1"></i>
+                  Admin
+                </th>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <i class="fas fa-credit-card text-green-500 mr-1"></i>
+                  Pago
+                </th>
+                <th class="px-6 py-4 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <i class="fas fa-eye text-blue-500 mr-1"></i>
+                  Ver
+                </th>
               </tr>
             </thead>
-            <tbody id="tablaEliminaciones">
+            <tbody id="tablaEliminaciones" class="bg-white divide-y divide-slate-200">
               <!-- Contenido dinámico -->
             </tbody>
           </table>
         </div>
 
-        <!-- Paginación -->
-        <nav aria-label="Paginación de eliminaciones">
-          <ul class="pagination justify-content-center" id="paginacion">
-            <!-- Contenido dinámico -->
-          </ul>
-        </nav>
+        <!-- Paginación Mejorada -->
+        <div class="bg-slate-50 px-6 py-4 border-t border-slate-200">
+          <nav class="flex justify-center">
+            <ul class="inline-flex items-center space-x-1" id="paginacion">
+              <!-- Contenido dinámico -->
+            </ul>
+          </nav>
+        </div>
 
         <!-- Mensaje sin resultados -->
-        <div id="sinResultados" class="text-center py-4" style="display: none;">
-          <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-          <h5 class="text-muted">No se encontraron eliminaciones</h5>
-          <p class="text-muted">No hay registros que coincidan con los filtros aplicados.</p>
+        <div id="sinResultados" class="text-center py-12" style="display: none;">
+          <div class="flex flex-col items-center">
+            <i class="fas fa-inbox text-slate-300 text-4xl mb-3"></i>
+            <h3 class="text-lg font-medium text-gray-900 mb-1">No se encontraron eliminaciones</h3>
+            <p class="text-gray-500">No hay registros que coincidan con los filtros aplicados</p>
+          </div>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Modal para ver detalles de eliminación -->
+<!-- Modal Mejorado para Detalles -->
 <div class="modal fade" id="modalDetalleEliminacion" tabindex="-1" aria-labelledby="modalDetalleEliminacionLabel" aria-hidden="true">
   <div class="modal-dialog modal-xl">
-    <div class="modal-content">
-      <div class="modal-header bg-danger text-white">
-        <h5 class="modal-title" id="modalDetalleEliminacionLabel">
-          <i class="fas fa-info-circle me-2"></i>Detalles de Eliminación
+    <div class="modal-content rounded-xl shadow-2xl">
+      <div class="modal-header bg-slate-50 text-slate-700 border-b border-slate-200">
+        <h5 class="modal-title text-lg font-semibold flex items-center" id="modalDetalleEliminacionLabel">
+          <i class="fas fa-info-circle mr-2"></i>
+          Detalles de Eliminación
         </h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <div class="modal-body">
+      <div class="modal-body p-6 bg-white">
         <div id="detalleEliminacion">
           <!-- Contenido dinámico -->
         </div>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+      <div class="modal-footer bg-slate-50 border-t border-slate-200">
+        <button type="button" class="px-4 py-2 bg-slate-500 text-white rounded-lg hover:bg-slate-600 transition-colors" data-bs-dismiss="modal">
+          Cerrar
+        </button>
       </div>
     </div>
   </div>
 </div>
 
+<!-- Estilos personalizados mejorados -->
 <style>
 .badge-motivo {
   font-size: 0.85em;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
 }
 
-.badge-documento_duplicado { background-color: #6c757d; }
-.badge-error_critico { background-color: #dc3545; }
-.badge-nota_credito { background-color: #fd7e14; }
-.badge-cancelacion_cliente { background-color: #0dcaf0; }
-.badge-otro { background-color: #6f42c1; }
-
-.table th {
-  border-top: none;
-  font-weight: 600;
-  font-size: 0.9rem;
+.badge-documento_duplicado { 
+  background: linear-gradient(135deg, #64748b, #475569);
+  color: white;
+}
+.badge-error_critico { 
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  color: white;
+}
+.badge-nota_credito { 
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+}
+.badge-cancelacion_cliente { 
+  background: linear-gradient(135deg, #06b6d4, #0891b2);
+  color: white;
+}
+.badge-otro { 
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  color: white;
 }
 
-.table td {
-  vertical-align: middle;
-  font-size: 0.9rem;
+.table-hover tbody tr:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+  transform: translateY(-1px);
+  transition: all 0.2s ease;
 }
 
-.pagination .page-link {
-  color: #6c757d;
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
 
-.pagination .page-item.active .page-link {
-  background-color: #dc3545;
-  border-color: #dc3545;
-}
-
-.card {
-  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-  border: 1px solid rgba(0, 0, 0, 0.125);
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 </style>
 
-<!-- 🔧 CARGAR MOMENT.JS PARA FORMATEO CORRECTO DE FECHAS -->
+<!-- Scripts mejorados -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.43/moment-timezone-with-data.min.js"></script>
 
@@ -239,10 +335,10 @@ document.addEventListener('DOMContentLoaded', function() {
   let paginaActual = 1;
   let filtrosActuales = {};
   
-  // 🔧 CONFIGURAR TIMEZONE DE ECUADOR PARA AUDITORÍA
+  // Configurar timezone de Ecuador para auditoría
   const TIMEZONE_ECUADOR = 'America/Guayaquil';
   
-  // 🔧 FUNCIÓN PARA FORMATEAR FECHAS CORRECTAMENTE EN TIMEZONE ECUADOR
+  // Función para formatear fechas correctamente en timezone Ecuador
   function formatearFechaEcuador(fechaISO, soloFecha = false) {
     if (!fechaISO) return 'No definida';
     
@@ -263,7 +359,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
   
-  // 🔧 FUNCIÓN PARA FORMATEAR FECHA COMPLETA PARA AUDITORÍA
+  // Función para formatear fecha completa para auditoría
   function formatearFechaCompletaEcuador(fechaISO) {
     if (!fechaISO) return 'No definida';
     
@@ -368,7 +464,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
   
-  // 🔧 FUNCIÓN CORREGIDA PARA RENDERIZAR TABLA CON FECHAS CORRECTAS
+  // Función corregida para renderizar tabla con fechas correctas
   function renderizarTabla(registros) {
     const tbody = document.getElementById('tablaEliminaciones');
     tbody.innerHTML = '';
@@ -376,48 +472,54 @@ document.addEventListener('DOMContentLoaded', function() {
     registros.forEach(registro => {
       const datos = registro.datosDocumento;
       const tr = document.createElement('tr');
+      tr.className = 'hover:bg-gray-50 transition-colors';
       
-      // 🔧 FORMATEAR FECHA CORRECTAMENTE EN TIMEZONE ECUADOR
+      // Formatear fecha correctamente en timezone Ecuador
       const fechaFormateada = formatearFechaEcuador(registro.fechaEliminacion);
       
       tr.innerHTML = `
-        <td>
-          <small class="text-muted">
-            ${fechaFormateada.fecha}
-          </small><br>
-          <small class="text-primary"><strong>${fechaFormateada.hora}</strong></small>
+        <td class="px-6 py-4 whitespace-nowrap">
+          <div class="text-sm font-medium text-gray-900">${fechaFormateada.fecha}</div>
+          <div class="text-xs text-blue-600">${fechaFormateada.hora}</div>
         </td>
-        <td>
-          <code>${registro.codigoDocumento}</code>
+        <td class="px-6 py-4 whitespace-nowrap">
+          <code class="bg-slate-100 text-slate-800 px-2 py-1 rounded text-sm">${registro.codigoDocumento}</code>
         </td>
-        <td>
-          <span class="badge bg-secondary">${datos.tipoDocumento || 'N/A'}</span>
+        <td class="px-6 py-4 whitespace-nowrap">
+          <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-800">
+            ${datos.tipoDocumento || 'N/A'}
+          </span>
         </td>
-        <td>
-          <strong>${datos.nombreCliente || 'N/A'}</strong><br>
-          <small class="text-muted">${datos.identificacionCliente || ''}</small>
+        <td class="px-6 py-4">
+          <div class="text-sm font-medium text-gray-900">${datos.nombreCliente || 'N/A'}</div>
+          <div class="text-xs text-gray-500">${datos.identificacionCliente || ''}</div>
         </td>
-        <td>
-          <span class="badge badge-motivo badge-${registro.motivo}">
+        <td class="px-6 py-4 whitespace-nowrap">
+          <span class="badge-motivo badge-${registro.motivo}">
             ${formatearMotivo(registro.motivo)}
           </span>
         </td>
-        <td>
-          <strong class="text-danger">$${(registro.valorImpacto || 0).toLocaleString()}</strong>
-          ${registro.estabaPagado ? '<br><small class="text-success">✓ Pagado</small>' : '<br><small class="text-warning">◯ Pendiente</small>'}
+        <td class="px-6 py-4 whitespace-nowrap">
+          <div class="text-sm font-bold text-amber-600">$${(registro.valorImpacto || 0).toLocaleString()}</div>
+          ${registro.estabaPagado ? 
+            '<div class="text-xs text-green-600">✓ Pagado</div>' : 
+            '<div class="text-xs text-yellow-600">◯ Pendiente</div>'
+          }
         </td>
-        <td>
-          <strong>${registro.nombreAdministrador}</strong><br>
-          <small class="text-muted">ID: ${registro.eliminadoPor}</small>
+        <td class="px-6 py-4">
+          <div class="text-sm font-medium text-gray-900">${registro.nombreAdministrador}</div>
+          <div class="text-xs text-gray-500">ID: ${registro.eliminadoPor}</div>
         </td>
-        <td>
-          <span class="badge ${registro.estabaPagado ? 'bg-success' : 'bg-warning'}">
+        <td class="px-6 py-4 whitespace-nowrap">
+          <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${registro.estabaPagado ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
             ${registro.estabaPagado ? 'Pagado' : 'Pendiente'}
           </span>
         </td>
-        <td>
-          <button class="btn btn-sm btn-outline-info" onclick="verDetalle(${registro.id})">
-            <i class="fas fa-eye"></i>
+        <td class="px-6 py-4 whitespace-nowrap text-center">
+          <button class="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors" 
+                  onclick="verDetalle(${registro.id})">
+            <i class="fas fa-eye mr-1"></i>
+            Ver
           </button>
         </td>
       `;
@@ -426,46 +528,50 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  // Función para renderizar paginación
+  // Función para renderizar paginación mejorada
   function renderizarPaginacion(pagination) {
     const paginacionContainer = document.getElementById('paginacion');
     paginacionContainer.innerHTML = '';
     
     // Botón anterior
-    const prevLi = document.createElement('li');
-    prevLi.className = `page-item ${!pagination.hasPrev ? 'disabled' : ''}`;
-    prevLi.innerHTML = `
-      <a class="page-link" href="#" onclick="cambiarPagina(${pagination.page - 1})">
-        <i class="fas fa-chevron-left"></i>
-      </a>
-    `;
-    paginacionContainer.appendChild(prevLi);
+    if (pagination.hasPrev) {
+      const prevLi = document.createElement('li');
+      prevLi.innerHTML = `
+        <a class="inline-flex items-center px-3 py-2 text-sm font-medium text-slate-500 bg-white border border-slate-300 rounded-l-lg hover:bg-slate-100 hover:text-slate-700 transition-colors" 
+           href="#" onclick="cambiarPagina(${pagination.page - 1})">
+          <i class="fas fa-chevron-left"></i>
+        </a>
+      `;
+      paginacionContainer.appendChild(prevLi);
+    }
     
     // Números de página
     for (let i = 1; i <= pagination.totalPages; i++) {
       const li = document.createElement('li');
-      li.className = `page-item ${i === pagination.page ? 'active' : ''}`;
       li.innerHTML = `
-        <a class="page-link" href="#" onclick="cambiarPagina(${i})">${i}</a>
+        <a class="inline-flex items-center px-3 py-2 text-sm font-medium ${i === pagination.page ? 'text-white bg-blue-600 border border-blue-600' : 'text-slate-500 bg-white border border-slate-300 hover:bg-slate-100 hover:text-slate-700'} transition-colors" 
+           href="#" onclick="cambiarPagina(${i})">${i}</a>
       `;
       paginacionContainer.appendChild(li);
     }
     
     // Botón siguiente
-    const nextLi = document.createElement('li');
-    nextLi.className = `page-item ${!pagination.hasNext ? 'disabled' : ''}`;
-    nextLi.innerHTML = `
-      <a class="page-link" href="#" onclick="cambiarPagina(${pagination.page + 1})">
-        <i class="fas fa-chevron-right"></i>
-      </a>
-    `;
-    paginacionContainer.appendChild(nextLi);
+    if (pagination.hasNext) {
+      const nextLi = document.createElement('li');
+      nextLi.innerHTML = `
+        <a class="inline-flex items-center px-3 py-2 text-sm font-medium text-slate-500 bg-white border border-slate-300 rounded-r-lg hover:bg-slate-100 hover:text-slate-700 transition-colors" 
+           href="#" onclick="cambiarPagina(${pagination.page + 1})">
+          <i class="fas fa-chevron-right"></i>
+        </a>
+      `;
+      paginacionContainer.appendChild(nextLi);
+    }
     
     // Información de paginación
     const info = document.createElement('li');
-    info.className = 'page-item disabled';
+    info.className = 'ml-3';
     info.innerHTML = `
-      <span class="page-link">
+      <span class="inline-flex items-center px-3 py-2 text-sm text-slate-500">
         ${pagination.total} registros
       </span>
     `;
@@ -530,40 +636,90 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   };
   
-  // 🔧 FUNCIÓN CORREGIDA PARA RENDERIZAR DETALLE CON FECHAS CORRECTAS
+  // Función corregida para renderizar detalle con fechas correctas
   function renderizarDetalle(registro) {
     const container = document.getElementById('detalleEliminacion');
     const datos = registro.datosDocumento;
     
     container.innerHTML = `
-      <div class="row">
-        <div class="col-md-6">
-          <h6 class="border-bottom pb-2 mb-3">Información de la Eliminación</h6>
-          <p><strong>Fecha/Hora:</strong> <span class="text-primary">${formatearFechaCompletaEcuador(registro.fechaEliminacion)}</span></p>
-          <p><strong>Motivo:</strong> <span class="badge badge-${registro.motivo}">${formatearMotivo(registro.motivo)}</span></p>
-          <p><strong>Administrador:</strong> ${registro.nombreAdministrador} (ID: ${registro.eliminadoPor})</p>
-          <p><strong>IP:</strong> ${registro.ip || 'N/A'}</p>
-          <p><strong>Justificación:</strong></p>
-          <div class="alert alert-light">${registro.justificacion}</div>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-slate-50 rounded-lg p-4 border border-slate-200">
+          <h6 class="font-semibold text-slate-900 border-b border-slate-200 pb-2 mb-3 flex items-center">
+            <i class="fas fa-trash-alt text-slate-600 mr-2"></i>
+            Información de la Eliminación
+          </h6>
+          <div class="space-y-3">
+            <div class="flex justify-between">
+              <strong class="text-slate-600">Fecha/Hora:</strong>
+              <span class="text-slate-800 font-medium">${formatearFechaCompletaEcuador(registro.fechaEliminacion)}</span>
+            </div>
+            <div class="flex justify-between">
+              <strong class="text-slate-600">Motivo:</strong>
+              <span class="badge-motivo badge-${registro.motivo}">${formatearMotivo(registro.motivo)}</span>
+            </div>
+            <div class="flex justify-between">
+              <strong class="text-slate-600">Administrador:</strong>
+              <span>${registro.nombreAdministrador} (ID: ${registro.eliminadoPor})</span>
+            </div>
+            <div class="flex justify-between">
+              <strong class="text-slate-600">IP:</strong>
+              <code class="bg-slate-200 px-2 py-1 rounded">${registro.ip || 'N/A'}</code>
+            </div>
+          </div>
+          <div class="mt-4">
+            <strong class="text-slate-600">Justificación:</strong>
+            <div class="bg-white border border-slate-200 rounded-lg p-3 mt-2 text-sm">${registro.justificacion}</div>
+          </div>
         </div>
-        <div class="col-md-6">
-          <h6 class="border-bottom pb-2 mb-3">Datos del Documento</h6>
-          <p><strong>Código:</strong> <code>${registro.codigoDocumento}</code></p>
-          <p><strong>Tipo:</strong> ${datos.tipoDocumento}</p>
-          <p><strong>Cliente:</strong> ${datos.nombreCliente}</p>
-          <p><strong>Identificación:</strong> ${datos.identificacionCliente}</p>
-          <p><strong>Estado:</strong> ${datos.estado}</p>
-          <p><strong>Valor Factura:</strong> $${(datos.valorFactura || 0).toLocaleString()}</p>
-          <p><strong>Estado Pago:</strong> ${datos.estadoPago}</p>
-          <p><strong>Fecha Creación:</strong> ${formatearFechaCompletaEcuador(datos.created_at)}</p>
+        
+        <div class="bg-slate-50 rounded-lg p-4 border border-slate-200">
+          <h6 class="font-semibold text-slate-900 border-b border-slate-200 pb-2 mb-3 flex items-center">
+            <i class="fas fa-file-alt text-blue-500 mr-2"></i>
+            Datos del Documento
+          </h6>
+          <div class="space-y-3">
+            <div class="flex justify-between">
+              <strong class="text-slate-600">Código:</strong>
+              <code class="bg-white px-2 py-1 rounded border border-slate-200">${registro.codigoDocumento}</code>
+            </div>
+            <div class="flex justify-between">
+              <strong class="text-slate-600">Tipo:</strong>
+              <span>${datos.tipoDocumento}</span>
+            </div>
+            <div class="flex justify-between">
+              <strong class="text-slate-600">Cliente:</strong>
+              <span>${datos.nombreCliente}</span>
+            </div>
+            <div class="flex justify-between">
+              <strong class="text-slate-600">Identificación:</strong>
+              <span>${datos.identificacionCliente}</span>
+            </div>
+            <div class="flex justify-between">
+              <strong class="text-slate-600">Estado:</strong>
+              <span>${datos.estado}</span>
+            </div>
+            <div class="flex justify-between">
+              <strong class="text-slate-600">Valor Factura:</strong>
+              <span class="text-amber-600 font-medium">$${(datos.valorFactura || 0).toLocaleString()}</span>
+            </div>
+            <div class="flex justify-between">
+              <strong class="text-slate-600">Estado Pago:</strong>
+              <span class="${datos.estadoPago === 'pagado' ? 'text-green-600' : 'text-yellow-600'}">${datos.estadoPago}</span>
+            </div>
+            <div class="flex justify-between">
+              <strong class="text-slate-600">Fecha Creación:</strong>
+              <span>${formatearFechaCompletaEcuador(datos.created_at)}</span>
+            </div>
+          </div>
         </div>
       </div>
       
-      <div class="mt-4">
-        <h6 class="border-bottom pb-2 mb-3">Datos Completos del Documento (JSON)</h6>
-        <pre class="bg-light p-3" style="max-height: 300px; overflow-y: auto; font-size: 0.8rem;">
-${JSON.stringify(datos, null, 2)}
-        </pre>
+      <div class="mt-6">
+        <h6 class="font-semibold text-slate-900 border-b border-slate-200 pb-2 mb-3 flex items-center">
+          <i class="fas fa-code text-indigo-500 mr-2"></i>
+          Datos Completos del Documento (JSON)
+        </h6>
+        <pre class="bg-slate-100 rounded-lg p-3 text-xs overflow-auto max-h-60 border border-slate-200">${JSON.stringify(datos, null, 2)}</pre>
       </div>
     `;
   }
@@ -574,5 +730,7 @@ ${JSON.stringify(datos, null, 2)}
     params.set('formato', 'excel');
     window.open(`/api/admin/eliminaciones/exportar?${params}`);
   };
+  
+  console.log('📋 Página de auditoría de eliminaciones inicializada con diseño profesional elegante');
 });
 </script> 

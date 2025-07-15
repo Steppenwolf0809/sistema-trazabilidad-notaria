@@ -1,140 +1,505 @@
-<!-- Gestión de Matrizadores -->
-<div class="row">
-  <div class="col-md-12 mb-4">
-    <div class="card">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <span>Listado de Matrizadores</span>
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevoMatrizador">
-          <i class="fas fa-plus me-1"></i> Nuevo Matrizador
-        </button>
-      </div>
-      <div class="card-body p-0">
-        <div class="table-responsive">
-          <table class="table table-hover mb-0">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Nombre</th>
-                <th>Email</th>
-                <th>Cargo</th>
-                <th>Rol</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {{#each matrizadores}}
-              <tr>
-                <td>{{this.id}}</td>
-                <td>{{this.nombre}}</td>
-                <td>{{this.email}}</td>
-                <td>{{this.cargo}}</td>
-                <td>
-                  {{#if (eq this.rol "admin")}}
-                  <span class="badge bg-danger">Administrador</span>
-                  {{else if (eq this.rol "matrizador")}}
-                  <span class="badge bg-primary">Matrizador</span>
-                  {{else if (eq this.rol "recepcion")}}
-                  <span class="badge bg-success">Recepción</span>
-                  {{else if (eq this.rol "caja")}}
-                  <span class="badge bg-warning">Caja</span>
-                  {{else if (eq this.rol "caja_archivo")}}
-                  <span class="badge bg-info">Caja + Archivo</span>
-                  {{else if (eq this.rol "archivo")}}
-                  <span class="badge bg-purple">Archivo</span>
-                  {{else}}
-                  <span class="badge bg-secondary">Consulta</span>
-                  {{/if}}
-                </td>
-                <td>
-                  {{#if this.activo}}
-                  <span class="badge bg-success">Activo</span>
-                  {{else}}
-                  <span class="badge bg-danger">Inactivo</span>
-                  {{/if}}
-                </td>
-                <td>
-                  <div class="btn-group btn-group-sm">
-                    <button class="btn btn-outline-primary editar-matrizador" 
-                            data-id="{{this.id}}"
-                            data-nombre="{{this.nombre}}"
-                            data-email="{{this.email}}"
-                            data-identificacion="{{this.identificacion}}"
-                            data-cargo="{{this.cargo}}"
-                            data-rol="{{this.rol}}"
-                            data-activo="{{this.activo}}"
-                            data-bs-toggle="modal" 
-                            data-bs-target="#modalEditarMatrizador">
-                      <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-outline-danger eliminar-matrizador" 
-                            data-id="{{this.id}}" 
-                            data-nombre="{{this.nombre}}">
-                      <i class="fas fa-trash"></i>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-              {{else}}
-              <tr>
-                <td colspan="7" class="text-center py-3">No hay matrizadores registrados</td>
-              </tr>
-              {{/each}}
-            </tbody>
-          </table>
+{{!-- GESTIÓN DE MATRIZADORES - DISEÑO PROFESIONAL UNIFICADO --}}
+
+<style>
+  .matrizadores-container {
+    padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  
+  .matrizadores-header {
+    background: white;
+    padding: 2rem;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+  }
+  
+  .matrizadores-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #162840;
+    margin-bottom: 0.5rem;
+  }
+  
+  .matrizadores-subtitle {
+    color: #6b7280;
+    font-size: 1.1rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  /* ===== FILTROS Y ACCIONES ===== */
+  .controles-section {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  
+  .filtros-matrizadores {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  
+  .filtro-rol {
+    padding: 0.75rem 1rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    background: white;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .filtro-rol:focus {
+    outline: none;
+    border-color: #D4AF37;
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+  }
+  
+  .btn-nuevo-matrizador {
+    background: #D4AF37;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .btn-nuevo-matrizador:hover {
+    background: #B8941F;
+    transform: translateY(-2px);
+  }
+  
+  /* ===== GRID DE MATRIZADORES ===== */
+  .matrizadores-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  
+  .matrizador-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .matrizador-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+  }
+  
+  .matrizador-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .matrizador-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #D4AF37, #B8941F);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+  
+  .matrizador-info h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1f2937;
+  }
+  
+  .matrizador-info p {
+    margin: 0.25rem 0 0 0;
+    color: #6b7280;
+    font-size: 0.9rem;
+  }
+  
+  .matrizador-detalles {
+    margin-bottom: 1rem;
+  }
+  
+  .detalle-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+  }
+  
+  .detalle-icon {
+    width: 20px;
+    color: #6b7280;
+  }
+  
+  /* ===== BADGES Y ESTADOS ===== */
+  .badge-rol {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    margin-bottom: 1rem;
+  }
+  
+  .badge-admin {
+    background: #fecaca;
+    color: #991b1b;
+  }
+  
+  .badge-matrizador {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+  
+  .badge-recepcion {
+    background: #d1fae5;
+    color: #065f46;
+  }
+  
+  .badge-caja {
+    background: #fef3c7;
+    color: #92400e;
+  }
+  
+  .badge-archivo {
+    background: #e0e7ff;
+    color: #3730a3;
+  }
+  
+  .badge-caja-archivo {
+    background: #bfdbfe;
+    color: #1e3a8a;
+  }
+  
+  .estado-activo {
+    background: #dcfce7;
+    color: #166534;
+  }
+  
+  .estado-inactivo {
+    background: #fee2e2;
+    color: #dc2626;
+  }
+  
+  /* ===== BOTONES DE ACCIÓN ===== */
+  .acciones-matrizador {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+  }
+  
+  .btn-accion-mini {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+  }
+  
+  .btn-editar {
+    background: #3b82f6;
+    color: white;
+  }
+  
+  .btn-editar:hover {
+    background: #2563eb;
+  }
+  
+  .btn-toggle {
+    background: #10b981;
+    color: white;
+  }
+  
+  .btn-toggle:hover {
+    background: #059669;
+  }
+  
+  .btn-toggle.inactivo {
+    background: #ef4444;
+  }
+  
+  .btn-toggle.inactivo:hover {
+    background: #dc2626;
+  }
+  
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 768px) {
+    .matrizadores-container {
+      padding: 1rem;
+    }
+    
+    .controles-section {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    
+    .filtros-matrizadores {
+      justify-content: center;
+    }
+    
+    .matrizadores-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<div class="matrizadores-container">
+  <!-- Header Profesional -->
+  <div class="matrizadores-header">
+    <h1 class="matrizadores-title">
+      <i class="fas fa-users" style="color: #D4AF37;"></i>
+      Gestión de Matrizadores
+    </h1>
+    <p class="matrizadores-subtitle">
+      Administración de usuarios y roles del sistema notarial
+    </p>
+  </div>
+
+  <!-- Controles y Filtros -->
+  <div class="controles-section">
+    <div class="filtros-matrizadores">
+      <select class="filtro-rol" id="filtroRol" onchange="filtrarPorRol(this.value)">
+        <option value="">Todos los roles</option>
+        <option value="admin">Administradores</option>
+        <option value="matrizador">Matrizadores</option>
+        <option value="recepcion">Recepción</option>
+        <option value="caja">Caja</option>
+        <option value="archivo">Archivo</option>
+        <option value="caja_archivo">Caja + Archivo</option>
+      </select>
+      
+      <select class="filtro-rol" id="filtroEstado" onchange="filtrarPorEstado(this.value)">
+        <option value="">Todos los estados</option>
+        <option value="activo">Activos</option>
+        <option value="inactivo">Inactivos</option>
+      </select>
+    </div>
+    
+    <button type="button" class="btn-nuevo-matrizador" data-bs-toggle="modal" data-bs-target="#modalNuevoMatrizador">
+      <i class="fas fa-plus"></i>
+      Nuevo Matrizador
+    </button>
+  </div>
+
+  <!-- Grid de Matrizadores -->
+  <div class="matrizadores-grid" id="matrizadoresGrid">
+    {{#each matrizadores}}
+    <div class="matrizador-card" data-rol="{{this.rol}}" data-estado="{{#if this.activo}}activo{{else}}inactivo{{/if}}">
+      <!-- Header del Matrizador -->
+      <div class="matrizador-header">
+        <div class="matrizador-avatar">
+          {{getIniciales this.nombre}}
+        </div>
+        <div class="matrizador-info">
+          <h3>{{this.nombre}}</h3>
+          <p>{{this.cargo}}</p>
         </div>
       </div>
+
+      <!-- Badge de Rol -->
+      <div>
+        {{#if (eq this.rol "admin")}}
+          <span class="badge-rol badge-admin">
+            <i class="fas fa-crown"></i> Administrador
+          </span>
+        {{else if (eq this.rol "matrizador")}}
+          <span class="badge-rol badge-matrizador">
+            <i class="fas fa-user-tie"></i> Matrizador
+          </span>
+        {{else if (eq this.rol "recepcion")}}
+          <span class="badge-rol badge-recepcion">
+            <i class="fas fa-inbox"></i> Recepción
+          </span>
+        {{else if (eq this.rol "caja")}}
+          <span class="badge-rol badge-caja">
+            <i class="fas fa-cash-register"></i> Caja
+          </span>
+        {{else if (eq this.rol "caja_archivo")}}
+          <span class="badge-rol badge-caja-archivo">
+            <i class="fas fa-archive"></i> Caja + Archivo
+          </span>
+        {{else if (eq this.rol "archivo")}}
+          <span class="badge-rol badge-archivo">
+            <i class="fas fa-folder-open"></i> Archivo
+          </span>
+        {{else}}
+          <span class="badge-rol" style="background: #f3f4f6; color: #6b7280;">
+            <i class="fas fa-user"></i> {{this.rol}}
+          </span>
+        {{/if}}
+      </div>
+
+      <!-- Detalles del Matrizador -->
+      <div class="matrizador-detalles">
+        <div class="detalle-item">
+          <i class="fas fa-envelope detalle-icon"></i>
+          <span>{{this.email}}</span>
+        </div>
+        
+        <div class="detalle-item">
+          <i class="fas fa-id-card detalle-icon"></i>
+          <span>{{this.identificacion}}</span>
+        </div>
+        
+        <div class="detalle-item">
+          <i class="fas fa-calendar detalle-icon"></i>
+          <span>{{#if this.ultimoAcceso}}Último acceso: {{formatFechaCorta this.ultimoAcceso}}{{else}}Nunca ha accedido{{/if}}</span>
+        </div>
+        
+        <div class="detalle-item">
+          <i class="fas fa-circle detalle-icon"></i>
+          {{#if this.activo}}
+            <span class="badge-rol estado-activo">
+              <i class="fas fa-check"></i> Activo
+            </span>
+          {{else}}
+            <span class="badge-rol estado-inactivo">
+              <i class="fas fa-times"></i> Inactivo
+            </span>
+          {{/if}}
+        </div>
+      </div>
+
+      <!-- Acciones -->
+      <div class="acciones-matrizador">
+        <button class="btn-accion-mini btn-editar" 
+                data-bs-toggle="modal" 
+                data-bs-target="#modalEditarMatrizador"
+                onclick="cargarDatosMatrizador({{this.id}})"
+                title="Editar matrizador">
+          <i class="fas fa-edit"></i>
+        </button>
+        
+        <button class="btn-accion-mini btn-toggle {{#unless this.activo}}inactivo{{/unless}}" 
+                onclick="toggleEstadoMatrizador({{this.id}}, {{this.activo}})"
+                title="{{#if this.activo}}Desactivar{{else}}Activar{{/if}} matrizador">
+          {{#if this.activo}}
+            <i class="fas fa-toggle-on"></i>
+          {{else}}
+            <i class="fas fa-toggle-off"></i>
+          {{/if}}
+        </button>
+      </div>
     </div>
+    {{/each}}
   </div>
+
+  {{#unless matrizadores}}
+  <div style="text-align: center; padding: 3rem; color: #6b7280; background: white; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+    <i class="fas fa-users" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.3;"></i>
+    <h3>No hay matrizadores registrados</h3>
+    <p>Crea el primer matrizador para comenzar</p>
+  </div>
+  {{/unless}}
 </div>
 
 <!-- Modal Nuevo Matrizador -->
-<div class="modal fade" id="modalNuevoMatrizador" tabindex="-1" aria-labelledby="modalNuevoMatrizadorLabel" aria-hidden="true">
-  <div class="modal-dialog">
+<div class="modal fade" id="modalNuevoMatrizador" tabindex="-1">
+  <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="modalNuevoMatrizadorLabel">Registrar Nuevo Matrizador</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        <h5 class="modal-title">
+          <i class="fas fa-user-plus me-2"></i>
+          Nuevo Matrizador
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <form action="/admin/matrizadores/registro" method="POST">
+      <form id="formNuevoMatrizador" action="/admin/matrizadores" method="POST">
         <div class="modal-body">
-          <div class="mb-3">
-            <label for="nombre" class="form-label">Nombre Completo</label>
-            <input type="text" class="form-control" id="nombre" name="nombre" required>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="nombre" class="form-label">Nombre Completo</label>
+                <input type="text" class="form-control" id="nombre" name="nombre" required>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="email" class="form-label">Email</label>
+                <input type="email" class="form-control" id="email" name="email" required>
+              </div>
+            </div>
           </div>
-          <div class="mb-3">
-            <label for="email" class="form-label">Email</label>
-            <input type="email" class="form-control" id="email" name="email" required>
+          
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="identificacion" class="form-label">Identificación</label>
+                <input type="text" class="form-control" id="identificacion" name="identificacion" required>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="cargo" class="form-label">Cargo</label>
+                <input type="text" class="form-control" id="cargo" name="cargo" required>
+              </div>
+            </div>
           </div>
-          <div class="mb-3">
-            <label for="identificacion" class="form-label">Identificación</label>
-            <input type="text" class="form-control" id="identificacion" name="identificacion" required>
-          </div>
-          <div class="mb-3">
-            <label for="cargo" class="form-label">Cargo</label>
-            <input type="text" class="form-control" id="cargo" name="cargo" required>
-          </div>
-          <div class="mb-3">
-            <label for="rol" class="form-label">Rol en el Sistema</label>
-            <select class="form-select" id="rol" name="rol" required>
-              <option value="matrizador">Matrizador</option>
-              <option value="admin">Administrador</option>
-              <option value="recepcion">Recepción</option>
-              <option value="caja">Caja</option>
-              <option value="caja_archivo">Caja + Archivo</option>
-              <option value="archivo">Archivo</option>
-              <option value="consulta">Consulta</option>
-            </select>
-          </div>
-          <div class="mb-3">
-            <label for="password" class="form-label">Contraseña</label>
-            <input type="password" class="form-control" id="password" name="password">
-            <div class="form-text">Ingrese una contraseña si el matrizador tendrá acceso al sistema.</div>
+          
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="rol" class="form-label">Rol</label>
+                <select class="form-select" id="rol" name="rol" required>
+                  <option value="">Seleccionar rol</option>
+                  <option value="admin">Administrador</option>
+                  <option value="matrizador">Matrizador</option>
+                  <option value="recepcion">Recepción</option>
+                  <option value="caja">Caja</option>
+                  <option value="archivo">Archivo</option>
+                  <option value="caja_archivo">Caja + Archivo</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="password" class="form-label">Contraseña</label>
+                <input type="password" class="form-control" id="password" name="password" required>
+              </div>
+            </div>
           </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary">Guardar</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-1"></i>
+            Crear Matrizador
+          </button>
         </div>
       </form>
     </div>
@@ -142,179 +507,78 @@
 </div>
 
 <!-- Modal Editar Matrizador -->
-<div class="modal fade" id="modalEditarMatrizador" tabindex="-1" aria-labelledby="modalEditarMatrizadorLabel" aria-hidden="true">
-  <div class="modal-dialog">
+<div class="modal fade" id="modalEditarMatrizador" tabindex="-1">
+  <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="modalEditarMatrizadorLabel">Editar Matrizador</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        <h5 class="modal-title">
+          <i class="fas fa-user-edit me-2"></i>
+          Editar Matrizador
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <form action="/admin/matrizadores/actualizar" method="POST">
+      <form id="formEditarMatrizador" method="POST">
         <div class="modal-body">
-          <input type="hidden" id="editar-id" name="id" required>
-          <div class="mb-3">
-            <label for="editar-nombre" class="form-label">Nombre Completo</label>
-            <input type="text" class="form-control" id="editar-nombre" name="nombre" required>
-          </div>
-          <div class="mb-3">
-            <label for="editar-email" class="form-label">Email</label>
-            <input type="email" class="form-control" id="editar-email" name="email" required>
-          </div>
-          <div class="mb-3">
-            <label for="editar-identificacion" class="form-label">Identificación</label>
-            <input type="text" class="form-control" id="editar-identificacion" name="identificacion" required>
-          </div>
-          <div class="mb-3">
-            <label for="editar-cargo" class="form-label">Cargo</label>
-            <input type="text" class="form-control" id="editar-cargo" name="cargo" required>
-          </div>
-          <div class="mb-3">
-            <label for="editar-rol" class="form-label">Rol en el Sistema</label>
-            <select class="form-select" id="editar-rol" name="rol" required>
-              <option value="matrizador">Matrizador</option>
-              <option value="admin">Administrador</option>
-              <option value="recepcion">Recepción</option>
-              <option value="caja">Caja</option>
-              <option value="caja_archivo">Caja + Archivo</option>
-              <option value="archivo">Archivo</option>
-              <option value="consulta">Consulta</option>
-            </select>
-          </div>
-          <div class="mb-3">
-            <label for="editar-password" class="form-label">Contraseña</label>
-            <input type="password" class="form-control" id="editar-password" name="password">
-            <div class="form-text">Deje en blanco para mantener la contraseña actual.</div>
-          </div>
-          <div class="mb-3 form-check">
-            <input type="checkbox" class="form-check-input" id="editar-activo" name="activo" value="1">
-            <label class="form-check-label" for="editar-activo">Activo</label>
-          </div>
+          <!-- Los campos se llenarán dinámicamente con JavaScript -->
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary">Actualizar</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-1"></i>
+            Actualizar
+          </button>
         </div>
       </form>
     </div>
   </div>
 </div>
 
-<!-- Modal Confirmar Eliminación -->
-<div class="modal fade" id="modalConfirmarEliminar" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Confirmar Eliminación</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-      </div>
-      <div class="modal-body">
-        <p>¿Está seguro que desea eliminar al matrizador <strong id="nombre-matrizador-eliminar"></strong>?</p>
-        <p class="text-danger">Esta acción no se puede deshacer.</p>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <form action="/admin/matrizadores/eliminar" method="POST">
-          <input type="hidden" id="id-matrizador-eliminar" name="id" required>
-          <button type="submit" class="btn btn-danger">Eliminar</button>
-        </form>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Scripts específicos para matrizadores -->
 <script>
-  document.addEventListener('DOMContentLoaded', function() {
-    // Manejar eventos para editar matrizador
-    const botonesEditar = document.querySelectorAll('.editar-matrizador');
-    botonesEditar.forEach(btn => {
-      btn.addEventListener('click', function() {
-        // Obtener datos del botón
-        const id = this.getAttribute('data-id');
-        const nombre = this.getAttribute('data-nombre');
-        const email = this.getAttribute('data-email');
-        const identificacion = this.getAttribute('data-identificacion');
-        const cargo = this.getAttribute('data-cargo');
-        const rol = this.getAttribute('data-rol');
-        const activo = this.getAttribute('data-activo') === 'true';
-        
-        console.log('Editando matrizador:', { id, nombre, email, identificacion, cargo, rol, activo });
-        
-        // Verificar que el ID existe
-        if (!id) {
-          console.error('Error: No se pudo obtener el ID del matrizador para editar');
-          alert('Error: No se pudo obtener el ID del matrizador');
-          return;
-        }
-        
-        // Asignar valores al formulario
-        document.getElementById('editar-id').value = id;
-        document.getElementById('editar-nombre').value = nombre || '';
-        document.getElementById('editar-email').value = email || '';
-        document.getElementById('editar-identificacion').value = identificacion || '';
-        document.getElementById('editar-cargo').value = cargo || '';
-        
-        // Asignar rol si existe
-        const selectRol = document.getElementById('editar-rol');
-        if (rol && selectRol) {
-          selectRol.value = rol;
-        }
-        
-        document.getElementById('editar-activo').checked = activo;
-      });
-    });
-    
-    // Manejar eventos para eliminar matrizador
-    const botonesEliminar = document.querySelectorAll('.eliminar-matrizador');
-    botonesEliminar.forEach(btn => {
-      btn.addEventListener('click', function() {
-        const id = this.getAttribute('data-id');
-        const nombre = this.getAttribute('data-nombre');
-        
-        console.log('Eliminando matrizador:', { id, nombre });
-        
-        // Verificar que el ID existe
-        if (!id) {
-          console.error('Error: No se pudo obtener el ID del matrizador para eliminar');
-          alert('Error: No se pudo obtener el ID del matrizador');
-          return;
-        }
-        
-        document.getElementById('id-matrizador-eliminar').value = id;
-        document.getElementById('nombre-matrizador-eliminar').textContent = nombre || 'Seleccionado';
-        
-        // Mostrar modal de confirmación
-        const modalConfirmacion = new bootstrap.Modal(document.getElementById('modalConfirmarEliminar'));
-        modalConfirmacion.show();
-      });
-    });
-    
-    // Validación del formulario de edición
-    const formEditar = document.querySelector('#modalEditarMatrizador form');
-    if (formEditar) {
-      formEditar.addEventListener('submit', function(event) {
-        const id = document.getElementById('editar-id').value;
-        if (!id) {
-          event.preventDefault();
-          alert('Error: ID de matrizador no válido');
-          console.error('Error de validación: ID no proporcionado');
-          return false;
-        }
-      });
-    }
-    
-    // Validación del formulario de eliminación
-    const formEliminar = document.querySelector('#modalConfirmarEliminar form');
-    if (formEliminar) {
-      formEliminar.addEventListener('submit', function(event) {
-        const id = document.getElementById('id-matrizador-eliminar').value;
-        if (!id) {
-          event.preventDefault();
-          alert('Error: ID de matrizador no válido');
-          console.error('Error de validación: ID no proporcionado para eliminar');
-          return false;
-        }
-      });
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('🎯 Vista de matrizadores inicializada');
+});
+
+// Función para filtrar por rol
+function filtrarPorRol(rol) {
+  const cards = document.querySelectorAll('.matrizador-card');
+  cards.forEach(card => {
+    if (rol === '' || card.getAttribute('data-rol') === rol) {
+      card.style.display = 'block';
+    } else {
+      card.style.display = 'none';
     }
   });
+}
+
+// Función para filtrar por estado
+function filtrarPorEstado(estado) {
+  const cards = document.querySelectorAll('.matrizador-card');
+  cards.forEach(card => {
+    if (estado === '' || card.getAttribute('data-estado') === estado) {
+      card.style.display = 'block';
+    } else {
+      card.style.display = 'none';
+    }
+  });
+}
+
+// Función para cargar datos del matrizador en modal de edición
+function cargarDatosMatrizador(id) {
+  // Aquí se haría una petición AJAX para obtener los datos del matrizador
+  console.log('Cargar datos del matrizador:', id);
+}
+
+// Función para toggle del estado del matrizador
+function toggleEstadoMatrizador(id, estadoActual) {
+  const nuevoEstado = !estadoActual;
+  const accion = nuevoEstado ? 'activar' : 'desactivar';
+  
+  if (confirm(`¿Está seguro de ${accion} este matrizador?`)) {
+    // Aquí se haría una petición AJAX para cambiar el estado
+    console.log('Toggle estado matrizador:', id, 'nuevo estado:', nuevoEstado);
+    
+    // Recargar la página para reflejar los cambios
+    window.location.reload();
+  }
+}
 </script> 

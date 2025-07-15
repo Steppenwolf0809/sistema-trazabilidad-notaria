@@ -1,295 +1,381 @@
-<!--
-  PÁGINA UNIVERSAL DE HISTORIAL DE NOTIFICACIONES
-  Rol: Admin
--->
-
-<!--
-  Componente Universal para el Historial de Notificaciones
-  - Usado por: Admin, Recepción, Archivo, Matrizador
-  - Contiene: Filtros, Estadísticas y Tabla de Notificaciones
--->
-
-<div class="container-fluid">
-    <!-- Breadcrumb -->
-    <div class="row mb-3">
-        <div class="col-12">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item">
-                        <a href="/{{@root.userRole}}/dashboard">
-                            <i class="fas fa-tachometer-alt me-1"></i>Dashboard
-                        </a>
-                    </li>
-                    <li class="breadcrumb-item active" aria-current="page">
-                        <i class="fas fa-bell me-1"></i>Control de Notificaciones
-                    </li>
-                </ol>
-            </nav>
-        </div>
-    </div>
-
-    <div class="d-flex justify-content-between align-items-center mb-4">
+<!-- HISTORIAL DE NOTIFICACIONES - DISEÑO PROFESIONAL UNIFICADO -->
+<div class="min-h-screen bg-gray-50">
+  <!-- Header Profesional -->
+  <div class="bg-white border-b border-gray-200 mb-6">
+    <div class="px-6 py-8">
+      <div class="flex items-center justify-between">
         <div>
-            <h2>👁️ Control de Notificaciones</h2>
-            <p class="text-muted mb-0">Un historial centralizado de todas las comunicaciones enviadas.</p>
+          <h1 class="text-4xl font-bold text-gray-900 mb-2">
+            <i class="fas fa-bell text-blue-600 mr-3"></i>
+            Control de Notificaciones
+          </h1>
+          <p class="text-xl text-gray-600">
+            Historial centralizado de todas las comunicaciones enviadas
+          </p>
         </div>
-        {{#if stats.total}}
-            <span class="badge bg-info fs-6">{{stats.total}} notificaciones</span>
-        {{/if}}
+        <div class="flex items-center space-x-3">
+          {{#if stats.total}}
+            <span class="inline-flex items-center px-3 py-2 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+              <i class="fas fa-database mr-2"></i>
+              {{stats.total}} notificaciones
+            </span>
+          {{/if}}
+        </div>
+      </div>
     </div>
-    
-    <!-- Filtros Universales -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <h5 class="mb-0">🔍 Filtros de Control</h5>
-        </div>
-        <div class="card-body">
-            <form method="GET" action="/{{@root.userRole}}/notificaciones/historial" id="filtros-notificaciones-form">
-                <div class="row mb-3">
-                    <div class="col-md-2">
-                        <label class="form-label">📅 Desde:</label>
-                        <input type="date" class="form-control" name="fechaDesde" value="{{filtros.fechaDesde}}">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">📅 Hasta:</label>
-                        <input type="date" class="form-control" name="fechaHasta" value="{{filtros.fechaHasta}}">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">📱 Tipo:</label>
-                        <select class="form-select" name="tipo">
-                            <option value="">Todos</option>
-                            <option value="documento_listo" {{#if (eq filtros.tipo 'documento_listo')}}selected{{/if}}>📋 Listo para Retiro</option>
-                            <option value="entrega_confirmada" {{#if (eq filtros.tipo 'entrega_confirmada')}}selected{{/if}}>✅ Entregado</option>
-                            <option value="entrega_grupal" {{#if (eq filtros.tipo 'entrega_grupal')}}selected{{/if}}>📦 Entrega Grupal</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">📧 Canal:</label>
-                        <select class="form-select" name="canal">
-                            <option value="">Todos</option>
-                            <option value="whatsapp" {{#if (eq filtros.canal 'whatsapp')}}selected{{/if}}>WhatsApp</option>
-                            <option value="email" {{#if (eq filtros.canal 'email')}}selected{{/if}}>Email</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">✅ Estado:</label>
-                        <select class="form-select" name="estado">
-                            <option value="">Todos</option>
-                            <option value="enviado" {{#if (eq filtros.estado 'enviado')}}selected{{/if}}>Enviado</option>
-                            <option value="error" {{#if (eq filtros.estado 'error')}}selected{{/if}}>Error</option>
-                            <option value="pendiente" {{#if (eq filtros.estado 'pendiente')}}selected{{/if}}>Pendiente</option>
-                        </select>
-                    </div>
-                    {{#if (or (eq @root.userRole "admin") (eq @root.userRole "recepcion"))}}
-                    <div class="col-md-2">
-                        <label class="form-label">👨‍💼 Matrizador:</label>
-                        <select class="form-select" name="matrizadorId">
-                            <option value="">Todos</option>
-                            {{#each matrizadores}}
-                            <option value="{{this.id}}" {{#if (eq ../filtros.matrizadorId (toString this.id))}}selected{{/if}}>
-                                {{this.nombre}}
-                            </option>
-                            {{/each}}
-                        </select>
-                    </div>
-                    {{/if}}
-                </div>
-                <div class="row">
-                    <div class="col-md-8">
-                        <label class="form-label">🔍 Búsqueda Rápida:</label>
-                        <input type="text" class="form-control" name="busqueda" 
-                               value="{{filtros.busqueda}}" placeholder="Código de documento, nombre de cliente, N° factura o destinatario">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">&nbsp;</label>
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-primary flex-fill">🔍 Buscar</button>
-                            <a href="/{{@root.userRole}}/notificaciones/historial" class="btn btn-outline-secondary flex-fill">
-                                🔄 Limpiar
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
+  </div>
 
-    <!-- Estadísticas Rápidas -->
+  <div class="px-6">
+    <!-- Estadísticas Principales -->
     {{#if stats}}
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card bg-primary text-white">
-                <div class="card-body text-center">
-                    <h3>{{stats.total}}</h3>
-                    <p class="mb-0">📊 Total</p>
-                </div>
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+      <div class="bg-white rounded-xl shadow-md overflow-hidden transform hover:scale-105 transition-transform duration-200">
+        <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
+          <div class="flex items-center">
+            <i class="fas fa-chart-bar text-white text-2xl mr-3"></i>
+            <div>
+              <p class="text-blue-100 text-sm font-medium">Total General</p>
+              <p class="text-white text-2xl font-bold">{{stats.total}}</p>
             </div>
+          </div>
         </div>
-        <div class="col-md-3">
-            <div class="card bg-success text-white">
-                <div class="card-body text-center">
-                    <h3>{{stats.enviadas}}</h3>
-                    <p class="mb-0">✅ Enviadas</p>
-                </div>
+      </div>
+      
+      <div class="bg-white rounded-xl shadow-md overflow-hidden transform hover:scale-105 transition-transform duration-200">
+        <div class="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4">
+          <div class="flex items-center">
+            <i class="fas fa-check-circle text-white text-2xl mr-3"></i>
+            <div>
+              <p class="text-green-100 text-sm font-medium">Enviadas</p>
+              <p class="text-white text-2xl font-bold">{{stats.enviadas}}</p>
             </div>
+          </div>
         </div>
-        <div class="col-md-3">
-            <div class="card bg-danger text-white">
-                <div class="card-body text-center">
-                    <h3>{{stats.fallidas}}</h3>
-                    <p class="mb-0">❌ Fallidas</p>
-                </div>
+      </div>
+      
+      <div class="bg-white rounded-xl shadow-md overflow-hidden transform hover:scale-105 transition-transform duration-200">
+        <div class="bg-gradient-to-r from-red-600 to-red-700 px-6 py-4">
+          <div class="flex items-center">
+            <i class="fas fa-times-circle text-white text-2xl mr-3"></i>
+            <div>
+              <p class="text-red-100 text-sm font-medium">Fallidas</p>
+              <p class="text-white text-2xl font-bold">{{stats.fallidas}}</p>
             </div>
+          </div>
         </div>
-        <div class="col-md-3">
-            <div class="card bg-warning text-white">
-                <div class="card-body text-center">
-                    <h3>{{stats.pendientes}}</h3>
-                    <p class="mb-0">⏳ Pendientes</p>
-                </div>
+      </div>
+      
+      <div class="bg-white rounded-xl shadow-md overflow-hidden transform hover:scale-105 transition-transform duration-200">
+        <div class="bg-gradient-to-r from-yellow-600 to-yellow-700 px-6 py-4">
+          <div class="flex items-center">
+            <i class="fas fa-clock text-white text-2xl mr-3"></i>
+            <div>
+              <p class="text-yellow-100 text-sm font-medium">Pendientes</p>
+              <p class="text-white text-2xl font-bold">{{stats.pendientes}}</p>
             </div>
+          </div>
         </div>
+      </div>
     </div>
     {{/if}}
 
-    <!-- Tabla Optimizada para Legibilidad - Sin Código -->
-    <div class="card shadow-sm">
-        <div class="card-header bg-primary text-white">
-            <div class="d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">
-                    <i class="fas fa-bell me-2"></i>
-                    Historial de Notificaciones
-                </h5>
-                {{#if stats.total}}
-                    <span class="badge bg-light text-primary fs-6">
-                        {{stats.total}} registros
-                    </span>
-                {{/if}}
-            </div>
-        </div>
-        <div class="card-body p-0">
-          {{#if notificaciones.length}}
-            <!-- Información de estados -->
-            <div class="alert alert-info mx-3 mt-3 mb-3">
-                <small>
-                    <strong>Estados:</strong>
-                    <span class="badge bg-success ms-1">Enviado</span> WhatsApp entregado
-                    <span class="badge bg-danger ms-1">Error</span> Falló el envío
-                    <span class="badge bg-warning text-dark ms-1">Pendiente</span> En proceso
-                </small>
+    <!-- Panel de Filtros Modernos -->
+    <div class="bg-white rounded-xl shadow-md mb-6 overflow-hidden">
+      <div class="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4">
+        <h3 class="text-lg font-semibold text-white flex items-center">
+          <i class="fas fa-filter mr-2"></i>
+          Filtros de Control
+        </h3>
+      </div>
+      
+      <div class="p-6">
+        <form method="GET" action="/{{@root.userRole}}/notificaciones/historial" id="filtros-notificaciones-form">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-4">
+            <div>
+              <label class="flex items-center text-sm font-medium text-gray-700 mb-2">
+                <i class="fas fa-calendar-day text-blue-500 mr-2"></i>
+                Fecha Inicio
+              </label>
+              <input type="date" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                     name="fechaDesde" value="{{filtros.fechaDesde}}">
             </div>
             
-            <div class="table-responsive">
-                <table class="table notificaciones-historial-optimizado">
-                    <thead>
-                        <tr>
-                            <th width="15%">📅 Fecha/Hora</th>
-                            <th width="30%">📄 Documento</th>
-                            <th width="25%">👤 Cliente</th>
-                            <th width="15%">📱 Enviado a</th>
-                            <th width="10%">✅ Estado</th>
-                            <th width="5%">👁️</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {{#each notificaciones}}
-                        <tr class="fila-notificacion">
-                            <td class="fecha-celda">
-                                <div class="fecha-principal">{{formatearFechaSolo this.created_at}}</div>
-                                <div class="hora-secundaria">{{formatearHoraSolo this.created_at}}</div>
-                            </td>
-                            <td class="documento-celda">
-                                {{#if (esEntregaGrupal this.tipoEvento)}}
-                                    <div class="codigo-documento text-success">📦 ENTREGA GRUPAL</div>
-                                    <div class="tipo-documento">
-                                        <i class="fas fa-boxes"></i>
-                                        {{this.metadatos.totalDocumentos}} documentos
-                                    </div>
-                                {{else}}
-                                    <div class="codigo-documento">
-                                        <a href="/{{../userRole}}/documentos/detalle/{{this.documento.id}}" class="text-decoration-none" title="{{this.documento.codigoBarras}}">
-                                            <code class="bg-light text-dark px-1 rounded" style="font-size: 0.8rem; word-break: break-all;">{{this.documento.codigoBarras}}</code>
-                                        </a>
-                                    </div>
-                                    <div class="tipo-documento">
-                                        <i class="{{iconoTipoDocumento this.documento.tipoDocumento}}"></i>
-                                        {{abreviarTipoDocumento this.documento.tipoDocumento}}
-                                    </div>
-                                {{/if}}
-                            </td>
-                            <td class="cliente-celda">
-                                {{#if (esEntregaGrupal this.tipoEvento)}}
-                                    <div class="nombre-cliente">{{this.metadatos.nombreCliente}}</div>
-                                    <div class="ci-cliente">Entrega grupal</div>
-                                {{else}}
-                                    <div class="nombre-cliente">{{this.documento.nombreCliente}}</div>
-                                    {{#if this.documento.identificacionCliente}}
-                                    <div class="ci-cliente">{{this.documento.identificacionCliente}}</div>
-                                    {{/if}}
-                                {{/if}}
-                            </td>
-                            <td class="telefono-celda">
-                                <div class="telefono-info">
-                                    <i class="fab fa-whatsapp"></i>
-                                    {{destinatarioCensurado this.destinatario}}
-                                </div>
-                            </td>
-                            <td class="estado-celda">
-                                {{{estadoConColor this.estado}}}
-                            </td>
-                            <td class="acciones-celda">
-                                <button class="btn btn-detalle" onclick="verDetalleNotificacion({{this.id}})" title="Ver detalle completo">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                            </td>
-                        </tr>
-                        {{/each}}
-                    </tbody>
-                </table>
+            <div>
+              <label class="flex items-center text-sm font-medium text-gray-700 mb-2">
+                <i class="fas fa-calendar-check text-blue-500 mr-2"></i>
+                Fecha Fin
+              </label>
+              <input type="date" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                     name="fechaHasta" value="{{filtros.fechaHasta}}">
             </div>
             
-            <!-- Información de resultados mejorada -->
-            <div class="d-flex justify-content-between align-items-center mt-3 p-4 bg-gradient" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
-                <div>
-                    <strong class="text-primary">
-                        <i class="fas fa-info-circle me-2"></i>
-                        Mostrando {{notificaciones.length}} de {{stats.total}} notificaciones
-                    </strong>
-                    <div class="small text-muted mt-1">
-                        Filtros aplicados: 
-                        {{#if filtros.fechaDesde}}📅 Desde {{filtros.fechaDesde}}{{/if}}
-                        {{#if filtros.estado}}✅ {{filtros.estado}}{{/if}}
-                        {{#if filtros.busqueda}}🔍 "{{filtros.busqueda}}"{{/if}}
-                    </div>
-                </div>
-                <div class="text-end">
-                    <div class="text-muted small">
-                        <i class="fas fa-clock me-1"></i>
-                        Actualizado: {{formatDateTime "now"}}
-                    </div>
-                    <button class="btn btn-sm btn-outline-primary mt-1" onclick="location.reload()">
-                        <i class="fas fa-sync-alt me-1"></i>Actualizar
-                    </button>
-                </div>
+            <div>
+              <label class="flex items-center text-sm font-medium text-gray-700 mb-2">
+                <i class="fas fa-tag text-green-500 mr-2"></i>
+                Tipo
+              </label>
+              <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                      name="tipo">
+                <option value="">Todos</option>
+                <option value="documento_listo" {{#if (eq filtros.tipo 'documento_listo')}}selected{{/if}}>📋 Listo para Retiro</option>
+                <option value="entrega_confirmada" {{#if (eq filtros.tipo 'entrega_confirmada')}}selected{{/if}}>✅ Entregado</option>
+                <option value="entrega_grupal" {{#if (eq filtros.tipo 'entrega_grupal')}}selected{{/if}}>📦 Entrega Grupal</option>
+              </select>
             </div>
-          {{else}}
-            <div class="text-center py-5">
-                <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
-                <h5 class="text-muted">📭 No se encontraron notificaciones</h5>
-                <p class="text-muted">No hay notificaciones que coincidan con los filtros aplicados.</p>
-                <button class="btn btn-primary" onclick="location.reload()">
-                    <i class="fas fa-sync-alt me-1"></i>Actualizar
-                </button>
+            
+            <div>
+              <label class="flex items-center text-sm font-medium text-gray-700 mb-2">
+                <i class="fab fa-whatsapp text-green-500 mr-2"></i>
+                Canal
+              </label>
+              <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                      name="canal">
+                <option value="">Todos</option>
+                <option value="whatsapp" {{#if (eq filtros.canal 'whatsapp')}}selected{{/if}}>WhatsApp</option>
+                <option value="email" {{#if (eq filtros.canal 'email')}}selected{{/if}}>Email</option>
+              </select>
             </div>
+            
+            <div>
+              <label class="flex items-center text-sm font-medium text-gray-700 mb-2">
+                <i class="fas fa-check-circle text-yellow-500 mr-2"></i>
+                Estado
+              </label>
+              <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                      name="estado">
+                <option value="">Todos</option>
+                <option value="enviado" {{#if (eq filtros.estado 'enviado')}}selected{{/if}}>Enviado</option>
+                <option value="error" {{#if (eq filtros.estado 'error')}}selected{{/if}}>Error</option>
+                <option value="pendiente" {{#if (eq filtros.estado 'pendiente')}}selected{{/if}}>Pendiente</option>
+              </select>
+            </div>
+            
+            {{#if (or (eq @root.userRole "admin") (eq @root.userRole "recepcion"))}}
+            <div>
+              <label class="flex items-center text-sm font-medium text-gray-700 mb-2">
+                <i class="fas fa-user text-purple-500 mr-2"></i>
+                Matrizador
+              </label>
+              <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                      name="matrizadorId">
+                <option value="">Todos</option>
+                {{#each matrizadores}}
+                <option value="{{this.id}}" {{#if (eq ../filtros.matrizadorId (toString this.id))}}selected{{/if}}>
+                  {{this.nombre}}
+                </option>
+                {{/each}}
+              </select>
+            </div>
+            {{/if}}
+          </div>
+          
+          <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+            <div class="lg:col-span-3">
+              <label class="flex items-center text-sm font-medium text-gray-700 mb-2">
+                <i class="fas fa-search text-indigo-500 mr-2"></i>
+                Búsqueda Rápida
+              </label>
+              <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                     name="busqueda" value="{{filtros.busqueda}}" 
+                     placeholder="Código de documento, nombre de cliente, N° factura o destinatario">
+            </div>
+            <div class="flex items-end space-x-2">
+              <button type="submit" class="flex-1 inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                <i class="fas fa-search mr-2"></i>
+                Buscar
+              </button>
+              <a href="/{{@root.userRole}}/notificaciones/historial" 
+                 class="flex-1 inline-flex items-center justify-center px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors">
+                <i class="fas fa-times mr-2"></i>
+                Limpiar
+              </a>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Tabla de Notificaciones -->
+    <div class="bg-white rounded-xl shadow-md overflow-hidden">
+      <div class="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-semibold text-white flex items-center">
+            <i class="fas fa-bell mr-2"></i>
+            Historial de Notificaciones
+          </h3>
+          {{#if stats.total}}
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-white bg-opacity-20 text-white">
+              {{stats.total}} registros
+            </span>
           {{/if}}
         </div>
+      </div>
+      
+      {{#if notificaciones.length}}
+        <!-- Información de estados -->
+        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mx-6 mt-4">
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <i class="fas fa-info-circle text-blue-400"></i>
+            </div>
+            <div class="ml-3">
+              <p class="text-sm text-blue-700">
+                <strong>Estados:</strong>
+                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 ml-2">
+                  <i class="fas fa-check mr-1"></i>Enviado
+                </span>
+                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 ml-2">
+                  <i class="fas fa-times mr-1"></i>Error
+                </span>
+                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 ml-2">
+                  <i class="fas fa-clock mr-1"></i>Pendiente
+                </span>
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead class="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  <i class="fas fa-clock text-blue-500 mr-1"></i>
+                  Fecha/Hora
+                </th>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  <i class="fas fa-file-alt text-blue-500 mr-1"></i>
+                  Documento
+                </th>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  <i class="fas fa-user text-purple-500 mr-1"></i>
+                  Cliente
+                </th>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  <i class="fab fa-whatsapp text-green-500 mr-1"></i>
+                  Enviado a
+                </th>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  <i class="fas fa-check-circle text-yellow-500 mr-1"></i>
+                  Estado
+                </th>
+                <th class="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  <i class="fas fa-eye text-indigo-500 mr-1"></i>
+                  Ver
+                </th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              {{#each notificaciones}}
+              <tr class="hover:bg-gray-50 transition-colors">
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm font-medium text-gray-900">{{formatearFechaSolo this.created_at}}</div>
+                  <div class="text-xs text-gray-500">{{formatearHoraSolo this.created_at}}</div>
+                </td>
+                <td class="px-6 py-4">
+                  {{#if (esEntregaGrupal this.tipoEvento)}}
+                    <div class="flex items-center">
+                      <i class="fas fa-boxes text-green-600 mr-2"></i>
+                      <div>
+                        <div class="text-sm font-medium text-green-600">ENTREGA GRUPAL</div>
+                        <div class="text-xs text-gray-500">{{this.metadatos.totalDocumentos}} documentos</div>
+                      </div>
+                    </div>
+                  {{else}}
+                    <a href="/{{../userRole}}/documentos/detalle/{{this.documento.id}}" class="flex items-center text-blue-600 hover:text-blue-800 transition-colors">
+                      <i class="{{iconoTipoDocumento this.documento.tipoDocumento}} mr-2"></i>
+                      <div>
+                        <div class="text-sm font-medium">{{this.documento.codigoBarras}}</div>
+                        <div class="text-xs text-gray-500">{{abreviarTipoDocumento this.documento.tipoDocumento}}</div>
+                      </div>
+                    </a>
+                  {{/if}}
+                </td>
+                <td class="px-6 py-4">
+                  {{#if (esEntregaGrupal this.tipoEvento)}}
+                    <div class="text-sm font-medium text-gray-900">{{this.metadatos.nombreCliente}}</div>
+                    <div class="text-xs text-gray-500">Entrega grupal</div>
+                  {{else}}
+                    <div class="text-sm font-medium text-gray-900">{{this.documento.nombreCliente}}</div>
+                    {{#if this.documento.identificacionCliente}}
+                    <div class="text-xs text-gray-500">{{this.documento.identificacionCliente}}</div>
+                    {{/if}}
+                  {{/if}}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="flex items-center text-sm text-gray-900">
+                    <i class="fab fa-whatsapp text-green-500 mr-2"></i>
+                    {{destinatarioCensurado this.destinatario}}
+                  </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  {{{estadoConColor this.estado}}}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-center">
+                  <button class="inline-flex items-center px-3 py-1 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors" 
+                          onclick="verDetalleNotificacion({{this.id}})">
+                    <i class="fas fa-eye mr-1"></i>
+                    Ver
+                  </button>
+                </td>
+              </tr>
+              {{/each}}
+            </tbody>
+          </table>
+        </div>
+        
+        <!-- Información de resultados -->
+        <div class="bg-gray-50 px-6 py-4 border-t border-gray-200">
+          <div class="flex justify-between items-center">
+            <div>
+              <div class="text-sm font-medium text-gray-900 flex items-center">
+                <i class="fas fa-info-circle text-blue-500 mr-2"></i>
+                Mostrando {{notificaciones.length}} de {{stats.total}} notificaciones
+              </div>
+              {{#if (or filtros.fechaDesde filtros.estado filtros.busqueda)}}
+              <div class="text-xs text-gray-500 mt-1">
+                Filtros aplicados: 
+                {{#if filtros.fechaDesde}}📅 Desde {{filtros.fechaDesde}}{{/if}}
+                {{#if filtros.estado}}✅ {{filtros.estado}}{{/if}}
+                {{#if filtros.busqueda}}🔍 "{{filtros.busqueda}}"{{/if}}
+              </div>
+              {{/if}}
+            </div>
+            <div class="flex items-center space-x-2">
+              <span class="text-xs text-gray-500">
+                <i class="fas fa-clock mr-1"></i>
+                Actualizado: {{formatDateTime "now"}}
+              </span>
+              <button class="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors" 
+                      onclick="location.reload()">
+                <i class="fas fa-sync-alt mr-1"></i>
+                Actualizar
+              </button>
+            </div>
+          </div>
+        </div>
+      {{else}}
+        <div class="text-center py-12">
+          <div class="flex flex-col items-center">
+            <i class="fas fa-bell-slash text-gray-300 text-4xl mb-3"></i>
+            <h3 class="text-lg font-medium text-gray-900 mb-1">No hay notificaciones</h3>
+            <p class="text-gray-500 mb-4">No se encontraron notificaciones que coincidan con los filtros aplicados</p>
+            <button class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors" 
+                    onclick="location.reload()">
+              <i class="fas fa-sync-alt mr-2"></i>
+              Actualizar
+            </button>
+          </div>
+        </div>
+      {{/if}}
     </div>
+  </div>
 </div>
 
-<!-- Modal Elegante para Detalles de Notificación -->
+<!-- Modal Mejorado para Detalles de Notificación -->
 <div class="modal fade" id="detalleNotificacionModal" tabindex="-1" aria-labelledby="detalleNotificacionModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-xl">
-    <div class="modal-content">
+    <div class="modal-content rounded-xl shadow-2xl">
       <!-- Contenido se cargará dinámicamente aquí -->
     </div>
   </div>
@@ -299,10 +385,7 @@
 <link rel="stylesheet" href="/css/notificaciones-legible.css">
 <script src="/js/table-universal.js"></script>
 <script>
-    /**
-     * Mostrar detalle elegante de notificación
-     * @param {number} notificacionId - ID de la notificación
-     */
+    // Función mejorada para mostrar detalle de notificación
     function verDetalleNotificacion(notificacionId) {
         console.log(`🔍 Cargando detalle de notificación ID: ${notificacionId}`);
         
@@ -311,12 +394,12 @@
         
         // Mostrar indicador de carga elegante
         modalContent.innerHTML = `
-            <div class="modal-body text-center py-5">
-                <div class="spinner-border text-primary mb-3" role="status">
-                    <span class="visually-hidden">Cargando...</span>
+            <div class="modal-body text-center py-8">
+                <div class="flex flex-col items-center">
+                    <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent mb-4"></div>
+                    <h5 class="text-lg font-medium text-gray-900 mb-2">Cargando detalles...</h5>
+                    <p class="text-gray-500">Obteniendo información de la notificación</p>
                 </div>
-                <h5 class="text-muted">Cargando detalles...</h5>
-                <p class="text-muted small">Obteniendo información de la notificación</p>
             </div>
         `;
         
@@ -343,85 +426,39 @@
         .catch(error => {
             console.error('❌ Error al cargar detalle:', error);
             modalContent.innerHTML = `
-                <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
+                <div class="bg-gradient-to-r from-red-600 to-red-700 px-6 py-4 text-white">
+                    <h5 class="text-lg font-semibold flex items-center">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
                         Error al cargar
                     </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body text-center py-5">
-                    <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
-                    <h5 class="text-danger">No se pudo cargar el detalle</h5>
-                    <p class="text-muted">${error.message}</p>
-                    <button class="btn btn-primary" onclick="verDetalleNotificacion(${notificacionId})">
-                        <i class="fas fa-redo me-1"></i>Reintentar
+                <div class="p-8 text-center">
+                    <div class="flex flex-col items-center">
+                        <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-3"></i>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">No se pudo cargar el detalle</h3>
+                        <p class="text-gray-500 mb-4">${error.message}</p>
+                        <button class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors" 
+                                onclick="verDetalleNotificacion(${notificacionId})">
+                            <i class="fas fa-redo mr-2"></i>Reintentar
+                        </button>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end">
+                    <button type="button" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors" data-bs-dismiss="modal">
+                        Cerrar
                     </button>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
                 </div>
             `;
         });
     }
     
-    /**
-     * Reenviar notificación (funcionalidad futura)
-     * @param {number} notificacionId - ID de la notificación
-     */
-    function reenviarNotificacion(notificacionId) {
-        if (!confirm('¿Está seguro de que desea reenviar esta notificación?')) {
-            return;
-        }
-        
-        console.log(`📱 Reenviando notificación ID: ${notificacionId}`);
-        
-        // Implementar lógica de reenvío
-        fetch(`/{{@root.userRole}}/notificaciones/${notificacionId}/reenviar`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.exito) {
-                alert('✅ Notificación reenviada exitosamente');
-                location.reload(); // Recargar para ver el estado actualizado
-            } else {
-                alert(`❌ Error al reenviar: ${data.mensaje}`);
-            }
-        })
-        .catch(error => {
-            console.error('Error al reenviar:', error);
-            alert('❌ Error al reenviar la notificación');
-        });
-    }
-    
-    /**
-     * Aplicar filtros de tabla
-     */
-    function aplicarFiltros() {
-        const form = document.getElementById('filtros-notificaciones-form');
-        if (form) {
-            form.submit();
-        }
-    }
-    
-    /**
-     * Limpiar filtros
-     */
-    function limpiarFiltros() {
-        window.location.href = '/{{@root.userRole}}/notificaciones/historial';
-    }
-    
-    // Inicialización
+    // Inicialización mejorada
     document.addEventListener('DOMContentLoaded', function() {
-        console.log('📋 Tabla optimizada de notificaciones inicializada');
+        console.log('📋 Página de notificaciones inicializada con diseño profesional');
         
         // Auto-refresh cada 5 minutos
         setInterval(() => {
-            console.log('🔄 Auto-actualizando tabla de notificaciones...');
+            console.log('🔄 Auto-actualizando notificaciones...');
             location.reload();
         }, 5 * 60 * 1000);
         

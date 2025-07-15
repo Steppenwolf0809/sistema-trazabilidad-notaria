@@ -1,436 +1,608 @@
-{{!-- 
-  SISTEMA HÍBRIDO DE REPORTES - DOCUMENTACIÓN
-  ==========================================
-  
-  Este archivo maneja dos tipos de reportes:
-  
-  1. VISTAS COMPLETAS (rutas específicas):
-     - /admin/reportes/financiero → views/admin/reportes/financiero.hbs
-     - /admin/reportes/pendientes → views/admin/reportes/pendientes.hbs
-     - /admin/reportes/cobros-matrizador → views/admin/reportes/cobros-matrizador.hbs
-     - /admin/reportes/productividad-matrizadores → views/admin/reportes/productividad-matrizadores.hbs
-     - /admin/reportes/registros-auditoria → views/admin/reportes/registros-auditoria.hbs
-     
-     Características:
-     - Tienen su propia vista completa con layout
-     - Incluyen breadcrumbs propios
-     - Funcionalidad compleja y específica
-     - Rutas directas en adminRoutes.js
-  
-  2. PARTIALS DINÁMICOS (parámetro ?tipo=):
-     - /admin/reportes?tipo=estado → partial: views/partials/admin/reportes/partials/estado.hbs
-     - /admin/reportes?tipo=sin_pago → partial: views/partials/admin/reportes/partials/sin_pago.hbs
-     - /admin/reportes?tipo=sin_procesar → partial: views/partials/admin/reportes/partials/sin_procesar.hbs
-     - /admin/reportes?tipo=fecha → partial: views/partials/admin/reportes/partials/fecha.hbs
-     - /admin/reportes?tipo=matrizador → partial: views/partials/admin/reportes/partials/matrizador.hbs
-     - /admin/reportes?tipo=tipoDocumento → partial: views/partials/admin/reportes/partials/tipoDocumento.hbs
-     
-     Características:
-     - Se renderizan dentro de esta vista principal
-     - Usan breadcrumb dinámico de esta vista
-     - Reportes más simples y estandarizados
-     - Manejados por la función exports.reportes en adminController.js
-  
-  3. GRID PRINCIPAL (sin parámetros):
-     - /admin/reportes → Muestra grid con 8 reportes útiles
-     
-  REGLAS PARA FUTUROS REPORTES:
-  - Reportes simples con filtros estándar → Usar partials dinámicos
-  - Reportes complejos con funcionalidad específica → Crear vista completa
-  - Siempre mantener navegación consistente con breadcrumbs
-  - Documentar cualquier cambio en esta sección
---}}
+{{!-- SISTEMA DE REPORTES - DISEÑO PROFESIONAL UNIFICADO --}}
 
-{{!-- Página Principal de Reportes - Grid Simplificado con 8 Reportes Útiles --}}
+<style>
+  .reportes-container {
+    padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  
+  .reportes-header {
+    background: white;
+    padding: 2rem;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+  }
+  
+  .reportes-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #162840;
+    margin-bottom: 0.5rem;
+  }
+  
+  .reportes-subtitle {
+    color: #6b7280;
+    font-size: 1.1rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  /* ===== FILTROS DE PERÍODO ESTILO DASHBOARD ===== */
+  .filtros-periodo {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+  }
+  
+  .filtros-titulo {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .filtros-horizontales {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  
+  .boton-filtro {
+    background: #f8fafc;
+    border: 2px solid #e2e8f0;
+    padding: 0.75rem 1.5rem;
+    border-radius: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: #475569;
+    font-size: 0.9rem;
+    text-decoration: none;
+  }
+  
+  .boton-filtro:hover {
+    background: #e2e8f0;
+    transform: translateY(-2px);
+    text-decoration: none;
+    color: #475569;
+  }
+  
+  .boton-filtro.activo {
+    background: #D4AF37;
+    color: white;
+    border-color: #D4AF37;
+    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+  }
+  
+  .panel-fechas {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 0.5rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    display: none;
+  }
+  
+  .panel-fechas.activo {
+    display: block;
+  }
+  
+  .fechas-container {
+    display: flex;
+    gap: 1rem;
+    align-items: end;
+    flex-wrap: wrap;
+  }
+  
+  .fecha-input {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .fecha-input label {
+    display: block;
+    font-size: 0.8rem;
+    color: #4E7DA6;
+    margin-bottom: 0.25rem;
+    font-weight: 500;
+  }
+  
+  .input-fecha {
+    padding: 0.5rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    min-width: 150px;
+  }
+  
+  .btn-aplicar-fechas {
+    background: #D4AF37;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .btn-aplicar-fechas:hover {
+    background: #B8941F;
+  }
+  
+  /* ===== GRID DE REPORTES ===== */
+  .reportes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  
+  .reporte-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+  }
+  
+  .reporte-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    text-decoration: none;
+    color: inherit;
+  }
+  
+  .reporte-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .reporte-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+    background: linear-gradient(135deg, #D4AF37, #B8941F);
+  }
+  
+  .reporte-info h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1f2937;
+  }
+  
+  .reporte-info p {
+    margin: 0.25rem 0 0 0;
+    color: #6b7280;
+    font-size: 0.9rem;
+  }
+  
+  .reporte-estadisticas {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #f3f4f6;
+  }
+  
+  .estadistica-item {
+    text-align: center;
+    flex: 1;
+  }
+  
+  .estadistica-valor {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1f2937;
+    display: block;
+  }
+  
+  .estadistica-etiqueta {
+    font-size: 0.75rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+  }
+  
+  /* ===== ICONOS POR CATEGORÍA ===== */
+  .icon-financiero {
+    background: linear-gradient(135deg, #059669, #047857) !important;
+  }
+  
+  .icon-operacional {
+    background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+  }
+  
+  .icon-auditoria {
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed) !important;
+  }
+  
+  .icon-productividad {
+    background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+  }
+  
+  /* ===== VISTA DE REPORTE INDIVIDUAL ===== */
+  .reporte-contenido {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 2rem;
+  }
+  
+  .reporte-contenido h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 768px) {
+    .reportes-container {
+      padding: 1rem;
+    }
+    
+    .filtros-horizontales {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    
+    .boton-filtro {
+      text-align: center;
+    }
+    
+    .reportes-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .fechas-container {
+      flex-direction: column;
+      align-items: stretch;
+    }
+  }
+</style>
 
-{{!-- BREADCRUMB DINÁMICO --}}
-<div class="row mb-3">
-  <div class="col-12">
-    <nav aria-label="breadcrumb">
-      <ol class="breadcrumb">
-        <li class="breadcrumb-item">
-          <a href="/admin/dashboard">
-            <i class="fas fa-tachometer-alt me-1"></i>Dashboard
-          </a>
-        </li>
-        <li class="breadcrumb-item">
-          <a href="/admin/reportes">
-            <i class="fas fa-chart-bar me-1"></i>Reportes
-          </a>
-        </li>
-        {{!-- Breadcrumb específico según el tipo de reporte --}}
-        {{#if filtros.tipo}}
-          <li class="breadcrumb-item active" aria-current="page">
-            {{#if (eq filtros.tipo "estado")}}
-              <i class="fas fa-tasks me-1"></i>Reporte por Estado
-            {{else if (eq filtros.tipo "sin_pago")}}
-              <i class="fas fa-exclamation-triangle me-1"></i>Documentos Sin Pago
-            {{else if (eq filtros.tipo "sin_procesar")}}
-              <i class="fas fa-clock me-1"></i>Documentos Sin Procesar
-            {{else if (eq filtros.tipo "fecha")}}
-              <i class="fas fa-calendar me-1"></i>Reporte por Fecha
-            {{else if (eq filtros.tipo "matrizador")}}
-              <i class="fas fa-user me-1"></i>Reporte por Matrizador
-            {{else if (eq filtros.tipo "tipoDocumento")}}
-              <i class="fas fa-file me-1"></i>Reporte por Tipo
-            {{else}}
-              <i class="fas fa-chart-line me-1"></i>{{title}}
-            {{/if}}
-          </li>
-        {{/if}}
-      </ol>
-    </nav>
+<div class="reportes-container">
+  <!-- Header Profesional -->
+  <div class="reportes-header">
+    <h1 class="reportes-title">
+      <i class="fas fa-chart-line" style="color: #D4AF37;"></i>
+      Sistema de Reportes
+    </h1>
+    <p class="reportes-subtitle">
+      Análisis financiero, operacional y de productividad del sistema notarial
+    </p>
   </div>
+
+  {{#unless tipoReporte}}
+  <!-- Filtros de Período -->
+  <div class="filtros-periodo">
+    <h3 class="filtros-titulo">
+      <i class="fas fa-calendar-alt"></i>
+      Período de Análisis
+    </h3>
+    
+    <div class="filtros-horizontales">
+      <a href="/admin/reportes?periodo=hoy" class="boton-filtro {{#if (eq periodoActivo 'hoy')}}activo{{/if}}">
+        <i class="fas fa-calendar-day"></i> Hoy
+      </a>
+      <a href="/admin/reportes?periodo=semana" class="boton-filtro {{#if (eq periodoActivo 'semana')}}activo{{/if}}">
+        <i class="fas fa-calendar-week"></i> Esta Semana
+      </a>
+      <a href="/admin/reportes?periodo=mes" class="boton-filtro {{#if (eq periodoActivo 'mes')}}activo{{/if}}">
+        <i class="fas fa-calendar-alt"></i> Este Mes
+      </a>
+      <a href="/admin/reportes?periodo=año" class="boton-filtro {{#if (eq periodoActivo 'año')}}activo{{/if}}">
+        <i class="fas fa-calendar"></i> Este Año
+      </a>
+      <button type="button" class="boton-filtro {{#if (eq periodoActivo 'personalizado')}}activo{{/if}}" onclick="togglePanelFechas()">
+        <i class="fas fa-calendar-alt"></i> Personalizado
+      </button>
+    </div>
+    
+    <!-- Panel de fechas personalizadas -->
+    <div class="panel-fechas {{#if (eq periodoActivo 'personalizado')}}activo{{/if}}" id="panelFechas">
+      <form method="GET" action="/admin/reportes">
+        <div class="fechas-container">
+          <div class="fecha-input">
+            <label for="fechaDesde">Fecha Desde:</label>
+            <input type="date" id="fechaDesde" name="fechaDesde" class="input-fecha" value="{{fechaDesde}}">
+          </div>
+          <div class="fecha-input">
+            <label for="fechaHasta">Fecha Hasta:</label>
+            <input type="date" id="fechaHasta" name="fechaHasta" class="input-fecha" value="{{fechaHasta}}">
+          </div>
+          <button type="submit" class="btn-aplicar-fechas">
+            <i class="fas fa-filter"></i> Aplicar Filtros
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Grid de Reportes -->
+  <div class="reportes-grid">
+    <!-- Reportes Financieros -->
+    <a href="/admin/reportes/financiero" class="reporte-card">
+      <div class="reporte-header">
+        <div class="reporte-icon icon-financiero">
+          <i class="fas fa-chart-pie"></i>
+        </div>
+        <div class="reporte-info">
+          <h3>Reporte Financiero</h3>
+          <p>Análisis completo de ingresos, gastos y rentabilidad</p>
+        </div>
+      </div>
+      <div class="reporte-estadisticas">
+        <div class="estadistica-item">
+          <span class="estadistica-valor">$12,450</span>
+          <span class="estadistica-etiqueta">Ingresos</span>
+        </div>
+        <div class="estadistica-item">
+          <span class="estadistica-valor">$2,180</span>
+          <span class="estadistica-etiqueta">Pendiente</span>
+        </div>
+        <div class="estadistica-item">
+          <span class="estadistica-valor">82%</span>
+          <span class="estadistica-etiqueta">Cobros</span>
+        </div>
+      </div>
+    </a>
+
+    <a href="/admin/reportes/pendientes" class="reporte-card">
+      <div class="reporte-header">
+        <div class="reporte-icon icon-operacional">
+          <i class="fas fa-clock"></i>
+        </div>
+        <div class="reporte-info">
+          <h3>Documentos Pendientes</h3>
+          <p>Seguimiento de documentos en proceso y entregas</p>
+        </div>
+      </div>
+      <div class="reporte-estadisticas">
+        <div class="estadistica-item">
+          <span class="estadistica-valor">24</span>
+          <span class="estadistica-etiqueta">En proceso</span>
+        </div>
+        <div class="estadistica-item">
+          <span class="estadistica-valor">12</span>
+          <span class="estadistica-etiqueta">Listos</span>
+        </div>
+        <div class="estadistica-item">
+          <span class="estadistica-valor">3</span>
+          <span class="estadistica-etiqueta">Vencidos</span>
+        </div>
+      </div>
+    </a>
+
+    <a href="/admin/reportes/productividad-matrizadores" class="reporte-card">
+      <div class="reporte-header">
+        <div class="reporte-icon icon-productividad">
+          <i class="fas fa-users-cog"></i>
+        </div>
+        <div class="reporte-info">
+          <h3>Productividad Matrizadores</h3>
+          <p>Rendimiento y eficiencia del equipo de trabajo</p>
+        </div>
+      </div>
+      <div class="reporte-estadisticas">
+        <div class="estadistica-item">
+          <span class="estadistica-valor">156</span>
+          <span class="estadistica-etiqueta">Docs/mes</span>
+        </div>
+        <div class="estadistica-item">
+          <span class="estadistica-valor">4.2</span>
+          <span class="estadistica-etiqueta">Días prom.</span>
+        </div>
+        <div class="estadistica-item">
+          <span class="estadistica-valor">94%</span>
+          <span class="estadistica-etiqueta">Eficiencia</span>
+        </div>
+      </div>
+    </a>
+
+    <a href="/admin/reportes/cobros-matrizador" class="reporte-card">
+      <div class="reporte-header">
+        <div class="reporte-icon icon-financiero">
+          <i class="fas fa-hand-holding-usd"></i>
+        </div>
+        <div class="reporte-info">
+          <h3>Cobros por Matrizador</h3>
+          <p>Comisiones y pagos por matrizador</p>
+        </div>
+      </div>
+      <div class="reporte-estadisticas">
+        <div class="estadistica-item">
+          <span class="estadistica-valor">$3,240</span>
+          <span class="estadistica-etiqueta">Total</span>
+        </div>
+        <div class="estadistica-item">
+          <span class="estadistica-valor">$810</span>
+          <span class="estadistica-etiqueta">Promedio</span>
+        </div>
+        <div class="estadistica-item">
+          <span class="estadistica-valor">4</span>
+          <span class="estadistica-etiqueta">Activos</span>
+        </div>
+      </div>
+    </a>
+
+    <a href="/admin/reportes/registros-auditoria" class="reporte-card">
+      <div class="reporte-header">
+        <div class="reporte-icon icon-auditoria">
+          <i class="fas fa-search"></i>
+        </div>
+        <div class="reporte-info">
+          <h3>Auditoría del Sistema</h3>
+          <p>Registro de acciones y cambios en el sistema</p>
+        </div>
+      </div>
+      <div class="reporte-estadisticas">
+        <div class="estadistica-item">
+          <span class="estadistica-valor">428</span>
+          <span class="estadistica-etiqueta">Acciones</span>
+        </div>
+        <div class="estadistica-item">
+          <span class="estadistica-valor">12</span>
+          <span class="estadistica-etiqueta">Usuarios</span>
+        </div>
+        <div class="estadistica-item">
+          <span class="estadistica-valor">0</span>
+          <span class="estadistica-etiqueta">Alertas</span>
+        </div>
+      </div>
+    </a>
+
+    <a href="/admin/reportes?tipo=estado" class="reporte-card">
+      <div class="reporte-header">
+        <div class="reporte-icon icon-operacional">
+          <i class="fas fa-tasks"></i>
+        </div>
+        <div class="reporte-info">
+          <h3>Documentos por Estado</h3>
+          <p>Distribución de documentos según su estado actual</p>
+        </div>
+      </div>
+      <div class="reporte-estadisticas">
+        <div class="estadistica-item">
+          <span class="estadistica-valor">68</span>
+          <span class="estadistica-etiqueta">Proceso</span>
+        </div>
+        <div class="estadistica-item">
+          <span class="estadistica-valor">24</span>
+          <span class="estadistica-etiqueta">Listos</span>
+        </div>
+        <div class="estadistica-item">
+          <span class="estadistica-valor">156</span>
+          <span class="estadistica-etiqueta">Entregados</span>
+        </div>
+      </div>
+    </a>
+
+    <a href="/admin/reportes?tipo=sin_pago" class="reporte-card">
+      <div class="reporte-header">
+        <div class="reporte-icon icon-financiero">
+          <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <div class="reporte-info">
+          <h3>Documentos Sin Pago</h3>
+          <p>Seguimiento de documentos con pagos pendientes</p>
+        </div>
+      </div>
+      <div class="reporte-estadisticas">
+        <div class="estadistica-item">
+          <span class="estadistica-valor">18</span>
+          <span class="estadistica-etiqueta">Pendientes</span>
+        </div>
+        <div class="estadistica-item">
+          <span class="estadistica-valor">$2,450</span>
+          <span class="estadistica-etiqueta">Valor</span>
+        </div>
+        <div class="estadistica-item">
+          <span class="estadistica-valor">12</span>
+          <span class="estadistica-etiqueta">Días prom.</span>
+        </div>
+      </div>
+    </a>
+
+    <a href="/admin/reportes?tipo=tipoDocumento" class="reporte-card">
+      <div class="reporte-header">
+        <div class="reporte-icon icon-operacional">
+          <i class="fas fa-file-alt"></i>
+        </div>
+        <div class="reporte-info">
+          <h3>Tipos de Documento</h3>
+          <p>Análisis de frecuencia por tipo de documento</p>
+        </div>
+      </div>
+      <div class="reporte-estadisticas">
+        <div class="estadistica-item">
+          <span class="estadistica-valor">45%</span>
+          <span class="estadistica-etiqueta">Escrituras</span>
+        </div>
+        <div class="estadistica-item">
+          <span class="estadistica-valor">28%</span>
+          <span class="estadistica-etiqueta">Actas</span>
+        </div>
+        <div class="estadistica-item">
+          <span class="estadistica-valor">27%</span>
+          <span class="estadistica-etiqueta">Otros</span>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  {{else}}
+  <!-- Vista de Reporte Individual -->
+  <div class="reporte-contenido">
+    <h3>
+      <i class="fas fa-chart-bar"></i>
+      {{tituloReporte}}
+    </h3>
+    
+    {{!-- Aquí se renderiza el partial correspondiente al tipo de reporte --}}
+    {{> (concat "admin/reportes/partials/" tipoReporte)}}
+  </div>
+  {{/unless}}
 </div>
 
-{{!-- CONTENIDO PRINCIPAL: Grid o Partial Dinámico --}}
-{{#if filtros.tipo}}
-  {{!-- VISTA DE REPORTE ESPECÍFICO CON PARTIAL DINÁMICO --}}
-  <div class="row">
-    <div class="col-md-12 mb-4">
-      <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <span>
-            <i class="fas fa-chart-bar me-2"></i>
-            {{#if (eq filtros.tipo "estado")}}Reporte por Estado
-            {{else if (eq filtros.tipo "sin_pago")}}Documentos Sin Pago
-            {{else if (eq filtros.tipo "sin_procesar")}}Documentos Sin Procesar
-            {{else if (eq filtros.tipo "fecha")}}Reporte por Fecha
-            {{else if (eq filtros.tipo "matrizador")}}Reporte por Matrizador
-            {{else if (eq filtros.tipo "tipoDocumento")}}Reporte por Tipo
-            {{else}}{{title}}{{/if}}
-          </span>
-          <div>
-            <a href="/admin/reportes" class="btn btn-sm btn-outline-secondary me-2">
-              <i class="fas fa-arrow-left me-1"></i> Volver al Grid
-            </a>
-            <button class="btn btn-sm btn-outline-primary me-2" onclick="window.print()">
-              <i class="fas fa-print me-1"></i> Imprimir
-            </button>
-            <button class="btn btn-sm btn-outline-success" onclick="exportarReporte()">
-              <i class="fas fa-file-excel me-1"></i> Exportar Excel
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  {{!-- FILTROS Y CONTENIDO DEL REPORTE --}}
-  <div class="row">
-    <div class="col-md-3">
-      <div class="card mb-4">
-        <div class="card-header">
-          <i class="fas fa-filter me-2"></i>Filtros
-        </div>
-        <div class="card-body">
-          <form id="reportForm" action="/admin/reportes" method="GET">
-            <input type="hidden" name="tipo" value="{{filtros.tipo}}">
-            
-            <div class="mb-3">
-              <label for="fechaInicio" class="form-label">Fecha Inicial</label>
-              <input type="date" class="form-control" id="fechaInicio" name="fechaInicio" value="{{filtros.fechaInicio}}">
-            </div>
-            
-            <div class="mb-3">
-              <label for="fechaFin" class="form-label">Fecha Final</label>
-              <input type="date" class="form-control" id="fechaFin" name="fechaFin" value="{{filtros.fechaFin}}">
-            </div>
-            
-            {{#if matrizadores}}
-            <div class="mb-3">
-              <label for="idMatrizador" class="form-label">Matrizador</label>
-              <select class="form-select" id="idMatrizador" name="idMatrizador">
-                <option value="">Todos</option>
-                {{#each matrizadores}}
-                <option value="{{this.id}}" {{#if (eq ../filtros.idMatrizador this.id)}}selected{{/if}}>{{this.nombre}}</option>
-                {{/each}}
-              </select>
-            </div>
-            {{/if}}
-            
-            <div class="d-grid">
-              <button type="submit" class="btn btn-primary">
-                <i class="fas fa-search me-1"></i> Actualizar Reporte
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-    
-    <div class="col-md-9">
-      {{!-- INCLUIR PARTIAL DINÁMICO SEGÚN EL TIPO --}}
-      {{#if (eq filtros.tipo "estado")}}
-        {{> admin/reportes/partials/estado}}
-      {{else if (eq filtros.tipo "sin_pago")}}
-        {{> admin/reportes/partials/sin_pago}}
-      {{else if (eq filtros.tipo "sin_procesar")}}
-        {{> admin/reportes/partials/sin_procesar}}
-      {{else if (eq filtros.tipo "fecha")}}
-        {{> admin/reportes/partials/fecha}}
-      {{else if (eq filtros.tipo "matrizador")}}
-        {{> admin/reportes/partials/matrizador}}
-      {{else if (eq filtros.tipo "tipoDocumento")}}
-        {{> admin/reportes/partials/tipoDocumento}}
-      {{else}}
-        <div class="alert alert-warning">
-          <i class="fas fa-exclamation-triangle me-2"></i>
-          Tipo de reporte no reconocido: {{filtros.tipo}}
-        </div>
-      {{/if}}
-    </div>
-  </div>
-
-{{else}}
-  {{!-- VISTA DEL GRID PRINCIPAL (sin tipo específico) --}}
-  <div class="row">
-    <div class="col-md-12 mb-4">
-      <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <span><i class="fas fa-chart-bar me-2"></i> Reportes y Estadísticas</span>
-          <div>
-            <button class="btn btn-sm btn-outline-primary me-2" onclick="window.print()">
-              <i class="fas fa-print me-1"></i> Imprimir
-            </button>
-            <button class="btn btn-sm btn-outline-success" onclick="exportarReportes()">
-              <i class="fas fa-file-excel me-1"></i> Exportar Excel
-            </button>
-          </div>
-        </div>
-        <div class="card-body">
-          <p class="text-muted mb-0">
-            <i class="fas fa-info-circle me-1"></i>
-            Selecciona un reporte para ver análisis detallados y estadísticas del sistema.
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  {{!-- Grid de Reportes Simplificado - Exactamente 8 Reportes Útiles --}}
-  <div class="row">
-    {{!-- 1. Reporte por Estado --}}
-    <div class="col-md-6 col-lg-4 mb-4">
-      <div class="card h-100 border-primary">
-        <div class="card-body text-center">
-          <div class="mb-3">
-            <i class="fas fa-tasks fa-3x text-primary"></i>
-          </div>
-          <h5 class="card-title">Reporte por Estado</h5>
-          <p class="card-text text-muted">Documentos agrupados por estado de procesamiento</p>
-          <a href="/admin/reportes?tipo=estado" class="btn btn-primary">
-            <i class="fas fa-chart-pie me-1"></i> Ver Reporte
-          </a>
-        </div>
-      </div>
-    </div>
-
-    {{!-- 2. Reporte Financiero --}}
-    <div class="col-md-6 col-lg-4 mb-4">
-      <div class="card h-100 border-success">
-        <div class="card-body text-center">
-          <div class="mb-3">
-            <i class="fas fa-dollar-sign fa-3x text-success"></i>
-          </div>
-          <h5 class="card-title">Reporte Financiero</h5>
-          <p class="card-text text-muted">Análisis de ingresos y facturación</p>
-          <a href="/admin/reportes/financiero" class="btn btn-success">
-            <i class="fas fa-chart-line me-1"></i> Ver Reporte
-          </a>
-        </div>
-      </div>
-    </div>
-
-    {{!-- 3. Documentos Sin Pago --}}
-    <div class="col-md-6 col-lg-4 mb-4">
-      <div class="card h-100 border-warning">
-        <div class="card-body text-center">
-          <div class="mb-3">
-            <i class="fas fa-exclamation-triangle fa-3x text-warning"></i>
-          </div>
-          <h5 class="card-title">Documentos Sin Pago</h5>
-          <p class="card-text text-muted">Documentos pendientes de pago</p>
-          <a href="/admin/reportes?tipo=sin_pago" class="btn btn-warning">
-            <i class="fas fa-credit-card me-1"></i> Ver Reporte
-          </a>
-        </div>
-      </div>
-    </div>
-
-    {{!-- 4. Documentos Sin Procesar --}}
-    <div class="col-md-6 col-lg-4 mb-4">
-      <div class="card h-100 border-danger">
-        <div class="card-body text-center">
-          <div class="mb-3">
-            <i class="fas fa-clock fa-3x text-danger"></i>
-          </div>
-          <h5 class="card-title">Documentos Sin Procesar</h5>
-          <p class="card-text text-muted">Documentos pendientes de procesamiento</p>
-          <a href="/admin/reportes?tipo=sin_procesar" class="btn btn-danger">
-            <i class="fas fa-hourglass-half me-1"></i> Ver Reporte
-          </a>
-        </div>
-      </div>
-    </div>
-
-    {{!-- 5. Pagos Atrasados --}}
-    <div class="col-md-6 col-lg-4 mb-4">
-      <div class="card h-100 border-info">
-        <div class="card-body text-center">
-          <div class="mb-3">
-            <i class="fas fa-calendar-times fa-3x text-info"></i>
-          </div>
-          <h5 class="card-title">Pagos Atrasados</h5>
-          <p class="card-text text-muted">Documentos con pagos vencidos por antigüedad</p>
-          <a href="/admin/reportes/pendientes" class="btn btn-info">
-            <i class="fas fa-bell me-1"></i> Ver Reporte
-          </a>
-        </div>
-      </div>
-    </div>
-
-    {{!-- 6. Cobros por Matrizador --}}
-    <div class="col-md-6 col-lg-4 mb-4">
-      <div class="card h-100 border-secondary">
-        <div class="card-body text-center">
-          <div class="mb-3">
-            <i class="fas fa-users fa-3x text-secondary"></i>
-          </div>
-          <h5 class="card-title">Cobros por Matrizador</h5>
-          <p class="card-text text-muted">Análisis de cobros por cada matrizador</p>
-          <a href="/admin/reportes/cobros-matrizador" class="btn btn-secondary">
-            <i class="fas fa-user-tie me-1"></i> Ver Reporte
-          </a>
-        </div>
-      </div>
-    </div>
-
-    {{!-- 7. Productividad Matrizadores --}}
-    <div class="col-md-6 col-lg-4 mb-4">
-      <div class="card h-100 border-dark">
-        <div class="card-body text-center">
-          <div class="mb-3">
-            <i class="fas fa-chart-bar fa-3x text-dark"></i>
-          </div>
-          <h5 class="card-title">Productividad Matrizadores</h5>
-          <p class="card-text text-muted">Métricas de rendimiento por matrizador</p>
-          <a href="/admin/reportes/productividad-matrizadores" class="btn btn-dark">
-            <i class="fas fa-tachometer-alt me-1"></i> Ver Reporte
-          </a>
-        </div>
-      </div>
-    </div>
-
-    {{!-- 8. Reporte de Matrizadores --}}
-    <div class="col-md-6 col-lg-4 mb-4">
-      <div class="card h-100 border-purple">
-        <div class="card-body text-center">
-          <div class="mb-3">
-            <i class="fas fa-users-cog fa-3x" style="color: #6f42c1;"></i>
-          </div>
-          <h5 class="card-title">Reporte de Matrizadores</h5>
-          <p class="card-text text-muted">Análisis de productividad y facturación por matrizador</p>
-          <a href="/admin/reportes/matrizadores" class="btn" style="background-color: #6f42c1; color: white;">
-            <i class="fas fa-users me-1"></i> Ver Reporte
-          </a>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  {{!-- Información adicional --}}
-  <div class="row mt-4">
-    <div class="col-md-12">
-      <div class="alert alert-info">
-        <h6><i class="fas fa-lightbulb me-2"></i>Información sobre los Reportes</h6>
-        <div class="row">
-          <div class="col-md-6">
-            <ul class="mb-0">
-              <li><strong>Reporte por Estado:</strong> Muestra la distribución de documentos según su estado actual</li>
-              <li><strong>Reporte Financiero:</strong> Análisis completo de ingresos, facturación y cobros</li>
-              <li><strong>Documentos Sin Pago:</strong> Identifica documentos facturados pero no pagados</li>
-              <li><strong>Documentos Sin Procesar:</strong> Documentos que requieren atención inmediata</li>
-            </ul>
-          </div>
-          <div class="col-md-6">
-            <ul class="mb-0">
-              <li><strong>Pagos Atrasados:</strong> Documentos con pagos vencidos organizados por antigüedad</li>
-              <li><strong>Cobros por Matrizador:</strong> Rendimiento financiero de cada matrizador</li>
-              <li><strong>Productividad Matrizadores:</strong> Métricas de eficiencia y rendimiento detalladas</li>
-              <li><strong>Reporte de Matrizadores:</strong> Análisis de productividad y facturación por matrizador</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-{{/if}}
-
-{{!-- Scripts para funcionalidad básica --}}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-function exportarReportes() {
-  alert('Funcionalidad de exportación en desarrollo.\nCada reporte individual tiene su propia opción de exportación.');
-}
-
-function exportarReporte() {
-  alert('Funcionalidad de exportación específica en desarrollo.');
-}
-
-// Mejorar la experiencia visual
 document.addEventListener('DOMContentLoaded', function() {
-  // Agregar efecto hover a las tarjetas del grid
-  const cards = document.querySelectorAll('.card');
-  cards.forEach(card => {
-    card.addEventListener('mouseenter', function() {
-      this.style.transform = 'translateY(-5px)';
-      this.style.transition = 'transform 0.3s ease';
-    });
-    
-    card.addEventListener('mouseleave', function() {
-      this.style.transform = 'translateY(0)';
-    });
-  });
+  console.log('🎯 Sistema de reportes inicializado');
+  
+  // Configurar fechas por defecto para el período personalizado
+  const hoy = new Date();
+  const fechaDesde = document.getElementById('fechaDesde');
+  const fechaHasta = document.getElementById('fechaHasta');
+  
+  if (fechaDesde && !fechaDesde.value) {
+    const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+    fechaDesde.value = primerDiaMes.toISOString().split('T')[0];
+  }
+  
+  if (fechaHasta && !fechaHasta.value) {
+    fechaHasta.value = hoy.toISOString().split('T')[0];
+  }
 });
-</script>
 
-{{!-- Estilos adicionales --}}
-<style>
-.card {
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+function togglePanelFechas() {
+  const panel = document.getElementById('panelFechas');
+  const botones = document.querySelectorAll('.boton-filtro');
+  
+  // Remover clase activo de todos los botones
+  botones.forEach(btn => btn.classList.remove('activo'));
+  
+  // Toggle del panel
+  if (panel.classList.contains('activo')) {
+    panel.classList.remove('activo');
+  } else {
+    panel.classList.add('activo');
+    // Marcar botón personalizado como activo
+    event.target.classList.add('activo');
+  }
 }
-
-.card:hover {
-  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-}
-
-.fa-3x {
-  margin-bottom: 1rem;
-}
-
-.btn {
-  transition: all 0.3s ease;
-}
-
-.alert-info {
-  background-color: #f8f9fa;
-  border-color: #dee2e6;
-  color: #495057;
-}
-
-.breadcrumb {
-  background-color: #f8f9fa;
-  border-radius: 0.375rem;
-  padding: 0.75rem 1rem;
-}
-
-.breadcrumb-item + .breadcrumb-item::before {
-  content: ">";
-  color: #6c757d;
-}
-
-.border-purple {
-  border-color: #6f42c1 !important;
-}
-</style> 
+</script> 
