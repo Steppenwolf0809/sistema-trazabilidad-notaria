@@ -27,7 +27,7 @@
     }
     
     .sidebar.collapsed {
-      width: 80px !important;
+      width: 60px !important; /* Reducir de 80px a 60px para consistencia */
     }
     
     .sidebar-item {
@@ -76,11 +76,12 @@
     /* Main content responsive */
     .main-content {
       transition: margin-left 0.3s ease;
-      margin-left: 280px;
+      margin-left: 250px; /* Reducir de 280px a 250px */
+      padding: 15px 20px; /* Optimizar padding para más espacio */
     }
     
     .main-content.expanded {
-      margin-left: 80px;
+      margin-left: 60px; /* Reducir de 80px a 60px */
     }
     
     /* Responsive */
@@ -103,7 +104,7 @@
 </head>
 <body class="bg-gray-50">
   <!-- Sidebar -->
-  <div id="sidebar" class="sidebar fixed left-0 top-0 h-full w-70 text-white z-40">
+  <div id="sidebar" class="sidebar fixed left-0 top-0 h-full w-64 text-white z-40" style="width: 250px;"> <!-- Optimizar ancho a 250px -->
     <!-- Logo/Header -->
     <div class="flex items-center justify-between p-4 border-b border-white/10">
       <div class="flex items-center space-x-3">
@@ -180,7 +181,7 @@
   </div>
   
   <!-- Header -->
-  <header class="navbar fixed top-0 right-0 left-70 h-16 flex items-center justify-between px-6 text-white z-30" id="header">
+  <header class="navbar fixed top-0 right-0 h-16 flex items-center justify-between px-6 text-white z-30" id="header" style="left: 250px;"> <!-- Actualizar left para nuevo ancho -->
     <div class="flex items-center space-x-4">
       <h2 class="text-xl font-semibold">{{title}}</h2>
     </div>

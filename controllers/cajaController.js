@@ -626,7 +626,7 @@ const cajaController = {
       
       // Parámetros de paginación
       const page = parseInt(req.query.page) || 1;
-      const limit = 30; // CORREGIDO: Aumentado de 10 a 30 documentos por página
+      const limit = 15; // OPTIMIZADO: Reducido de 30 a 15 documentos por página para mejor visualización
       const offset = (page - 1) * limit;
 
       // ✨ NUEVO: Parámetros de ordenamiento
