@@ -358,8 +358,11 @@ class SidebarManager {
     console.log('📏 Colapsando sidebar');
     
     this.isCollapsed = true;
+    
+    // SOLUCIÓN: Aplicar clases en múltiples elementos para asegurar sincronización
     this.sidebar.classList.add('collapsed');
     this.mainContent.classList.add('sidebar-collapsed');
+    document.body.classList.add('sidebar-collapsed'); // AGREGADO: clase en body también
     
     // Actualizar ícono del botón - Mejorado para forzar el cambio
     if (this.toggleBtn) {
@@ -378,9 +381,16 @@ class SidebarManager {
       this.saveState();
     }
     
-    // Trigger resize event para otros componentes
+    // AGREGADO: Forzar recálculo de layout
     setTimeout(() => {
       window.dispatchEvent(new Event('resize'));
+      // Forzar reflow del layout
+      if (this.mainContent) {
+        this.mainContent.style.transform = 'translateZ(0)';
+        setTimeout(() => {
+          this.mainContent.style.transform = '';
+        }, 50);
+      }
     }, 300);
   }
 
@@ -390,8 +400,11 @@ class SidebarManager {
     console.log('📏 Expandiendo sidebar');
     
     this.isCollapsed = false;
+    
+    // SOLUCIÓN: Remover clases de múltiples elementos para asegurar sincronización
     this.sidebar.classList.remove('collapsed');
     this.mainContent.classList.remove('sidebar-collapsed');
+    document.body.classList.remove('sidebar-collapsed'); // AGREGADO: clase en body también
     
     // Actualizar ícono del botón - Mejorado para forzar el cambio
     if (this.toggleBtn) {
@@ -410,9 +423,16 @@ class SidebarManager {
       this.saveState();
     }
     
-    // Trigger resize event para otros componentes
+    // AGREGADO: Forzar recálculo de layout
     setTimeout(() => {
       window.dispatchEvent(new Event('resize'));
+      // Forzar reflow del layout
+      if (this.mainContent) {
+        this.mainContent.style.transform = 'translateZ(0)';
+        setTimeout(() => {
+          this.mainContent.style.transform = '';
+        }, 50);
+      }
     }, 300);
   }
 
@@ -453,6 +473,70 @@ class SidebarManager {
     } catch (e) {
       console.warn('⚠️ No se pudo cargar el estado guardado del sidebar');
     }
+    
+    // AGREGADO: Verificar y corregir estado inicial
+    this.ensureCorrectInitialState();
+  }
+
+  /**
+   * NUEVA FUNCIÓN: Asegura que el estado inicial del layout sea correcto
+   */
+  ensureCorrectInitialState() {
+    console.log('🔍 Verificando estado inicial del layout...');
+    
+    // Verificar consistencia entre sidebar y main-content
+    const sidebarCollapsed = this.sidebar && this.sidebar.classList.contains('collapsed');
+    const mainContentCollapsed = this.mainContent && this.mainContent.classList.contains('sidebar-collapsed');
+    const bodyCollapsed = document.body.classList.contains('sidebar-collapsed');
+    
+    console.log('📊 Estado actual:', {
+      sidebarCollapsed,
+      mainContentCollapsed,
+      bodyCollapsed,
+      isCollapsed: this.isCollapsed
+    });
+    
+    // Si hay inconsistencias, corregirlas
+    if (sidebarCollapsed !== mainContentCollapsed || sidebarCollapsed !== bodyCollapsed) {
+      console.log('⚠️ Inconsistencia detectada, corrigiendo...');
+      
+      if (sidebarCollapsed) {
+        // Sidebar está colapsado, asegurar que todo esté sincronizado
+        this.mainContent?.classList.add('sidebar-collapsed');
+        document.body.classList.add('sidebar-collapsed');
+        this.isCollapsed = true;
+      } else {
+        // Sidebar está expandido, asegurar que todo esté sincronizado
+        this.mainContent?.classList.remove('sidebar-collapsed');
+        document.body.classList.remove('sidebar-collapsed');
+        this.isCollapsed = false;
+      }
+    }
+    
+    // Forzar recálculo de layout
+    setTimeout(() => {
+      this.forceLayoutRecalc();
+    }, 100);
+  }
+
+  /**
+   * NUEVA FUNCIÓN: Fuerza el recálculo del layout
+   */
+  forceLayoutRecalc() {
+    console.log('🔄 Forzando recálculo de layout...');
+    
+    if (this.mainContent) {
+      // Técnica para forzar reflow
+      const originalDisplay = this.mainContent.style.display;
+      this.mainContent.style.display = 'none';
+      this.mainContent.offsetHeight; // Trigger reflow
+      this.mainContent.style.display = originalDisplay;
+      
+      // Disparar evento resize
+      window.dispatchEvent(new Event('resize'));
+    }
+    
+    console.log('✅ Layout recalculado correctamente');
   }
 
   /**

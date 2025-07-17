@@ -2438,3 +2438,178 @@
   align-items: center !important;
   justify-content: center !important;
 }
+
+/* ====================================================
+   📊 OPTIMIZACIÓN ESPECÍFICA PARA PANEL MATRIZADOR
+   ==================================================== */
+
+/* Panel principal del matrizador */
+.panel-matrizador,
+.main-content .container-fluid,
+.main-content .row,
+.main-content .col-12 {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* Cards optimizadas para máximo ancho */
+.panel-matrizador .card {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin-bottom: 20px !important;
+  border: none !important;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08) !important;
+  border-radius: 12px !important;
+}
+
+.panel-matrizador .card-body {
+  padding: 20px !important;
+  word-wrap: break-word !important;
+  overflow-x: auto !important;
+}
+
+/* Optimización de formularios y controles */
+.panel-matrizador .form-control,
+.panel-matrizador .form-select {
+  min-width: 150px !important;
+}
+
+.panel-matrizador .btn-group {
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+}
+
+/* Tabla de autorizaciones verbales optimizada */
+.panel-matrizador .table-responsive {
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+  margin: 0 !important;
+  width: 100% !important;
+  overflow-x: auto !important;
+}
+
+.panel-matrizador .table {
+  width: 100% !important;
+  min-width: 600px !important; /* Ancho mínimo para evitar compresión */
+  margin: 0 !important;
+}
+
+.panel-matrizador .table th,
+.panel-matrizador .table td {
+  padding: 12px 8px !important;
+  font-size: 13px !important;
+  vertical-align: middle !important;
+  white-space: nowrap !important;
+}
+
+/* Headers específicos del panel */
+.panel-matrizador .alert {
+  margin-bottom: 20px !important;
+  border-radius: 8px !important;
+  border-width: 0 !important;
+  border-left-width: 4px !important;
+  padding: 15px 20px !important;
+}
+
+.panel-matrizador .alert-warning {
+  background-color: #fff8e1 !important;
+  color: #e65100 !important;
+  border-left-color: #ff9800 !important;
+}
+
+.panel-matrizador .alert-success {
+  background-color: #e8f5e8 !important;
+  color: #2e7d32 !important;
+  border-left-color: #4caf50 !important;
+}
+
+/* Badges optimizados */
+.panel-matrizador .badge {
+  font-size: 11px !important;
+  padding: 6px 10px !important;
+  font-weight: 600 !important;
+  border-radius: 6px !important;
+}
+
+.panel-matrizador .badge-info {
+  background-color: #1976d2 !important;
+  color: white !important;
+}
+
+/* Botones optimizados */
+.panel-matrizador .btn-sm {
+  padding: 6px 12px !important;
+  font-size: 12px !important;
+  border-radius: 6px !important;
+}
+
+/* Headers con mejor distribución */
+.panel-matrizador .d-flex {
+  gap: 15px !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+}
+
+.panel-matrizador .h4 {
+  margin: 0 !important;
+  font-size: 1.5rem !important;
+  font-weight: 600 !important;
+  color: var(--text-primary) !important;
+}
+
+/* Container específico del dashboard */
+.dashboard-matrizador {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.dashboard-matrizador .row {
+  margin: 0 !important;
+  width: 100% !important;
+}
+
+.dashboard-matrizador .col-12 {
+  padding: 0 !important;
+  width: 100% !important;
+}
+
+/* Responsive específico para panel matrizador */
+@media (max-width: 1200px) {
+  .panel-matrizador .d-flex {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+  
+  .panel-matrizador .btn-group {
+    width: 100% !important;
+    justify-content: stretch !important;
+  }
+  
+  .panel-matrizador .form-control,
+  .panel-matrizador .form-select {
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .panel-matrizador .card-body {
+    padding: 15px !important;
+  }
+  
+  .panel-matrizador .table th,
+  .panel-matrizador .table td {
+    padding: 8px 4px !important;
+    font-size: 12px !important;
+  }
+  
+  .panel-matrizador .btn-sm {
+    padding: 4px 8px !important;
+    font-size: 11px !important;
+  }
+}

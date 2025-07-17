@@ -69,9 +69,10 @@ body {
 }
 
 /* ===================================================
-   CONTENEDOR PRINCIPAL DEL LAYOUT
+   SISTEMA DE LAYOUT DINÁMICO CORREGIDO
    ================================================== */
 
+/* Layout principal del app container */
 .app-container {
   display: flex !important;
   min-height: 100vh !important;
@@ -82,14 +83,17 @@ body {
 }
 
 /* ===================================================
-   ESTRUCTURA BASE DE LA SIDEBAR
+   SIDEBAR CON TRANSICIONES DINÁMICAS
    ================================================== */
 
 .sidebar {
-  position: relative !important;
-  flex: 0 0 var(--sidebar-width-expanded) !important;
-  width: var(--sidebar-width-expanded) !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
   height: 100vh !important;
+  width: var(--sidebar-width-expanded) !important;
+  min-width: var(--sidebar-width-expanded) !important;
+  flex: 0 0 var(--sidebar-width-expanded) !important;
   background: var(--sidebar-bg) !important;
   color: var(--sidebar-text) !important;
   padding: 0 !important;
@@ -101,8 +105,9 @@ body {
 }
 
 .sidebar.collapsed {
-  flex: 0 0 var(--sidebar-width-collapsed) !important;
   width: var(--sidebar-width-collapsed) !important;
+  min-width: var(--sidebar-width-collapsed) !important;
+  flex: 0 0 var(--sidebar-width-collapsed) !important;
 }
 
 /* ===================================================
@@ -408,23 +413,42 @@ button.sidebar-toggle {
 }
 
 /* ===================================================
-   ÁREA DE CONTENIDO PRINCIPAL
+   CONTENIDO PRINCIPAL CON CÁLCULO DINÁMICO
    ================================================== */
 
 .main-content {
-  flex: 1 !important;
-  padding: 15px 20px !important; /* Reducir padding para más espacio */
+  /* SOLUCIÓN: Usar margin-left dinámico basado en el ancho de sidebar */
+  margin-left: var(--sidebar-width-expanded) !important;
+  width: calc(100% - var(--sidebar-width-expanded)) !important;
+  max-width: calc(100% - var(--sidebar-width-expanded)) !important;
   min-height: 100vh !important;
+  padding: 15px 20px !important;
   background: var(--background) !important;
   overflow-x: hidden !important;
-  width: calc(100vw - var(--sidebar-width-expanded)) !important;
-  max-width: calc(100vw - var(--sidebar-width-expanded)) !important;
-  transition: width var(--transition-speed) var(--transition-easing) !important;
+  transition: margin-left var(--transition-speed) var(--transition-easing), 
+              width var(--transition-speed) var(--transition-easing) !important;
+  position: relative !important;
+  flex: 1 !important;
 }
 
+/* ESTADO COLAPSADO: El contenido principal se expande */
 .main-content.sidebar-collapsed {
-  width: calc(100vw - var(--sidebar-width-collapsed)) !important;
-  max-width: calc(100vw - var(--sidebar-width-collapsed)) !important;
+  margin-left: var(--sidebar-width-collapsed) !important;
+  width: calc(100% - var(--sidebar-width-collapsed)) !important;
+  max-width: calc(100% - var(--sidebar-width-collapsed)) !important;
+}
+
+/* Alternativa usando clases en body */
+body.sidebar-collapsed .main-content {
+  margin-left: var(--sidebar-width-collapsed) !important;
+  width: calc(100% - var(--sidebar-width-collapsed)) !important;
+  max-width: calc(100% - var(--sidebar-width-collapsed)) !important;
+}
+
+body:not(.sidebar-collapsed) .main-content {
+  margin-left: var(--sidebar-width-expanded) !important;
+  width: calc(100% - var(--sidebar-width-expanded)) !important;
+  max-width: calc(100% - var(--sidebar-width-expanded)) !important;
 }
 
 /* ===================================================
@@ -859,7 +883,7 @@ button.sidebar-toggle {
 } 
 
 /* ===================================================
-   RESPONSIVE DESIGN OPTIMIZADO PARA DIFERENTES RESOLUCIONES
+   RESPONSIVE DESIGN OPTIMIZADO PARA LAYOUT DINÁMICO
    ================================================== */
 
 /* Desktop XL (>= 1400px) - Máximo espacio disponible */
@@ -868,7 +892,8 @@ button.sidebar-toggle {
     padding: 20px 25px !important;
   }
   
-  .table-documentos .col-cliente {
+  .table-documentos .col-cliente,
+  .panel-matrizador .table .col-cliente {
     min-width: 250px !important;
     max-width: 300px !important;
   }
@@ -884,7 +909,8 @@ button.sidebar-toggle {
     padding: 15px 20px !important;
   }
   
-  .table-documentos .col-cliente {
+  .table-documentos .col-cliente,
+  .panel-matrizador .table .col-cliente {
     min-width: 200px !important;
     max-width: 250px !important;
   }
@@ -897,14 +923,11 @@ button.sidebar-toggle {
   }
   
   .table-documentos th,
-  .table-documentos td {
+  .table-documentos td,
+  .panel-matrizador .table th,
+  .panel-matrizador .table td {
     padding: 6px 4px !important;
     font-size: 12px !important;
-  }
-  
-  .table-documentos .col-cliente {
-    min-width: 180px !important;
-    max-width: 220px !important;
   }
   
   .topbar {
@@ -917,7 +940,7 @@ button.sidebar-toggle {
   }
 }
 
-/* Tablet (768px - 991px) - Sidebar overlay */
+/* Tablet (768px - 991px) - Sidebar overlay, contenido full width */
 @media (min-width: 768px) and (max-width: 991px) {
   .sidebar {
     position: fixed !important;
@@ -930,11 +953,25 @@ button.sidebar-toggle {
     transform: translateX(0) !important;
   }
   
+  /* CORRECCIÓN CLAVE: En tablet el contenido debe usar todo el ancho */
   .main-content {
+    margin-left: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
-    margin-left: 0 !important;
     padding: 10px 12px !important;
+  }
+  
+  /* Importante: Sobrescribir clases de estado colapsado en tablet */
+  .main-content.sidebar-collapsed {
+    margin-left: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  
+  body.sidebar-collapsed .main-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
   }
   
   .sidebar-toggle {
@@ -946,18 +983,10 @@ button.sidebar-toggle {
     z-index: 1051 !important;
   }
   
-  .table-documentos {
-    font-size: 11px !important;
-  }
-  
-  .table-documentos .col-cliente {
-    min-width: 150px !important;
-    max-width: 180px !important;
-  }
-  
   .topbar {
     padding: 10px 12px !important;
     margin-bottom: 12px !important;
+    margin-left: 50px !important; /* Espacio para botón toggle */
   }
   
   .topbar h4 {
@@ -991,11 +1020,25 @@ button.sidebar-toggle {
     transform: translateX(0) !important;
   }
   
+  /* CORRECCIÓN CLAVE: En móvil el contenido debe usar todo el ancho */
   .main-content {
+    margin-left: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
-    margin-left: 0 !important;
     padding: 8px 10px !important;
+  }
+  
+  /* Importante: Sobrescribir clases de estado colapsado en móvil */
+  .main-content.sidebar-collapsed {
+    margin-left: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  
+  body.sidebar-collapsed .main-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
   }
   
   .sidebar-toggle {
@@ -1019,73 +1062,27 @@ button.sidebar-toggle {
     font-size: 16px !important;
   }
   
+  /* Panel matrizador específico para móvil */
+  .panel-matrizador .d-flex {
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+  
+  .panel-matrizador .btn-group {
+    width: 100% !important;
+  }
+  
   /* Tabla móvil optimizada */
   .table-responsive {
     font-size: 10px !important;
   }
   
   .table-documentos th,
-  .table-documentos td {
+  .table-documentos td,
+  .panel-matrizador .table th,
+  .panel-matrizador .table td {
     padding: 4px 2px !important;
     font-size: 10px !important;
-  }
-  
-  .table-documentos .col-checkbox {
-    width: 30px !important;
-    max-width: 30px !important;
-  }
-  
-  .table-documentos .col-codigo {
-    width: 100px !important;
-    max-width: 100px !important;
-  }
-  
-  .table-documentos .col-cliente {
-    min-width: 120px !important;
-    max-width: 150px !important;
-  }
-  
-  .table-documentos .col-matrizador {
-    width: 60px !important;
-    max-width: 60px !important;
-  }
-  
-  .table-documentos .col-fecha {
-    width: 70px !important;
-    max-width: 70px !important;
-  }
-  
-  .table-documentos .col-estado,
-  .table-documentos .col-pago {
-    width: 80px !important;
-    max-width: 80px !important;
-  }
-  
-  .table-documentos .col-valor {
-    width: 70px !important;
-    max-width: 70px !important;
-  }
-  
-  .table-documentos .col-acciones {
-    width: 80px !important;
-    max-width: 80px !important;
-  }
-  
-  /* Badges más pequeños en móvil */
-  .badge {
-    font-size: 8px !important;
-    padding: 2px 4px !important;
-  }
-  
-  /* Botones más pequeños en móvil */
-  .btn-group-sm .btn {
-    padding: 2px 4px !important;
-    font-size: 10px !important;
-  }
-  
-  .btn-universal {
-    min-width: 24px !important;
-    height: 24px !important;
   }
   
   /* Overlay para cerrar sidebar */
@@ -1105,26 +1102,5 @@ button.sidebar-toggle {
   .sidebar-overlay.active {
     opacity: 1 !important;
     visibility: visible !important;
-  }
-  
-  /* Container optimizado para móvil */
-  .container-fluid.px-2 {
-    padding-left: 4px !important;
-    padding-right: 4px !important;
-  }
-  
-  .card-body.p-3 {
-    padding: 8px !important;
-  }
-  
-  /* Filtros en móvil - stack vertical */
-  .row.g-3 {
-    gap: 8px !important;
-  }
-  
-  .row.g-3 .col-md-2,
-  .row.g-3 .col-md-1 {
-    width: 100% !important;
-    margin-bottom: 8px !important;
   }
 } 
