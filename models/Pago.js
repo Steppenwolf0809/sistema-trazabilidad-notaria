@@ -48,7 +48,7 @@ const Pago = sequelize.define('Pago', {
   
   // Forma de pago utilizada
   formaPago: {
-    type: DataTypes.ENUM('efectivo', 'transferencia', 'cheque', 'tarjeta_credito', 'tarjeta_debito', 'otros'),
+    type: DataTypes.ENUM('efectivo', 'transferencia', 'cheque', 'tarjeta_credito', 'tarjeta_debito', 'otros', 'exento'),
     field: 'forma_pago',
     allowNull: false
   },

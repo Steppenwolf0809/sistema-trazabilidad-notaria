@@ -561,6 +561,139 @@ const helpers = {
     if (!amount) return '0.00';
     return parseFloat(amount).toFixed(2);
   },
+
+  // ============== HELPERS PARA FACTURAS EXENTAS ==============
+
+  /**
+   * ✨ NUEVO: Helper para verificar si una factura es exenta ($0.00)
+   * @param {number} valorFactura - Valor de la factura
+   * @returns {boolean} true si es factura exenta
+   */
+  esFacturaExenta: (valorFactura) => {
+    const valor = parseFloat(valorFactura || 0);
+    return valor <= 0;
+  },
+
+  /**
+   * ✨ NUEVO: Helper para mostrar valor de factura con indicador de exenta
+   * @param {number} valorFactura - Valor de la factura
+   * @returns {string} HTML con valor formateado y badge si es exenta
+   */
+  valorFacturaConExenta: (valorFactura) => {
+    const valor = parseFloat(valorFactura || 0);
+    const valorFormateado = valor.toFixed(2);
+    
+    if (valor <= 0) {
+      return `
+        <div class="d-flex align-items-center">
+          <span class="fs-5 text-info fw-bold">$${valorFormateado}</span>
+          <span class="badge bg-info text-white ms-2 px-2 py-1">
+            <i class="fas fa-star me-1"></i>EXENTA
+          </span>
+        </div>
+      `;
+    }
+    
+    return `<span class="fs-5 text-primary">$${valorFormateado}</span>`;
+  },
+
+  /**
+   * ✨ NUEVO: Helper para badge de estado de pago mejorado con facturas exentas
+   * @param {string} estadoPago - Estado de pago del documento
+   * @param {number} valorFactura - Valor de la factura
+   * @returns {string} HTML del badge apropiado
+   */
+  badgeEstadoPagoConExenta: (estadoPago, valorFactura) => {
+    if (!estadoPago) return '<span class="badge bg-secondary text-white"><i class="fas fa-question-circle me-1"></i>Desconocido</span>';
+    
+    const valor = parseFloat(valorFactura || 0);
+    const estado = estadoPago.toLowerCase();
+    
+    // Casos especiales para facturas exentas
+    if (valor <= 0 && (estado.includes('completo') || estado.includes('pagado'))) {
+      return `
+        <span class="badge bg-info text-white px-2 py-1" title="Factura exenta - Valor $0.00">
+          <i class="fas fa-star me-1"></i>EXENTA
+        </span>
+      `;
+    }
+    
+    // Estados normales
+    let clase = '';
+    let icono = '';
+    let texto = '';
+    
+    if (estado.includes('pendiente') || estado.includes('no_pagado')) {
+      clase = 'bg-danger text-white';
+      icono = 'fas fa-times-circle';
+      texto = 'NO PAGADO';
+    } else if (estado.includes('parcial')) {
+      clase = 'bg-warning text-dark';
+      icono = 'fas fa-circle-half-stroke';
+      texto = 'PARCIAL';
+    } else if (estado.includes('completo')) {
+      clase = 'bg-success text-white';
+      icono = 'fas fa-dollar-sign';
+      texto = 'PAGADO';
+    } else if (estado.includes('retencion')) {
+      clase = 'bg-success text-white';
+      icono = 'fas fa-university';
+      texto = 'CON RETENCIÓN';
+    } else {
+      clase = 'bg-secondary text-white';
+      icono = 'fas fa-question-circle';
+      texto = estado.toUpperCase();
+    }
+    
+    return `<span class="badge ${clase} px-2 py-1"><i class="${icono} me-1"></i>${texto}</span>`;
+  },
+
+  /**
+   * ✨ NUEVO: Helper para mostrar información financiera completa
+   * @param {Object} documento - Documento con información financiera
+   * @returns {string} HTML con información completa
+   */
+  infoFinancieraCompleta: (documento) => {
+    if (!documento) return '';
+    
+    const valorFactura = parseFloat(documento.valorFactura || 0);
+    const valorPagado = parseFloat(documento.valorPagado || 0);
+    const valorPendiente = parseFloat(documento.valorPendiente || 0);
+    const esExenta = valorFactura <= 0;
+    
+    if (esExenta) {
+      return `
+        <div class="info-financiera-exenta">
+          <div class="text-center">
+            <div class="text-info fs-4 fw-bold">$0.00</div>
+            <div class="badge bg-info text-white">
+              <i class="fas fa-star me-1"></i>FACTURA EXENTA
+            </div>
+            <div class="small text-muted mt-1">Sin costo por exención tributaria</div>
+          </div>
+        </div>
+      `;
+    }
+    
+    return `
+      <div class="info-financiera-normal">
+        <div class="row text-center">
+          <div class="col-4">
+            <div class="text-muted small">TOTAL</div>
+            <div class="fs-5 text-primary">$${valorFactura.toFixed(2)}</div>
+          </div>
+          <div class="col-4">
+            <div class="text-muted small">PAGADO</div>
+            <div class="fs-5 text-success">$${valorPagado.toFixed(2)}</div>
+          </div>
+          <div class="col-4">
+            <div class="text-muted small">PENDIENTE</div>
+            <div class="fs-5 text-danger">$${valorPendiente.toFixed(2)}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  },
   
   add: (a, b) => {
     return parseInt(a) + parseInt(b);

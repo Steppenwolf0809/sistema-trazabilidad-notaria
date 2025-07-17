@@ -733,7 +733,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // ✅ CORREGIDO: Usar directamente el valor numérico de datos.valorFactura
     const valorFacturaNum = parseFloat(datos.valorFactura || 0);
-    const valorFacturaFormatted = valorFacturaNum > 0 ? valorFacturaNum.toFixed(2) : '';
+    // ✅ MOSTRAR SIEMPRE EL VALOR, incluso si es $0.00 para facturas exentas
+    const valorFacturaFormatted = valorFacturaNum.toFixed(2);
     
     document.getElementById('valorFactura').value = valorFacturaFormatted;
     
@@ -786,6 +787,9 @@ document.addEventListener('DOMContentLoaded', function() {
         alertaExenta.className = 'alert alert-info mt-3';
         alertaExenta.innerHTML = `
           <h6><i class="fas fa-info-circle text-info"></i> Factura Exenta Detectada</h6>
+          <div class="mb-2">
+            <strong>💰 Valor extraído del XML:</strong> <span class="badge bg-info text-white">$${valorFacturaFormatted}</span>
+          </div>
           <p class="mb-1">${datos.notaExencion}</p>
           <div class="small text-info">
             <strong>✅ Esta es una factura válida con valor $0.00 por exención tributaria.</strong><br>
@@ -815,6 +819,9 @@ document.addEventListener('DOMContentLoaded', function() {
         alertaValidacion.className = 'alert alert-warning mt-3';
         alertaValidacion.innerHTML = `
           <h6><i class="fas fa-exclamation-triangle text-warning"></i> Validación Manual Requerida</h6>
+          <div class="mb-2">
+            <strong>💰 Valor extraído del XML:</strong> <span class="badge bg-warning text-dark">$${valorFacturaFormatted}</span>
+          </div>
           <p class="mb-1">${datos.notaValidacion}</p>
           <div class="small">
             <strong>⚠️ Por favor, verifique los siguientes puntos:</strong><br>
@@ -859,6 +866,9 @@ document.addEventListener('DOMContentLoaded', function() {
         alertaValor.className = 'alert alert-danger mt-3';
         alertaValor.innerHTML = `
           <h6><i class="fas fa-exclamation-triangle text-danger"></i> Error: Valor de Factura $0</h6>
+          <div class="mb-2">
+            <strong>💰 Valor extraído del XML:</strong> <span class="badge bg-danger text-white">$${valorFacturaFormatted}</span>
+          </div>
           <p class="mb-2">El XML procesado no contiene un valor de factura válido.</p>
           <div class="small">
             <strong>Posibles causas:</strong><br>

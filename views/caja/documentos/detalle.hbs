@@ -92,9 +92,16 @@
           <div class="card-header d-flex justify-content-between align-items-center" id="pago">
             <h5 class="mb-0"><i class="fas fa-money-bill-wave me-2"></i>Información de Facturación y Pagos</h5>
             {{#if (and (neq documento.estado "eliminado") (neq documento.estado "nota_credito") (neq documento.estadoPago "pagado_completo"))}}
-            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#registrarPagoModal">
-              <i class="fas fa-plus-circle me-1"></i> Registrar Pago
-            </button>
+              {{#if (esFacturaExenta documento.valorFactura)}}
+              <div class="alert alert-info py-2 mb-0">
+                <i class="fas fa-info-circle me-1"></i>
+                <strong>Factura Exenta:</strong> Este documento no requiere pago por valor $0.00
+              </div>
+              {{else}}
+              <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#registrarPagoModal">
+                <i class="fas fa-plus-circle me-1"></i> Registrar Pago
+              </button>
+              {{/if}}
             {{/if}}
           </div>
           <div class="card-body">
@@ -113,7 +120,7 @@
                       </div>
                       <div class="col-12 mb-2">
                         <strong>💰 Valor Total:</strong> 
-                        <span class="fs-5 text-primary">${{#if documento.valorFactura}}{{formatMoney documento.valorFactura}}{{else}}0.00{{/if}}</span>
+                        {{{valorFacturaConExenta documento.valorFactura}}}
                       </div>
                       {{#if documento.fechaFactura}}
                       <div class="col-12">
@@ -134,15 +141,7 @@
                     <div class="row">
                       <div class="col-12 mb-2">
                         <strong>🏷️ Estado:</strong> 
-                        {{#if (eq documento.estadoPago "pagado_completo")}}
-                        <span class="badge bg-success fs-6">✅ Pagado Completo</span>
-                        {{else if (eq documento.estadoPago "pagado_con_retencion")}}
-                        <span class="badge bg-info fs-6">🧾 Pagado con Retención</span>
-                        {{else if (eq documento.estadoPago "pago_parcial")}}
-                        <span class="badge bg-warning text-dark fs-6">⚠️ Pago Parcial</span>
-                        {{else}}
-                        <span class="badge bg-danger fs-6">❌ Pendiente</span>
-                        {{/if}}
+                        {{{badgeEstadoPagoConExenta documento.estadoPago documento.valorFactura}}}
                       </div>
                       <div class="col-12 mb-2">
                         <strong>💳 Método:</strong> 

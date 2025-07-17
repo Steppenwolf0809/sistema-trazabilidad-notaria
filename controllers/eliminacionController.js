@@ -103,7 +103,11 @@ exports.eliminarDocumento = async (req, res) => {
     
     // NUEVO: Cambiar código para liberar el original antes de marcar como eliminado
     const codigoOriginal = documento.codigoBarras;
-    const timestamp = new Date().toISOString().slice(0,10).replace(/-/g,'');
+    // CORREGIDO: Incluir hora, minuto y segundo para evitar duplicados en el mismo día
+    const now = new Date();
+    const fecha = now.toISOString().slice(0,10).replace(/-/g,''); // YYYYMMDD
+    const hora = now.toISOString().slice(11,19).replace(/:/g,''); // HHMMSS
+    const timestamp = `${fecha}-${hora}`;
     const nuevoCodigo = `${codigoOriginal}-DEL-${timestamp}`;
     
     // Determinar el nuevo estado según el motivo

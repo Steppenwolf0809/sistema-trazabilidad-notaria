@@ -194,10 +194,10 @@
           {{{badgeEstadoEntrega this.estado}}}
         </td>
         
-        <!-- Estado de Pago (NUEVO BADGE) -->
+        <!-- Estado de Pago (MEJORADO CON FACTURAS EXENTAS) -->
         <td class="col-pago text-center">
           {{#if this.numeroFactura}}
-            {{{badgeEstadoPago this.estadoPago}}}
+            {{{badgeEstadoPagoConExenta this.estadoPago this.valorFactura}}}
           {{else}}
             <span class="badge bg-secondary" title="Documento sin factura asociada">
                 <i class="fas fa-file-invoice-dollar me-1"></i> S/F
@@ -205,10 +205,19 @@
           {{/if}}
         </td>
         
-        <!-- Valor con formato mejorado -->
+        <!-- Valor con formato mejorado (CON INDICADOR EXENTA) -->
         <td class="col-valor text-right">
           {{#if this.valorFactura}}
-          <span class="valor-monetario">{{formatDineroCompleto this.valorFactura}}</span>
+            {{#if (esFacturaExenta this.valorFactura)}}
+            <div class="d-flex align-items-center justify-content-end">
+              <span class="valor-monetario text-info fw-bold">$0.00</span>
+              <span class="badge bg-info text-white ms-1 px-1 py-1" style="font-size: 0.7rem;" title="Factura exenta">
+                <i class="fas fa-star"></i>
+              </span>
+            </div>
+            {{else}}
+            <span class="valor-monetario">{{formatDineroCompleto this.valorFactura}}</span>
+            {{/if}}
           {{else}}
           <span class="valor-monetario text-muted">$0.00</span>
           {{/if}}

@@ -2738,6 +2738,37 @@ const cajaController = {
           nombreCliente
         });
 
+        // ============== FIX FACTURAS EXENTAS: DETECCIÓN Y ESTADO AUTOMÁTICO ==============
+        const valorFacturaNum = parseFloat(valorFactura || 0);
+        let estadoPagoInicial = 'pendiente';
+        let valorPagadoInicial = 0;
+        let observacionesConExencion = observaciones || 'Documento registrado desde XML mediante vista previa';
+        
+        // 🚨 FIX URGENTE: Detectar facturas exentas ($0.00) y marcar como pagadas automáticamente
+        if (valorFacturaNum <= 0) {
+          console.log('💰 [EXENTAS] Factura con valor $0.00 detectada - Marcando como PAGADA AUTOMÁTICAMENTE');
+          
+          // CAMBIO CRÍTICO: Marcar SIEMPRE como pagado_completo si valor = $0.00
+          // No usar verificación restrictiva, cualquier factura $0.00 debe considerarse exenta
+          estadoPagoInicial = 'pagado_completo';
+          valorPagadoInicial = 0; // En facturas exentas, el valor pagado es 0
+          observacionesConExencion = `${observaciones || ''} | FACTURA EXENTA $0.00 - Estado PAGADO automático por valor exento`.trim();
+          
+          console.log('✅ [EXENTAS] Factura $0.00 marcada automáticamente como PAGADO_COMPLETO');
+        }
+        
+        // Si hay pago inmediato configurado, usar esa lógica en su lugar
+        if (pagoInmediato && estadoPagoInicial !== 'pagado_completo') {
+          estadoPagoInicial = 'pendiente'; // Se actualizará más abajo con la lógica de pago
+        }
+        
+        console.log('🔍 [EXENTAS] Estado de pago determinado:', {
+          valorFactura: valorFacturaNum,
+          estadoPago: estadoPagoInicial,
+          valorPagado: valorPagadoInicial,
+          esFacturaExenta: estadoPagoInicial === 'pagado_completo'
+        });
+
         // 1. Crear el documento de forma segura
         const nuevoDocumento = await crearDocumentoSeguro({
           codigoBarras: codigoBarras,
@@ -2747,12 +2778,14 @@ const cajaController = {
           emailCliente: emailCliente || null,
           telefonoCliente: telefonoCliente || null,
           numeroFactura: numeroFactura || null,
-          valorFactura: parseFloat(valorFactura || 0),
+          valorFactura: valorFacturaNum,
           fechaFactura: fechaFacturaProcesada,
           estado: 'en_proceso',
-          estadoPago: pagoInmediato ? 'pendiente' : 'pendiente', // Se actualizará si hay pago
+          estadoPago: estadoPagoInicial,
+          valorPagado: valorPagadoInicial,
+          valorPendiente: Math.max(0, valorFacturaNum - valorPagadoInicial),
           idMatrizador: idMatrizador,
-          observaciones: observaciones || 'Documento registrado desde XML mediante vista previa',
+          observaciones: observacionesConExencion,
           // Campos del sistema de contactos (se agregarán solo si existen)
           telefonoWhatsapp: req.body.telefonoWhatsapp || null,
           contactoValidado: req.body.contactoValidado || false,
@@ -2765,6 +2798,69 @@ const cajaController = {
         console.log('   📋 Código:', nuevoDocumento.codigoBarras);
         console.log('   📅 fechaFactura guardada:', nuevoDocumento.fechaFactura);
         console.log('   📅 fechaFactura tipo:', typeof nuevoDocumento.fechaFactura);
+        console.log('   💰 estadoPago:', nuevoDocumento.estadoPago);
+        console.log('   💵 valorPagado:', nuevoDocumento.valorPagado);
+
+        // ============== REGISTRAR EVENTO AUTOMÁTICO PARA FACTURAS EXENTAS ==============
+        if (estadoPagoInicial === 'pagado_completo' && valorFacturaNum <= 0) {
+          console.log('📝 [EXENTAS] Registrando evento de pago automático para factura exenta...');
+          
+          try {
+            // Importar modelo Pago
+            const { Pago } = require('../models');
+            
+            // Crear registro de pago automático
+            await Pago.create({
+              documentoId: nuevoDocumento.id,
+              usuarioId: req.matrizador?.id || 1, // Usuario sistema o caja
+              monto: 0.00,
+              formaPago: 'exento',
+              numeroComprobante: null,
+              esRetencion: false,
+              observaciones: 'Pago automático - Factura exenta por valor $0.00',
+              fechaPago: new Date(),
+              metadatos: {
+                tipoOperacion: 'pago_automatico_exento',
+                valorFactura: valorFacturaNum,
+                razonExencion: 'Factura con valor $0.00 detectada como exenta',
+                sistemaAutomatico: true
+              }
+            }, { transaction });
+            
+            console.log('✅ [EXENTAS] Evento de pago automático registrado exitosamente');
+            
+            // Crear evento en el historial del documento
+            await EventoDocumento.create({
+              documentoId: nuevoDocumento.id,
+              usuarioId: req.matrizador?.id || 1,
+              tipo: 'pago_automatico_exenta',
+              categoria: 'financiero',
+              titulo: '💰 Pago Automático - Factura Exenta',
+              descripcion: `Factura exenta ($0.00) marcada automáticamente como PAGADA al ser procesada desde XML`,
+              detalles: JSON.stringify({
+                valorFactura: valorFacturaNum,
+                estadoPagoAnterior: 'pendiente',
+                estadoPagoNuevo: 'pagado_completo',
+                tipoOperacion: 'pago_automatico_exento',
+                razonExencion: 'Valor de factura $0.00',
+                sistemaAutomatico: true,
+                procesadoPor: req.matrizador?.nombre || 'Sistema'
+              }),
+              usuario: req.matrizador?.nombre || 'Sistema',
+              metadatos: JSON.stringify({
+                automatico: true,
+                valorFactura: valorFacturaNum,
+                fechaProcesamiento: new Date().toISOString(),
+                origenProceso: 'xml_registro'
+              })
+            }, { transaction });
+            
+            console.log('✅ [EXENTAS] Evento del historial registrado exitosamente');
+          } catch (error) {
+            console.error('⚠️ [EXENTAS] Error registrando eventos de pago automático:', error.message);
+            // No fallar la transacción por esto, es informativo
+          }
+        }
 
         console.log('✅ Documento creado en transacción:', nuevoDocumento.id);
 
@@ -3165,7 +3261,11 @@ const cajaController = {
 
         // NUEVO: Cambiar código para liberar el original antes de marcar como eliminado
         const codigoOriginal = documento.codigoBarras;
-        const timestamp = new Date().toISOString().slice(0,10).replace(/-/g,'');
+        // CORREGIDO: Incluir hora, minuto y segundo para evitar duplicados en el mismo día
+        const now = new Date();
+        const fecha = now.toISOString().slice(0,10).replace(/-/g,''); // YYYYMMDD
+        const hora = now.toISOString().slice(11,19).replace(/:/g,''); // HHMMSS
+        const timestamp = `${fecha}-${hora}`;
         const nuevoCodigo = `${codigoOriginal}-DEL-${timestamp}`;
 
         // 1. Marcar documento como eliminado (SOFT DELETE)
@@ -4209,7 +4309,67 @@ async function calcularMetricasPeriodoCaja(fechaInicio, fechaFin) {
   };
 }
 
-// ============== FUNCIÓN AUXILIAR PARA DETECTAR FACTURAS EXENTAS ==============
+// ============== NUEVA FUNCIÓN: VERIFICAR FACTURA EXENTA EN REGISTRO ==============
+
+/**
+ * Determina si una factura con valor $0.00 es una factura exenta válida
+ * para marcado automático como pagada
+ * @param {Object} datosDocumento - Datos del documento desde el formulario
+ * @returns {boolean} true si es factura exenta válida
+ */
+function verificarFacturaExenta(datosDocumento) {
+  console.log('🔍 [EXENTAS] Verificando si factura $0.00 es exenta válida...');
+  
+  // Obtener datos del cliente y servicio
+  const nombreCliente = (datosDocumento.nombreCliente || '').toLowerCase();
+  const observaciones = (datosDocumento.observaciones || '').toLowerCase();
+  const numeroFactura = datosDocumento.numeroFactura || '';
+  
+  // Patrones que indican facturas exentas válidas
+  const patronesExencion = [
+    // Entidades gubernamentales
+    'fiscal', 'juzgado', 'gobierno', 'municipal', 'canton', 'prefect',
+    'ministerio', 'consejo', 'tribunal', 'corte', 'registro civil',
+    
+    // Servicios notariales específicos exentos
+    'testimonio', 'certificacion', 'copia certificada',
+    
+    // Palabras clave de exención
+    'exento', 'exenta', 'sin costo', 'gratuito', 'tarifa 0'
+  ];
+  
+  // Verificar si algún patrón coincide
+  const esClienteExento = patronesExencion.some(patron => nombreCliente.includes(patron));
+  const esServicioExento = patronesExencion.some(patron => observaciones.includes(patron));
+  
+  // Verificar estructura válida de factura
+  const tieneEstructuraValida = !!(
+    datosDocumento.nombreCliente &&
+    datosDocumento.identificacionCliente &&
+    numeroFactura
+  );
+  
+  console.log('📋 [EXENTAS] Análisis de exención:', {
+    nombreCliente,
+    esClienteExento,
+    esServicioExento,
+    tieneEstructuraValida,
+    numeroFactura
+  });
+  
+  // Es exenta si tiene estructura válida Y (cliente exento O servicio exento)
+  const esFacturaExentaValida = tieneEstructuraValida && (esClienteExento || esServicioExento);
+  
+  if (esFacturaExentaValida) {
+    console.log('✅ [EXENTAS] Factura identificada como exenta válida');
+  } else {
+    console.log('⚠️ [EXENTAS] Factura $0.00 requiere validación manual');
+  }
+  
+  return esFacturaExentaValida;
+}
+
+// ============== FUNCIÓN AUXILIAR PARA DETECTAR FACTURAS EXENTAS EN XML ==============
 
 /**
  * Determina si una factura con valor $0 es una factura exenta válida
@@ -5323,3 +5483,6 @@ async function crearDocumentoSeguro(datosDocumento, transaction = null) {
 }
 
 module.exports = cajaController;
+
+// Exportar función auxiliar para uso en scripts
+module.exports.verificarFacturaExenta = verificarFacturaExenta;
