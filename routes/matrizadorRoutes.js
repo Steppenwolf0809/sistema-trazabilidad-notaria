@@ -126,6 +126,12 @@ router.post('/api/grupos-notificacion/crear', validarAccesoConAuditoria(['matriz
 // API para separar documento de grupo de notificación
 router.post('/api/grupos-notificacion/:documentoId/separar', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.separarDeGrupoNotificacion);
 
+// API para revertir agrupación propia (FIX 1 - MATRIZADOR PUEDE REVERTIR)
+router.post('/api/revertir-agrupacion/:documentoId', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.revertirAgrupacionPropia);
+
+// API para test debugging
+router.get('/api/test-desagrupar/:documentoId', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.testDesagrupar);
+
 // API específica para marcar grupo completo como listo
 router.post('/api/documentos/:id/marcar-listo-grupo', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.marcarGrupoComoListo);
 

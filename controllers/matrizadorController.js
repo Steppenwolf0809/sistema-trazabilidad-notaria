@@ -4017,6 +4017,108 @@ const matrizadorController = {
       });
     }
   },
+
+  // NUEVA: Función simple para debugging
+  async testDesagrupar(req, res) {
+    try {
+      const { documentoId } = req.params;
+      console.log(`🧪 [TEST] Iniciando test para documento ${documentoId}`);
+      
+      const documento = await Documento.findByPk(documentoId);
+      if (!documento) {
+        return res.json({ error: 'Documento no encontrado' });
+      }
+      
+      console.log(`🧪 [TEST] Documento encontrado. Grupo actual: ${documento.notificacionGrupalId}`);
+      
+      return res.json({
+        success: true,
+        documentoId: documentoId,
+        grupoActual: documento.notificacionGrupalId,
+        mensaje: 'Test completado exitosamente'
+      });
+      
+    } catch (error) {
+      console.error('🧪 [TEST] Error:', error);
+      return res.json({ error: error.message });
+    }
+  },
+
+  // Nueva función: revertir agrupación propia
+  async revertirAgrupacionPropia(req, res) {
+    try {
+      const { documentoId } = req.params;
+      const matrizadorId = req.matrizador?.id || req.user?.id;
+      
+      console.log(`🔄 [REVERTIR] Matrizador ${matrizadorId} revirtiendo documento ${documentoId}`);
+      
+      // 1. Verificar que el documento pertenece al matrizador
+      console.log(`🔍 [REVERTIR] Buscando documento ${documentoId} del matrizador ${matrizadorId}`);
+      const documento = await Documento.findOne({
+        where: { 
+          id: documentoId,
+          idMatrizador: matrizadorId 
+        },
+        include: [{
+          model: NotificacionGrupal,
+          as: 'notificacionGrupal',
+          required: false
+        }]
+      });
+      
+      if (!documento) {
+        console.log(`❌ [REVERTIR] Documento no encontrado o sin permisos`);
+        return res.status(403).json({ 
+          error: 'No tienes permisos para este documento' 
+        });
+      }
+      
+      console.log(`📋 [REVERTIR] Documento encontrado. GrupoId actual: ${documento.notificacionGrupalId}`);
+      
+      if (!documento.notificacionGrupalId) {
+        console.log(`⚠️ [REVERTIR] Documento ya está desagrupado`);
+        return res.status(400).json({ 
+          error: 'El documento no está agrupado' 
+        });
+      }
+      
+      // 2. Remover del grupo (versión simplificada - EVITAR HOOKS)
+      console.log(`🔄 [REVERTIR] Actualizando documento para remover del grupo...`);
+      await Documento.update(
+        { notificacionGrupalId: null },
+        { 
+          where: { id: documentoId },
+          hooks: false  // CRÍTICO: Evitar hooks que causan el cuelgue
+        }
+      );
+      console.log(`✅ [REVERTIR] Documento actualizado - grupo removido`);
+      
+      // 3. Registrar evento
+      console.log(`📝 [REVERTIR] Registrando evento en historial...`);
+      await EventoDocumento.create({
+        documentoId: documentoId,
+        tipo: 'modificacion',
+        descripcion: 'Agrupación revertida por el matrizador',
+        usuario: `Matrizador: ${matrizadorId}`,
+        fecha: new Date()
+      });
+      console.log(`✅ [REVERTIR] Evento registrado en historial`);
+      
+      console.log(`✅ [REVERTIR] Documento ${documentoId} removido del grupo exitosamente`);
+      
+      return res.json({
+        success: true,
+        mensaje: 'Documento removido del grupo exitosamente'
+      });
+      
+    } catch (error) {
+      console.error('❌ [REVERTIR] Error completo:', error);
+      return res.status(500).json({
+        error: 'Error interno del servidor',
+        details: error.message
+      });
+    }
+  },
 };
 
 // Funciones auxiliares para el historial de eventos
