@@ -4261,10 +4261,59 @@ exports.revertirEstadoDocumento = async (req, res) => {
           break;
           
         case 'separar_grupo':
-          datosAnteriores = { notificacionGrupalId: documento.notificacionGrupalId };
+          // ============== SEPARACIÓN GRUPAL AUTOMÁTICA ==============
+          
+          const grupoId = documento.notificacionGrupalId;
+          if (!grupoId) {
+            throw new Error('El documento no está en ningún grupo');
+          }
+          
+          console.log(`🔄 [SEPARACIÓN GRUPAL] Iniciando separación automática del grupo ${grupoId}`);
+          
+          // Obtener TODOS los documentos del grupo
+          const documentosDelGrupo = await Documento.findAll({
+            where: { notificacionGrupalId: grupoId },
+            transaction: t
+          });
+          
+          console.log(`📋 [SEPARACIÓN GRUPAL] Encontrados ${documentosDelGrupo.length} documentos en el grupo ${grupoId}`);
+          
+          // Capturar estado anterior del documento actual
+          datosAnteriores = { 
+            notificacionGrupalId: documento.notificacionGrupalId,
+            esLiderGrupo: documento.esLiderGrupo,
+            totalDocumentosAfectados: documentosDelGrupo.length
+          };
+          
+          // SEPARAR TODOS LOS DOCUMENTOS DEL GRUPO de una vez
+          await Documento.update(
+            {
+              notificacionGrupalId: null,
+              esLiderGrupo: false
+            },
+            {
+              where: { notificacionGrupalId: grupoId },
+              transaction: t
+            }
+          );
+          
+          console.log(`✅ [SEPARACIÓN GRUPAL] ${documentosDelGrupo.length} documentos separados automáticamente`);
+          
+          // Actualizar el documento actual en memoria para consistencia
           documento.notificacionGrupalId = null;
-          datosNuevos = { notificacionGrupalId: null };
-          estadoNuevo = documento.estado; // Mantiene el mismo estado
+          documento.esLiderGrupo = false;
+          
+          // Registrar operación grupal para auditoría
+          datosNuevos = { 
+            notificacionGrupalId: null,
+            esLiderGrupo: false,
+            operacion: 'separacion_grupal_automatica',
+            documentosAfectados: documentosDelGrupo.length,
+            documentosIds: documentosDelGrupo.map(d => d.id),
+            grupoDisuelto: grupoId
+          };
+          
+          estadoNuevo = documento.estado; // Mantener estado de trabajo actual
           break;
           
         case 'reactivar_documento':
@@ -4325,9 +4374,28 @@ exports.revertirEstadoDocumento = async (req, res) => {
       };
     });
     
+    // Personalizar mensaje según tipo de reversión
+    let mensajeExito = 'Reversión ejecutada exitosamente';
+    
+    if (tipoReversion === 'separar_grupo') {
+      const documentosAfectados = resultado.documento.toJSON ? 
+        JSON.parse(JSON.stringify(resultado.documento)).notificacionGrupalId ? 1 : 
+        (resultado.documento.dataValues || {}).totalDocumentosAfectados || 1 : 1;
+        
+      // Extraer información de documentos afectados de datosNuevos
+      const auditoria = await require('../models/ReversionAuditoria').findOne({
+        where: { documentoId: id },
+        order: [['created_at', 'DESC']],
+        limit: 1
+      });
+      
+      const totalAfectados = auditoria?.datosNuevos?.documentosAfectados || 1;
+      mensajeExito = `¡Grupo separado exitosamente! ${totalAfectados} documentos fueron separados automáticamente`;
+    }
+
     res.json({
       success: true,
-      mensaje: 'Reversión ejecutada exitosamente',
+      mensaje: mensajeExito,
       documento: resultado.documento,
       cambios: {
         estadoAnterior: resultado.estadoAnterior,
@@ -4450,6 +4518,7 @@ function validarReversionAdmin(tipoReversion, documento) {
           mensaje: 'El documento no está en un grupo de notificación'
         };
       }
+      // ✅ Validación exitosa - se separarán TODOS los documentos del grupo automáticamente
       break;
       
     case 'reactivar_documento':

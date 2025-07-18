@@ -164,13 +164,15 @@ async function detectarDocumentosParaNotificacionGrupal(identificacionCliente, d
   try {
     console.log(`🔍 [NOTIFICACIÓN GRUPAL] Detectando documentos para agrupar - Cliente: ${identificacionCliente}, Matrizador: ${matrizadorId}`);
     
-    // Buscar documentos del mismo cliente, mismo matrizador, en estado 'en_proceso'
+    // Buscar documentos del mismo cliente, mismo matrizador, en estados válidos para agrupación
     // que NO estén ya en un grupo de notificación
     const documentosDisponibles = await Documento.findAll({
       where: {
         identificacionCliente: identificacionCliente,
         idMatrizador: matrizadorId,
-        estado: 'en_proceso',
+        estado: { 
+          [Op.in]: ['en_proceso', 'listo_para_entrega'] // ✅ INCLUIR AMBOS ESTADOS VÁLIDOS
+        },
         id: { [Op.ne]: documentoActualId }, // Excluir documento actual
         notificacionGrupalId: null // Solo documentos sin grupo asignado
       },
@@ -178,6 +180,14 @@ async function detectarDocumentosParaNotificacionGrupal(identificacionCliente, d
     });
     
     console.log(`📄 [NOTIFICACIÓN GRUPAL] Encontrados ${documentosDisponibles.length} documentos disponibles para agrupar`);
+    
+    // ✅ NUEVO: Log detallado de documentos encontrados para debug
+    if (documentosDisponibles.length > 0) {
+      console.log(`📋 [DETECCIÓN MEJORADA] Documentos detectables para reagrupación:`);
+      documentosDisponibles.forEach(doc => {
+        console.log(`   - ID: ${doc.id}, Código: ${doc.codigoBarras}, Estado: ${doc.estado}, Grupo: ${doc.notificacionGrupalId || 'null'}, Líder: ${doc.esLiderGrupo || false}`);
+      });
+    }
     
     // Verificar si el documento actual ya está en un grupo
     const documentoActual = await Documento.findByPk(documentoActualId);
@@ -258,7 +268,9 @@ async function crearGrupoNotificacion(documentoLiderId, documentosIds, matrizado
         id: { [Op.in]: todosLosDocumentosIds },
         identificacionCliente: documentoLider.identificacionCliente,
         idMatrizador: matrizadorId,
-        estado: 'en_proceso',
+        estado: { 
+          [Op.in]: ['en_proceso', 'listo_para_entrega'] // ✅ PERMITIR AMBOS ESTADOS EN AGRUPACIÓN
+        },
         notificacionGrupalId: null // No deben estar ya en un grupo
       },
       transaction
@@ -4082,10 +4094,13 @@ const matrizadorController = {
         });
       }
       
-      // 2. Remover del grupo (versión simplificada - EVITAR HOOKS)
+      // 2. Remover del grupo con limpieza completa (versión simplificada - EVITAR HOOKS)
       console.log(`🔄 [REVERTIR] Actualizando documento para remover del grupo...`);
       await Documento.update(
-        { notificacionGrupalId: null },
+        { 
+          notificacionGrupalId: null,
+          esLiderGrupo: false  // ✅ LIMPIAR TAMBIÉN EL CAMPO DE LIDERAZGO
+        },
         { 
           where: { id: documentoId },
           hooks: false  // CRÍTICO: Evitar hooks que causan el cuelgue
