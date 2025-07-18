@@ -1152,7 +1152,7 @@
   }
   
   /**
-   * Función global para separar documento del grupo
+   * Función global para separar documento del grupo (OPTIMIZADA)
    * @param {number} documentoId - ID del documento
    */
   async function separarDeGrupo(documentoId) {
@@ -1164,8 +1164,8 @@
     }
     
     try {
-      // Llamar a la API para separar del grupo
-      const response = await fetch(`/matrizador/api/grupos-notificacion/${documentoId}/separar`, {
+      // 🚀 OPTIMIZADO: Usar la nueva función rápida sin hooks
+      const response = await fetch(`/matrizador/api/revertir-agrupacion/${documentoId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -1174,7 +1174,7 @@
       
       const resultado = await response.json();
       
-      if (resultado.exito) {
+      if (resultado.success || resultado.exito) {
         alert('✅ Documento separado del grupo exitosamente.\n\nAhora tendrá su propia notificación individual.');
         
         // Recargar la página para mostrar el nuevo estado
@@ -1183,7 +1183,7 @@
         }, 1500);
         
       } else {
-        throw new Error(resultado.mensaje || 'Error desconocido al separar del grupo');
+        throw new Error(resultado.mensaje || resultado.error || 'Error desconocido al separar del grupo');
       }
       
     } catch (error) {
