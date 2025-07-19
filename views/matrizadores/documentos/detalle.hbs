@@ -850,6 +850,12 @@
     // Ya no se usan badges de autorización (sistema limpiado)
   }
 
+  // ✅ FUNCIÓN REQUERIDA PARA COMPATIBILIDAD CON BACKEND
+  function mostrarNotificacionExito(mensaje) {
+    // Función dummy para evitar errores - El mensaje ya se muestra con alert()
+    console.log('📱 [NOTIFICACIÓN] ' + mensaje);
+  }
+
   console.log('📖 Vista de detalle cargada para documento {{documento.codigoBarras}}');
   
   // ============== FORMATEAR FECHAS DE EVENTOS ==============
