@@ -329,8 +329,8 @@ const generarMensajeNotificacionGrupal = (documentos, codigoVerificacionGrupal) 
   const totalDocumentos = documentos.length;
   
   // Construir encabezado
-  let mensaje = `🏛️ *NOTARÍA 18*\n\n`;
-  mensaje += `¡Sus documentos están listos para retirar!\n\n`;
+  let mensaje = `🏛️ *NOTARÍA DÉCIMA OCTAVA*\n\n`;
+  mensaje += `Sus documentos están listos para retiro:\n\n`;
   
   // Listar todos los documentos del grupo
   documentos.forEach((documento, index) => {
@@ -340,75 +340,35 @@ const generarMensajeNotificacionGrupal = (documentos, codigoVerificacionGrupal) 
       contextoTramite = ` - ${documento.notas.trim()}`;
     }
     
-    mensaje += `📄 *Trámite:* ${documento.tipoDocumento}${contextoTramite}\n`;
+    mensaje += `📄 *${documento.tipoDocumento.toUpperCase()}*${contextoTramite}\n`;
+    mensaje += `   Código: ${documento.codigoBarras}\n`;
+    
+    // Agregar separación entre documentos (excepto el último)
     if (index < documentos.length - 1) {
       mensaje += `\n`;
     }
   });
   
-  mensaje += `👤 *Cliente:* ${documentoPrincipal.nombreCliente}\n\n`;
+  // Código de verificación único
+  mensaje += `\n🔢 *Código de verificación:* ${codigoVerificacionGrupal}\n`;
+  mensaje += `(Un solo código válido para todos los documentos)\n\n`;
   
-  // ✅ NUEVA LÓGICA: Analizar estados de pago de todos los documentos del grupo
-  if (documentos.length > 1) {
-    // Analizar estados de pago de todos los documentos del grupo
-    const estadosPago = documentos.map(doc => doc.estadoPago);
-    const valoresPendientes = documentos
-      .filter(doc => doc.estadoPago === 'pendiente')
-      .map(doc => parseFloat(doc.valorFactura) || 0);
-    const valorTotalPendiente = valoresPendientes.reduce((sum, valor) => sum + valor, 0);
-    
-    const todosPageados = estadosPago.every(estado => 
-      estado === 'pagado_completo' || estado === 'pagado_con_retencion'
-    );
-    const todosPendientes = estadosPago.every(estado => estado === 'pendiente');
-
-    // Crear sección de pago según el estado
-    let seccionPago = '';
-    
-    if (todosPageados) {
-      // Formato igual a documentos individuales pagados
-      seccionPago = `✅ PAGO CONFIRMADO
-🔢 Código de retiro: ${codigoVerificacionGrupal}
-
-☑️ PARA RETIRAR:
-• Presentar código de retiro
-• Presentar identificación`;
-      
-    } else if (todosPendientes) {
-      // Formato igual a documentos individuales pendientes
-      seccionPago = `⚠️ IMPORTANTE: PAGO PENDIENTE
-💰 Valor total a pagar: $${valorTotalPendiente.toFixed(2)}
-🔢 Código de retiro: ${codigoVerificacionGrupal}
-
-☑️ PASOS PARA RETIRAR:
-1️⃣ Realizar el pago en caja
-2️⃣ Presentar código de retiro
-3️⃣ Retirar documentos`;
-      
-    } else {
-      // Estados mixtos
-      seccionPago = `⚠️ ESTADO MIXTO DE PAGOS
-💰 Pendiente de pago: $${valorTotalPendiente.toFixed(2)}
-🔢 Código de retiro: ${codigoVerificacionGrupal}
-
-☑️ PASOS PARA RETIRAR:
-1️⃣ Realizar pago pendiente en caja
-2️⃣ Presentar código de retiro
-3️⃣ Retirar todos los documentos`;
-    }
-    
-    mensaje += seccionPago;
-  } else {
-    // Para documentos individuales, mantener lógica anterior
-    mensaje += `🔢 *Código de verificación:* ${codigoVerificacionGrupal}\n`;
-    mensaje += `(Un solo código válido para todos los documentos)\n`;
-  }
+  // Información de la notaría
+  mensaje += `👤 *Cliente:* ${documentoPrincipal.nombreCliente}\n`;
+  mensaje += `📋 *Total de documentos:* ${totalDocumentos}\n\n`;
   
   // Información de contacto y ubicación
-  mensaje += `\n\n📍 *Ubicación:* Notaría Décima Octava\n`;
-  mensaje += `🕒 *Horario:* Lunes a Viernes 8:00-17:00\n\n`;
+  if (process.env.NOTARIA_DIRECCION) {
+    mensaje += `📍 *Dirección:* ${process.env.NOTARIA_DIRECCION}\n`;
+  }
+  if (process.env.NOTARIA_TELEFONO) {
+    mensaje += `📞 *Teléfono:* ${process.env.NOTARIA_TELEFONO}\n`;
+  }
+  if (process.env.NOTARIA_HORARIO) {
+    mensaje += `🕒 *Horarios:* ${process.env.NOTARIA_HORARIO}\n`;
+  }
   
-  mensaje += `Gracias por confiar en nosotros.`;
+  mensaje += `\nPresente este código al retirar todos sus documentos.`;
   
   return mensaje;
 };
