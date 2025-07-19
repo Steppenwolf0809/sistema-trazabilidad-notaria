@@ -194,82 +194,8 @@
                     </div>
                 </div>
                 
-                <!-- 🔐 SECCIÓN DE PRE-AUTORIZACIÓN DE CRÉDITO -->
-                <!-- 🔴 CORRECCIÓN: Solo mostrar si el documento NO está pagado completo -->
-                {{#unless (or (eq documento.estadoPago 'pagado_completo') (eq documento.estadoPago 'pagado_con_retencion'))}}
-                <div class="row mt-3">
-                    <div class="col-md-12">
-                        <div class="card border-warning">
-                            <div class="card-header bg-warning text-dark">
-                                <h6 class="mb-0">
-                                    <i class="fas fa-university me-2"></i>
-                                    Autorización de Crédito para Entrega
-                                </h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="preAutorizacionCredito" name="entrega_sin_verificar_pago"
-                                           data-accion="pre-autorizar-credito" data-documento-id="{{documento.id}}" data-cliente-nombre="{{documento.nombreCliente}}"
-                                           {{#if documento.entrega_sin_verificar_pago}}checked{{/if}}>
-                                    <label class="form-check-label" for="preAutorizacionCredito">
-                                        <strong>✅ Cliente con crédito autorizado - Puede retirar sin pago previo</strong>
-                                        <div class="text-muted small mt-1">
-                                            <i class="fas fa-info-circle me-1"></i>
-                                            Marque esta opción si el cliente tiene crédito autorizado por la notaría y puede retirar documentos sin pago previo.
-                                            Esto evitará que recepción tenga que solicitar autorización adicional al entregar.
-                                        </div>
-                                        <div class="text-success small mt-1">
-                                            <i class="fas fa-check-circle me-1"></i>
-                                            Al marcar esta opción se registrará automáticamente la pre-autorización en el sistema.
-                                        </div>
-                                    </label>
-                                </div>
-                                
-                                <!-- Justificación para la autorización -->
-                                <div id="justificacionCredito" style="display: {{#if documento.entrega_sin_verificar_pago}}block{{else}}none{{/if}};" class="mt-3">
-                                    <label class="form-label">Justificación para autorización de crédito:</label>
-                                    <select class="form-select" name="justificacion_entrega_sin_pago" id="justificacionSelect">
-                                        <option value="">Seleccione una justificación...</option>
-                                        <option value="cliente_corporativo" {{#if (eq documento.justificacion_entrega_sin_pago "cliente_corporativo")}}selected{{/if}}>Cliente corporativo con convenio</option>
-                                        <option value="historial_pagos" {{#if (eq documento.justificacion_entrega_sin_pago "historial_pagos")}}selected{{/if}}>Cliente con excelente historial</option>
-                                        <option value="urgencia_justificada" {{#if (eq documento.justificacion_entrega_sin_pago "urgencia_justificada")}}selected{{/if}}>Situación urgente justificada</option>
-                                        <option value="cliente_frecuente" {{#if (eq documento.justificacion_entrega_sin_pago "cliente_frecuente")}}selected{{/if}}>Cliente frecuente de confianza</option>
-                                        <option value="otro" {{#if (eq documento.justificacion_entrega_sin_pago "otro")}}selected{{/if}}>Otro motivo</option>
-                                    </select>
-                                    <div class="form-text text-muted">
-                                        <i class="fas fa-info-circle me-1"></i>
-                                        Esta justificación se registrará en el sistema para auditoría.
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                {{else}}
-                <!-- 🔴 MENSAJE INFORMATIVO: Documento ya pagado -->
-                <div class="row mt-3">
-                    <div class="col-md-12">
-                        <div class="alert alert-success border-success">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-check-circle fa-2x text-success me-3"></i>
-                                <div>
-                                    <h6 class="mb-1 text-success">
-                                        <strong>✅ Documento Pagado Completo</strong>
-                                    </h6>
-                                    <p class="mb-1">
-                                        Este documento tiene el pago completo registrado.
-                                        <strong>No requiere autorización de crédito.</strong>
-                                    </p>
-                                    <small class="text-success">
-                                        <i class="fas fa-info-circle me-1"></i>
-                                        Recepción entregará directamente al verificar la identidad del cliente.
-                                    </small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                {{/unless}}
+                <!-- SECCIÓN ELIMINADA: Autorización de Crédito para Entrega -->
+                <!-- Función removida por decisión administrativa - Se maneja manualmente en recepción -->
                 
                 <!-- Búsqueda de documento principal eliminada para matrizadores -->
                 
@@ -375,60 +301,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const telefonoErrorContainer = telefonoInput ? telefonoInput.parentElement.querySelector('.invalid-feedback') : null;
     const emailErrorContainer = emailInput ? emailInput.parentElement.querySelector('.invalid-feedback') : null;
     
-    // 🔐 CONFIGURAR PRE-AUTORIZACIÓN DE CRÉDITO
-    const checkboxPreAutorizacion = document.getElementById('preAutorizacionCredito');
-    const justificacionDiv = document.getElementById('justificacionCredito');
-    const justificacionSelect = document.getElementById('justificacionSelect');
-    
-    if (checkboxPreAutorizacion) {
-        console.log('✅ Configurando checkbox de pre-autorización de crédito');
-        
-        // Event listener para mostrar/ocultar justificación
-        checkboxPreAutorizacion.addEventListener('change', function() {
-            const documentoId = this.dataset.documentoId;
-            const clienteNombre = this.dataset.clienteNombre;
-            
-            if (this.checked) {
-                // Mostrar justificación
-                if (justificacionDiv) {
-                    justificacionDiv.style.display = 'block';
-                    if (justificacionSelect) {
-                        justificacionSelect.setAttribute('required', 'required');
-                    }
-                }
-                
-                console.log('✅ Checkbox marcado - se guardará en BD al enviar formulario');
-            } else {
-                // Ocultar justificación
-                if (justificacionDiv) {
-                    justificacionDiv.style.display = 'none';
-                    if (justificacionSelect) {
-                        justificacionSelect.removeAttribute('required');
-                        justificacionSelect.value = '';
-                    }
-                }
-                
-                console.log('❌ Checkbox desmarcado - se guardará en BD al enviar formulario');
-            }
-        });
-        
-        // Verificar estado inicial (ya no usa localStorage, solo base de datos)
-        verificarEstadoPreAutorizacion();
-    }
-    
-    // Función para verificar estado inicial desde base de datos
-    function verificarEstadoPreAutorizacion() {
-        const documentoId = '{{documento.id}}';
-        const checkboxPreAutorizacion = document.getElementById('preAutorizacionCredito');
-        
-        if (checkboxPreAutorizacion) {
-            // Estado inicial viene del servidor ({{documento.entrega_sin_verificar_pago}})
-            const estadoInicial = {{#if documento.entrega_sin_verificar_pago}}true{{else}}false{{/if}};
-            checkboxPreAutorizacion.checked = estadoInicial;
-            
-            console.log('🔍 Estado inicial documento {{documento.id}} (desde BD):', estadoInicial ? 'AUTORIZADO' : 'SIN AUTORIZAR');
-        }
-    }
+    // SECCIÓN ELIMINADA: JavaScript de pre-autorización de crédito
+    // Función removida - Se maneja en recepción
     
     // Verificar elementos críticos
     console.log('🔍 Verificando elementos críticos:');

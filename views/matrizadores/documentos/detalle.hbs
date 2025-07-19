@@ -662,42 +662,8 @@
         </div>
         {{/if}}
 
-        <!-- Opción crédito (solo si pendiente de pago) -->
-        {{#unless (or (eq documento.estadoPago 'pagado_completo') (eq documento.estadoPago 'pagado_con_retencion'))}}
-        <div class="card border-warning mb-3">
-          <div class="card-header bg-warning text-dark py-2">
-            <h6 class="mb-0">
-              <i class="fas fa-handshake me-1"></i>
-              Autorización de crédito (opcional)
-            </h6>
-          </div>
-          <div class="card-body">
-            <div class="form-check mb-2">
-              <input class="form-check-input" type="checkbox" id="clienteConCredito">
-              <label class="form-check-label fw-bold" for="clienteConCredito">
-                <span class="text-success">
-                  <i class="fas fa-university me-1"></i>
-                  Cliente con crédito autorizado por la notaría
-                </span>
-              </label>
-            </div>
-            <div id="justificacionCredito" style="display: none;" class="mt-2">
-              <label class="form-label small">Justificación requerida:</label>
-              <select class="form-select form-select-sm" id="justificacionSelect">
-                <option value="cliente_corporativo">Cliente corporativo con convenio</option>
-                <option value="historial_pagos">Cliente con excelente historial de pagos</option>
-                <option value="urgencia_justificada">Situación urgente justificada</option>
-                <option value="cliente_frecuente">Cliente frecuente de confianza</option>
-                <option value="otro">Otro motivo autorizado</option>
-              </select>
-            </div>
-            <small class="text-muted">
-              <i class="fas fa-info-circle me-1"></i>
-              Marque solo si el cliente tiene autorización especial para recibir documentos sin verificar pago.
-            </small>
-          </div>
-        </div>
-        {{/unless}}
+        <!-- SECCIÓN ELIMINADA: Autorización de crédito (opcional) -->
+        <!-- Función removida por decisión administrativa - Se maneja manualmente en recepción -->
 
         <!-- Confirmación final -->
         <div class="border-top pt-3">
@@ -756,15 +722,8 @@
 
   // ✅ CONFIGURAR EVENT LISTENERS DEL MODAL SIMPLIFICADO
   document.addEventListener('DOMContentLoaded', function() {
-    // Event listener para mostrar/ocultar justificación de crédito
-    const checkboxCredito = document.getElementById('clienteConCredito');
-    const justificacionDiv = document.getElementById('justificacionCredito');
-    
-    if (checkboxCredito && justificacionDiv) {
-      checkboxCredito.addEventListener('change', function() {
-        justificacionDiv.style.display = this.checked ? 'block' : 'none';
-      });
-    }
+    // SECCIÓN ELIMINADA: Event listener para checkbox de crédito
+    // Función removida - Se maneja en recepción
     
     // Event listener para el botón de confirmación
     const btnConfirmar = document.getElementById('btnConfirmarMarcarListo');
@@ -805,20 +764,11 @@
   // ✅ FUNCIÓN SIMPLIFICADA PARA CONFIRMAR MARCAR COMO LISTO
   async function confirmarMarcarListoSimplificado() {
     const documentoId = document.getElementById('documentoIdModal').value;
-    const checkboxCredito = document.getElementById('clienteConCredito');
-    const justificacionSelect = document.getElementById('justificacionSelect');
     
     console.log('🎯 [MODAL SIMPLIFICADO] Confirmando documento:', documentoId);
     
-    // Obtener valores del modal simplificado
-    const tieneCredito = checkboxCredito ? checkboxCredito.checked : false;
-    const justificacion = (tieneCredito && justificacionSelect) ? justificacionSelect.value : null;
-    
-    // Validar justificación si se marcó crédito
-    if (tieneCredito && !justificacion) {
-      alert('⚠️ Debe seleccionar una justificación para autorizar el crédito');
-      return;
-    }
+    // SECCIÓN ELIMINADA: Obtener valores de crédito autorizado
+    // Función removida - No se maneja crédito desde el modal
     
     // Verificar si está en grupo (sin confirmación adicional - ya informado en el modal)
     const informacionGrupal = document.querySelector('[data-grupo-id]');
@@ -826,16 +776,12 @@
     const esGrupo = grupoId && grupoId !== 'null';
     
     console.log('📋 [MODAL SIMPLIFICADO] Datos:', {
-      credito: tieneCredito,
-      justificacion: justificacion,
       esGrupo: esGrupo,
       grupoId: grupoId
     });
     
     // Preparar datos para envío
     const datosEnvio = {
-      entrega_sin_verificar_pago: tieneCredito,
-      justificacion_entrega_sin_pago: justificacion,
       accion_autorizacion: esGrupo ? 'marcar_todo_grupo' : 'marcar_solo_documento',
       marcarTodoElGrupo: esGrupo
     };
