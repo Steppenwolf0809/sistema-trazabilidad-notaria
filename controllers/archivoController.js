@@ -988,10 +988,40 @@ const archivoController = {
         // Enviar notificación grupal solo si hay documentos propios
         if (documentosActualizados.length > 0) {
           try {
-            // Reutilizar la función del matrizador para notificación grupal
-            const whatsappService = require('../services/whatsappService');
-            await whatsappService.enviarNotificacionGrupal(perteneceAGrupo.id);
-            console.log(`📱 [ARCHIVO - GRUPO] Notificación grupal enviada para grupo ${perteneceAGrupo.id}`);
+            // ✅ CORRECCIÓN: Obtener datos completos del grupo para notificación con estado de pago
+            const grupoCompleto = await NotificacionGrupal.findByPk(perteneceAGrupo.id, {
+              include: [{
+                model: Documento,
+                as: 'documentos',
+                where: { 
+                  estado: 'listo_para_entrega',
+                  idMatrizador: req.matrizador.id // Solo documentos propios del archivo
+                }
+              }]
+            });
+            
+            if (grupoCompleto && grupoCompleto.documentos.length > 0) {
+              const documentoPrincipal = grupoCompleto.documentos[0];
+              
+              if (documentoPrincipal.telefonoCliente && !documentoPrincipal.omitirNotificacion) {
+                const whatsappService = require('../services/whatsappService');
+                
+                // ✅ USAR PARÁMETROS CORRECTOS: telefono, documentos, codigo
+                const resultado = await whatsappService.enviarNotificacionGrupal(
+                  documentoPrincipal.telefonoCliente,
+                  grupoCompleto.documentos,
+                  perteneceAGrupo.codigoVerificacion
+                );
+                
+                if (resultado.exito) {
+                  console.log(`📱 [ARCHIVO - GRUPO] Notificación grupal CON ESTADO DE PAGO enviada para grupo ${perteneceAGrupo.id}`);
+                } else {
+                  console.error(`❌ [ARCHIVO - GRUPO] Error en notificación grupal:`, resultado.error);
+                }
+              } else {
+                console.log(`⏭️ [ARCHIVO - GRUPO] No se envió notificación: sin teléfono o notificación omitida`);
+              }
+            }
           } catch (notificationError) {
             console.error('❌ [ARCHIVO - GRUPO] Error enviando notificación grupal:', notificationError);
           }
