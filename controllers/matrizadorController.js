@@ -2798,6 +2798,459 @@ const matrizadorController = {
   },
 
   /**
+   * Actualizar sección específica de un documento (para vista unificada)
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  actualizarSeccionDocumento: async (req, res) => {
+    // Definir variables fuera del try-catch para acceso en catch
+    let documentoId, seccion, datosActualizacion;
+    const transaction = await sequelize.transaction();
+    
+    try {
+      const { id, seccion: sec } = req.params;
+      documentoId = id;
+      seccion = sec;
+      datosActualizacion = req.body;
+      const usuarioId = req.matrizador?.id || req.user?.id;
+      const usuarioNombre = req.matrizador?.nombre || req.user?.nombre || 'Sistema';
+      
+      console.log(`📝 [ACTUALIZAR SECCIÓN] Documento ${documentoId}, sección: ${seccion}`, {
+        datos: datosActualizacion,
+        usuario: usuarioNombre,
+        body: req.body,
+        headers: req.headers['content-type']
+      });
+      
+      // 🔍 DEBUG ESPECÍFICO PARA NOTIFICACIONES
+      if (seccion === 'notificaciones') {
+        console.log('🔔 [DEBUG NOTIFICACIONES] Datos específicos recibidos:', {
+          entregadoInmediatamente: datosActualizacion.entregadoInmediatamente,
+          metodoNotificacion: datosActualizacion.metodoNotificacion,
+          razonSinNotificar: datosActualizacion.razonSinNotificar,
+          todosLosCampos: Object.keys(datosActualizacion),
+          tiposDeDatos: Object.fromEntries(
+            Object.entries(datosActualizacion).map(([k, v]) => [k, typeof v])
+          )
+        });
+      }
+      
+      // Validar que la sección es permitida
+      const seccionesPermitidas = ['general', 'cliente', 'notificaciones', 'notas'];
+      if (!seccionesPermitidas.includes(seccion)) {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          message: `Sección '${seccion}' no es válida. Secciones permitidas: ${seccionesPermitidas.join(', ')}`
+        });
+      }
+      
+      // Buscar el documento
+      const documento = await Documento.findByPk(documentoId, {
+        include: [
+          { model: Matrizador, as: 'matrizador', attributes: ['id', 'nombre'] }
+        ],
+        transaction
+      });
+      
+      if (!documento) {
+        await transaction.rollback();
+        return res.status(404).json({
+          success: false,
+          message: 'Documento no encontrado'
+        });
+      }
+      
+      // Verificar permisos (solo puede editar sus propios documentos)
+      console.log(`🔒 [PERMISOS] Verificando acceso:`, {
+        documentoMatrizador: documento.idMatrizador,
+        usuarioId: usuarioId,
+        coincide: documento.idMatrizador === usuarioId
+      });
+      
+      if (documento.idMatrizador !== usuarioId) {
+        await transaction.rollback();
+        return res.status(403).json({
+          success: false,
+          message: 'No tienes permisos para editar este documento',
+          debug: {
+            documentoMatrizador: documento.idMatrizador,
+            usuarioId: usuarioId
+          }
+        });
+      }
+      
+      // Verificar que el documento esté en estado editable
+      if (!['en_proceso', 'listo_para_entrega'].includes(documento.estado)) {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          message: 'El documento no puede ser editado en su estado actual'
+        });
+      }
+      
+      // Validar y preparar datos según la sección
+      let camposActualizados = {};
+      let detallesCambios = [];
+      
+      if (seccion === 'general') {
+        if (datosActualizacion.tipoDocumento) {
+          const tiposValidos = ['Protocolo', 'Diligencias', 'Certificaciones', 'Arrendamientos', 'Otros'];
+          if (!tiposValidos.includes(datosActualizacion.tipoDocumento)) {
+            await transaction.rollback();
+            return res.status(400).json({
+              success: false,
+              message: 'Tipo de documento no válido'
+            });
+          }
+          
+          if (documento.tipoDocumento !== datosActualizacion.tipoDocumento) {
+            camposActualizados.tipoDocumento = datosActualizacion.tipoDocumento;
+            detallesCambios.push(`Tipo: ${documento.tipoDocumento} → ${datosActualizacion.tipoDocumento}`);
+          }
+        }
+      }
+      
+      if (seccion === 'cliente') {
+        // Validar campos obligatorios
+        if (!datosActualizacion.nombreCliente?.trim()) {
+          await transaction.rollback();
+          return res.status(400).json({
+            success: false,
+            message: 'El nombre del cliente es obligatorio'
+          });
+        }
+        
+        if (!datosActualizacion.identificacionCliente?.trim()) {
+          await transaction.rollback();
+          return res.status(400).json({
+            success: false,
+            message: 'La identificación del cliente es obligatoria'
+          });
+        }
+        
+        // Validar email si está presente
+        if (datosActualizacion.emailCliente && datosActualizacion.emailCliente.trim()) {
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailRegex.test(datosActualizacion.emailCliente.trim())) {
+            await transaction.rollback();
+            return res.status(400).json({
+              success: false,
+              message: 'El formato del email no es válido'
+            });
+          }
+        }
+        
+        // Validar teléfono si está presente
+        if (datosActualizacion.telefonoCliente !== undefined) {
+          const telefonoOriginal = datosActualizacion.telefonoCliente || '';
+          const telefonoLimpio = telefonoOriginal.replace(/\D/g, '');
+          
+          if (telefonoLimpio.length > 0) {
+            // Si hay dígitos, debe tener exactamente 10
+            if (telefonoLimpio.length !== 10) {
+              await transaction.rollback();
+              return res.status(400).json({
+                success: false,
+                message: 'El teléfono debe tener exactamente 10 dígitos'
+              });
+            }
+            camposActualizados.telefonoCliente = telefonoLimpio;
+          } else {
+            // Si no hay dígitos, establecer como null
+            camposActualizados.telefonoCliente = null;
+          }
+        }
+        
+        // Preparar cambios
+        if (documento.nombreCliente !== datosActualizacion.nombreCliente.trim()) {
+          camposActualizados.nombreCliente = datosActualizacion.nombreCliente.trim();
+          detallesCambios.push(`Nombre: ${documento.nombreCliente} → ${datosActualizacion.nombreCliente.trim()}`);
+        }
+        
+        if (documento.identificacionCliente !== datosActualizacion.identificacionCliente.trim()) {
+          camposActualizados.identificacionCliente = datosActualizacion.identificacionCliente.trim();
+          detallesCambios.push(`ID: ${documento.identificacionCliente} → ${datosActualizacion.identificacionCliente.trim()}`);
+        }
+        
+        const emailAnterior = documento.emailCliente || '';
+        const emailNuevo = (datosActualizacion.emailCliente && datosActualizacion.emailCliente.trim()) || '';
+        if (emailAnterior !== emailNuevo) {
+          camposActualizados.emailCliente = emailNuevo || null;
+          detallesCambios.push(`Email: ${emailAnterior || 'Sin email'} → ${emailNuevo || 'Sin email'}`);
+        }
+        
+        if (camposActualizados.hasOwnProperty('telefonoCliente')) {
+          const telefonoAnterior = documento.telefonoCliente || '';
+          const telefonoNuevo = camposActualizados.telefonoCliente || '';
+          if (telefonoAnterior !== telefonoNuevo) {
+            detallesCambios.push(`Teléfono: ${telefonoAnterior || 'Sin teléfono'} → ${telefonoNuevo || 'Sin teléfono'}`);
+          }
+        }
+      }
+      
+      if (seccion === 'notificaciones') {
+        console.log('🔔 [NOTIFICACIONES] Procesando actualización de notificaciones...');
+        
+        // Manejar entrega inmediata
+        const entregaInmediataAnterior = documento.entregadoInmediatamente || false;
+        const entregaInmediataNueva = datosActualizacion.entregadoInmediatamente || false;
+        
+        if (entregaInmediataAnterior !== entregaInmediataNueva) {
+          camposActualizados.entregadoInmediatamente = entregaInmediataNueva;
+          detallesCambios.push(`Entrega inmediata: ${entregaInmediataAnterior ? 'Desactivada' : 'Activada'}`);
+          console.log(`🚀 [ENTREGA INMEDIATA] ${entregaInmediataAnterior} → ${entregaInmediataNueva}`);
+        }
+        
+        // Manejar método de notificación Y notificar automático
+        const metodoAnterior = documento.metodoNotificacion || 'whatsapp';
+        const metodoNuevo = datosActualizacion.metodoNotificacion || 'whatsapp';
+        
+        if (metodoAnterior !== metodoNuevo) {
+          camposActualizados.metodoNotificacion = metodoNuevo;
+          
+          const traduccionMetodo = {
+            'whatsapp': 'WhatsApp',
+            'email': 'Email',
+            'ambos': 'WhatsApp y Email',
+            'ninguno': 'Sin notificaciones'
+          };
+          
+          detallesCambios.push(`Método notificación: ${traduccionMetodo[metodoAnterior] || metodoAnterior} → ${traduccionMetodo[metodoNuevo] || metodoNuevo}`);
+          console.log(`📱 [MÉTODO NOTIFICACIÓN] ${metodoAnterior} → ${metodoNuevo}`);
+        }
+        
+        // CRÍTICO: Actualizar notificarAutomatico basado en metodoNotificacion
+        // Para evitar conflictos con la validación del modelo
+        const notificarAutomaticoAnterior = documento.notificarAutomatico || false;
+        const notificarAutomaticoNuevo = (datosActualizacion.metodoNotificacion !== 'ninguno') && !datosActualizacion.entregadoInmediatamente;
+        
+        if (notificarAutomaticoAnterior !== notificarAutomaticoNuevo) {
+          camposActualizados.notificarAutomatico = notificarAutomaticoNuevo;
+          detallesCambios.push(`Notificación automática: ${notificarAutomaticoAnterior ? 'Desactivada' : 'Activada'}`);
+          console.log(`🔔 [NOTIFICAR AUTO] ${notificarAutomaticoAnterior} → ${notificarAutomaticoNuevo}`);
+        }
+        
+        // Manejar razón para no notificar
+        console.log('📝 [RAZÓN] Procesando razón para no notificar...');
+        if (metodoNuevo === 'ninguno') {
+          // Si es entrega inmediata, usar razón automática
+          let razonNueva;
+          if (entregaInmediataNueva) {
+            razonNueva = 'Cliente recogerá personalmente sin notificación previa';
+            console.log('📝 [RAZÓN] Usando razón automática para entrega inmediata');
+          } else {
+            // Si no es entrega inmediata, validar que haya razón manual
+            if (!datosActualizacion.razonSinNotificar?.trim()) {
+              console.log('❌ [RAZÓN] Falta razón manual para no notificar');
+              await transaction.rollback();
+              return res.status(400).json({
+                success: false,
+                message: 'Debe especificar la razón para no notificar al cliente'
+              });
+            }
+            razonNueva = datosActualizacion.razonSinNotificar.trim();
+            console.log('📝 [RAZÓN] Usando razón manual:', razonNueva);
+          }
+          
+          const razonAnterior = documento.razonSinNotificar || '';
+          
+          if (razonAnterior !== razonNueva) {
+            camposActualizados.razonSinNotificar = razonNueva;
+            detallesCambios.push(`Razón sin notificar: actualizada`);
+            console.log(`📝 [RAZÓN] ${razonAnterior} → ${razonNueva}`);
+          }
+        } else {
+          // Si se activan las notificaciones, limpiar la razón
+          if (documento.razonSinNotificar) {
+            camposActualizados.razonSinNotificar = null;
+            detallesCambios.push(`Razón sin notificar: eliminada (notificaciones activadas)`);
+            console.log('📝 [RAZÓN] Limpiando razón (notificaciones activadas)');
+          }
+        }
+      }
+      
+      if (seccion === 'notas') {
+        const notasAnteriores = documento.notas || '';
+        const notasNuevas = datosActualizacion.notas?.trim() || '';
+        
+        if (notasAnteriores !== notasNuevas) {
+          camposActualizados.notas = notasNuevas || null;
+          detallesCambios.push(`Notas: ${notasAnteriores ? 'actualizadas' : 'agregadas'}`);
+        }
+      }
+      
+      // Si no hay cambios, responder exitosamente sin hacer nada
+      if (Object.keys(camposActualizados).length === 0) {
+        await transaction.commit();
+        return res.json({
+          success: true,
+          message: 'No hay cambios que aplicar',
+          data: camposActualizados
+        });
+      }
+      
+      // 🔍 DEBUG: Mostrar campos que se van a actualizar
+      console.log('💾 [ANTES DE ACTUALIZAR] Campos a actualizar:', {
+        documentoId: documento.id,
+        seccion: seccion,
+        camposActualizados: camposActualizados,
+        estadoActualDocumento: {
+          entregadoInmediatamente: documento.entregadoInmediatamente,
+          metodoNotificacion: documento.metodoNotificacion,
+          notificarAutomatico: documento.notificarAutomatico,
+          razonSinNotificar: documento.razonSinNotificar
+        }
+      });
+      
+      // Aplicar los cambios
+      await documento.update(camposActualizados, { transaction });
+      
+      console.log('✅ [DESPUÉS DE ACTUALIZAR] Documento actualizado exitosamente');
+      
+      // Crear evento de auditoría
+      await EventoDocumento.create({
+        documentoId: documento.id,
+        tipo: 'edicion',
+        detalles: `Sección '${seccion}' actualizada: ${detallesCambios.join(', ')}`,
+        usuario: usuarioNombre,
+        metadatos: {
+          idUsuario: usuarioId,
+          seccion: seccion,
+          cambios: detallesCambios,
+          via: 'vista_unificada'
+        }
+      }, { transaction });
+      
+      await transaction.commit();
+      
+      console.log(`✅ [ACTUALIZAR SECCIÓN] Documento ${documentoId} actualizado:`, {
+        seccion,
+        cambios: detallesCambios,
+        usuario: usuarioNombre
+      });
+      
+      res.json({
+        success: true,
+        message: `Sección '${seccion}' actualizada correctamente`,
+        data: camposActualizados,
+        cambios: detallesCambios
+      });
+      
+    } catch (error) {
+      await transaction.rollback();
+      console.error(`❌ [ACTUALIZAR SECCIÓN] Error completo:`, {
+        message: error.message,
+        stack: error.stack,
+        documentoId: documentoId,
+        seccion: seccion,
+        datosRecibidos: datosActualizacion
+      });
+      res.status(500).json({
+        success: false,
+        message: 'Error interno del servidor',
+        error: error.message,
+        debug: process.env.NODE_ENV === 'development' ? {
+          stack: error.stack,
+          datos: datosActualizacion
+        } : undefined
+      });
+    }
+  },
+
+  /**
+   * Actualizar notas de un documento (función específica y rápida)
+   * @param {Object} req - Objeto de solicitud Express
+   * @param {Object} res - Objeto de respuesta Express
+   */
+  actualizarNotas: async (req, res) => {
+    let documentoId;
+    const transaction = await sequelize.transaction();
+    
+    try {
+      const { id } = req.params;
+      documentoId = id;
+      const { notas } = req.body;
+      const usuarioId = req.matrizador?.id || req.user?.id;
+      const usuarioNombre = req.matrizador?.nombre || req.user?.nombre || 'Sistema';
+      
+      console.log(`📝 [ACTUALIZAR NOTAS] Documento ${documentoId}`, {
+        notas: notas?.substring(0, 100) + (notas?.length > 100 ? '...' : ''),
+        usuario: usuarioNombre
+      });
+      
+      // Buscar el documento
+      const documento = await Documento.findByPk(documentoId, { transaction });
+      
+      if (!documento) {
+        await transaction.rollback();
+        return res.status(404).json({
+          success: false,
+          message: 'Documento no encontrado'
+        });
+      }
+      
+      // Verificar permisos
+      if (documento.idMatrizador !== usuarioId) {
+        await transaction.rollback();
+        return res.status(403).json({
+          success: false,
+          message: 'No tienes permisos para editar este documento'
+        });
+      }
+      
+      // Verificar que el documento esté en estado editable
+      if (!['en_proceso', 'listo_para_entrega'].includes(documento.estado)) {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          message: 'El documento no puede ser editado en su estado actual'
+        });
+      }
+      
+      const notasAnteriores = documento.notas || '';
+      const notasNuevas = notas?.trim() || '';
+      
+      // Solo actualizar si hay cambios
+      if (notasAnteriores !== notasNuevas) {
+        await documento.update({ notas: notasNuevas || null }, { transaction });
+        
+        // Registrar en auditoría
+        await RegistroAuditoria.create({
+          documentoId: documentoId,
+          usuarioId: usuarioId,
+          tipoAccion: 'actualizacion',
+          descripcion: `Notas actualizadas`,
+          detallesCambios: `Notas: ${notasAnteriores ? 'actualizadas' : 'agregadas'}`,
+          timestamp: obtenerTimestampEcuador()
+        }, { transaction });
+        
+        console.log(`✅ [NOTAS] Actualizadas para documento ${documentoId}`);
+      }
+      
+      await transaction.commit();
+      
+      res.json({
+        success: true,
+        message: 'Notas actualizadas correctamente',
+        documento: {
+          id: documento.id,
+          notas: notasNuevas || null
+        }
+      });
+      
+    } catch (error) {
+      await transaction.rollback();
+      console.error(`❌ [ACTUALIZAR NOTAS] Error:`, error);
+      res.status(500).json({
+        success: false,
+        message: 'Error interno del servidor',
+        error: error.message
+      });
+    }
+  },
+
+  /**
    * Obtener datos básicos de un documento (para verificar estado de crédito)
    * @param {Object} req - Objeto de solicitud Express
    * @param {Object} res - Objeto de respuesta Express

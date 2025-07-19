@@ -36,15 +36,21 @@ router.get('/documentos/buscar', validarAccesoConAuditoria(['matrizador', 'caja_
 router.get('/documentos/detalle/:id', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.detalleDocumento);
 
 // =============== EDICIÓN DE DOCUMENTOS ASIGNADOS ===============
-// Solo puede editar documentos que le han sido asignados
-router.get('/documentos/editar/:id', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), documentoController.mostrarFormularioEdicionMatrizador);
-router.post('/documentos/editar/:id', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), documentoController.actualizarDocumento);
+// ELIMINADO: La edición ahora se hace in-place en la vista de detalle unificada
+// router.get('/documentos/editar/:id') - Removido
+// router.post('/documentos/editar/:id') - Removido
 
 // NUEVA RUTA: Obtener datos actuales del documento para modal inteligente
 router.get('/documentos/:id/datos', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.obtenerDatosDocumento);
 
 // NUEVA RUTA: Marcar documento como listo para entrega
 router.post('/documentos/:id/marcar-listo', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.marcarComoListo);
+
+// NUEVA RUTA: Actualización por secciones para vista unificada
+router.patch('/documentos/:id/seccion/:seccion', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.actualizarSeccionDocumento);
+
+// RUTA ESPECÍFICA: Actualización rápida de notas
+router.patch('/documentos/:id/notas', validarAccesoConAuditoria(['matrizador', 'caja_archivo']), matrizadorController.actualizarNotas);
 
 // =============== MARCADO COMO LISTO Y PROCESAMIENTO ===============
 // Función principal del matrizador: procesar y marcar como listo
