@@ -1,0 +1,139 @@
+{{! SECCIÓN NOTAS - COMPONENTE UNIVERSAL }}
+{{! Campo de notas con guardado automático y edición directa }}
+
+<div class="info-card" id="seccion-notas">
+  <h6 class="section-title">
+    <i class="fas fa-sticky-note"></i>
+    Notas y Observaciones
+    {{#if config.permisos.editarNotas}}
+    <span class="text-muted small ms-2">(Se guarda automáticamente)</span>
+    {{/if}}
+  </h6>
+  
+  {{#if config.permisos.editarNotas}}
+  <!-- Modo de edición directa -->
+  <div class="notes-container">
+    <textarea 
+      class="form-control" 
+      id="documentoNotas" 
+      rows="4" 
+      placeholder="Escriba observaciones sobre el trámite, estado del cliente o cualquier información relevante..."
+      onblur="guardarNotasAutomatico()"
+      data-documento-id="{{documento.id}}">{{documento.notas}}</textarea>
+    
+    <div class="notes-actions mt-2 d-flex justify-content-between align-items-center">
+      <button class="btn btn-success-soft btn-sm" onclick="guardarNotas()" id="btnGuardarNotas">
+        <i class="fas fa-save me-1"></i> Guardar Notas
+      </button>
+      <span class="text-success small" id="notasGuardadas" style="display: none;">
+        <i class="fas fa-check-circle me-1"></i> Guardado correctamente
+      </span>
+      <span class="text-danger small" id="notasError" style="display: none;">
+        <i class="fas fa-exclamation-triangle me-1"></i> Error al guardar
+      </span>
+    </div>
+  </div>
+  {{else}}
+  <!-- Modo solo lectura -->
+  <div class="notes-readonly">
+    <div class="info-value notes-display" id="notas-display">
+      {{#if documento.notas}}
+        {{documento.notas}}
+      {{else}}
+        <span class="text-muted">Sin notas registradas</span>
+      {{/if}}
+    </div>
+  </div>
+  {{/if}}
+</div>
+
+{{#if config.permisos.editarNotas}}
+<!-- JavaScript específico para notas con guardado automático -->
+<script>
+// Función para guardar notas manualmente
+async function guardarNotas() {
+  const textarea = document.getElementById('documentoNotas');
+  const documentoId = textarea.getAttribute('data-documento-id');
+  const notas = textarea.value;
+  const btnGuardar = document.getElementById('btnGuardarNotas');
+  const indicadorExito = document.getElementById('notasGuardadas');
+  const indicadorError = document.getElementById('notasError');
+  
+  // Mostrar estado de carga
+  const textoOriginal = btnGuardar.innerHTML;
+  btnGuardar.disabled = true;
+  btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Guardando...';
+  
+  // Ocultar indicadores previos
+  indicadorExito.style.display = 'none';
+  indicadorError.style.display = 'none';
+  
+  try {
+    const response = await fetch(`/${window.userRole}/documentos/${documentoId}/seccion/notas`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: JSON.stringify({ notas: notas })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      mostrarConfirmacionGuardado();
+      console.log('✅ Notas guardadas correctamente');
+    } else {
+      throw new Error(data.message || 'Error desconocido al guardar notas');
+    }
+    
+  } catch (error) {
+    console.error('❌ Error al guardar notas:', error);
+    mostrarErrorGuardado(error.message);
+  } finally {
+    // Restaurar botón
+    btnGuardar.disabled = false;
+    btnGuardar.innerHTML = textoOriginal;
+  }
+}
+
+// Función para guardar automáticamente al perder el foco
+function guardarNotasAutomatico() {
+  // Debounce para evitar muchas llamadas
+  clearTimeout(window.notasTimeout);
+  window.notasTimeout = setTimeout(() => {
+    console.log('💾 Guardado automático de notas iniciado');
+    guardarNotas();
+  }, 1000);
+}
+
+// Función para mostrar confirmación de guardado
+function mostrarConfirmacionGuardado() {
+  const indicador = document.getElementById('notasGuardadas');
+  const indicadorError = document.getElementById('notasError');
+  
+  indicadorError.style.display = 'none';
+  indicador.style.display = 'inline';
+  
+  // Ocultar después de 3 segundos
+  setTimeout(() => {
+    indicador.style.display = 'none';
+  }, 3000);
+}
+
+// Función para mostrar error de guardado
+function mostrarErrorGuardado(mensaje) {
+  const indicadorError = document.getElementById('notasError');
+  const indicadorExito = document.getElementById('notasGuardadas');
+  
+  indicadorExito.style.display = 'none';
+  indicadorError.style.display = 'inline';
+  indicadorError.title = mensaje;
+  
+  // Ocultar después de 5 segundos
+  setTimeout(() => {
+    indicadorError.style.display = 'none';
+  }, 5000);
+}
+</script>
+{{/if}} 

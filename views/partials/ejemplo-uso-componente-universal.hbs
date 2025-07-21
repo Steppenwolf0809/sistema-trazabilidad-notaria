@@ -1,0 +1,124 @@
+{{! EJEMPLO DE USO DEL COMPONENTE UNIVERSAL }}
+{{! Este archivo muestra cómo integrar el componente en cualquier vista }}
+
+{{!-- 
+  PASO 1: Incluir el componente universal con datos
+  El controlador debe pasar: documento, config, eventos, informacionGrupal, userRole
+--}}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{documento.tipoDocumento}} - {{documento.codigoBarras}}</title>
+    <!-- CSS adicional específico si es necesario -->
+    <link rel="stylesheet" href="/css/tu-vista-especifica.css">
+</head>
+<body>
+    <div class="container-fluid">
+        
+        {{!-- USO DEL COMPONENTE UNIVERSAL --}}
+        {{> documento-detalle-universal 
+            documento=documento 
+            config=config 
+            eventos=eventos 
+            informacionGrupal=informacionGrupal 
+            userRole=userRole}}
+        
+        {{!-- Contenido adicional específico de tu vista si es necesario --}}
+        <div class="additional-content mt-4">
+            <!-- Aquí puedes agregar contenido específico que no esté cubierto por el componente universal -->
+        </div>
+        
+    </div>
+    
+    <!-- JavaScript adicional específico si es necesario -->
+    <script src="/js/tu-vista-especifica.js"></script>
+</body>
+</html>
+
+{{!-- 
+  PASO 2: En tu controlador, configurar los datos necesarios
+  
+  Ejemplo para controlador de Admin:
+  
+  const { obtenerDetallePorRol } = require('../controllers/documentoUniversalController');
+  
+  async function mostrarDetalleDocumento(req, res) {
+    try {
+      const documentoId = req.params.id;
+      const userId = req.user.id;
+      const userRole = 'admin'; // O req.user.rol
+      
+      // Obtener todos los datos necesarios para el componente
+      const datosVista = await obtenerDetallePorRol(userRole, documentoId, userId);
+      
+      // Renderizar la vista con el componente universal
+      res.render('admin/documentos/detalle', {
+        layout: 'admin',
+        ...datosVista
+      });
+      
+    } catch (error) {
+      console.error('Error mostrando detalle:', error);
+      res.status(500).render('error', { message: error.message });
+    }
+  }
+--}}
+
+{{!-- 
+  CONFIGURACIONES POR ROL AUTOMÁTICAS:
+  
+  Para ADMIN:
+  - Ve todas las secciones
+  - Puede editar casi todo excepto datos financieros
+  - Tiene acceso a funciones de auditoría
+  - Puede eliminar documentos
+  
+  Para MATRIZADOR:
+  - Solo ve documentos asignados a él
+  - Puede editar cliente y notificaciones
+  - Puede crear grupos de notificación
+  - Puede marcar documentos como listos
+  
+  Para CAJA:
+  - Ve información financiera y puede editarla
+  - No ve notificaciones grupales
+  - Enfocado en pagos y facturación
+  
+  Para ARCHIVO:
+  - Vista mínima enfocada en entrega
+  - Solo puede editar notas
+  - No ve datos financieros ni notificaciones
+  
+  Para RECEPCIÓN:
+  - Puede asignar matrizadores
+  - Edita información básica del cliente
+  - No ve datos financieros complejos
+--}}
+
+{{!-- 
+  PERSONALIZACIÓN ADICIONAL:
+  
+  Si necesitas personalizar la configuración para casos especiales:
+  
+  // En tu controlador, después de obtenerDetallePorRol:
+  
+  // Personalizar configuración específica
+  datosVista.config.mostrarSeccionEspecial = true;
+  datosVista.config.permisos.accionPersonalizada = true;
+  
+  // Agregar datos adicionales
+  datosVista.datosEspeciales = await obtenerDatosEspeciales(documentoId);
+  
+  // El componente se adaptará automáticamente
+--}}
+
+{{!-- 
+  MIGRACIÓN DESDE VISTA EXISTENTE:
+  
+  1. Reemplaza tu HTML actual con {{> documento-detalle-universal ...}}
+  2. Actualiza tu controlador para usar obtenerDetallePorRol()
+  3. Remueve CSS y JavaScript duplicado
+  4. Mantén solo funcionalidades específicas que no cubra el componente
+  5. Testing y validación
+--}} 

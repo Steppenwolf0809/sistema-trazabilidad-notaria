@@ -1,0 +1,150 @@
+{{! SECCIÓN NOTIFICACIONES - COMPONENTE UNIVERSAL }}
+{{! Configuración de política de notificaciones con sistema bidireccional }}
+
+<div class="info-card" id="seccion-notificaciones">
+  {{#if config.permisos.editarNotificaciones}}
+  <button class="edit-toggle" onclick="toggleSectionEdit('notificaciones')" data-section="notificaciones">
+    <i class="fas fa-edit"></i> Editar
+  </button>
+  {{/if}}
+  
+  <h6 class="section-title">
+    <i class="fas fa-bell"></i>
+    Configuración de Notificaciones
+  </h6>
+  
+  <!-- Modo Vista -->
+  <div class="view-mode" id="notificaciones-view">
+    <div class="info-row">
+      <span class="info-label">Política:</span>
+      <span class="info-value" id="politicaNotificacion-display">
+        {{#if (eq documento.metodoNotificacion 'ninguno')}}
+        <span class="badge estado-pendiente">🔕 No notificar</span>
+        {{else}}
+        <span class="badge estado-listo">🔔 Notificar automáticamente</span>
+        {{/if}}
+      </span>
+    </div>
+    {{#if (eq documento.metodoNotificacion 'ninguno')}}
+    <div class="info-row">
+      <span class="info-label">Razón:</span>
+      <span class="info-value" id="razonSinNotificar-display">
+        {{#if documento.razonSinNotificar}}{{documento.razonSinNotificar}}{{else}}No especificada{{/if}}
+      </span>
+    </div>
+    {{/if}}
+    {{#if documento.entregadoInmediatamente}}
+    <div class="info-row entrega-inmediata-row">
+      <span class="info-label">Especial:</span>
+      <span class="info-value">
+        <span class="badge estado-en-proceso">⚡ Entrega inmediata</span>
+      </span>
+    </div>
+    {{/if}}
+  </div>
+  
+  {{#if config.permisos.editarNotificaciones}}
+  <!-- Modo Edición -->
+  <div class="edit-mode" id="notificaciones-edit" style="display: none;">
+    <div class="notification-policy mb-3">
+      <label class="form-label fw-bold">Política de Notificación:</label>
+      
+      <div class="form-check mb-2">
+        <input class="form-check-input" type="radio" name="politicaNotificacion" id="notificarAutomatico-edit" value="automatico" 
+               {{#if (ne documento.metodoNotificacion 'ninguno')}}checked{{/if}}>
+        <label class="form-check-label" for="notificarAutomatico-edit">
+          <strong>🔔 Notificar automáticamente</strong>
+          <small class="text-muted d-block">Cliente autoriza notificaciones cuando el documento esté listo</small>
+        </label>
+      </div>
+      
+      <div class="form-check mb-2">
+        <input class="form-check-input" type="radio" name="politicaNotificacion" id="noNotificar-edit" value="no_notificar" 
+               {{#if (eq documento.metodoNotificacion 'ninguno')}}checked{{/if}}>
+        <label class="form-check-label" for="noNotificar-edit">
+          <strong>🔕 No notificar</strong>
+          <small class="text-muted d-block">Cliente no autoriza ningún tipo de notificación</small>
+        </label>
+      </div>
+    </div>
+
+    <!-- Opciones especiales -->
+    <div class="special-options mb-3">
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="entregaInmediata-edit" {{#if documento.entregadoInmediatamente}}checked{{/if}}>
+        <label class="form-check-label" for="entregaInmediata-edit">
+          <strong>⚡ Entrega inmediata</strong>
+          <small class="text-muted d-block">Cliente está esperando - recibe documento directamente</small>
+        </label>
+      </div>
+      
+      <!-- Información adicional cuando se marca entrega inmediata -->
+      <div class="alert alert-info-professional mt-2" id="infoEntregaInmediata" style="display: none;">
+        <small>
+          <i class="fas fa-info-circle"></i> 
+          <strong>Entrega inmediata:</strong> No se genera código de verificación ni notificación previa. 
+          Solo se enviará confirmación de entrega cuando se complete.
+        </small>
+      </div>
+    </div>
+    
+    <div class="mb-3" id="razonGroup-edit" {{#if (ne documento.metodoNotificacion 'ninguno')}}style="display: none;"{{/if}}>
+      <label class="form-label">Razón para no notificar:</label>
+      <textarea class="form-control" id="razonSinNotificar-edit" rows="2" 
+                placeholder="Especifique por qué el cliente no autoriza notificaciones">{{documento.razonSinNotificar}}</textarea>
+      <div class="invalid-feedback"></div>
+      
+      <!-- Botones de ayuda -->
+      <div class="mt-2">
+        <small class="text-muted">Razones comunes:</small>
+        <div class="btn-group-sm mt-1" role="group">
+          <button type="button" class="btn btn-outline-secondary btn-sm" onclick="llenarRazonRapida('Cliente no autoriza notificaciones electrónicas')">
+            No autoriza
+          </button>
+          <button type="button" class="btn btn-outline-secondary btn-sm" onclick="llenarRazonRapida('Cliente prefiere contacto telefónico directo')">
+            Prefiere llamada
+          </button>
+          <button type="button" class="btn btn-outline-secondary btn-sm" onclick="llenarRazonRapida('Cliente recogerá personalmente sin notificación previa')">
+            Recoge personalmente
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Información adicional -->
+    <div class="alert alert-info-professional">
+      <small>
+        <i class="fas fa-info-circle"></i> 
+        Las notificaciones se envían por WhatsApp al número registrado.
+        {{#if config.mostrarInfoEmail}}
+        También se puede enviar por email si está configurado.
+        {{/if}}
+      </small>
+    </div>
+    
+    <div class="edit-actions">
+      <button class="btn btn-success-soft btn-sm" onclick="saveSectionChanges('notificaciones')">
+        <i class="fas fa-save me-1"></i> Guardar
+      </button>
+      <button class="btn btn-secondary-soft btn-sm" onclick="cancelSectionEdit('notificaciones')">
+        <i class="fas fa-times me-1"></i> Cancelar
+      </button>
+    </div>
+  </div>
+  {{/if}}
+</div>
+
+{{#if config.permisos.editarNotificaciones}}
+<!-- JavaScript específico para lógica bidireccional de notificaciones -->
+<script>
+// Función para llenar rápidamente la razón de no notificar
+function llenarRazonRapida(razon) {
+  const textarea = document.getElementById('razonSinNotificar-edit');
+  if (textarea) {
+    textarea.value = razon;
+    textarea.classList.remove('is-invalid');
+    console.log('✅ Razón llenada automáticamente:', razon);
+  }
+}
+</script>
+{{/if}} 

@@ -1,0 +1,91 @@
+{{! SECCIÓN INFORMACIÓN GENERAL - COMPONENTE UNIVERSAL }}
+{{! Información básica del documento (normalmente solo lectura) }}
+
+<div class="info-card" id="seccion-general">
+  {{#if config.permisos.editarGeneral}}
+  <button class="edit-toggle" onclick="toggleSectionEdit('general')" data-section="general">
+    <i class="fas fa-edit"></i> Editar
+  </button>
+  {{/if}}
+  
+  <h6 class="section-title">
+    <i class="fas fa-info-circle"></i>
+    Información General
+  </h6>
+  
+  <!-- Modo Vista -->
+  <div class="view-mode" id="general-view">
+    <div class="info-row">
+      <span class="info-label">Tipo:</span>
+      <span class="info-value" id="tipoDocumento-display">{{documento.tipoDocumento}}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Código:</span>
+      <span class="info-value" style="font-family: 'JetBrains Mono', 'Fira Code', monospace; background: #f8fafc; padding: 4px 8px; border-radius: 4px; border: 1px solid #D0D7D9;">
+        {{documento.codigoBarras}}
+      </span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Fecha Registro:</span>
+      <span class="info-value">{{formatDate documento.created_at}}</span>
+    </div>
+    {{#if documento.fechaFactura}}
+    <div class="info-row">
+      <span class="info-label">Fecha Documento:</span>
+      <span class="info-value">{{formatDateDocument documento.fechaFactura}}</span>
+    </div>
+    {{/if}}
+    {{#if config.mostrarMatrizador}}
+    <div class="info-row">
+      <span class="info-label">Matrizador:</span>
+      <span class="info-value" id="matrizador-display">
+        {{#if documento.matrizador}}{{documento.matrizador.nombre}}{{else}}Sin asignar{{/if}}
+      </span>
+    </div>
+    {{/if}}
+  </div>
+  
+  {{#if config.permisos.editarGeneral}}
+  <!-- Modo Edición -->
+  <div class="edit-mode" id="general-edit" style="display: none;">
+    <div class="mb-3">
+      <label class="form-label">Tipo de Documento:</label>
+      <select class="form-control" id="tipoDocumento-edit" required>
+        <option value="">Seleccione tipo...</option>
+        <option value="Escritura" {{#if (eq documento.tipoDocumento "Escritura")}}selected{{/if}}>Escritura</option>
+        <option value="Certificado" {{#if (eq documento.tipoDocumento "Certificado")}}selected{{/if}}>Certificado</option>
+        <option value="Copia" {{#if (eq documento.tipoDocumento "Copia")}}selected{{/if}}>Copia</option>
+        <option value="Poder" {{#if (eq documento.tipoDocumento "Poder")}}selected{{/if}}>Poder</option>
+        <option value="Testamento" {{#if (eq documento.tipoDocumento "Testamento")}}selected{{/if}}>Testamento</option>
+        <option value="Reconocimiento de firma" {{#if (eq documento.tipoDocumento "Reconocimiento de firma")}}selected{{/if}}>Reconocimiento de firma</option>
+        <option value="Otro" {{#if (eq documento.tipoDocumento "Otro")}}selected{{/if}}>Otro</option>
+      </select>
+      <div class="invalid-feedback"></div>
+    </div>
+    
+    {{#if config.permisos.cambiarMatrizador}}
+    <div class="mb-3">
+      <label class="form-label">Asignar Matrizador:</label>
+      <select class="form-control" id="matrizador-edit">
+        <option value="">Sin asignar</option>
+        {{#each matrizadoresDisponibles}}
+        <option value="{{this.id}}" {{#if (eq ../documento.matrizador_id this.id)}}selected{{/if}}>
+          {{this.nombre}}
+        </option>
+        {{/each}}
+      </select>
+      <div class="invalid-feedback"></div>
+    </div>
+    {{/if}}
+    
+    <div class="edit-actions">
+      <button class="btn btn-success-soft btn-sm" onclick="saveSectionChanges('general')">
+        <i class="fas fa-save me-1"></i> Guardar
+      </button>
+      <button class="btn btn-secondary-soft btn-sm" onclick="cancelSectionEdit('general')">
+        <i class="fas fa-times me-1"></i> Cancelar
+      </button>
+    </div>
+  </div>
+  {{/if}}
+</div> 

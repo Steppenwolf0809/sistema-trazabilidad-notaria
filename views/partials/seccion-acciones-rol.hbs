@@ -1,0 +1,273 @@
+{{! SECCIÓN ACCIONES POR ROL - COMPONENTE UNIVERSAL }}
+{{! Acciones específicas según el rol del usuario y estado del documento }}
+
+{{#if config.mostrarAcciones}}
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="info-card" id="seccion-acciones">
+      <h6 class="section-title">
+        <i class="fas fa-tasks"></i>
+        Acciones Disponibles
+        <span class="badge estado-{{userRole}} ms-2">{{userRole}}</span>
+      </h6>
+      
+      <div class="actions-grid">
+        
+        {{!-- ACCIONES PARA ADMIN --}}
+        {{#if (eq userRole "admin")}}
+        <div class="action-group admin-actions">
+          <h6 class="action-group-title">
+            <i class="fas fa-crown"></i> Administración
+          </h6>
+          
+          {{#if config.permisos.separarGrupos}}
+          <button class="btn btn-warning-soft action-btn" onclick="separarDeGrupo({{documento.id}})">
+            <i class="fas fa-unlink me-1"></i> Separar de Grupo
+          </button>
+          {{/if}}
+          
+          {{#if config.permisos.autorizarUrgente}}
+          <button class="btn btn-orange action-btn" onclick="autorizarUrgente({{documento.id}})">
+            <i class="fas fa-bolt me-1"></i> Autorizar Urgente
+          </button>
+          {{/if}}
+          
+          {{#if config.permisos.eliminarDocumento}}
+          <button class="btn btn-danger action-btn" onclick="eliminarDocumento({{documento.id}})">
+            <i class="fas fa-trash me-1"></i> Eliminar Documento
+          </button>
+          {{/if}}
+          
+          {{#if config.permisos.auditoria}}
+          <a href="/admin/auditoria/documento/{{documento.id}}" class="btn btn-info-soft action-btn">
+            <i class="fas fa-history me-1"></i> Ver Auditoría
+          </a>
+          {{/if}}
+        </div>
+        {{/if}}
+        
+        {{!-- ACCIONES PARA MATRIZADOR --}}
+        {{#if (eq userRole "matrizador")}}
+        <div class="action-group matrizador-actions">
+          <h6 class="action-group-title">
+            <i class="fas fa-user-edit"></i> Matrizador
+          </h6>
+          
+          {{#if (and config.permisos.marcarListo (eq documento.estado "en_proceso"))}}
+          <button class="btn btn-success action-btn-primary" onclick="marcarListo({{documento.id}})">
+            <i class="fas fa-check me-1"></i> Marcar como Listo
+          </button>
+          {{/if}}
+          
+          {{#if config.permisos.crearGrupo}}
+          <button class="btn btn-primary-soft action-btn" onclick="crearGrupoNotificacion({{documento.id}})">
+            <i class="fas fa-layer-group me-1"></i> Crear Grupo
+          </button>
+          {{/if}}
+          
+          {{#if config.permisos.separarMiDocumento}}
+          <button class="btn btn-outline-warning action-btn" onclick="separarDeGrupo({{documento.id}})">
+            <i class="fas fa-user-times me-1"></i> Separar Mi Documento
+          </button>
+          {{/if}}
+        </div>
+        {{/if}}
+        
+        {{!-- ACCIONES PARA CAJA --}}
+        {{#if (eq userRole "caja")}}
+        <div class="action-group caja-actions">
+          <h6 class="action-group-title">
+            <i class="fas fa-cash-register"></i> Caja
+          </h6>
+          
+          {{#if config.permisos.registrarPago}}
+          <button class="btn btn-success action-btn" onclick="registrarPago({{documento.id}})">
+            <i class="fas fa-dollar-sign me-1"></i> Registrar Pago
+          </button>
+          {{/if}}
+          
+          {{#if config.permisos.generarFactura}}
+          <button class="btn btn-primary action-btn" onclick="generarFactura({{documento.id}})">
+            <i class="fas fa-file-invoice me-1"></i> Generar Factura
+          </button>
+          {{/if}}
+          
+          {{#if config.permisos.entregarDocumento}}
+          <button class="btn btn-info action-btn" onclick="entregarDocumento({{documento.id}})">
+            <i class="fas fa-hand-holding me-1"></i> Entregar Documento
+          </button>
+          {{/if}}
+        </div>
+        {{/if}}
+        
+        {{!-- ACCIONES PARA ARCHIVO --}}
+        {{#if (eq userRole "archivo")}}
+        <div class="action-group archivo-actions">
+          <h6 class="action-group-title">
+            <i class="fas fa-archive"></i> Archivo
+          </h6>
+          
+          {{#if config.permisos.entregarDocumento}}
+          <button class="btn btn-success action-btn" onclick="entregarDocumento({{documento.id}})">
+            <i class="fas fa-hand-holding me-1"></i> Entregar Documento
+          </button>
+          {{/if}}
+          
+          {{#if config.permisos.verificarDocumento}}
+          <button class="btn btn-primary action-btn" onclick="verificarDocumento({{documento.id}})">
+            <i class="fas fa-search me-1"></i> Verificar Documento
+          </button>
+          {{/if}}
+          
+          {{#if config.permisos.devolverArchivo}}
+          <button class="btn btn-warning action-btn" onclick="devolverArchivo({{documento.id}})">
+            <i class="fas fa-undo me-1"></i> Devolver a Proceso
+          </button>
+          {{/if}}
+        </div>
+        {{/if}}
+        
+        {{!-- ACCIONES PARA RECEPCIÓN --}}
+        {{#if (eq userRole "recepcion")}}
+        <div class="action-group recepcion-actions">
+          <h6 class="action-group-title">
+            <i class="fas fa-inbox"></i> Recepción
+          </h6>
+          
+          {{#if config.permisos.asignarMatrizador}}
+          <button class="btn btn-primary action-btn" onclick="asignarMatrizador({{documento.id}})">
+            <i class="fas fa-user-plus me-1"></i> Asignar Matrizador
+          </button>
+          {{/if}}
+          
+          {{#if config.permisos.entregarDocumento}}
+          <button class="btn btn-success action-btn" onclick="entregarDocumento({{documento.id}})">
+            <i class="fas fa-hand-holding me-1"></i> Entregar Documento
+          </button>
+          {{/if}}
+        </div>
+        {{/if}}
+        
+        {{!-- ACCIONES COMUNES --}}
+        <div class="action-group common-actions">
+          <h6 class="action-group-title">
+            <i class="fas fa-cog"></i> Acciones Generales
+          </h6>
+          
+          {{#if config.permisos.imprimirDocumento}}
+          <button class="btn btn-secondary-soft action-btn" onclick="imprimirDocumento({{documento.id}})">
+            <i class="fas fa-print me-1"></i> Imprimir
+          </button>
+          {{/if}}
+          
+          {{#if config.permisos.descargarPDF}}
+          <a href="/{{userRole}}/documentos/{{documento.id}}/pdf" class="btn btn-secondary-soft action-btn" target="_blank">
+            <i class="fas fa-file-pdf me-1"></i> Descargar PDF
+          </a>
+          {{/if}}
+          
+          {{#if config.permisos.compartirDocumento}}
+          <button class="btn btn-info-soft action-btn" onclick="compartirDocumento({{documento.id}})">
+            <i class="fas fa-share me-1"></i> Compartir
+          </button>
+          {{/if}}
+        </div>
+      </div>
+      
+      {{!-- INFORMACIÓN DE ESTADO --}}
+      <div class="status-info mt-3">
+        <small class="text-muted">
+          <i class="fas fa-info-circle me-1"></i>
+          <strong>Estado actual:</strong> {{translateEstado documento.estado}} | 
+          <strong>Última modificación:</strong> {{formatDateTime documento.updated_at}}
+          {{#if documento.matrizador}}
+          | <strong>Asignado a:</strong> {{documento.matrizador.nombre}}
+          {{/if}}
+        </small>
+      </div>
+    </div>
+  </div>
+</div>
+{{/if}}
+
+<!-- JavaScript para las acciones específicas -->
+<script>
+// Funciones específicas por rol - se sobrescriben según necesidad
+
+function marcarListo(documentoId) {
+  if (window.marcarListo) {
+    window.marcarListo(documentoId);
+  } else {
+    console.log('Función marcarListo no disponible');
+  }
+}
+
+function separarDeGrupo(documentoId) {
+  if (window.separarDeGrupo) {
+    window.separarDeGrupo(documentoId);
+  } else {
+    console.log('Función separarDeGrupo no disponible');
+  }
+}
+
+function crearGrupoNotificacion(documentoId) {
+  if (window.procesarAgrupacion) {
+    window.procesarAgrupacion();
+  } else {
+    console.log('Función crearGrupoNotificacion no disponible');
+  }
+}
+
+function autorizarUrgente(documentoId) {
+  // Implementación básica
+  if (confirm('¿Está seguro de autorizar este documento como urgente?')) {
+    window.location.href = `/${window.userRole}/documentos/${documentoId}/autorizar-urgente`;
+  }
+}
+
+function eliminarDocumento(documentoId) {
+  if (confirm('¿Está seguro de eliminar este documento? Esta acción no se puede deshacer.')) {
+    window.location.href = `/${window.userRole}/documentos/${documentoId}/eliminar`;
+  }
+}
+
+function registrarPago(documentoId) {
+  window.location.href = `/${window.userRole}/documentos/${documentoId}/pago`;
+}
+
+function generarFactura(documentoId) {
+  window.location.href = `/${window.userRole}/documentos/${documentoId}/factura`;
+}
+
+function entregarDocumento(documentoId) {
+  window.location.href = `/${window.userRole}/documentos/${documentoId}/entrega`;
+}
+
+function verificarDocumento(documentoId) {
+  window.location.href = `/${window.userRole}/documentos/${documentoId}/verificar`;
+}
+
+function asignarMatrizador(documentoId) {
+  window.location.href = `/${window.userRole}/documentos/${documentoId}/asignar`;
+}
+
+function imprimirDocumento(documentoId) {
+  window.print();
+}
+
+function compartirDocumento(documentoId) {
+  // Implementación básica de compartir
+  if (navigator.share) {
+    navigator.share({
+      title: 'Documento - {{documento.tipoDocumento}}',
+      text: 'Documento {{documento.codigoBarras}} - {{documento.nombreCliente}}',
+      url: window.location.href
+    });
+  } else {
+    // Fallback: copiar URL al portapapeles
+    navigator.clipboard.writeText(window.location.href).then(() => {
+      alert('URL copiada al portapapeles');
+    });
+  }
+}
+</script> 

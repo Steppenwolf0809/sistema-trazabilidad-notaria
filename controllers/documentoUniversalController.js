@@ -1,0 +1,620 @@
+/**
+ * CONTROLADOR UNIVERSAL DE DOCUMENTOS
+ * Sistema modular de permisos y configuración por rol
+ * Basado en la vista exitosa de matrizador, extendida para todos los roles
+ */
+
+const Documento = require('../models/Documento');
+const Matrizador = require('../models/Matrizador');
+const EventoDocumento = require('../models/EventoDocumento');
+const NotificacionGrupal = require('../models/NotificacionGrupal');
+const { obtenerHistorialUniversal } = require('../utils/historialUniversal');
+const { Op } = require('sequelize');
+
+// ============== CONFIGURACIÓN DE ROLES Y PERMISOS ==============
+
+/**
+ * Configuración de permisos y funcionalidades por rol
+ */
+const configRoles = {
+  admin: {
+    // Secciones visibles
+    mostrarHeader: true,
+    mostrarAlertas: true,
+    mostrarInfoGeneral: true,
+    mostrarCliente: true,
+    mostrarFinanciero: true,
+    mostrarNotificaciones: true,
+    mostrarNotas: true,
+    mostrarNotificacionesGrupales: true,
+    mostrarAcciones: true,
+    mostrarHistorial: true,
+    mostrarModalMarcarListo: true,
+    
+    // Configuraciones específicas
+    mostrarInfoMatrizador: true,
+    mostrarIndicadorContacto: true,
+    mostrarCamposExtendidos: true,
+    mostrarInfoEmail: true,
+    esAdmin: true,
+    
+    // Permisos específicos
+    permisos: {
+      // Edición de secciones
+      editarGeneral: true,
+      editarCliente: true,
+      editarFinanciero: false, // Solo caja puede editar datos financieros
+      editarNotificaciones: true,
+      editarNotas: true,
+      editarGlobal: true,
+      
+      // Permisos de matrizador
+      cambiarMatrizador: true,
+      
+      // Acciones principales
+      marcarListo: false, // Admin no marca documentos como listo
+      separarGrupos: true,
+      autorizarUrgente: true,
+      eliminarDocumento: true,
+      auditoria: true,
+      
+      // Acciones comunes
+      imprimirDocumento: true,
+      descargarPDF: true,
+      compartirDocumento: true
+    },
+    
+    // URL de retorno
+    urlVolver: '/admin/documentos',
+    puedeEditar: true
+  },
+  
+  matrizador: {
+    // Secciones visibles
+    mostrarHeader: true,
+    mostrarAlertas: true,
+    mostrarInfoGeneral: true,
+    mostrarCliente: true,
+    mostrarFinanciero: true,
+    mostrarNotificaciones: true,
+    mostrarNotas: true,
+    mostrarNotificacionesGrupales: true,
+    mostrarAcciones: true,
+    mostrarHistorial: true,
+    mostrarModalMarcarListo: true,
+    
+    // Configuraciones específicas
+    mostrarInfoMatrizador: false,
+    mostrarIndicadorContacto: true,
+    mostrarCamposExtendidos: false,
+    mostrarInfoEmail: true,
+    esAdmin: false,
+    
+    // Permisos específicos
+    permisos: {
+      // Edición de secciones (solo sus documentos asignados)
+      editarGeneral: false,
+      editarCliente: true, // Función que verifica asignación
+      editarFinanciero: false,
+      editarNotificaciones: true, // Función que verifica asignación
+      editarNotas: true, // Función que verifica asignación
+      editarGlobal: false,
+      
+      // Acciones principales
+      marcarListo: true, // Función que verifica asignación
+      crearGrupo: true,
+      separarMiDocumento: true,
+      
+      // Acciones comunes
+      imprimirDocumento: true,
+      descargarPDF: true,
+      compartirDocumento: false
+    },
+    
+    urlVolver: '/matrizador/documentos',
+    puedeEditar: true
+  },
+  
+  caja: {
+    // Secciones visibles
+    mostrarHeader: true,
+    mostrarAlertas: false,
+    mostrarInfoGeneral: true,
+    mostrarCliente: true,
+    mostrarFinanciero: true,
+    mostrarNotificaciones: false,
+    mostrarNotas: true,
+    mostrarNotificacionesGrupales: false,
+    mostrarAcciones: true,
+    mostrarHistorial: true,
+    mostrarModalMarcarListo: false,
+    
+    // Configuraciones específicas
+    mostrarInfoMatrizador: true,
+    mostrarIndicadorContacto: false,
+    mostrarCamposExtendidos: true,
+    mostrarInfoEmail: false,
+    esAdmin: false,
+    
+    // Permisos específicos
+    permisos: {
+      // Edición de secciones
+      editarGeneral: false,
+      editarCliente: true,
+      editarFinanciero: true, // Solo caja puede editar datos financieros
+      editarNotificaciones: false,
+      editarNotas: true,
+      editarGlobal: false,
+      
+      // Acciones principales
+      registrarPago: true,
+      generarFactura: true,
+      entregarDocumento: true,
+      
+      // Acciones comunes
+      imprimirDocumento: true,
+      descargarPDF: true,
+      compartirDocumento: false
+    },
+    
+    urlVolver: '/caja/documentos',
+    puedeEditar: true
+  },
+  
+  archivo: {
+    // Secciones visibles
+    mostrarHeader: true,
+    mostrarAlertas: false,
+    mostrarInfoGeneral: true,
+    mostrarCliente: false,
+    mostrarFinanciero: false,
+    mostrarNotificaciones: false,
+    mostrarNotas: true,
+    mostrarNotificacionesGrupales: false,
+    mostrarAcciones: true,
+    mostrarHistorial: true,
+    mostrarModalMarcarListo: false,
+    
+    // Configuraciones específicas
+    mostrarInfoMatrizador: true,
+    mostrarIndicadorContacto: false,
+    mostrarCamposExtendidos: false,
+    mostrarInfoEmail: false,
+    esAdmin: false,
+    
+    // Permisos específicos
+    permisos: {
+      // Edición de secciones
+      editarGeneral: false,
+      editarCliente: false,
+      editarFinanciero: false,
+      editarNotificaciones: false,
+      editarNotas: true,
+      editarGlobal: false,
+      
+      // Acciones principales
+      entregarDocumento: true,
+      verificarDocumento: true,
+      devolverArchivo: true,
+      
+      // Acciones comunes
+      imprimirDocumento: true,
+      descargarPDF: true,
+      compartirDocumento: false
+    },
+    
+    urlVolver: '/archivo/documentos',
+    puedeEditar: false
+  },
+  
+  recepcion: {
+    // Secciones visibles
+    mostrarHeader: true,
+    mostrarAlertas: false,
+    mostrarInfoGeneral: true,
+    mostrarCliente: true,
+    mostrarFinanciero: false,
+    mostrarNotificaciones: false,
+    mostrarNotas: true,
+    mostrarNotificacionesGrupales: false,
+    mostrarAcciones: true,
+    mostrarHistorial: true,
+    mostrarModalMarcarListo: false,
+    
+    // Configuraciones específicas
+    mostrarInfoMatrizador: true,
+    mostrarIndicadorContacto: true,
+    mostrarCamposExtendidos: false,
+    mostrarInfoEmail: false,
+    esAdmin: false,
+    
+    // Permisos específicos
+    permisos: {
+      // Edición de secciones
+      editarGeneral: false,
+      editarCliente: true,
+      editarFinanciero: false,
+      editarNotificaciones: false,
+      editarNotas: true,
+      editarGlobal: false,
+      
+      // Acciones principales
+      asignarMatrizador: true,
+      entregarDocumento: true,
+      
+      // Acciones comunes
+      imprimirDocumento: true,
+      descargarPDF: true,
+      compartirDocumento: false
+    },
+    
+    urlVolver: '/recepcion/documentos',
+    puedeEditar: true
+  }
+};
+
+// ============== FUNCIONES PRINCIPALES ==============
+
+/**
+ * Obtiene la configuración base para un rol específico
+ * @param {string} rol - Rol del usuario (admin, matrizador, caja, archivo, recepcion)
+ * @returns {Object} Configuración base del rol
+ */
+function obtenerConfiguracionBase(rol) {
+  const config = configRoles[rol];
+  if (!config) {
+    throw new Error(`Rol '${rol}' no reconocido`);
+  }
+  
+  return JSON.parse(JSON.stringify(config)); // Deep clone
+}
+
+/**
+ * Calcula permisos dinámicos basados en el rol, documento y usuario
+ * @param {string} rol - Rol del usuario
+ * @param {Object} documento - Datos del documento
+ * @param {number} userId - ID del usuario
+ * @param {Object} usuario - Datos completos del usuario (opcional)
+ * @returns {Object} Configuración con permisos calculados
+ */
+function calcularPermisosDinamicos(rol, documento, userId, usuario = null) {
+  const config = obtenerConfiguracionBase(rol);
+  
+  // Aplicar lógica específica según rol
+  switch (rol) {
+    case 'matrizador':
+      const esDocumentoAsignado = documento.matrizador_id === userId;
+      
+      // Solo puede editar sus documentos asignados
+      config.permisos.editarCliente = esDocumentoAsignado;
+      config.permisos.editarNotificaciones = esDocumentoAsignado;
+      config.permisos.editarNotas = esDocumentoAsignado;
+      config.permisos.marcarListo = esDocumentoAsignado && documento.estado === 'en_proceso';
+      
+      // Solo puede crear grupos si el documento está en proceso y asignado
+      config.permisos.crearGrupo = esDocumentoAsignado && documento.estado === 'en_proceso';
+      
+      break;
+      
+    case 'admin':
+      // Admin puede hacer todo excepto marcar como listo (eso es responsabilidad del matrizador)
+      config.permisos.marcarListo = false;
+      break;
+      
+    case 'caja':
+      // Caja puede editar datos financieros independientemente de asignación
+      config.permisos.editarFinanciero = true;
+      break;
+      
+    case 'archivo':
+      // Archivo solo puede entregar documentos que estén listos
+      config.permisos.entregarDocumento = documento.estado === 'listo_para_entrega';
+      break;
+      
+    case 'recepcion':
+      // Recepción puede asignar matrizador solo si no está asignado
+      config.permisos.asignarMatrizador = !documento.matrizador_id;
+      break;
+  }
+  
+  return config;
+}
+
+/**
+ * Obtiene el detalle completo del documento con datos específicos según el rol
+ * @param {string} rol - Rol del usuario
+ * @param {number} documentoId - ID del documento
+ * @param {number} userId - ID del usuario
+ * @param {Object} options - Opciones adicionales
+ * @returns {Object} Datos completos para la vista
+ */
+async function obtenerDetallePorRol(rol, documentoId, userId, options = {}) {
+  try {
+    console.log(`🔍 Obteniendo detalle documento ${documentoId} para rol ${rol} usuario ${userId}`);
+    
+    // Buscar documento con asociaciones necesarias
+    const documento = await Documento.findByPk(documentoId, {
+      include: [
+        {
+          model: Matrizador,
+          as: 'matrizador',
+          attributes: ['id', 'nombre', 'email']
+        }
+      ]
+    });
+    
+    if (!documento) {
+      throw new Error('Documento no encontrado');
+    }
+    
+    // Verificar permisos de acceso según rol
+    const tieneAcceso = verificarAccesoDocumento(rol, documento, userId);
+    if (!tieneAcceso) {
+      throw new Error('No tiene permisos para ver este documento');
+    }
+    
+    // Calcular configuración y permisos dinámicos
+    const config = calcularPermisosDinamicos(rol, documento, userId);
+    
+    // Obtener datos adicionales según necesidad
+    const datosAdicionales = await obtenerDatosAdicionales(rol, documento, config);
+    
+    // Obtener historial si es necesario
+    let eventos = [];
+    if (config.mostrarHistorial) {
+      eventos = await obtenerHistorialUniversal(documentoId, {
+        incluirDetalles: config.esAdmin,
+        limitarEventos: config.esAdmin ? false : true
+      });
+    }
+    
+    // Obtener información de notificaciones grupales
+    let informacionGrupal = null;
+    if (config.mostrarNotificacionesGrupales) {
+      informacionGrupal = await obtenerInformacionGrupal(documento);
+    }
+    
+    console.log(`✅ Detalle obtenido exitosamente para rol ${rol}`);
+    
+    return {
+      documento,
+      config,
+      eventos,
+      informacionGrupal,
+      userRole: rol,
+      ...datosAdicionales
+    };
+    
+  } catch (error) {
+    console.error(`❌ Error obteniendo detalle documento ${documentoId}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Verifica si el usuario tiene acceso al documento según su rol
+ * @param {string} rol - Rol del usuario
+ * @param {Object} documento - Datos del documento
+ * @param {number} userId - ID del usuario
+ * @returns {boolean} True si tiene acceso
+ */
+function verificarAccesoDocumento(rol, documento, userId) {
+  switch (rol) {
+    case 'admin':
+      return true; // Admin puede ver todo
+      
+    case 'matrizador':
+      // Matrizador solo puede ver documentos asignados a él
+      return documento.matrizador_id === userId;
+      
+    case 'caja':
+    case 'archivo':
+    case 'recepcion':
+      return true; // Estos roles pueden ver todos los documentos
+      
+    default:
+      return false;
+  }
+}
+
+/**
+ * Obtiene datos adicionales necesarios según el rol
+ * @param {string} rol - Rol del usuario
+ * @param {Object} documento - Datos del documento
+ * @param {Object} config - Configuración del rol
+ * @returns {Object} Datos adicionales
+ */
+async function obtenerDatosAdicionales(rol, documento, config) {
+  const datos = {};
+  
+  // Obtener lista de matrizadores disponibles si se necesita
+  if (config.permisos.cambiarMatrizador || config.permisos.asignarMatrizador) {
+    datos.matrizadoresDisponibles = await Matrizador.findAll({
+      where: { activo: true },
+      attributes: ['id', 'nombre'],
+      order: [['nombre', 'ASC']]
+    });
+  }
+  
+  return datos;
+}
+
+/**
+ * Obtiene información de notificaciones grupales
+ * @param {Object} documento - Datos del documento
+ * @returns {Object|null} Información grupal o null
+ */
+async function obtenerInformacionGrupal(documento) {
+  // Implementación simplificada - se puede expandir según necesidades
+  try {
+    const grupo = await NotificacionGrupal.findOne({
+      where: {
+        id: documento.notificacion_grupal_id
+      },
+      include: [
+        {
+          model: Documento,
+          as: 'documentos',
+          attributes: ['id', 'codigoBarras', 'tipoDocumento', 'estado']
+        }
+      ]
+    });
+    
+    if (grupo) {
+      return {
+        grupo,
+        esLiderDelGrupo: grupo.documento_lider_id === documento.id,
+        totalDocumentosGrupo: grupo.documentos.length,
+        documentosDelGrupo: grupo.documentos,
+        puedeModificarGrupo: true // Se puede ajustar según lógica específica
+      };
+    }
+    
+    // Si no está en grupo, buscar documentos agrupables
+    const documentosAgrupables = await Documento.findAll({
+      where: {
+        nombreCliente: documento.nombreCliente,
+        identificacionCliente: documento.identificacionCliente,
+        estado: 'en_proceso',
+        notificacion_grupal_id: null,
+        id: { [Op.ne]: documento.id }
+      },
+      attributes: ['id', 'codigoBarras', 'tipoDocumento', 'estado', 'created_at'],
+      limit: 10
+    });
+    
+    return {
+      grupo: null,
+      puedeCrearGrupo: documentosAgrupables.length > 0,
+      totalAgrupables: documentosAgrupables.length,
+      documentosAgrupables
+    };
+    
+  } catch (error) {
+    console.error('Error obteniendo información grupal:', error);
+    return null;
+  }
+}
+
+/**
+ * Edita una sección específica del documento con validación de permisos
+ * @param {string} rol - Rol del usuario
+ * @param {number} documentoId - ID del documento
+ * @param {string} seccion - Nombre de la sección a editar
+ * @param {Object} datos - Datos a actualizar
+ * @param {number} userId - ID del usuario
+ * @returns {Object} Resultado de la operación
+ */
+async function editarSeccionPorRol(rol, documentoId, seccion, datos, userId) {
+  try {
+    console.log(`📝 Editando sección ${seccion} del documento ${documentoId} por rol ${rol}`);
+    
+    // Obtener documento actual
+    const documento = await Documento.findByPk(documentoId);
+    if (!documento) {
+      throw new Error('Documento no encontrado');
+    }
+    
+    // Verificar permisos
+    const config = calcularPermisosDinamicos(rol, documento, userId);
+    const permiso = `editar${seccion.charAt(0).toUpperCase() + seccion.slice(1)}`;
+    
+    if (!config.permisos[permiso]) {
+      throw new Error('No tiene permisos para editar esta sección');
+    }
+    
+    // Validar datos según la sección
+    const datosValidados = validarDatosSeccion(seccion, datos);
+    
+    // Actualizar documento
+    await documento.update(datosValidados);
+    
+    // Registrar evento de auditoría
+    await EventoDocumento.create({
+      documento_id: documentoId,
+      usuario_id: userId,
+      tipo_evento: 'edicion',
+      descripcion: `Sección ${seccion} editada por ${rol}`,
+      detalles: JSON.stringify({
+        seccion,
+        cambios: datosValidados,
+        rol
+      }),
+      created_at: new Date()
+    });
+    
+    console.log(`✅ Sección ${seccion} editada exitosamente`);
+    
+    return {
+      success: true,
+      message: 'Sección actualizada correctamente',
+      datos: datosValidados
+    };
+    
+  } catch (error) {
+    console.error(`❌ Error editando sección ${seccion}:`, error);
+    return {
+      success: false,
+      message: error.message
+    };
+  }
+}
+
+/**
+ * Valida los datos de entrada según la sección
+ * @param {string} seccion - Nombre de la sección
+ * @param {Object} datos - Datos a validar
+ * @returns {Object} Datos validados
+ */
+function validarDatosSeccion(seccion, datos) {
+  switch (seccion) {
+    case 'cliente':
+      return {
+        nombreCliente: datos.nombreCliente?.trim() || '',
+        identificacionCliente: datos.identificacionCliente?.trim() || '',
+        emailCliente: datos.emailCliente?.trim() || null,
+        telefonoCliente: datos.telefonoCliente?.replace(/\D/g, '') || null
+      };
+      
+    case 'notificaciones':
+      return {
+        metodoNotificacion: datos.metodoNotificacion || 'whatsapp',
+        razonSinNotificar: datos.razonSinNotificar?.trim() || null,
+        entregadoInmediatamente: Boolean(datos.entregadoInmediatamente)
+      };
+      
+    case 'notas':
+      return {
+        notas: datos.notas?.trim() || null
+      };
+      
+    case 'general':
+      return {
+        tipoDocumento: datos.tipoDocumento?.trim() || '',
+        matrizador_id: datos.matrizador_id || null
+      };
+      
+    case 'financiero':
+      return {
+        numeroFactura: datos.numeroFactura?.trim() || null,
+        valorFactura: parseFloat(datos.valorFactura) || 0,
+        fechaFactura: datos.fechaFactura || null,
+        estadoPago: datos.estadoPago || 'pendiente',
+        metodoPago: datos.metodoPago?.trim() || null
+      };
+      
+    default:
+      throw new Error('Sección no reconocida');
+  }
+}
+
+// ============== EXPORTAR FUNCIONES ==============
+
+module.exports = {
+  obtenerDetallePorRol,
+  editarSeccionPorRol,
+  calcularPermisosDinamicos,
+  obtenerConfiguracionBase,
+  verificarAccesoDocumento,
+  configRoles
+}; 

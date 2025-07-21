@@ -1,0 +1,104 @@
+{{! SECCIÓN CLIENTE - COMPONENTE UNIVERSAL }}
+{{! Información del cliente con capacidad de edición in-place }}
+
+<div class="info-card" id="seccion-cliente">
+  {{#if config.permisos.editarCliente}}
+  <button class="edit-toggle" onclick="toggleSectionEdit('cliente')" data-section="cliente">
+    <i class="fas fa-edit"></i> Editar
+  </button>
+  {{/if}}
+  
+  <h6 class="section-title">
+    <i class="fas fa-user"></i>
+    Información del Cliente
+  </h6>
+  
+  <!-- Modo Vista -->
+  <div class="view-mode" id="cliente-view">
+    <div class="info-row">
+      <span class="info-label">Nombre:</span>
+      <span class="info-value" id="nombreCliente-display">{{documento.nombreCliente}}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Identificación:</span>
+      <span class="info-value" id="identificacionCliente-display">{{documento.identificacionCliente}}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Email:</span>
+      <span class="info-value {{#unless documento.emailCliente}}empty{{/unless}}" id="emailCliente-display">
+        {{#if documento.emailCliente}}{{documento.emailCliente}}{{else}}No registrado{{/if}}
+      </span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Teléfono:</span>
+      <span class="info-value {{#unless documento.telefonoCliente}}empty{{/unless}}" id="telefonoCliente-display">
+        {{#if documento.telefonoCliente}}{{documento.telefonoCliente}}{{else}}No registrado{{/if}}
+      </span>
+    </div>
+    {{#if config.mostrarIndicadorContacto}}
+    <div class="info-row">
+      <span class="info-label">Contacto:</span>
+      <span class="info-value">
+        {{> indicador-contacto documento=documento}}
+      </span>
+    </div>
+    {{/if}}
+  </div>
+  
+  {{#if config.permisos.editarCliente}}
+  <!-- Modo Edición -->
+  <div class="edit-mode" id="cliente-edit" style="display: none;">
+    <div class="mb-3">
+      <label class="form-label">Nombre Completo:</label>
+      <input type="text" class="form-control" id="nombreCliente-edit" 
+             value="{{documento.nombreCliente}}" required 
+             placeholder="Ingrese nombre completo">
+      <div class="invalid-feedback"></div>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Identificación:</label>
+      <input type="text" class="form-control" id="identificacionCliente-edit" 
+             value="{{documento.identificacionCliente}}" required 
+             placeholder="Cédula, RUC o pasaporte">
+      <div class="invalid-feedback"></div>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Email:</label>
+      <input type="email" class="form-control" id="emailCliente-edit" 
+             value="{{documento.emailCliente}}" 
+             placeholder="ejemplo@correo.com">
+      <div class="invalid-feedback"></div>
+      <small class="form-text text-muted">
+        <i class="fas fa-info-circle"></i> Opcional - Se usará para notificaciones por email
+      </small>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Teléfono:</label>
+      <input type="tel" class="form-control" id="telefonoCliente-edit" 
+             value="{{documento.telefonoCliente}}" 
+             placeholder="0999999999" maxlength="10">
+      <div class="invalid-feedback"></div>
+      <small class="form-text text-muted">
+        <i class="fas fa-whatsapp text-success"></i> Para WhatsApp debe iniciar con 09
+      </small>
+    </div>
+    
+    {{#if config.mostrarCamposExtendidos}}
+    <div class="mb-3">
+      <label class="form-label">Dirección:</label>
+      <textarea class="form-control" id="direccionCliente-edit" rows="2" 
+                placeholder="Dirección completa del cliente">{{documento.direccionCliente}}</textarea>
+    </div>
+    {{/if}}
+    
+    <div class="edit-actions">
+      <button class="btn btn-success-soft btn-sm" onclick="saveSectionChanges('cliente')">
+        <i class="fas fa-save me-1"></i> Guardar
+      </button>
+      <button class="btn btn-secondary-soft btn-sm" onclick="cancelSectionEdit('cliente')">
+        <i class="fas fa-times me-1"></i> Cancelar
+      </button>
+    </div>
+  </div>
+  {{/if}}
+</div> 

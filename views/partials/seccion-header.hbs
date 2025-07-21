@@ -1,0 +1,79 @@
+{{! SECCIÓN HEADER - COMPONENTE UNIVERSAL }}
+{{! Título, estado, código y acciones principales del documento }}
+
+<!-- Header del documento -->
+<div class="document-header">
+  <div class="row align-items-center">
+    <div class="col-lg-8">
+      <h1 class="document-title">
+        {{documento.tipoDocumento}}
+        {{> estado-badge estado=documento.estado}}
+      </h1>
+      <p class="document-subtitle">
+        Documento: {{documento.codigoBarras}} | Cliente: {{documento.nombreCliente}}
+      </p>
+      {{#if documento.fechaFactura}}
+      <p class="document-date">
+        <i class="fas fa-calendar me-1"></i>
+        Fecha documento: {{formatDateDocument documento.fechaFactura}}
+      </p>
+      {{/if}}
+    </div>
+    <div class="col-lg-4">
+      <div class="action-buttons justify-content-end">
+        
+        {{#if (and config.permisos.marcarListo (eq documento.estado "en_proceso"))}}
+        <button class="btn btn-success action-button-primary" onclick="marcarListo({{documento.id}})">
+          <i class="fas fa-check me-1"></i> 
+          {{#if (eq userRole "matrizador")}}Marcar como Listo{{else}}Procesar Documento{{/if}}
+        </button>
+        {{/if}}
+
+        {{#if config.permisos.autorizarUrgente}}
+        <button class="btn btn-warning action-button-secondary" onclick="autorizarUrgente({{documento.id}})">
+          <i class="fas fa-exclamation me-1"></i> Autorizar Urgente
+        </button>
+        {{/if}}
+
+        {{#if config.permisos.eliminarDocumento}}
+        <button class="btn btn-danger action-button-danger" onclick="eliminarDocumento({{documento.id}})">
+          <i class="fas fa-trash me-1"></i> Eliminar
+        </button>
+        {{/if}}
+
+        {{#if config.permisos.editarGlobal}}
+        <button class="btn btn-outline-primary" id="globalEditToggle">
+          <i class="fas fa-edit me-1"></i> Editar
+        </button>
+        {{/if}}
+        
+        <a href="{{config.urlVolver}}" class="btn btn-secondary-soft">
+          <i class="fas fa-arrow-left me-1"></i> Volver
+        </a>
+      </div>
+    </div>
+  </div>
+
+  {{#if config.mostrarInfoMatrizador}}
+  <div class="row mt-2">
+    <div class="col-12">
+      <div class="matrizador-info">
+        <small class="text-muted">
+          <i class="fas fa-user me-1"></i>
+          <strong>Matrizador:</strong> 
+          {{#if documento.matrizador}}
+            {{documento.matrizador.nombre}}
+            {{#if config.esAdmin}}
+              <a href="/admin/matrizadores/{{documento.matrizador.id}}" class="text-decoration-none ms-2">
+                <i class="fas fa-external-link-alt"></i> Ver perfil
+              </a>
+            {{/if}}
+          {{else}}
+            <span class="text-warning">Sin asignar</span>
+          {{/if}}
+        </small>
+      </div>
+    </div>
+  </div>
+  {{/if}}
+</div> 

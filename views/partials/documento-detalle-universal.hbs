@@ -1,0 +1,88 @@
+{{! COMPONENTE UNIVERSAL - DETALLE DE DOCUMENTO }}
+{{! Sistema modular configurable por rol con edición in-place }}
+
+<!-- CSS específico para el componente universal -->
+<link rel="stylesheet" href="/css/documento-detalle-unificado.css">
+
+<div class="document-unified-container" 
+     data-documento-id="{{documento.id}}" 
+     data-user-role="{{userRole}}"
+     data-puede-editar="{{config.puedeEditar}}">
+  
+  {{#if config.mostrarHeader}}
+    {{> seccion-header documento=documento config=config userRole=userRole}}
+  {{/if}}
+
+  {{#if config.mostrarAlertas}}
+    {{> seccion-alertas documento=documento config=config userRole=userRole}}
+  {{/if}}
+
+  <!-- Grid principal de información -->
+  <div class="info-grid mb-4">
+    
+    {{#if config.mostrarInfoGeneral}}
+      {{> seccion-info-general documento=documento config=config userRole=userRole}}
+    {{/if}}
+
+    {{#if config.mostrarCliente}}
+      {{> seccion-cliente documento=documento config=config userRole=userRole}}
+    {{/if}}
+
+  </div>
+
+  {{#if config.mostrarFinanciero}}
+    {{> seccion-financiera documento=documento config=config userRole=userRole}}
+  {{/if}}
+
+  <!-- Sección de Notificaciones y Notas -->
+  <div class="row mb-4">
+    {{#if config.mostrarNotificaciones}}
+    <div class="{{#if config.mostrarNotas}}col-md-6{{else}}col-12{{/if}}">
+      {{> seccion-notificaciones documento=documento config=config userRole=userRole}}
+    </div>
+    {{/if}}
+    
+    {{#if config.mostrarNotas}}
+    <div class="{{#if config.mostrarNotificaciones}}col-md-6{{else}}col-12{{/if}}">
+      {{> seccion-notas documento=documento config=config userRole=userRole}}
+    </div>
+    {{/if}}
+  </div>
+
+  {{#if config.mostrarNotificacionesGrupales}}
+    {{> seccion-notificaciones-grupales documento=documento informacionGrupal=informacionGrupal config=config userRole=userRole}}
+  {{/if}}
+
+  {{#if config.mostrarAcciones}}
+    {{> seccion-acciones-rol documento=documento config=config userRole=userRole}}
+  {{/if}}
+
+  {{#if config.mostrarHistorial}}
+    {{> historial-universal eventos=eventos esAdmin=config.esAdmin userRole=userRole}}
+  {{/if}}
+  
+</div>
+
+<!-- Modales necesarios -->
+{{#if config.mostrarModalMarcarListo}}
+  {{> modal-marcar-listo documento=documento informacionGrupal=informacionGrupal config=config}}
+{{/if}}
+
+<!-- JavaScript del componente universal -->
+<script src="/js/documento-detalle-unificado.js" defer></script>
+<script>
+// Configuración global para el componente
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('🎨 Componente universal inicializado');
+  
+  // Configurar variables globales
+  window.documentoId = {{documento.id}};
+  window.userRole = '{{userRole}}';
+  window.configuracionComponente = {{{json config}}};
+  
+  // Inicializar funcionalidades específicas por rol
+  if (window.documentoDetalle) {
+    window.documentoDetalle.configurarPorRol('{{userRole}}', window.configuracionComponente);
+  }
+});
+</script> 

@@ -1,0 +1,166 @@
+{{! SECCIÓN FINANCIERA - COMPONENTE UNIVERSAL }}
+{{! Información de facturación y pagos (normalmente solo lectura, editable para caja) }}
+
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="financial-section">
+      {{#if config.permisos.editarFinanciero}}
+      <button class="edit-toggle" onclick="toggleSectionEdit('financiero')" data-section="financiero">
+        <i class="fas fa-edit"></i> Editar
+      </button>
+      {{/if}}
+      
+      <h6 class="section-title">
+        <i class="fas fa-dollar-sign"></i>
+        Información Financiera
+      </h6>
+      
+      <!-- Modo Vista -->
+      <div class="view-mode" id="financiero-view">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="info-card border-professional">
+              <h6 class="text-muted-professional mb-3">
+                <i class="fas fa-file-invoice me-1"></i>
+                Facturación
+              </h6>
+              <div class="info-row">
+                <span class="info-label">N° Factura:</span>
+                <span class="info-value" id="numeroFactura-display">
+                  {{#if documento.numeroFactura}}{{documento.numeroFactura}}{{else}}<span class="text-subtle">No registrado</span>{{/if}}
+                </span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Valor Total:</span>
+                <span class="info-value financial-value" id="valorFactura-display">
+                  ${{#if documento.valorFactura}}{{formatMoney documento.valorFactura}}{{else}}0.00{{/if}}
+                </span>
+              </div>
+              {{#if documento.fechaFactura}}
+              <div class="info-row">
+                <span class="info-label">Fecha Factura:</span>
+                <span class="info-value" id="fechaFactura-display">{{formatDateDocument documento.fechaFactura}}</span>
+              </div>
+              {{/if}}
+            </div>
+          </div>
+          
+          <div class="col-md-6">
+            <div class="info-card border-professional">
+              <h6 class="text-muted-professional mb-3">
+                <i class="fas fa-credit-card me-1"></i>
+                Estado de Pago
+              </h6>
+              <div class="info-row">
+                <span class="info-label">Estado:</span>
+                <span class="info-value" id="estadoPago-display">
+                  {{#if (eq documento.estadoPago "pagado_completo")}}
+                  <span class="badge estado-listo">✅ Pagado Completo</span>
+                  {{else if (eq documento.estadoPago "pagado_con_retencion")}}
+                  <span class="badge estado-entregado">🧾 Pagado con Retención</span>
+                  {{else if (eq documento.estadoPago "pago_parcial")}}
+                  <span class="badge estado-en-proceso">⚠️ Pago Parcial</span>
+                  {{else}}
+                  <span class="badge estado-pendiente">❌ Pendiente</span>
+                  {{/if}}
+                </span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Método:</span>
+                <span class="info-value" id="metodoPago-display">
+                  {{#if documento.metodoPago}}{{documento.metodoPago}}{{else}}<span class="text-subtle">No registrado</span>{{/if}}
+                </span>
+              </div>
+              {{#if documento.fechaUltimoPago}}
+              <div class="info-row">
+                <span class="info-label">Último Pago:</span>
+                <span class="info-value" id="fechaUltimoPago-display">{{formatDateTime documento.fechaUltimoPago}}</span>
+              </div>
+              {{/if}}
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {{#if config.permisos.editarFinanciero}}
+      <!-- Modo Edición (Solo para roles autorizados como Caja) -->
+      <div class="edit-mode" id="financiero-edit" style="display: none;">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="info-card border-professional">
+              <h6 class="text-muted-professional mb-3">
+                <i class="fas fa-file-invoice me-1"></i>
+                Datos de Facturación
+              </h6>
+              <div class="mb-3">
+                <label class="form-label">Número de Factura:</label>
+                <input type="text" class="form-control" id="numeroFactura-edit" 
+                       value="{{documento.numeroFactura}}" 
+                       placeholder="Ej: 001-001-000000123">
+                <div class="invalid-feedback"></div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Valor Total:</label>
+                <div class="input-group">
+                  <span class="input-group-text">$</span>
+                  <input type="number" class="form-control" id="valorFactura-edit" 
+                         value="{{documento.valorFactura}}" 
+                         step="0.01" min="0" 
+                         placeholder="0.00">
+                </div>
+                <div class="invalid-feedback"></div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Fecha de Factura:</label>
+                <input type="date" class="form-control" id="fechaFactura-edit" 
+                       value="{{#if documento.fechaFactura}}{{formatDateForInput documento.fechaFactura}}{{/if}}">
+                <div class="invalid-feedback"></div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="col-md-6">
+            <div class="info-card border-professional">
+              <h6 class="text-muted-professional mb-3">
+                <i class="fas fa-credit-card me-1"></i>
+                Estado de Pago
+              </h6>
+              <div class="mb-3">
+                <label class="form-label">Estado del Pago:</label>
+                <select class="form-control" id="estadoPago-edit">
+                  <option value="pendiente" {{#if (eq documento.estadoPago "pendiente")}}selected{{/if}}>Pendiente</option>
+                  <option value="pago_parcial" {{#if (eq documento.estadoPago "pago_parcial")}}selected{{/if}}>Pago Parcial</option>
+                  <option value="pagado_completo" {{#if (eq documento.estadoPago "pagado_completo")}}selected{{/if}}>Pagado Completo</option>
+                  <option value="pagado_con_retencion" {{#if (eq documento.estadoPago "pagado_con_retencion")}}selected{{/if}}>Pagado con Retención</option>
+                </select>
+                <div class="invalid-feedback"></div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Método de Pago:</label>
+                <select class="form-control" id="metodoPago-edit">
+                  <option value="">Seleccionar método...</option>
+                  <option value="efectivo" {{#if (eq documento.metodoPago "efectivo")}}selected{{/if}}>Efectivo</option>
+                  <option value="tarjeta_credito" {{#if (eq documento.metodoPago "tarjeta_credito")}}selected{{/if}}>Tarjeta de Crédito</option>
+                  <option value="tarjeta_debito" {{#if (eq documento.metodoPago "tarjeta_debito")}}selected{{/if}}>Tarjeta de Débito</option>
+                  <option value="transferencia" {{#if (eq documento.metodoPago "transferencia")}}selected{{/if}}>Transferencia Bancaria</option>
+                  <option value="cheque" {{#if (eq documento.metodoPago "cheque")}}selected{{/if}}>Cheque</option>
+                </select>
+                <div class="invalid-feedback"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="edit-actions mt-3">
+          <button class="btn btn-success-soft btn-sm" onclick="saveSectionChanges('financiero')">
+            <i class="fas fa-save me-1"></i> Guardar Cambios Financieros
+          </button>
+          <button class="btn btn-secondary-soft btn-sm" onclick="cancelSectionEdit('financiero')">
+            <i class="fas fa-times me-1"></i> Cancelar
+          </button>
+        </div>
+      </div>
+      {{/if}}
+    </div>
+  </div>
+</div> 
