@@ -1,0 +1,175 @@
+{{! EJEMPLO PRÁCTICO: ROL ARCHIVO CON COMPONENTE UNIVERSAL }}
+{{! Demostración de cómo archivo usa el sistema universal con configuración específica }}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Vista Unificada Archivo - Ejemplo</title>
+    <link rel="stylesheet" href="/css/documento-detalle-unificado.css">
+</head>
+<body>
+    <div class="container-fluid">
+        
+        {{!-- 
+          EJEMPLO: Configuración específica de archivo
+          Este ejemplo muestra cómo se ve el componente universal
+          para un usuario con rol "archivo"
+        --}}
+        
+        {{> documento-detalle-universal 
+            documento=documentoEjemplo
+            config=configArchivo
+            eventos=eventosEjemplo
+            informacionGrupal=infoGrupalEjemplo
+            userRole="archivo"}}
+        
+    </div>
+</body>
+</html>
+
+{{!-- 
+  CONFIGURACIÓN AUTOMÁTICA PARA ARCHIVO:
+  
+  El componente universal automáticamente configura para archivo:
+  
+  ✅ SECCIONES VISIBLES:
+  - Header con título y estado ✓
+  - Información general (solo lectura) ✓  
+  - Información del cliente (solo lectura) ✓
+  - Notas (editable solo para documentos propios) ✓
+  - Acciones de archivo (entregar, verificar) ✓
+  - Historial completo ✓
+  
+  ❌ SECCIONES OCULTAS:
+  - Información financiera ✗
+  - Configuración de notificaciones ✗
+  - Notificaciones grupales (solo si es documento propio)
+  
+  🔐 PERMISOS AUTOMÁTICOS:
+  - editarGeneral: false
+  - editarCliente: false
+  - editarFinanciero: false  
+  - editarNotificaciones: false
+  - editarNotas: true (solo documentos propios)
+  - entregarDocumentos: true (solo documentos propios)
+  
+  📱 FUNCIONALIDADES ESPECIALES:
+  - Solo ve notificaciones grupales en documentos propios
+  - Puede entregar documentos cuando están listos
+  - Acceso completo al historial
+  - Verificación de documentos
+--}}
+
+<script>
+// Datos de ejemplo para demostración
+const documentoEjemplo = {
+  id: 123,
+  codigoBarras: "ARC-2024-0123",
+  tipoDocumento: "Escritura",
+  nombreCliente: "Juan Pérez González",
+  identificacionCliente: "1234567890",
+  emailCliente: "juan@example.com",
+  telefonoCliente: "0999999999",
+  estado: "listo_para_entrega",
+  notas: "Documento revisado por archivo",
+  created_at: "2024-01-15T10:30:00Z",
+  idMatrizador: 456 // Será comparado con userId para determinar si es propio
+};
+
+const configArchivo = {
+  // Configuración automática del sistema universal para rol archivo
+  mostrarHeader: true,
+  mostrarAlertas: false,
+  mostrarInfoGeneral: true,
+  mostrarCliente: true,        // Solo lectura para archivo
+  mostrarFinanciero: false,    // Archivo no maneja pagos
+  mostrarNotificaciones: false,  // Archivo no gestiona notificaciones
+  mostrarNotas: true,
+  mostrarNotificacionesGrupales: true, // Solo si es documento propio
+  mostrarAcciones: true,
+  mostrarHistorial: true,
+  
+  // Permisos específicos de archivo
+  permisos: {
+    editarGeneral: false,
+    editarCliente: false,
+    editarFinanciero: false,
+    editarNotificaciones: false,
+    editarNotas: true,          // Solo para documentos propios
+    editarGlobal: false,
+    
+    // Acciones de archivo
+    entregarDocumento: true,
+    verificarDocumento: true,
+    devolverArchivo: false,     // Según necesidad
+    
+    // Acciones comunes
+    imprimirDocumento: true,
+    descargarPDF: true,
+    compartirDocumento: false
+  },
+  
+  urlVolver: "/archivo/documentos",
+  puedeEditar: false,           // Solo notas en documentos propios
+  esAdmin: false
+};
+
+const eventosEjemplo = [
+  {
+    id: 1,
+    tipo: "creacion",
+    descripcion: "Documento creado por Sistema",
+    usuario: "Caja Principal",
+    fecha: "2024-01-15T10:30:00Z"
+  },
+  {
+    id: 2,
+    tipo: "asignacion",
+    descripcion: "Documento asignado a matrizador Juan López",
+    usuario: "Recepción",
+    fecha: "2024-01-15T11:00:00Z"
+  },
+  {
+    id: 3,
+    tipo: "documento_listo",
+    descripcion: "Documento marcado como listo para entrega",
+    usuario: "Juan López",
+    fecha: "2024-01-16T14:30:00Z"
+  }
+];
+
+const infoGrupalEjemplo = {
+  grupo: null,
+  puedeCrearGrupo: false,
+  totalAgrupables: 0,
+  documentosAgrupables: []
+};
+
+console.log('📋 [EJEMPLO ARCHIVO] Configuración demostrada:', {
+  seccionesVisibles: Object.keys(configArchivo).filter(k => k.startsWith('mostrar') && configArchivo[k]).length,
+  permisosActivos: Object.keys(configArchivo.permisos).filter(k => configArchivo.permisos[k]).length,
+  funcionesPrincipales: ['entregarDocumento', 'verificarDocumento', 'editarNotas']
+});
+</script>
+
+{{!-- 
+  DIFERENCIAS CLAVE RESPECTO A OTROS ROLES:
+  
+  VS MATRIZADOR:
+  - Archivo NO puede editar datos del cliente
+  - Archivo NO puede configurar notificaciones
+  - Archivo NO puede marcar documentos como listo
+  - Archivo SÍ puede entregar documentos listos
+  
+  VS ADMIN:
+  - Archivo NO puede eliminar documentos
+  - Archivo NO puede ver datos financieros
+  - Archivo NO puede cambiar asignaciones
+  - Archivo SÍ tiene acceso completo al historial
+  
+  VS CAJA:
+  - Archivo NO puede manejar pagos
+  - Archivo NO puede generar facturas
+  - Archivo SÍ puede entregar documentos (caja también)
+  - Archivo enfoque en supervisión y entrega
+--}} 

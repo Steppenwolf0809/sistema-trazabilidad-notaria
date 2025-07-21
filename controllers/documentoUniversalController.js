@@ -162,40 +162,40 @@ const configRoles = {
   },
   
   archivo: {
-    // Secciones visibles
+    // Secciones visibles (IGUAL QUE MATRIZADOR PERO SIN FINANCIERO/NOTIFICACIONES)
     mostrarHeader: true,
     mostrarAlertas: false,
     mostrarInfoGeneral: true,
-    mostrarCliente: false,
-    mostrarFinanciero: false,
-    mostrarNotificaciones: false,
+    mostrarCliente: true,                  // ✅ Mostrar pero solo lectura
+    mostrarFinanciero: false,              // ❌ Archivo no maneja pagos
+    mostrarNotificaciones: false,          // ❌ Archivo no gestiona notificaciones
     mostrarNotas: true,
-    mostrarNotificacionesGrupales: false,
-    mostrarAcciones: true,
+    mostrarNotificacionesGrupales: true,   // ✅ Solo si es documento propio
+    mostrarAcciones: false,                // ❌ NO mostrar sección separada "Acciones Disponibles"
     mostrarHistorial: true,
     mostrarModalMarcarListo: false,
     
     // Configuraciones específicas
     mostrarInfoMatrizador: true,
-    mostrarIndicadorContacto: false,
+    mostrarIndicadorContacto: true,
     mostrarCamposExtendidos: false,
     mostrarInfoEmail: false,
     esAdmin: false,
     
-    // Permisos específicos
+    // Permisos específicos (SOLO LECTURA + NOTAS)
     permisos: {
-      // Edición de secciones
+      // Edición de secciones (solo lectura para archivo)
       editarGeneral: false,
-      editarCliente: false,
+      editarCliente: false,              // ❌ Solo lectura
       editarFinanciero: false,
       editarNotificaciones: false,
-      editarNotas: true,
+      editarNotas: true,                 // ✅ Solo pueden editar notas
       editarGlobal: false,
       
-      // Acciones principales
+      // Acciones principales (van en header, NO en sección separada)
       entregarDocumento: true,
       verificarDocumento: true,
-      devolverArchivo: true,
+      devolverArchivo: false,
       
       // Acciones comunes
       imprimirDocumento: true,
@@ -283,7 +283,7 @@ function calcularPermisosDinamicos(rol, documento, userId, usuario = null) {
   // Aplicar lógica específica según rol
   switch (rol) {
     case 'matrizador':
-      const esDocumentoAsignado = documento.matrizador_id === userId;
+      const esDocumentoAsignado = documento.idMatrizador === userId;
       
       // Solo puede editar sus documentos asignados
       config.permisos.editarCliente = esDocumentoAsignado;
@@ -307,13 +307,38 @@ function calcularPermisosDinamicos(rol, documento, userId, usuario = null) {
       break;
       
     case 'archivo':
-      // Archivo solo puede entregar documentos que estén listos
+      // Archivo: verificar si es documento propio (asignado a él)
+      const esDocumentoPropio = parseInt(documento.idMatrizador) === parseInt(userId);
+      
+      console.log(`🔍 [DEBUG] Verificando documento propio:`, {
+        documentoMatrizadorId: documento.idMatrizador,
+        userId,
+        esDocumentoPropio
+      });
+      
+      if (esDocumentoPropio) {
+        // Para documentos propios, habilitar permisos específicos
+        config.permisos.editarCliente = true;
+        config.permisos.editarNotificaciones = true;
+        config.permisos.editarNotas = true;
+        config.permisos.marcarComoListo = documento.estado === 'en_proceso';
+        config.permisos.devolverAProceso = documento.estado === 'listo_para_entrega';
+      } else {
+        // Para documentos de otros, solo lectura y entrega
+        config.permisos.editarCliente = false;
+        config.permisos.editarNotificaciones = false;
+        config.permisos.editarNotas = false;
+        config.permisos.marcarComoListo = false;
+        config.permisos.devolverAProceso = false;
+      }
+      
+      // Archivo puede entregar cualquier documento que esté listo
       config.permisos.entregarDocumento = documento.estado === 'listo_para_entrega';
       break;
       
     case 'recepcion':
       // Recepción puede asignar matrizador solo si no está asignado
-      config.permisos.asignarMatrizador = !documento.matrizador_id;
+      config.permisos.asignarMatrizador = !documento.idMatrizador;
       break;
   }
   
@@ -519,29 +544,64 @@ async function editarSeccionPorRol(rol, documentoId, seccion, datos, userId) {
     const config = calcularPermisosDinamicos(rol, documento, userId);
     const permiso = `editar${seccion.charAt(0).toUpperCase() + seccion.slice(1)}`;
     
+    console.log(`🔐 [DEBUG] Verificando permisos:`, {
+      rol,
+      documentoId,
+      seccion,
+      permiso,
+      userId,
+      matrizadorId: documento.idMatrizador,
+      permisos: config.permisos
+    });
+    
     if (!config.permisos[permiso]) {
+      console.error(`❌ [ERROR] Permiso denegado: ${permiso} = ${config.permisos[permiso]}`);
       throw new Error('No tiene permisos para editar esta sección');
     }
     
     // Validar datos según la sección
+    console.log(`📥 [DEBUG] Datos recibidos para sección ${seccion}:`, datos);
     const datosValidados = validarDatosSeccion(seccion, datos);
+    console.log(`✅ [DEBUG] Datos validados para sección ${seccion}:`, datosValidados);
     
     // Actualizar documento
     await documento.update(datosValidados);
     
-    // Registrar evento de auditoría
-    await EventoDocumento.create({
-      documento_id: documentoId,
-      usuario_id: userId,
-      tipo_evento: 'edicion',
-      descripcion: `Sección ${seccion} editada por ${rol}`,
-      detalles: JSON.stringify({
-        seccion,
-        cambios: datosValidados,
-        rol
-      }),
-      created_at: new Date()
-    });
+    // Registrar evento de auditoría (no crítico)
+    try {
+      const docId = parseInt(documentoId);
+      const usrId = parseInt(userId);
+      
+      console.log(`📝 [DEBUG] Creando evento:`, {
+        documentoId: docId,
+        usuarioId: usrId,
+        tipo: 'edicion',
+        isValidDocId: !isNaN(docId),
+        isValidUsrId: !isNaN(usrId)
+      });
+      
+      if (!isNaN(docId) && !isNaN(usrId)) {
+        await EventoDocumento.create({
+          documentoId: docId,
+          usuarioId: usrId,
+          tipo: 'edicion',
+          descripcion: `Sección ${seccion} editada por ${rol}`,
+          detalles: JSON.stringify({
+            seccion,
+            cambios: datosValidados,
+            rol
+          })
+        });
+        console.log('✅ Evento de auditoría creado exitosamente');
+      } else {
+        console.warn(`⚠️ IDs inválidos para EventoDocumento, saltando auditoría:`, {
+          documentoId, userId, docId, usrId
+        });
+      }
+    } catch (eventoError) {
+      console.error('❌ Error creando evento de auditoría (no crítico):', eventoError.message);
+      // No lanzar error, el guardado principal ya fue exitoso
+    }
     
     console.log(`✅ Sección ${seccion} editada exitosamente`);
     
@@ -577,10 +637,14 @@ function validarDatosSeccion(seccion, datos) {
       };
       
     case 'notificaciones':
+      const esEntregaInmediata = Boolean(datos.entregadoInmediatamente);
+      const metodoNotif = datos.metodoNotificacion || 'whatsapp';
+      
       return {
-        metodoNotificacion: datos.metodoNotificacion || 'whatsapp',
+        metodoNotificacion: metodoNotif,
+        notificarAutomatico: metodoNotif === 'whatsapp' && !esEntregaInmediata,
         razonSinNotificar: datos.razonSinNotificar?.trim() || null,
-        entregadoInmediatamente: Boolean(datos.entregadoInmediatamente)
+        entregadoInmediatamente: esEntregaInmediata
       };
       
     case 'notas':

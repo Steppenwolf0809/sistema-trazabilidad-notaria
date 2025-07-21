@@ -4654,4 +4654,11 @@ function traducirTipoEvento(tipoEvento) {
   return traducciones[tipoEvento] || 'General';
 }
 
+// Exportar funciones utilitarias para otros controladores (archivo, recepcion, etc.)
+matrizadorController.detectarDocumentosParaNotificacionGrupal = detectarDocumentosParaNotificacionGrupal;
+matrizadorController.crearGrupoNotificacion = crearGrupoNotificacion;
+matrizadorController.separarDeGrupoNotificacion = separarDeGrupoNotificacion;
+matrizadorController.detectarDocumentosGrupalesMatrizador = detectarDocumentosGrupalesMatrizador;
+matrizadorController.procesarEntregaGrupalMatrizador = procesarEntregaGrupalMatrizador;
+
 module.exports = matrizadorController;

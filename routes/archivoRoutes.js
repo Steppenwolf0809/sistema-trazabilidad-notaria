@@ -36,6 +36,9 @@ router.get('/documentos/mis-documentos', archivoController.listarMisDocumentos);
 // Ver detalle de cualquier documento
 router.get('/documentos/detalle/:id', archivoController.verDetalleDocumento);
 
+// 🆕 NUEVO: Editar sección específica del documento (solo notas para documentos propios)
+router.patch('/documentos/:id/seccion/:seccion', archivoController.editarSeccionDocumento);
+
 // Ruta para buscar documentos del mismo cliente (para documentos habilitantes)
 router.get('/api/documentos/mismo-cliente', esArchivo, archivoController.buscarDocumentosMismoCliente);
 

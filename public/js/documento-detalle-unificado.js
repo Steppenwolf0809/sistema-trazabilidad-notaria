@@ -67,7 +67,9 @@ class DocumentoDetalleUnificado {
     // Event listeners para botones de edición por sección
     document.querySelectorAll('.edit-toggle').forEach(button => {
       button.addEventListener('click', (e) => {
-        const section = e.target.getAttribute('data-section');
+        e.preventDefault();
+        const section = e.target.getAttribute('data-section') || e.target.closest('.edit-toggle').getAttribute('data-section');
+        console.log('🔄 Click en botón editar, sección:', section);
         if (section) {
           this.toggleSectionEdit(section);
         }
@@ -192,6 +194,12 @@ class DocumentoDetalleUnificado {
   }
   
   toggleSectionEdit(sectionName) {
+    // Verificar permisos para archivo
+    if (window.userRole === 'archivo' && !window.esDocumentoPropio) {
+      alert('❌ Solo puede editar sus propios documentos');
+      return;
+    }
+    
     const isEditing = this.sectionsEditing.has(sectionName);
     
     if (isEditing) {
@@ -562,6 +570,12 @@ class DocumentoDetalleUnificado {
   async saveSectionChanges(sectionName) {
     console.log(`💾 Iniciando guardado de sección: ${sectionName}`);
     
+    // Verificar permisos para archivo
+    if (window.userRole === 'archivo' && !window.esDocumentoPropio) {
+      alert('❌ Solo puede editar sus propios documentos');
+      return;
+    }
+    
     // Validar datos antes de guardar
     if (!this.validateSectionData(sectionName)) {
       console.log('❌ Validación fallida, cancelando guardado');
@@ -580,7 +594,10 @@ class DocumentoDetalleUnificado {
       const formData = this.collectSectionData(sectionName);
       console.log('📤 Datos a enviar:', formData);
       
-      const response = await fetch(`/matrizador/documentos/${this.documentoId}/seccion/${sectionName}`, {
+      // Determinar la ruta base según el rol del usuario
+      const roleBasePath = window.userRole === 'archivo' ? '/archivo' : '/matrizador';
+      
+      const response = await fetch(`${roleBasePath}/documentos/${this.documentoId}/seccion/${sectionName}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -747,6 +764,14 @@ window.cancelSectionEdit = function(sectionName) {
   }
 };
 
+window.llenarRazonRapida = function(razon) {
+  const razonInput = document.getElementById('razonSinNotificar-edit');
+  if (razonInput) {
+    razonInput.value = razon;
+    razonInput.focus();
+  }
+};
+
 // ============== SISTEMA ROBUSTO DE NOTIFICACIONES ==============
 
 class SistemaNotificacionesBidireccional {
@@ -853,7 +878,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Crear instancia global
   window.documentoDetalle = new DocumentoDetalleUnificado();
   
-  // Inicializar sistema bidireccional de notificaciones
+  // Inicializar sistema de notificaciones bidireccional
   window.sistemaNotificaciones = new SistemaNotificacionesBidireccional();
   
   console.log('✅ Sistema de documento detalle unificado listo');

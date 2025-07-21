@@ -1,88 +1,256 @@
-{{! ✅ DETALLE DE DOCUMENTO ARCHIVO - LAYOUT MEJORADO CON HISTORIAL }}
-{{! Soluciona problema de layout en columnas ilegibles + Agrega historial completo }}
+{{! DETALLE DE DOCUMENTO ARCHIVO - IDÉNTICO A MATRIZADOR CON PERMISOS ESPECÍFICOS }}
+{{! Layout sobrio inspirado en vista matrizador, colores equilibrados }}
+
+<!-- Include CSS y JS específicos para la vista unificada -->
+<link rel="stylesheet" href="/css/documento-detalle-unificado.css">
+<script src="/js/documento-detalle-unificado.js" defer></script>
 
 {{#if documento}}
-  {{! ✅ USO DEL COMPONENTE UNIVERSAL - Layout vertical legible con historial }}
-  {{> detalle-documento-universal 
-      documento=documento 
-      rol="archivo" 
-      permisos=(object 
-        puedeVer=true
-        puedeEditar=esDocumentoPropio
-        puedeEntregar=(and esDocumentoPropio (eq documento.estado "listo_para_entrega"))
-        puedeMarcarListo=(and esDocumentoPropio (eq documento.estado "en_proceso"))
-      )
-      accionesDisponibles=(buildAccionesArchivo documento esDocumentoPropio)
-  }}
+<div class="document-unified-container">
+  
+  <!-- Header del documento - IDÉNTICO A MATRIZADOR PERO CON ACCIONES ARCHIVO -->
+  <div class="document-header">
+    <div class="row align-items-center">
+      <div class="col-lg-8">
+        <h1 class="document-title">
+          {{documento.tipoDocumento}}
+          <span class="badge badge-estado {{#if (eq documento.estado "en_proceso")}}estado-en-proceso{{else if (eq documento.estado "listo_para_entrega")}}estado-listo{{else if (eq documento.estado "entregado")}}estado-entregado{{else}}estado-pendiente{{/if}} ms-3">
+            {{#if (eq documento.estado "en_proceso")}}En Proceso
+            {{else if (eq documento.estado "listo_para_entrega")}}Listo
+            {{else if (eq documento.estado "entregado")}}Entregado
+            {{else}}{{translateEstado documento.estado}}{{/if}}
+          </span>
+        </h1>
+        <p class="document-subtitle">Documento: {{documento.codigoBarras}} | Cliente: {{documento.nombreCliente}}</p>
+      </div>
+      <div class="col-lg-4">
+        <div class="action-buttons justify-content-end">
+          {{!-- ACCIÓN PRINCIPAL ARCHIVO: Marcar como Listo (solo documentos propios) --}}
+          {{#if (and esDocumentoPropio (eq documento.estado "en_proceso"))}}
+          <button class="btn btn-success action-button-primary" onclick="marcarListo({{documento.id}})">
+            <i class="fas fa-check me-1"></i> Marcar como Listo
+          </button>
+          {{/if}}
+          <a href="/archivo/documentos" class="btn btn-secondary-soft">
+            <i class="fas fa-arrow-left me-1"></i> Volver
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
 
-  {{! ============== HISTORIAL COMPLETO DEL DOCUMENTO ============== }}
-  {{#if eventos}}
-  <div class="container-fluid mt-4">
-    <div class="row">
-      <div class="col-12">
-        {{> historial-universal eventos=eventos}}
+  {{!-- AVISOS IMPORTANTES PARA NOTIFICACIONES GRUPALES (solo documentos propios) --}}
+  {{#if esDocumentoPropio}}
+  {{#if (and (eq documento.estado "en_proceso") informacionGrupal.puedeCrearGrupo)}}
+  <div class="alert alert-warning-professional">
+    <div class="d-flex align-items-start">
+      <i class="fas fa-exclamation-triangle me-3 mt-1"></i>
+      <div>
+        <h6 class="fw-bold mb-2">⚠️ Documentos agrupables detectados</h6>
+        <p class="mb-2">Se encontraron <strong>{{informacionGrupal.totalAgrupables}} documentos adicionales</strong> del mismo cliente que pueden agruparse para enviar una sola notificación.</p>
+        <a href="#seccion-notificaciones-grupales" class="btn btn-sm btn-warning-soft">
+          <i class="fas fa-arrow-down me-1"></i> Ver documentos disponibles
+        </a>
       </div>
     </div>
   </div>
   {{/if}}
-  {{! ============== FIN HISTORIAL ============== }}
 
-  {{! ============== SECCIÓN ESPECÍFICA DE ARCHIVO: NOTIFICACIONES GRUPALES ============== }}
-  {{#if esDocumentoPropio}}
-  <div class="container-fluid">
-    <div class="row mb-4">
-      <div class="col-12">
-        <div class="card card-elegant">
-          <div class="card-header bg-gradient-info text-white border-0">
-            <h5 class="text-white mb-0">
-              <i class="fas fa-users me-2"></i>Sistema de Notificaciones Grupales
-              <small class="text-white-50 ms-2">(Solo documentos propios)</small>
-            </h5>
+  {{#if (and (eq documento.estado "en_proceso") informacionGrupal.grupo)}}
+  <div class="alert alert-info-professional">
+    <div class="d-flex align-items-start">
+      <i class="fas fa-layer-group me-3 mt-1"></i>
+      <div>
+        <h6 class="fw-bold mb-2">📱 Documento agrupado para notificación</h6>
+        <p class="mb-2">Este documento está agrupado con <strong>{{informacionGrupal.totalDocumentosGrupo}} documentos</strong> del mismo cliente para notificación consolidada.</p>
+        <a href="#seccion-notificaciones-grupales" class="btn btn-sm btn-outline-primary">
+          <i class="fas fa-arrow-down me-1"></i> Ver grupo completo
+        </a>
+      </div>
+    </div>
+  </div>
+  {{/if}}
+  {{/if}}
+
+  <!-- Grid principal de información - IDÉNTICO A MATRIZADOR -->
+  <div class="info-grid mb-4">
+    
+    <!-- Información General (Solo Lectura) -->
+    <div class="info-card" id="seccion-general">
+      <h6 class="section-title">
+        <i class="fas fa-info-circle"></i>
+        Información General
+      </h6>
+      
+      <div class="info-row">
+        <span class="info-label">Tipo:</span>
+        <span class="info-value">{{documento.tipoDocumento}}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Código:</span>
+        <span class="info-value" style="font-family: 'JetBrains Mono', 'Fira Code', monospace; background: #f8fafc; padding: 4px 8px; border-radius: 4px; border: 1px solid #D0D7D9;">{{documento.codigoBarras}}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Fecha Registro:</span>
+        <span class="info-value">{{formatDate documento.created_at}}</span>
+      </div>
+      {{#if documento.fechaFactura}}
+      <div class="info-row">
+        <span class="info-label">Fecha Documento:</span>
+        <span class="info-value">{{formatDateDocument documento.fechaFactura}}</span>
+      </div>
+      {{/if}}
+      <div class="info-row">
+        <span class="info-label">Matrizador:</span>
+        <span class="info-value">{{#if documento.matrizador}}{{documento.matrizador.nombre}}{{else}}Sin asignar{{/if}}</span>
+      </div>
+    </div>
+
+    <!-- Información del Cliente (COMPLETAMENTE EDITABLE para documentos propios) -->
+    <div class="info-card" id="seccion-cliente">
+      {{#if esDocumentoPropio}}
+                        <button class="edit-toggle" data-section="cliente">
+        <i class="fas fa-edit"></i> Editar
+      </button>
+      {{/if}}
+      
+      <h6 class="section-title">
+        <i class="fas fa-user"></i>
+        Información del Cliente
+        {{#unless esDocumentoPropio}}
+        <span class="text-muted small ms-2">(Solo lectura)</span>
+        {{/unless}}
+      </h6>
+      
+      <!-- Modo Vista -->
+      <div class="view-mode" id="cliente-view">
+        <div class="info-row">
+          <span class="info-label">Nombre:</span>
+          <span class="info-value" id="nombreCliente-display">{{documento.nombreCliente}}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Identificación:</span>
+          <span class="info-value" id="identificacionCliente-display">{{documento.identificacionCliente}}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Email:</span>
+          <span class="info-value {{#unless documento.emailCliente}}empty{{/unless}}" id="emailCliente-display">
+            {{#if documento.emailCliente}}{{documento.emailCliente}}{{else}}No registrado{{/if}}
+          </span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Teléfono:</span>
+          <span class="info-value {{#unless documento.telefonoCliente}}empty{{/unless}}" id="telefonoCliente-display">
+            {{#if documento.telefonoCliente}}{{documento.telefonoCliente}}{{else}}No registrado{{/if}}
+          </span>
+        </div>
+      </div>
+      
+      <!-- Modo Edición (solo para documentos propios) -->
+      {{#if esDocumentoPropio}}
+      <div class="edit-mode" id="cliente-edit">
+        <div class="mb-3">
+          <label class="form-label">Nombre Completo:</label>
+          <input type="text" class="form-control" id="nombreCliente-edit" value="{{documento.nombreCliente}}" required>
+          <div class="invalid-feedback"></div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Identificación:</label>
+          <input type="text" class="form-control" id="identificacionCliente-edit" value="{{documento.identificacionCliente}}" required>
+          <div class="invalid-feedback"></div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Email:</label>
+          <input type="email" class="form-control" id="emailCliente-edit" value="{{documento.emailCliente}}" placeholder="ejemplo@correo.com">
+          <div class="invalid-feedback"></div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Teléfono:</label>
+          <input type="tel" class="form-control" id="telefonoCliente-edit" value="{{documento.telefonoCliente}}" placeholder="0999999999">
+          <div class="invalid-feedback"></div>
+        </div>
+        
+        <div class="edit-actions">
+          <button class="btn btn-success-soft btn-sm" onclick="saveSectionChanges('cliente')">
+            <i class="fas fa-save me-1"></i> Guardar
+          </button>
+          <button class="btn btn-secondary-soft btn-sm" onclick="cancelSectionEdit('cliente')">
+            <i class="fas fa-times me-1"></i> Cancelar
+          </button>
+        </div>
+      </div>
+      {{/if}}
+    </div>
+
+  </div>
+
+  <!-- Sección de Información Financiera (VISIBLE pero Solo lectura para archivo) -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="financial-section">
+        <h6 class="section-title">
+          <i class="fas fa-dollar-sign"></i>
+          Información Financiera
+          <span class="text-muted small ms-2">(Solo lectura)</span>
+        </h6>
+        
+        <div class="row">
+          <div class="col-md-6">
+            <div class="info-card border-professional">
+              <h6 class="text-muted-professional mb-3">
+                <i class="fas fa-file-invoice me-1"></i>
+                Facturación
+              </h6>
+              <div class="info-row">
+                <span class="info-label">N° Factura:</span>
+                <span class="info-value">
+                  {{#if documento.numeroFactura}}{{documento.numeroFactura}}{{else}}<span class="text-subtle">No registrado</span>{{/if}}
+                </span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Valor Total:</span>
+                <span class="info-value financial-value">${{#if documento.valorFactura}}{{formatMoney documento.valorFactura}}{{else}}0.00{{/if}}</span>
+              </div>
+              {{#if documento.fechaFactura}}
+              <div class="info-row">
+                <span class="info-label">Fecha Factura:</span>
+                <span class="info-value">{{formatDateDocument documento.fechaFactura}}</span>
+              </div>
+              {{/if}}
+            </div>
           </div>
-          <div class="card-body">
-            <!-- Información de grupo actual -->
-            <div id="infoGrupoActual">
-              {{#if documento.notificacionGrupal}}
-                <div class="alert alert-info">
-                  <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                      <h6><i class="fas fa-users me-1"></i> Documento en Grupo</h6>
-                      <p class="mb-1"><strong>Código del Grupo:</strong> <span class="badge bg-primary">{{documento.notificacionGrupal.codigoVerificacion}}</span></p>
-                      <p class="mb-1"><strong>Total de Documentos:</strong> {{documento.notificacionGrupal.totalDocumentos}}</p>
-                      <p class="mb-1"><strong>Rol en el Grupo:</strong> 
-                        {{#if documento.esLiderGrupo}}
-                          <span class="badge bg-success">👑 Líder del Grupo</span>
-                        {{else}}
-                          <span class="badge bg-secondary">👥 Miembro del Grupo</span>
-                        {{/if}}
-                      </p>
-                      <p class="mb-0"><small class="text-muted">Creado: {{formatDateTime documento.notificacionGrupal.fechaCreacion}}</small></p>
-                    </div>
-                    <div>
-                      <button type="button" class="btn btn-sm btn-outline-danger" onclick="abrirModalSeparar()">
-                        <i class="fas fa-unlink me-1"></i> Separar
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              {{else}}
-                <div class="alert alert-light">
-                  <h6><i class="fas fa-info-circle me-1"></i> Documento Individual</h6>
-                  <p class="mb-2">Este documento no pertenece a ningún grupo de notificación.</p>
-                  <button type="button" class="btn btn-sm btn-primary" onclick="abrirModalAgrupar()">
-                    <i class="fas fa-plus me-1"></i> Agrupar con otros documentos
-                  </button>
-                  {{!-- 💡 AVISO INFORMATIVO PARA ARCHIVO --}}
-                  <div class="mt-3 pt-2 border-top">
-                    <small class="text-muted d-flex align-items-start">
-                      <i class="fas fa-lightbulb me-2 mt-1 opacity-75" style="font-size: 0.8rem;"></i>
-                      <span>
-                        <strong>Código grupal:</strong> Se generará automáticamente cuando agrupe documentos propios del mismo cliente. 
-                        Solo puede agrupar documentos que le pertenecen.
-                      </span>
-                    </small>
-                  </div>
-                </div>
+          
+          <div class="col-md-6">
+            <div class="info-card border-professional">
+              <h6 class="text-muted-professional mb-3">
+                <i class="fas fa-credit-card me-1"></i>
+                Estado de Pago
+              </h6>
+              <div class="info-row">
+                <span class="info-label">Estado:</span>
+                <span class="info-value">
+                  {{#if (eq documento.estadoPago "pagado_completo")}}
+                  <span class="badge estado-listo">✅ Pagado Completo</span>
+                  {{else if (eq documento.estadoPago "pagado_con_retencion")}}
+                  <span class="badge estado-entregado">🧾 Pagado con Retención</span>
+                  {{else if (eq documento.estadoPago "pago_parcial")}}
+                  <span class="badge estado-en-proceso">⚠️ Pago Parcial</span>
+                  {{else}}
+                  <span class="badge estado-pendiente">❌ Pendiente</span>
+                  {{/if}}
+                </span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Método:</span>
+                <span class="info-value">
+                  {{#if documento.metodoPago}}{{documento.metodoPago}}{{else}}<span class="text-subtle">No registrado</span>{{/if}}
+                </span>
+              </div>
+              {{#if documento.fechaUltimoPago}}
+              <div class="info-row">
+                <span class="info-label">Último Pago:</span>
+                <span class="info-value">{{formatDateTime documento.fechaUltimoPago}}</span>
+              </div>
               {{/if}}
             </div>
           </div>
@@ -90,108 +258,840 @@
       </div>
     </div>
   </div>
-  {{/if}}
-  {{! ============== FIN SECCIÓN NOTIFICACIONES GRUPALES ============== }}
 
-{{else}}
-  <div class="container-fluid">
-    <div class="alert alert-danger">
-      <h4>Documento no encontrado</h4>
-      <p>El documento solicitado no existe o no tienes permisos para verlo.</p>
-      <a href="/archivo/documentos/mis-documentos" class="btn btn-primary">Volver a mis documentos</a>
+  <!-- Configuración de Notificaciones (EDITABLE para documentos propios) -->
+  <div class="row mb-4">
+    <div class="col-md-6">
+      <div class="info-card" id="seccion-notificaciones">
+        {{#if esDocumentoPropio}}
+                            <button class="edit-toggle" data-section="notificaciones">
+          <i class="fas fa-edit"></i> Editar
+        </button>
+        {{/if}}
+        
+        <h6 class="section-title">
+          <i class="fas fa-bell"></i>
+          Configuración de Notificaciones
+          {{#unless esDocumentoPropio}}
+          <span class="text-muted small ms-2">(Solo lectura)</span>
+          {{/unless}}
+        </h6>
+        
+        <!-- Modo Vista -->
+        <div class="view-mode" id="notificaciones-view">
+          <div class="info-row">
+            <span class="info-label">Política:</span>
+            <span class="info-value" id="politicaNotificacion-display">
+              {{#if (eq documento.metodoNotificacion 'ninguno')}}
+              <span class="badge estado-pendiente">🔕 No notificar</span>
+              {{else}}
+              <span class="badge estado-listo">🔔 Notificar automáticamente</span>
+              {{/if}}
+            </span>
+          </div>
+          {{#if (eq documento.metodoNotificacion 'ninguno')}}
+          <div class="info-row">
+            <span class="info-label">Razón:</span>
+            <span class="info-value" id="razonSinNotificar-display">
+              {{#if documento.razonSinNotificar}}{{documento.razonSinNotificar}}{{else}}No especificada{{/if}}
+            </span>
+          </div>
+          {{/if}}
+          {{#if documento.entregadoInmediatamente}}
+          <div class="info-row">
+            <span class="info-label">Especial:</span>
+            <span class="info-value">
+              <span class="badge estado-en-proceso">⚡ Entrega inmediata</span>
+            </span>
+          </div>
+          {{/if}}
+        </div>
+        
+        <!-- Modo Edición (solo para documentos propios) -->
+        {{#if esDocumentoPropio}}
+        <div class="edit-mode" id="notificaciones-edit">
+          <div class="notification-policy mb-3">
+            <label class="form-label fw-bold">Política de Notificación:</label>
+            
+            <div class="form-check mb-2">
+              <input class="form-check-input" type="radio" name="politicaNotificacion" id="notificarAutomatico-edit" value="automatico" 
+                     {{#if (ne documento.metodoNotificacion 'ninguno')}}checked{{/if}}>
+              <label class="form-check-label" for="notificarAutomatico-edit">
+                <strong>🔔 Notificar automáticamente</strong>
+                <small class="text-muted d-block">Cliente autoriza notificaciones cuando el documento esté listo</small>
+              </label>
+            </div>
+            
+            <div class="form-check mb-2">
+              <input class="form-check-input" type="radio" name="politicaNotificacion" id="noNotificar-edit" value="no_notificar" 
+                     {{#if (eq documento.metodoNotificacion 'ninguno')}}checked{{/if}}>
+              <label class="form-check-label" for="noNotificar-edit">
+                <strong>🔕 No notificar</strong>
+                <small class="text-muted d-block">Cliente no autoriza ningún tipo de notificación</small>
+              </label>
+            </div>
+          </div>
+
+          <!-- Opciones especiales -->
+          <div class="special-options mb-3">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="entregaInmediata-edit" {{#if documento.entregadoInmediatamente}}checked{{/if}}>
+              <label class="form-check-label" for="entregaInmediata-edit">
+                <strong>⚡ Entrega inmediata</strong>
+                <small class="text-muted d-block">Cliente está esperando - recibe documento directamente</small>
+              </label>
+            </div>
+            
+            <!-- Información adicional cuando se marca entrega inmediata -->
+            <div class="alert alert-info-professional mt-2" id="infoEntregaInmediata" style="display: none;">
+              <small>
+                <i class="fas fa-info-circle"></i> 
+                <strong>Entrega inmediata:</strong> No se genera código de verificación ni notificación previa. 
+                Solo se enviará confirmación de entrega cuando se complete.
+              </small>
+            </div>
+          </div>
+          
+          <div class="mb-3" id="razonGroup-edit" {{#if (ne documento.metodoNotificacion 'ninguno')}}style="display: none;"{{/if}}>
+            <label class="form-label">Razón para no notificar:</label>
+            <textarea class="form-control" id="razonSinNotificar-edit" rows="2" placeholder="Especifique por qué el cliente no autoriza notificaciones">{{documento.razonSinNotificar}}</textarea>
+            <div class="invalid-feedback"></div>
+            
+            <!-- Botones de ayuda -->
+            <div class="mt-2">
+              <small class="text-muted">Razones comunes:</small>
+              <div class="btn-group-sm mt-1" role="group">
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="llenarRazonRapida('Cliente no autoriza notificaciones electrónicas')">
+                  No autoriza
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="llenarRazonRapida('Cliente prefiere contacto telefónico directo')">
+                  Prefiere llamada
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="llenarRazonRapida('Cliente recogerá personalmente sin notificación previa')">
+                  Recoge personalmente
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Información adicional -->
+          <div class="alert alert-info-professional">
+            <small><i class="fas fa-info-circle"></i> Las notificaciones se envían por WhatsApp al número registrado</small>
+          </div>
+          
+          <div class="edit-actions">
+            <button class="btn btn-success-soft btn-sm" onclick="saveSectionChanges('notificaciones')">
+              <i class="fas fa-save me-1"></i> Guardar
+            </button>
+            <button class="btn btn-secondary-soft btn-sm" onclick="cancelSectionEdit('notificaciones')">
+              <i class="fas fa-times me-1"></i> Cancelar
+            </button>
+          </div>
+        </div>
+        {{/if}}
+      </div>
+    </div>
+    
+    <!-- Notas (Siempre Editables para documentos propios) -->
+    <div class="col-md-6">
+      <div class="info-card" id="seccion-notas">
+        <h6 class="section-title">
+          <i class="fas fa-sticky-note"></i>
+          Notas y Observaciones
+          {{#if esDocumentoPropio}}
+          <span class="text-muted small ms-2">(Se guarda automáticamente)</span>
+          {{else}}
+          <span class="text-muted small ms-2">(Solo lectura)</span>
+          {{/if}}
+        </h6>
+        
+        <div class="notes-container">
+          {{#if esDocumentoPropio}}
+          <textarea 
+            class="form-control" 
+            id="documentoNotas" 
+            rows="4" 
+            placeholder="Escriba observaciones sobre el trámite, estado del cliente o cualquier información relevante..."
+            onblur="guardarNotasAutomatico()"
+            data-documento-id="{{documento.id}}">{{documento.notas}}</textarea>
+          
+          <div class="notes-actions mt-2 d-flex justify-content-between align-items-center">
+            <button class="btn btn-success-soft btn-sm" onclick="guardarNotas()" id="btnGuardarNotas">
+              <i class="fas fa-save me-1"></i> Guardar Notas
+            </button>
+            <span class="text-success small" id="notasGuardadas" style="display: none;">
+              <i class="fas fa-check-circle me-1"></i> Guardado correctamente
+            </span>
+            <span class="text-danger small" id="notasError" style="display: none;">
+              <i class="fas fa-exclamation-triangle me-1"></i> Error al guardar
+            </span>
+          </div>
+          {{else}}
+          <div class="info-value">
+            {{#if documento.notas}}{{documento.notas}}{{else}}<span class="text-muted">Sin observaciones registradas</span>{{/if}}
+          </div>
+          {{/if}}
+        </div>
+      </div>
     </div>
   </div>
-{{/if}}
 
-{{! ============== SCRIPTS ESPECÍFICOS DE ARCHIVO ============== }}
+  {{!-- SISTEMA DE NOTIFICACIONES GRUPALES (solo para documentos propios) --}}
+  {{#if (and esDocumentoPropio informacionGrupal)}}
+  <div class="row mb-4" id="seccion-notificaciones-grupales" 
+       data-grupo-id="{{#if informacionGrupal.grupo}}{{informacionGrupal.grupo.id}}{{else}}null{{/if}}"
+       data-es-lider="{{informacionGrupal.esLiderDelGrupo}}"
+       data-puede-modificar="{{informacionGrupal.puedeModificarGrupo}}">
+    <div class="col-12">
+      <div class="info-card border-professional">
+        <h6 class="section-title">
+          <i class="fas fa-bell"></i>
+          Notificación Grupal
+          {{#if informacionGrupal.grupo}}
+          <span class="badge estado-listo ms-2">Grupo activo</span>
+          {{/if}}
+        </h6>
+        
+        {{#if informacionGrupal.grupo}}
+        <!-- DOCUMENTO YA ESTÁ EN GRUPO -->
+        <div class="alert alert-info-professional mb-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <strong>Este documento está agrupado para notificación</strong>
+              <br>
+              <small>
+                {{#if informacionGrupal.esLiderDelGrupo}}
+                Rol: <span class="badge estado-listo">Líder del grupo</span>
+                {{else}}
+                Rol: <span class="badge estado-entregado">Miembro del grupo</span>
+                {{/if}}
+                | Código de verificación único: <span class="badge estado-listo">{{informacionGrupal.grupo.codigoVerificacion}}</span>
+              </small>
+            </div>
+            <button class="btn btn-outline-warning btn-sm" onclick="separarDeGrupo({{documento.id}})" title="Separar mi documento del grupo">
+              <i class="fas fa-user-times me-1"></i> Separar mi documento
+            </button>
+          </div>
+        </div>
+        
+        {{#if informacionGrupal.documentosDelGrupo.length}}
+        <h6 class="text-muted-professional mb-3">Documentos en el mismo grupo ({{informacionGrupal.documentosDelGrupo.length}})</h6>
+        <div class="table-responsive">
+          <table class="table table-sm table-hover">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Tipo</th>
+                <th>Estado</th>
+                <th>Rol</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each informacionGrupal.documentosDelGrupo}}
+              <tr>
+                <td>
+                  <a href="/archivo/documentos/detalle/{{this.id}}" class="text-decoration-none">
+                    {{this.codigoBarras}}
+                  </a>
+                </td>
+                <td>{{this.tipoDocumento}}</td>
+                <td>
+                  {{#if (eq this.estado "en_proceso")}}
+                  <span class="badge estado-en-proceso">En Proceso</span>
+                  {{else if (eq this.estado "listo_para_entrega")}}
+                  <span class="badge estado-listo">Listo</span>
+                  {{else}}
+                  <span class="badge estado-entregado">{{this.estado}}</span>
+                  {{/if}}
+                </td>
+                <td>
+                  {{#if this.esLiderGrupo}}
+                  <span class="badge estado-listo">Líder</span>
+                  {{else}}
+                  <span class="badge estado-entregado">Miembro</span>
+                  {{/if}}
+                </td>
+              </tr>
+              {{/each}}
+            </tbody>
+          </table>
+        </div>
+        {{/if}}
+        
+        <div class="alert alert-warning-professional mt-3">
+          <small>
+            <i class="fas fa-lightbulb me-1"></i>
+            <strong>Notificación consolidada:</strong> Al marcar cualquier documento del grupo como listo, 
+            se enviará UNA SOLA notificación WhatsApp con todos los documentos del grupo.
+          </small>
+        </div>
+        
+        {{else}}
+        <!-- DOCUMENTO NO ESTÁ EN GRUPO - MOSTRAR OPCIÓN PARA AGRUPAR -->
+        {{#if informacionGrupal.puedeCrearGrupo}}
+        <div class="alert alert-success-professional mb-3">
+          <div class="d-flex align-items-start">
+            <i class="fas fa-layer-group me-3 mt-1"></i>
+            <div class="flex-grow-1">
+              <strong>¡Notificación grupal disponible!</strong>
+              <br>
+              <small>Se encontraron {{informacionGrupal.totalAgrupables}} documentos adicionales del mismo cliente</small>
+              <div class="mt-2">
+                <small class="text-success">
+                  <strong>Instrucción:</strong> Selecciona los documentos usando los checkboxes y presiona "Agrupar documentos"
+                </small>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <h6 class="text-muted-professional mb-3">Documentos disponibles para agrupar ({{informacionGrupal.totalAgrupables}})</h6>
+        <div class="table-responsive">
+          <table class="table table-sm table-hover">
+            <thead>
+              <tr>
+                <th width="50">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="selectAllDocs" onchange="toggleSelectAll(this.checked)">
+                    <label class="form-check-label" for="selectAllDocs">
+                      <small>Todos</small>
+                    </label>
+                  </div>
+                </th>
+                <th>Código</th>
+                <th>Tipo</th>
+                <th>Estado</th>
+                <th>Fecha</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each informacionGrupal.documentosAgrupables}}
+              <tr>
+                <td>
+                  <div class="form-check">
+                    <input class="form-check-input doc-checkbox" type="checkbox" 
+                           id="doc_{{this.id}}" value="{{this.id}}" 
+                           onchange="updateGroupButton()">
+                  </div>
+                </td>
+                <td>{{this.codigoBarras}}</td>
+                <td>{{this.tipoDocumento}}</td>
+                <td><span class="badge estado-en-proceso">En Proceso</span></td>
+                <td>{{formatDate this.created_at}}</td>
+              </tr>
+              {{/each}}
+            </tbody>
+          </table>
+        </div>
+        
+        <div class="mt-3 d-flex justify-content-between align-items-center">
+          <div class="text-muted-professional">
+            <small>Marca los documentos que quieres agrupar</small>
+          </div>
+          <button class="btn btn-success action-button-primary" id="btnAgruparSeleccionados" onclick="procesarAgrupacion()" disabled>
+            <i class="fas fa-layer-group me-1"></i> 
+            Crear grupo de <span id="contadorSeleccionados">0</span> documentos
+          </button>
+        </div>
+        
+        {{else}}
+        <div class="alert alert-light border-0 py-2">
+          <small class="text-muted">
+            <i class="fas fa-info-circle me-1"></i>
+            No hay otros documentos del mismo cliente en proceso para agrupar.
+          </small>
+        </div>
+        {{/if}}
+        {{/if}}
+      </div>
+    </div>
+  </div>
+  {{/if}}
 
-<!-- Incluir sistema de notificaciones grupales para archivo -->
-<script src="/js/notificaciones-grupales.js"></script>
-<script>
-// Configuración específica para archivo
-{{#if documento}}
-window.NOTIFICACIONES_GRUPALES_CONFIG = {
-  documentoId: {{documento.id}},
-  documentoCodigoBarras: '{{documento.codigoBarras}}',
-  clienteIdentificacion: '{{documento.identificacionCliente}}',
-  esDocumentoPropio: {{#if esDocumentoPropio}}true{{else}}false{{/if}},
-  perteneceAGrupo: {{#if documento.notificacionGrupal}}true{{else}}false{{/if}},
-  esLiderGrupo: {{#if documento.esLiderGrupo}}true{{else}}false{{/if}},
-  endpoints: {
-    detectar: '/archivo/api/documentos/{{documento.id}}/detectar-notificacion',
-    crear: '/archivo/api/grupos-notificacion/crear',
-    separar: '/archivo/api/grupos-notificacion/{{documento.id}}/separar',
-    marcarListo: '/archivo/api/documentos/{{documento.id}}/marcar-listo-grupo'
-  },
-  interfaz: {
-    contenedorInfo: '#infoGrupoActual',
-    botonMarcarListo: 'button[onclick*="marcarListo"]'
-  }
-};
-
-// Función original de marcar listo (interceptada por el sistema de grupos)
-function marcarListo(documentoId) {
-  // Esta función será interceptada por el sistema de notificaciones grupales
-  // si el documento pertenece a un grupo
+  <!-- Historial del documento (idéntico a matrizador) -->
+  {{> historial-universal eventos=eventos esAdmin=false userRole="archivo"}}
   
-  if (confirm('¿Está seguro de marcar este documento como listo para entrega?')) {
-    fetch(`/archivo/documentos/marcar-listo/${documentoId}`, {
+</div>
+
+<!-- Modal para marcar como listo - ESPECÍFICO ARCHIVO -->
+<div class="modal fade" id="modalMarcarListo" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header border-professional">
+        <h5 class="modal-title text-professional">
+          <i class="fas fa-check-circle me-2"></i>
+          Marcar documento como listo - Archivo
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      
+      <div class="modal-body">
+        <!-- Información del documento -->
+        <div class="modal-document-info mb-3">
+          <div class="row">
+            <div class="col-md-8">
+              <h6 class="mb-1" style="color: var(--primary-dark); font-weight: 600;">{{documento.tipoDocumento}}</h6>
+              <p class="mb-1" style="color: var(--gray-500); font-size: 14px;">
+                <i class="fas fa-barcode me-1"></i>
+                <strong>Código:</strong> {{documento.codigoBarras}}
+              </p>
+              <p class="mb-0" style="color: var(--gray-500); font-size: 14px;">
+                <i class="fas fa-user me-1"></i>
+                <strong>Cliente:</strong> {{documento.nombreCliente}}
+              </p>
+            </div>
+            <div class="col-md-4 text-end">
+              <div class="document-date">
+                <i class="fas fa-calendar me-1"></i>
+                {{formatDate documento.created_at}}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Estado de pago -->
+        <div class="alert alert-{{#if (or (eq documento.estadoPago 'pagado_completo') (eq documento.estadoPago 'pagado_con_retencion'))}}success-professional{{else}}warning-professional{{/if}} mb-3">
+          <div class="d-flex align-items-start">
+            <i class="fas fa-{{#if (or (eq documento.estadoPago 'pagado_completo') (eq documento.estadoPago 'pagado_con_retencion'))}}check-circle{{else}}exclamation-triangle{{/if}} me-3 mt-1"></i>
+            <div class="flex-grow-1">
+              <h6 class="fw-bold mb-1">
+                {{#if (or (eq documento.estadoPago 'pagado_completo') (eq documento.estadoPago 'pagado_con_retencion'))}}
+                ✅ PAGO CONFIRMADO
+                {{else}}
+                ⚠️ PAGO PENDIENTE
+                {{/if}}
+              </h6>
+              <div class="small text-muted-professional">
+                <strong>Estado:</strong> 
+                <span class="badge {{#if (or (eq documento.estadoPago 'pagado_completo') (eq documento.estadoPago 'pagado_con_retencion'))}}estado-listo{{else}}estado-pendiente{{/if}}">
+                  {{#if documento.estadoPago}}{{documento.estadoPago}}{{else}}Sin información{{/if}}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Información de agrupación (si aplica) -->
+        {{#if informacionGrupal.grupo}}
+        <div class="alert alert-info-professional mb-3">
+          <div class="d-flex align-items-start">
+            <i class="fas fa-layer-group me-3 mt-1"></i>
+            <div>
+              <h6 class="fw-bold mb-1">📱 Documento agrupado para notificación</h6>
+              <div class="small">
+                <strong>Grupo:</strong> {{informacionGrupal.totalDocumentosGrupo}} documentos del mismo cliente
+                <br>
+                <strong>Código grupal:</strong> 
+                <span class="badge estado-listo">{{informacionGrupal.grupo.codigoVerificacion}}</span>
+                <br>
+                <span class="text-info">
+                  Al marcar como listo se enviará UNA notificación para todo el grupo.
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+        {{/if}}
+
+        <!-- Confirmación final -->
+        <div class="border-top border-professional pt-3">
+          <h6 class="fw-bold mb-2 text-professional">
+            <i class="fas fa-paper-plane me-1"></i>
+            Confirmación de acción - Archivo
+          </h6>
+          <div class="alert alert-info-professional mb-0">
+            <div class="d-flex align-items-start">
+              <i class="fas fa-question-circle me-2 mt-1"></i>
+              <div>
+                <strong>¿Confirma marcar este documento como listo para entrega?</strong>
+                <div class="small text-muted-professional mt-1">
+                  {{#if informacionGrupal.grupo}}
+                    <i class="fas fa-bell me-1"></i>
+                    Se enviará notificación WhatsApp grupal al cliente.
+                  {{else}}
+                    <i class="fas fa-mobile-alt me-1"></i>
+                    Se enviará notificación WhatsApp individual al cliente.
+                  {{/if}}
+                  <br>
+                  <i class="fas fa-key me-1"></i>
+                  Se generará código de verificación para la entrega.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer border-professional">
+        <button type="button" class="btn btn-secondary-soft" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i> Cancelar
+        </button>
+        <button type="button" class="btn action-button-primary" id="btnConfirmarMarcarListo">
+          <i class="fas fa-paper-plane me-1"></i> 
+          <strong>Confirmar y Notificar Cliente</strong>
+        </button>
+        <input type="hidden" id="documentoIdModal" value="{{documento.id}}">
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============== VARIABLES GLOBALES ARCHIVO ==============
+
+window.documentoId = {{documento.id}};
+window.userRole = 'archivo';
+window.esDocumentoPropio = {{esDocumentoPropio}};
+
+// ============== FUNCIÓN ESPECÍFICA ARCHIVO: MARCAR COMO LISTO ==============
+
+// Función global para marcar como listo (archivo - solo documentos propios)
+function marcarListo(id) {
+  if (!window.esDocumentoPropio) {
+    alert('❌ Solo puede marcar como listos sus propios documentos');
+    return;
+  }
+  
+  document.getElementById('documentoIdModal').value = id;
+  const modal = new bootstrap.Modal(document.getElementById('modalMarcarListo'));
+  modal.show();
+}
+
+// Función de confirmación del modal para archivo
+async function confirmarMarcarListoArchivo() {
+  const documentoId = document.getElementById('documentoIdModal').value;
+  const btnConfirmar = document.getElementById('btnConfirmarMarcarListo');
+  
+  console.log('🎯 [ARCHIVO] Confirmando documento:', documentoId);
+  
+  // Obtener información de grupo
+  const informacionGrupal = document.querySelector('[data-grupo-id]');
+  const grupoId = informacionGrupal ? informacionGrupal.getAttribute('data-grupo-id') : null;
+  const esGrupo = grupoId && grupoId !== 'null';
+  
+  const datosEnvio = {
+    accion_autorizacion: esGrupo ? 'marcar_todo_grupo' : 'marcar_solo_documento',
+    marcarTodoElGrupo: esGrupo
+  };
+  
+  // Mostrar loading
+  const textoOriginal = btnConfirmar.innerHTML;
+  btnConfirmar.disabled = true;
+  btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> <strong>Procesando...</strong>';
+  
+  try {
+    const response = await fetch(`/archivo/documentos/${documentoId}/marcar-listo`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(datosEnvio)
+    });
+    
+    const data = await response.json();
+    
+    if (data.success || data.exito) {
+      const modal = bootstrap.Modal.getInstance(document.getElementById('modalMarcarListo'));
+      modal.hide();
+      
+      showToast('success', '✅ Documento marcado como listo y notificación enviada al cliente');
+      
+      setTimeout(() => window.location.reload(), 1500);
+    } else {
+      throw new Error(data.message || data.mensaje || 'Error desconocido');
+    }
+  } catch (error) {
+    console.error('❌ Error:', error);
+    showToast('error', `❌ Error: ${error.message}`);
+    
+    btnConfirmar.disabled = false;
+    btnConfirmar.innerHTML = textoOriginal;
+  }
+}
+
+// ============== FUNCIONES DE NOTIFICACIONES GRUPALES (ARCHIVO) ==============
+
+// Función global para separar documento del grupo
+async function separarDeGrupo(documentoId) {
+  console.log('🔗 [ARCHIVO] Separando documento:', documentoId);
+  
+  if (!confirm('¿Estás seguro de que quieres separar tu documento del grupo?\n\nEsto hará que tenga su propia notificación individual.')) {
+    return;
+  }
+  
+  try {
+    const response = await fetch(`/archivo/api/grupos-notificacion/${documentoId}/separar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    const resultado = await response.json();
+    
+    if (resultado.success || resultado.exito) {
+      alert('✅ Tu documento fue separado del grupo exitosamente.\n\nAhora tendrá su propia notificación individual.');
+      setTimeout(() => window.location.reload(), 1500);
+    } else {
+      throw new Error(resultado.mensaje || 'Error al separar del grupo');
+    }
+  } catch (error) {
+    console.error('❌ Error separando del grupo:', error);
+    alert(`❌ Error al separar del grupo: ${error.message}`);
+  }
+}
+
+// Funciones para manejo de checkboxes en agrupación
+function toggleSelectAll(seleccionar) {
+  console.log('🔄 [ARCHIVO] Seleccionar todos:', seleccionar);
+  const checkboxes = document.querySelectorAll('.doc-checkbox');
+  checkboxes.forEach(checkbox => checkbox.checked = seleccionar);
+  updateGroupButton();
+}
+
+function updateGroupButton() {
+  const checkboxes = document.querySelectorAll('.doc-checkbox:checked');
+  const contador = document.getElementById('contadorSeleccionados');
+  const boton = document.getElementById('btnAgruparSeleccionados');
+  
+  if (contador) contador.textContent = checkboxes.length;
+  
+  if (boton) {
+    boton.disabled = checkboxes.length === 0;
+    
+    if (checkboxes.length > 0) {
+      boton.innerHTML = `<i class="fas fa-layer-group me-1"></i> Agrupar ${checkboxes.length} documentos`;
+      boton.classList.remove('btn-secondary');
+      boton.classList.add('action-button-primary');
+    } else {
+      boton.innerHTML = `<i class="fas fa-layer-group me-1"></i> Crear grupo de <span id="contadorSeleccionados">0</span> documentos`;
+      boton.classList.remove('action-button-primary');
+      boton.classList.add('btn-secondary');
+    }
+  }
+}
+
+// Función para procesar agrupación
+async function procesarAgrupacion() {
+  const checkboxes = document.querySelectorAll('.doc-checkbox:checked');
+  const documentoActualId = {{documento.id}};
+  
+  if (checkboxes.length === 0) {
+    alert('Por favor selecciona al menos un documento para agrupar');
+    return;
+  }
+  
+  const documentosIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+  const boton = document.getElementById('btnAgruparSeleccionados');
+  const textoOriginal = boton.innerHTML;
+  
+  boton.disabled = true;
+  boton.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Agrupando...';
+  
+  try {
+    const response = await fetch('/archivo/api/grupos-notificacion/crear', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        documentoLiderId: documentoActualId,
+        documentosIds: documentosIds
+      })
+    });
+    
+    const resultado = await response.json();
+    
+    if (resultado.exito) {
+      alert(`✅ ¡Grupo creado exitosamente!\n\nSe agruparon ${resultado.datos.documentosAgrupados} documentos.\nCódigo de verificación: ${resultado.datos.codigoVerificacion}\n\nAhora el cliente recibirá una sola notificación para todos los documentos.`);
+      setTimeout(() => window.location.reload(), 2000);
+    } else {
+      throw new Error(resultado.mensaje || 'Error desconocido al crear el grupo');
+    }
+  } catch (error) {
+    console.error('❌ Error en agrupación:', error);
+    alert(`❌ Error al agrupar documentos: ${error.message}`);
+    boton.disabled = false;
+    boton.innerHTML = textoOriginal;
+  }
+}
+
+// ============== FUNCIONES PARA EDICIÓN (DELEGADAS AL JS UNIFICADO) ==============
+// Las funciones de edición están manejadas por documento-detalle-unificado.js
+
+// ============== FUNCIONES PARA NOTAS EDITABLES (SOLO DOCUMENTOS PROPIOS) ==============
+
+async function guardarNotas() {
+  if (!window.esDocumentoPropio) {
+    alert('❌ Solo puede editar notas de sus propios documentos');
+    return;
+  }
+  
+  const textarea = document.getElementById('documentoNotas');
+  const documentoId = textarea.getAttribute('data-documento-id');
+  const notas = textarea.value;
+  const btnGuardar = document.getElementById('btnGuardarNotas');
+  const indicadorExito = document.getElementById('notasGuardadas');
+  const indicadorError = document.getElementById('notasError');
+  
+  const textoOriginal = btnGuardar.innerHTML;
+  btnGuardar.disabled = true;
+  btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Guardando...';
+  
+  indicadorExito.style.display = 'none';
+  indicadorError.style.display = 'none';
+  
+  try {
+    const response = await fetch(`/archivo/documentos/${documentoId}/seccion/notas`, {
+      method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-      }
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.exito) {
-        alert('Documento marcado como listo exitosamente');
-        location.reload();
-      } else if (data.requiereConfirmacionGrupo) {
-        // Redirigir al sistema de grupos
-        if (window.notificacionesGrupales) {
-          window.notificacionesGrupales.mostrarModalMarcarGrupo(data.grupo);
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: JSON.stringify({ notas: notas })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      mostrarConfirmacionGuardado();
+      console.log('✅ Notas guardadas correctamente');
+    } else {
+      throw new Error(data.message || 'Error desconocido al guardar notas');
+    }
+    
+  } catch (error) {
+    console.error('❌ Error al guardar notas:', error);
+    mostrarErrorGuardado(error.message);
+  } finally {
+    btnGuardar.disabled = false;
+    btnGuardar.innerHTML = textoOriginal;
+  }
+}
+
+function guardarNotasAutomatico() {
+  if (!window.esDocumentoPropio) {
+    return;
+  }
+  
+  clearTimeout(window.notasTimeout);
+  window.notasTimeout = setTimeout(() => {
+    console.log('💾 Guardado automático de notas iniciado');
+    guardarNotas();
+  }, 1000);
+}
+
+function mostrarConfirmacionGuardado() {
+  const indicador = document.getElementById('notasGuardadas');
+  const indicadorError = document.getElementById('notasError');
+  
+  indicadorError.style.display = 'none';
+  indicador.style.display = 'inline';
+  
+  setTimeout(() => {
+    indicador.style.display = 'none';
+  }, 3000);
+}
+
+function mostrarErrorGuardado(mensaje) {
+  const indicadorError = document.getElementById('notasError');
+  const indicadorExito = document.getElementById('notasGuardadas');
+  
+  indicadorExito.style.display = 'none';
+  indicadorError.style.display = 'inline';
+  indicadorError.title = mensaje;
+  
+  setTimeout(() => {
+    indicadorError.style.display = 'none';
+  }, 5000);
+}
+
+// ============== FUNCIONES AUXILIARES ==============
+
+// Función para llenar rápidamente la razón de no notificar
+function llenarRazonRapida(razon) {
+  const textarea = document.getElementById('razonSinNotificar-edit');
+  if (textarea) {
+    textarea.value = razon;
+    textarea.classList.remove('is-invalid');
+    console.log('✅ Razón llenada automáticamente:', razon);
+  }
+}
+
+// Función auxiliar para mostrar toasts
+function showToast(type, message) {
+  // Implementación simple de toast
+  const toast = document.createElement('div');
+  toast.className = `alert alert-${type === 'success' ? 'success' : 'danger'} position-fixed`;
+  toast.style.top = '20px';
+  toast.style.right = '20px';
+  toast.style.zIndex = '9999';
+  toast.innerHTML = `
+    <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>
+    ${message}
+  `;
+  
+  document.body.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.remove();
+  }, 3000);
+}
+
+// ============== INICIALIZACIÓN ==============
+
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('🗂️ Vista de archivo inicializada con diseño idéntico a matrizador');
+  
+  // Configurar event listener para el botón de confirmación del modal
+  const btnConfirmar = document.getElementById('btnConfirmarMarcarListo');
+  if (btnConfirmar) {
+    btnConfirmar.addEventListener('click', confirmarMarcarListoArchivo);
+  }
+  
+  // Configurar checkboxes si existen
+  const checkboxes = document.querySelectorAll('.doc-checkbox');
+  const selectAllCheckbox = document.getElementById('selectAllDocs');
+  
+  checkboxes.forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+      updateGroupButton();
+      
+      if (selectAllCheckbox) {
+        const todosSeleccionados = Array.from(checkboxes).every(cb => cb.checked);
+        const ningunoSeleccionado = Array.from(checkboxes).every(cb => !cb.checked);
+        
+        if (todosSeleccionados) {
+          selectAllCheckbox.checked = true;
+          selectAllCheckbox.indeterminate = false;
+        } else if (ningunoSeleccionado) {
+          selectAllCheckbox.checked = false;
+          selectAllCheckbox.indeterminate = false;
+        } else {
+          selectAllCheckbox.checked = false;
+          selectAllCheckbox.indeterminate = true;
         }
-      } else {
-        alert('Error: ' + data.mensaje);
       }
-    })
-    .catch(error => {
-      console.error('Error:', error);
-      alert('Error al marcar documento como listo');
+    });
+  });
+  
+  if (selectAllCheckbox) {
+    selectAllCheckbox.addEventListener('change', function() {
+      toggleSelectAll(this.checked);
     });
   }
-}
-
-// Funciones para modales de notificaciones grupales
-function abrirModalAgrupar() {
-  if (window.notificacionesGrupales) {
-    window.notificacionesGrupales.abrirModalAgrupar();
-  } else {
-    alert('Sistema de notificaciones grupales no disponible');
+  
+  if (document.getElementById('btnAgruparSeleccionados')) {
+    updateGroupButton();
   }
-}
-
-function abrirModalSeparar() {
-  if (window.notificacionesGrupales) {
-    window.notificacionesGrupales.abrirModalSeparar();
-  } else {
-    alert('Sistema de notificaciones grupales no disponible');
-  }
-}
-
-// Inicializar sistema de notificaciones grupales cuando el DOM esté listo
-document.addEventListener('DOMContentLoaded', function() {
-  if (window.NotificacionesGrupales && window.NOTIFICACIONES_GRUPALES_CONFIG.esDocumentoPropio) {
-    window.notificacionesGrupales = new NotificacionesGrupales(window.NOTIFICACIONES_GRUPALES_CONFIG);
-    console.log('✅ Sistema de notificaciones grupales inicializado para archivo');
-  }
+  
+  console.log('✅ Vista de archivo lista - diseño profesional aplicado');
 });
-{{/if}}
 </script>
 
-{{! ✅ NOTA TÉCNICA: 
-    - Migrado completamente al componente universal
-    - Layout ahora es vertical y legible en todos los dispositivos
-    - Mantiene funcionalidad específica de archivo (notificaciones grupales)
-    - Consistente con otros roles del sistema
-}} 
+{{else}}
+<div class="document-unified-container">
+  <div class="alert alert-warning-professional">
+    <i class="fas fa-exclamation-triangle me-2"></i> 
+    El documento solicitado no existe o no tienes permisos para verlo.
+    <br>
+    <a href="/archivo/documentos" class="btn btn-outline-primary mt-2">
+      <i class="fas fa-arrow-left me-1"></i> Volver a documentos
+    </a>
+  </div>
+</div>
+{{/if}} 
