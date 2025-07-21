@@ -5,14 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{title}} - Administración Notarial</title>
   
+  <!-- Preconnect para optimización de carga de fuentes -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  
+  <!-- Google Fonts - Inter (Sistema Tipográfico Unificado) -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <!-- Sistema Tipográfico Unificado ProNotary -->
+  <link rel="stylesheet" href="/css/typography.css">
+  
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  
-  <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   
   <!-- CSS Personalizados existentes (mantener compatibilidad) -->
   <link rel="stylesheet" href="/css/table-universal.css">
@@ -37,6 +44,9 @@
   <!-- ProNotary Mobile Responsive System -->
   <link rel="stylesheet" href="/css/mobile-responsive.css">
   
+  <!-- FINAL: Forzar Sidebar Azul (carga al final con máxima especificidad) -->
+  <link rel="stylesheet" href="/css/sidebar-azul-final.css">
+  
   <!-- ProNotary Executive UI Design System -->
 
   
@@ -49,23 +59,23 @@
             'sans': ['Inter', 'ui-sans-serif', 'system-ui'],
           },
           colors: {
-            // PALETA PROFESIONAL NOTARIAL
-            'primary': '#162840',
-            'primary-light': '#4E7DA6',
-            'primary-dark': '#0d1a2b',
-            'secondary': '#BF8C60',
-            'secondary-light': '#d4a574',
-            'secondary-dark': '#a0734d',
-            'success': '#B1C6B8',
-            'warning': '#BF8C60',
-            'danger': '#a0734d',
-            'info': '#4E7DA6',
-            'light': '#f8fafc',
-            'dark': '#162840',
-            'sidebar': '#162840',
-            'sidebar-hover': '#4E7DA6',
-            'gray-professional': '#D0D7D9',
-            'gray-verdoso': '#B1C6B8'
+            // NUEVA PALETA AZUL PROFESIONAL - COHERENTE CON DASHBOARD
+            'primary': '#092F64', // Cool Black
+            'primary-light': '#4680EB', // Tufts Blue  
+            'primary-dark': '#1A5799', // Cobalt Blue
+            'secondary': '#9BBFFF', // Jordy Blue
+            'secondary-light': '#E9F5FF', // Alice Blue
+            'secondary-dark': '#1F1F1F', // Eerie Black
+            'success': '#4680EB', // Tufts Blue para éxito
+            'warning': '#9BBFFF', // Jordy Blue para advertencias
+            'danger': '#ef4444', // Mantener rojo para peligro
+            'info': '#4680EB', // Tufts Blue para información
+            'light': '#E9F5FF', // Alice Blue para fondos claros
+            'dark': '#092F64', // Cool Black para elementos oscuros
+            'sidebar': '#092F64', // Cool Black para sidebar
+            'sidebar-hover': '#4680EB', // Tufts Blue para hover sidebar
+            'gray-professional': '#9BBFFF', // Jordy Blue como gris profesional
+            'gray-verdoso': '#E9F5FF' // Alice Blue como alternativa suave
           },
           spacing: {
             '68': '17rem',
@@ -106,21 +116,21 @@
       border: 0;
     }
     
-    /* Gradient backgrounds - PALETA PROFESIONAL */
+    /* Gradient backgrounds - NUEVA PALETA AZUL PROFESIONAL */
     .bg-gradient-primary {
-      background: linear-gradient(135deg, #162840 0%, #4E7DA6 100%);
+      background: linear-gradient(135deg, #092F64 0%, #4680EB 100%); /* Cool Black a Tufts Blue */
     }
     
     .bg-gradient-success {
-      background: linear-gradient(135deg, #B1C6B8 0%, #D0D7D9 100%);
+      background: linear-gradient(135deg, #4680EB 0%, #9BBFFF 100%); /* Tufts Blue a Jordy Blue */
     }
     
     .bg-gradient-warning {
-      background: linear-gradient(135deg, #BF8C60 0%, #d4a574 100%);
+      background: linear-gradient(135deg, #9BBFFF 0%, #E9F5FF 100%); /* Jordy Blue a Alice Blue */
     }
     
     .bg-gradient-danger {
-      background: linear-gradient(135deg, #a0734d 0%, #BF8C60 100%);
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); /* Mantener rojo para peligro */
     }
     
     /* Elegant hover effects */
@@ -161,15 +171,15 @@
       justify-content: center;
     }
     
-    /* Link activo - PALETA PROFESIONAL */
+    /* Link activo - NUEVA PALETA AZUL PROFESIONAL */
     .nav-link-argon.active {
-      background: linear-gradient(135deg, #BF8C60 0%, #d4a574 100%);
+      background: linear-gradient(90deg, #4680EB 0%, #1A5799 100%); /* Tufts a Cobalt */
       color: white !important;
-      box-shadow: 0 4px 15px rgba(191, 140, 96, 0.4);
+      box-shadow: 0 4px 20px rgba(70, 128, 235, 0.4);
     }
     
     .nav-link-argon.active .shadow-soft-2xl {
-      background: rgba(255, 255, 255, 0.2) !important;
+      background: rgba(233, 245, 255, 0.2) !important; /* Alice Blue transparente */
       backdrop-filter: blur(10px);
     }
     
@@ -177,10 +187,11 @@
       color: white !important;
     }
     
-    /* Hover effects */
+    /* Hover effects - Nueva paleta */
     .nav-link-argon:hover:not(.active) {
-      background: #f1f5f9;
+      background: rgba(233, 245, 255, 0.8); /* Alice Blue suave */
       transform: translateX(4px);
+      color: #092F64; /* Cool Black para contraste */
     }
     
     /* Responsive */
@@ -216,8 +227,8 @@
 </head>
 <body class="font-sans antialiased bg-gray-50 text-slate-500">
   
-  <!-- Fondo elegante superior - PALETA PROFESIONAL -->
-  <div class="absolute w-full min-h-75" style="background: linear-gradient(135deg, #162840 0%, #4E7DA6 100%);"></div>
+  <!-- Fondo elegante superior - NUEVA PALETA AZUL PROFESIONAL -->
+  <div class="absolute w-full min-h-75" style="background: linear-gradient(135deg, #092F64 0%, #4680EB 100%);"></div>
   
   <!-- Sidebar elegante para Admin -->
   {{> sidebar-argon 

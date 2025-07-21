@@ -1,21 +1,21 @@
 /**
- * DASHBOARD EJECUTIVO - ESTILOS PROFESIONALES
+ * DASHBOARD EJECUTIVO - NUEVA PALETA AZUL PROFESIONAL
  * Sistema Notarial ProNotary
  * 
- * Paleta de colores profesional:
- * - Azul marino: #162840, #4E7DA6
- * - Dorado: #BF8C60, #d4a574
- * - Neutros: #B1C6B8, #D0D7D9
+ * Nueva paleta de colores azul profesional:
+ * - Cool Black: #092F64, Cobalt Blue: #1A5799
+ * - Tufts Blue: #4680EB, Jordy Blue: #9BBFFF
+ * - Alice Blue: #E9F5FF, Eerie Black: #1F1F1F
  */
 
-/* Variables CSS para consistencia */
+/* Variables CSS actualizadas con nueva paleta */
 :root {
-  --color-azul-marino: #162840;
-  --color-azul-medio: #4E7DA6;
-  --color-dorado: #BF8C60;
-  --color-dorado-claro: #d4a574;
-  --color-neutro: #B1C6B8;
-  --color-neutro-claro: #D0D7D9;
+  --color-azul-marino: #092F64;  /* Cool Black */
+  --color-azul-medio: #4680EB;   /* Tufts Blue */
+  --color-dorado: #4680EB;       /* Tufts Blue reemplaza dorado */
+  --color-dorado-claro: #9BBFFF; /* Jordy Blue reemplaza dorado claro */
+  --color-neutro: #E9F5FF;       /* Alice Blue */
+  --color-neutro-claro: #9BBFFF; /* Jordy Blue */
   --sombra-suave: 0 8px 25px rgba(0, 0, 0, 0.1);
   --sombra-media: 0 15px 35px rgba(0, 0, 0, 0.15);
   --sombra-intensa: 0 20px 40px rgba(0, 0, 0, 0.2);
@@ -37,7 +37,7 @@
    ============================================== */
 
 .encabezado-ejecutivo {
-  background: linear-gradient(135deg, var(--color-azul-marino) 0%, var(--color-azul-medio) 100%);
+  background: linear-gradient(135deg, var(--color-azul-marino) 0%, var(--color-azul-medio) 100%); /* Cool Black a Tufts Blue */
   border-radius: var(--border-radius-lg);
   box-shadow: var(--sombra-media);
   position: relative;

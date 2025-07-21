@@ -1,27 +1,28 @@
 /**
- * ESTILOS SIDEBAR ARGON PRO - SISTEMA COLAPSABLE
- * CSS avanzado para funcionalidad completa del menu lateral
+ * ESTILOS SIDEBAR ARGON PRO - PALETA AZUL PROFESIONAL
+ * CSS actualizado con nueva paleta de colores coherente con dashboard
  */
 
-/* ==================== VARIABLES CSS PROFESIONALES ==================== */
+/* ==================== VARIABLES CSS PROFESIONALES ACTUALIZADAS ==================== */
 :root {
   --sidebar-width: 250px;
   --sidebar-collapsed-width: 64px;
   --sidebar-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   
-  /* PALETA PROFESIONAL NOTARIAL */
-  --sidebar-bg: linear-gradient(135deg, #162840 0%, #4E7DA6 100%);
-  --sidebar-shadow: 0 10px 30px rgba(22, 40, 64, 0.3);
-  --sidebar-border: rgba(255, 255, 255, 0.1);
-  --sidebar-item-hover: rgba(255, 255, 255, 0.1);
-  --sidebar-item-active: #BF8C60;
-  --sidebar-text: rgba(255, 255, 255, 0.9);
-  --sidebar-text-muted: rgba(255, 255, 255, 0.6);
+  /* NUEVA PALETA AZUL PROFESIONAL - COHERENTE CON DASHBOARD */
+  --sidebar-bg: linear-gradient(180deg, #092F64 0%, #1A5799 100%); /* Cool Black a Cobalt Blue */
+  --sidebar-shadow: 0 10px 30px rgba(9, 47, 100, 0.3);
+  --sidebar-border: rgba(155, 191, 255, 0.2); /* Jordy Blue sutil */
+  --sidebar-item-hover: rgba(70, 128, 235, 0.2); /* Tufts Blue transparente */
+  --sidebar-item-active: linear-gradient(90deg, #4680EB 0%, #1A5799 100%); /* Tufts a Cobalt */
+  --sidebar-text: #9BBFFF; /* Jordy Blue para texto normal */
+  --sidebar-text-active: #E9F5FF; /* Alice Blue para texto activo */
+  --sidebar-text-muted: rgba(155, 191, 255, 0.6); /* Jordy Blue transparente */
   
-  --transition-duration: 0.3s; /* Variable dinámica para JS */
+  --transition-duration: 0.3s;
 }
 
-/* ==================== SIDEBAR BASE FORZADO ==================== */
+/* ==================== SIDEBAR BASE ACTUALIZADO ==================== */
 .sidebar-argon {
   position: fixed !important;
   top: 0;
@@ -29,7 +30,6 @@
   width: var(--sidebar-width);
   height: 100vh;
   background: var(--sidebar-bg) !important;
-  background: linear-gradient(135deg, #162840 0%, #4E7DA6 100%) !important;
   backdrop-filter: blur(20px);
   border-right: 1px solid var(--sidebar-border);
   box-shadow: var(--sidebar-shadow);
@@ -39,11 +39,11 @@
   overflow: hidden;
 }
 
-/* FORZAR COLORES PROFESIONALES - MÁXIMA ESPECIFICIDAD */
+/* FORZAR NUEVA PALETA AZUL PROFESIONAL - MÁXIMA ESPECIFICIDAD */
 .sidebar-argon,
 .sidebar-argon.show,
 .sidebar-argon.collapsed {
-  background: linear-gradient(135deg, #162840 0%, #4E7DA6 100%) !important;
+  background: linear-gradient(180deg, #092F64 0%, #1A5799 100%) !important;
 }
 
 /* ==================== ESTADO COLAPSADO ==================== */
@@ -61,13 +61,13 @@
   transition: var(--sidebar-transition);
 }
 
-/* ==================== HEADER DEL SIDEBAR ==================== */
+/* ==================== HEADER DEL SIDEBAR ACTUALIZADO ==================== */
 .sidebar-header {
   display: flex;
   align-items: center;
   padding: 1.5rem 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--sidebar-border);
+  background: rgba(9, 47, 100, 0.3); /* Cool Black transparente */
   backdrop-filter: blur(10px);
   transition: var(--sidebar-transition);
 }
@@ -75,7 +75,7 @@
 .sidebar-header .logo {
   display: flex;
   align-items: center;
-  color: white;
+  color: var(--sidebar-text-active); /* Alice Blue para logo */
   text-decoration: none;
   transition: var(--sidebar-transition);
 }
@@ -83,13 +83,14 @@
 .sidebar-header .logo-icon {
   width: 32px;
   height: 32px;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(233, 245, 255, 0.2); /* Alice Blue transparente */
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-right: 12px;
   transition: var(--sidebar-transition);
+  color: var(--sidebar-text-active);
 }
 
 .sidebar-header .logo-text {
@@ -98,6 +99,7 @@
   opacity: 1;
   transition: var(--sidebar-transition);
   white-space: nowrap;
+  color: var(--sidebar-text-active);
 }
 
 /* Header en estado colapsado */
@@ -117,7 +119,7 @@
   margin-right: 0;
 }
 
-/* ==================== NAVEGACIÓN ==================== */
+/* ==================== NAVEGACIÓN ACTUALIZADA ==================== */
 .sidebar-nav {
   padding: 1rem 0;
   height: calc(100vh - 140px);
@@ -130,15 +132,19 @@
 }
 
 .sidebar-nav::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(155, 191, 255, 0.1);
 }
 
 .sidebar-nav::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(155, 191, 255, 0.3);
   border-radius: 2px;
 }
 
-/* ==================== SECCIONES DEL MENU ==================== */
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(155, 191, 255, 0.5);
+}
+
+/* ==================== SECCIONES DEL MENU ACTUALIZADAS ==================== */
 .nav-section {
   margin-bottom: 1.5rem;
 }
@@ -163,7 +169,7 @@
   overflow: hidden;
 }
 
-/* ==================== ELEMENTOS DEL MENU ==================== */
+/* ==================== ELEMENTOS DEL MENU ACTUALIZADOS ==================== */
 .nav-item {
   margin-bottom: 0.25rem;
 }
@@ -172,7 +178,7 @@
   display: flex;
   align-items: center;
   padding: 0.75rem 1rem;
-  color: var(--sidebar-text);
+  color: var(--sidebar-text); /* Jordy Blue para texto normal */
   text-decoration: none;
   border-radius: 0 25px 25px 0;
   margin-right: 1rem;
@@ -182,16 +188,18 @@
 }
 
 .nav-link:hover {
-  background: var(--sidebar-item-hover);
-  color: white;
+  background: var(--sidebar-item-hover); /* Tufts Blue transparente */
+  color: var(--sidebar-text-active); /* Alice Blue para hover */
   transform: translateX(4px);
-  box-shadow: 0 4px 15px rgba(22, 40, 64, 0.2);
+  box-shadow: 0 4px 15px rgba(70, 128, 235, 0.2);
+  border-radius: 8px;
 }
 
 .nav-link.active {
-  background: linear-gradient(135deg, var(--sidebar-item-active), rgba(191, 140, 96, 0.8));
-  color: white;
-  box-shadow: 0 4px 20px rgba(191, 140, 96, 0.4);
+  background: var(--sidebar-item-active); /* Gradiente Tufts a Cobalt */
+  color: #FFFFFF;
+  box-shadow: 0 4px 20px rgba(70, 128, 235, 0.4);
+  border-radius: 8px;
 }
 
 .nav-link.active::before {
@@ -200,11 +208,12 @@
   left: 0;
   top: 0;
   bottom: 0;
-  width: 3px;
-  background: linear-gradient(135deg, #fff, rgba(255, 255, 255, 0.7));
+  width: 4px;
+  background: linear-gradient(180deg, #4680EB 0%, #9BBFFF 100%); /* Indicador Tufts a Jordy */
+  border-radius: 0 2px 2px 0;
 }
 
-/* ==================== ICONOS ==================== */
+/* ==================== ICONOS ACTUALIZADOS ==================== */
 .nav-icon {
   width: 20px;
   height: 20px;
@@ -214,6 +223,7 @@
   justify-content: center;
   transition: var(--sidebar-transition);
   flex-shrink: 0;
+  color: inherit;
 }
 
 .nav-text {
@@ -223,6 +233,7 @@
   transition: var(--sidebar-transition);
   white-space: nowrap;
   overflow: hidden;
+  color: inherit;
 }
 
 /* Estado colapsado - solo iconos */
@@ -244,15 +255,15 @@
   overflow: hidden;
 }
 
-/* ==================== BOTÓN TOGGLE ==================== */
+/* ==================== BOTÓN TOGGLE ACTUALIZADO ==================== */
 .sidebar-toggle {
   position: absolute;
   top: 20px;
   right: -15px;
   width: 30px;
   height: 30px;
-  background: linear-gradient(135deg, #162840, #4E7DA6);
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  background: linear-gradient(135deg, #4680EB, #1A5799); /* Tufts a Cobalt */
+  border: 2px solid var(--sidebar-border);
   border-radius: 50%;
   color: white;
   cursor: pointer;
@@ -261,13 +272,13 @@
   justify-content: center;
   transition: var(--sidebar-transition);
   z-index: 1001;
-  box-shadow: 0 4px 15px rgba(22, 40, 64, 0.3);
+  box-shadow: 0 4px 15px rgba(70, 128, 235, 0.3);
 }
 
 .sidebar-toggle:hover {
-  background: linear-gradient(135deg, #764ba2, #667eea);
+  background: linear-gradient(135deg, #9BBFFF, #4680EB); /* Jordy a Tufts */
   transform: scale(1.1);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 6px 20px rgba(70, 128, 235, 0.4);
 }
 
 .sidebar-toggle i {
@@ -279,19 +290,20 @@
   transform: rotate(180deg);
 }
 
-/* ==================== FOOTER SIDEBAR ==================== */
+/* ==================== FOOTER SIDEBAR ACTUALIZADO ==================== */
 .sidebar-footer {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
   padding: 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(0, 0, 0, 0.1);
+  border-top: 1px solid var(--sidebar-border);
+  background: rgba(9, 47, 100, 0.2); /* Cool Black transparente */
+  backdrop-filter: blur(15px);
 }
 
 .sidebar-footer .help-section {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(233, 245, 255, 0.1); /* Alice Blue transparente */
   border-radius: 12px;
   padding: 1rem;
   text-align: center;
@@ -301,17 +313,17 @@
 .sidebar-footer .help-section .help-icon {
   width: 40px;
   height: 40px;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(233, 245, 255, 0.2);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 0.5rem;
-  color: white;
+  color: var(--sidebar-text-active);
 }
 
 .sidebar-footer .help-section .help-text {
-  color: white;
+  color: var(--sidebar-text-active);
   font-size: 0.9rem;
   font-weight: 600;
   margin-bottom: 0.25rem;
@@ -319,7 +331,7 @@
 }
 
 .sidebar-footer .help-section .help-description {
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--sidebar-text-muted);
   font-size: 0.75rem;
   transition: var(--sidebar-transition);
 }
@@ -341,39 +353,42 @@
   overflow: hidden;
 }
 
-/* ==================== LOGOUT BUTTON ==================== */
+/* ==================== LOGOUT BUTTON ACTUALIZADO ==================== */
 .logout-section {
   padding: 0 1rem 1rem;
 }
 
 .logout-btn {
   width: 100%;
-  background: rgba(220, 53, 69, 0.2);
-  border: 1px solid rgba(220, 53, 69, 0.3);
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); /* Mantener rojo para logout */
+  border: 1px solid rgba(239, 68, 68, 0.3);
   color: white;
   padding: 0.75rem;
   border-radius: 8px;
   font-weight: 500;
   transition: var(--sidebar-transition);
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 }
 
 .logout-btn:hover {
-  background: rgba(220, 53, 69, 0.3);
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
   transform: translateY(-1px);
-  box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
 }
 
 .sidebar-argon.collapsed .logout-btn {
   padding: 0.75rem 0.5rem;
-  font-size: 0;
+  gap: 0;
 }
 
-.sidebar-argon.collapsed .logout-btn::before {
-  content: '\f2f5'; /* Font Awesome logout icon */
-  font-family: 'Font Awesome 5 Free';
-  font-weight: 900;
-  font-size: 14px;
+.sidebar-argon.collapsed .logout-btn .logout-text {
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
 }
 
 /* ==================== OVERLAY MOBILE ==================== */
@@ -383,7 +398,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(9, 47, 100, 0.5); /* Cool Black con transparencia */
   backdrop-filter: blur(4px);
   z-index: 998;
   opacity: 0;
@@ -489,6 +504,9 @@
   pointer-events: none;
   z-index: 9999;
   animation: tooltipFadeIn 0.2s ease;
+  background: var(--sidebar-bg);
+  color: var(--sidebar-text-active);
+  border: 1px solid var(--sidebar-border);
 }
 
 @keyframes tooltipFadeIn {
@@ -502,14 +520,14 @@
   }
 }
 
-/* ==================== ESTADOS DE FOCUS ==================== */
+/* ==================== ESTADOS DE FOCUS ACTUALIZADOS ==================== */
 .nav-link:focus {
-  outline: 2px solid rgba(255, 255, 255, 0.3);
+  outline: 2px solid rgba(155, 191, 255, 0.5); /* Jordy Blue para focus */
   outline-offset: 2px;
 }
 
 .sidebar-toggle:focus {
-  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline: 2px solid rgba(233, 245, 255, 0.7); /* Alice Blue para focus */
   outline-offset: 2px;
 }
 
@@ -525,10 +543,45 @@
   will-change: auto;
 }
 
-/* ==================== DARK MODE SUPPORT ==================== */
+/* ==================== MEJORAS VISUALES ADICIONALES ==================== */
+
+/* Efecto sutil hover en todo el sidebar */
+.sidebar-argon:hover {
+  box-shadow: 4px 0 12px rgba(9, 47, 100, 0.2);
+}
+
+/* Indicador visual mejorado para página activa */
+.nav-link.active {
+  position: relative;
+}
+
+.nav-link.active::after {
+  content: '';
+  position: absolute;
+  right: -1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-left: 8px solid #4680EB;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+}
+
+/* Transiciones más suaves para cambios de estado */
+.nav-link {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nav-link:hover {
+  transition: all 0.2s ease;
+}
+
+/* ==================== DARK MODE SUPPORT ACTUALIZADO ==================== */
 @media (prefers-color-scheme: dark) {
   :root {
-    --sidebar-bg: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+    --sidebar-bg: linear-gradient(180deg, #092F64 0%, #1A5799 100%);
     --sidebar-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    --sidebar-border: rgba(155, 191, 255, 0.3);
   }
 } 

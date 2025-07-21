@@ -1,10 +1,10 @@
 /**
- * FORZAR SIDEBAR PROFESIONAL - MÁXIMA ESPECIFICIDAD
- * Este archivo fuerza la aplicación de los colores profesionales
+ * FORZAR SIDEBAR PROFESIONAL - NUEVA PALETA AZUL
+ * Este archivo fuerza la aplicación de la nueva paleta azul profesional
  * en el sidebar con la máxima especificidad CSS posible
  */
 
-/* ==================== FORZAR SIDEBAR PROFESIONAL ==================== */
+/* ==================== FORZAR NUEVA PALETA AZUL PROFESIONAL ==================== */
 
 /* Aplicar con múltiples selectores para máxima especificidad */
 .sidebar-argon.sidebar-argon.sidebar-argon,
@@ -15,8 +15,8 @@
 nav.sidenav,
 .main-sidebar,
 .sidebar {
-  background: linear-gradient(135deg, #162840 0%, #4E7DA6 100%) !important;
-  background-color: #162840 !important;
+  background: linear-gradient(180deg, #092F64 0%, #1A5799 100%) !important; /* Cool Black a Cobalt Blue */
+  background-color: #092F64 !important;
 }
 
 /* Forzar en todos los estados posibles */
@@ -24,8 +24,8 @@ nav.sidenav,
 .sidebar-argon.collapsed,
 .sidebar-argon:hover,
 .sidebar-argon.active {
-  background: linear-gradient(135deg, #162840 0%, #4E7DA6 100%) !important;
-  background-color: #162840 !important;
+  background: linear-gradient(180deg, #092F64 0%, #1A5799 100%) !important;
+  background-color: #092F64 !important;
 }
 
 /* Forzar elementos internos del sidebar */
@@ -36,26 +36,26 @@ nav.sidenav,
   background: transparent !important;
 }
 
-/* Forzar items del sidebar */
+/* Forzar items del sidebar con nueva paleta */
 .sidebar-argon .nav-item .nav-link {
-  color: rgba(255, 255, 255, 0.8) !important;
+  color: #9BBFFF !important; /* Jordy Blue para texto normal */
   transition: all 0.3s ease !important;
 }
 
 .sidebar-argon .nav-item .nav-link:hover {
-  background: rgba(255, 255, 255, 0.1) !important;
-  color: white !important;
+  background: rgba(70, 128, 235, 0.2) !important; /* Tufts Blue transparente */
+  color: #E9F5FF !important; /* Alice Blue para hover */
 }
 
 .sidebar-argon .nav-item .nav-link.active {
-  background: linear-gradient(135deg, #BF8C60 0%, #d4a574 100%) !important;
-  color: white !important;
-  box-shadow: 0 2px 8px rgba(191, 140, 96, 0.3) !important;
+  background: linear-gradient(90deg, #4680EB 0%, #1A5799 100%) !important; /* Tufts a Cobalt */
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 20px rgba(70, 128, 235, 0.4) !important;
 }
 
 /* Forzar brand/logo */
 .sidebar-argon .navbar-brand {
-  color: white !important;
+  color: #E9F5FF !important; /* Alice Blue para logo */
 }
 
 /* Forzar iconos */
@@ -63,74 +63,158 @@ nav.sidenav,
   color: inherit !important;
 }
 
-/* Forzar scrollbar si existe */
+/* Forzar scrollbar personalizado */
 .sidebar-argon::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1) !important;
+  background: rgba(155, 191, 255, 0.1) !important;
 }
 
 .sidebar-argon::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.3) !important;
+  background: rgba(155, 191, 255, 0.3) !important;
   border-radius: 6px !important;
 }
 
 .sidebar-argon::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.5) !important;
+  background: rgba(155, 191, 255, 0.5) !important;
 }
 
-/* Forzar cualquier elemento con clases de Argon */
+/* Forzar elementos con clases de colores - Nueva paleta */
 .bg-gradient-primary,
 .bg-primary,
 .navbar-primary {
-  background: linear-gradient(135deg, #162840 0%, #4E7DA6 100%) !important;
-  background-color: #162840 !important;
+  background: linear-gradient(135deg, #092F64 0%, #4680EB 100%) !important; /* Cool Black a Tufts Blue */
+  background-color: #092F64 !important;
 }
 
-/* Forzar elementos con colores púrpura */
+/* Forzar elementos con colores púrpura hacia azules */
 .bg-purple,
 .bg-gradient-purple,
 .navbar-purple {
-  background: linear-gradient(135deg, #162840 0%, #4E7DA6 100%) !important;
-  background-color: #162840 !important;
+  background: linear-gradient(135deg, #092F64 0%, #4680EB 100%) !important;
+  background-color: #092F64 !important;
 }
 
 /* Forzar con selectores específicos de Argon */
 .sidenav[data-color="primary"],
 .sidenav[data-color="purple"],
 .sidenav[data-color="default"] {
-  background: linear-gradient(135deg, #162840 0%, #4E7DA6 100%) !important;
+  background: linear-gradient(180deg, #092F64 0%, #1A5799 100%) !important;
 }
 
 /* Forzar elementos inline que puedan tener estilos */
 .sidebar-argon[style*="background"],
 .sidenav[style*="background"] {
-  background: linear-gradient(135deg, #162840 0%, #4E7DA6 100%) !important;
+  background: linear-gradient(180deg, #092F64 0%, #1A5799 100%) !important;
 }
 
-/* ==================== BOTÓN TOGGLE PROFESIONAL ==================== */
+/* ==================== BOTÓN TOGGLE PROFESIONAL ACTUALIZADO ==================== */
 
-/* Forzar botón de colapsar con colores profesionales */
+/* Forzar botón de colapsar con nueva paleta azul */
 .sidebar-toggle,
 button.sidebar-toggle {
-  background: linear-gradient(135deg, #162840, #4E7DA6) !important;
-  box-shadow: 0 4px 15px rgba(22, 40, 64, 0.3) !important;
-  border: 2px solid rgba(255, 255, 255, 0.2) !important;
+  background: linear-gradient(135deg, #4680EB, #1A5799) !important; /* Tufts a Cobalt */
+  box-shadow: 0 4px 15px rgba(70, 128, 235, 0.3) !important;
+  border: 2px solid rgba(155, 191, 255, 0.2) !important;
 }
 
 .sidebar-toggle:hover,
 button.sidebar-toggle:hover {
-  background: linear-gradient(135deg, #4E7DA6, #BF8C60) !important;
-  box-shadow: 0 6px 20px rgba(22, 40, 64, 0.4) !important;
+  background: linear-gradient(135deg, #9BBFFF, #4680EB) !important; /* Jordy a Tufts */
+  box-shadow: 0 6px 20px rgba(70, 128, 235, 0.4) !important;
   transform: scale(1.05) !important;
 }
 
 .sidebar-toggle:active,
 button.sidebar-toggle:active {
-  background: linear-gradient(135deg, #BF8C60, #d4a574) !important;
+  background: linear-gradient(135deg, #4680EB, #1A5799) !important; /* Mantener consistencia en active */
   transform: scale(0.95) !important;
 }
 
 /* Forzar elementos con estilos inline */
 .sidebar-toggle[style*="background"],
 button.sidebar-toggle[style*="background"] {
-  background: linear-gradient(135deg, #162840, #4E7DA6) !important;
+  background: linear-gradient(135deg, #4680EB, #1A5799) !important;
+}
+
+/* ==================== ELEMENTOS ESPECÍFICOS ADICIONALES ==================== */
+
+/* Forzar secciones del menú */
+.sidebar-argon .nav-section-title,
+.sidebar-argon .sidebar-heading {
+  color: rgba(155, 191, 255, 0.6) !important; /* Jordy Blue transparente */
+}
+
+/* Forzar header del sidebar */
+.sidebar-argon .sidebar-header {
+  background: rgba(9, 47, 100, 0.3) !important; /* Cool Black transparente */
+  border-bottom: 1px solid rgba(155, 191, 255, 0.2) !important;
+}
+
+.sidebar-argon .logo-icon {
+  background: rgba(233, 245, 255, 0.2) !important; /* Alice Blue transparente */
+  color: #E9F5FF !important;
+}
+
+.sidebar-argon .logo-text {
+  color: #E9F5FF !important; /* Alice Blue para texto logo */
+}
+
+/* Forzar footer del sidebar */
+.sidebar-argon .sidebar-footer {
+  background: rgba(9, 47, 100, 0.2) !important; /* Cool Black transparente */
+  border-top: 1px solid rgba(155, 191, 255, 0.2) !important;
+}
+
+/* Forzar botón logout (mantener rojo para funcionalidad crítica) */
+.sidebar-argon .logout-btn {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+  color: white !important;
+}
+
+.sidebar-argon .logout-btn:hover {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%) !important;
+}
+
+/* ==================== SELECTORES DE EMERGENCIA ==================== */
+
+/* Si algún otro CSS tiene especificidad muy alta */
+html body .sidebar-argon.sidebar-argon.sidebar-argon {
+  background: linear-gradient(180deg, #092F64 0%, #1A5799 100%) !important;
+}
+
+html body .sidebar-argon.sidebar-argon.sidebar-argon .nav-link.active {
+  background: linear-gradient(90deg, #4680EB 0%, #1A5799 100%) !important;
+  color: #FFFFFF !important;
+}
+
+html body .sidebar-argon.sidebar-argon.sidebar-argon .nav-link:hover {
+  background: rgba(70, 128, 235, 0.2) !important;
+  color: #E9F5FF !important;
+}
+
+/* Último recurso con máxima especificidad */
+#root .sidebar-argon,
+[data-app] .sidebar-argon,
+.app .sidebar-argon {
+  background: linear-gradient(180deg, #092F64 0%, #1A5799 100%) !important;
+}
+
+/* ==================== VALIDACIÓN VISUAL ==================== */
+
+/* Indicador visual para confirmar que este CSS se está aplicando */
+.sidebar-argon::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 2px;
+  height: 20px;
+  background: #4680EB;
+  opacity: 0.8;
+  z-index: 9999;
+  animation: indicadorAzul 2s ease-in-out infinite;
+}
+
+@keyframes indicadorAzul {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 0.3; }
 } 

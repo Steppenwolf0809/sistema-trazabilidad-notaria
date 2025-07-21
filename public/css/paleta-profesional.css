@@ -1,261 +1,562 @@
-/**
- * PALETA DE COLORES PROFESIONAL - SISTEMA NOTARIAL PRONOTARY
- * Diseño elegante y serio apropiado para software legal empresarial
- * Extraído de diseño de despachos de abogados de alto nivel
- */
+/* ========================================
+   PALETA DE COLORES PROFESIONAL - DASHBOARD ADMIN
+   Transformación hacia tonos azules con tipografía mejorada
+   ======================================== */
 
-/* ==================== VARIABLES CSS PROFESIONALES ==================== */
+/* PALETA DE COLORES BASE */
 :root {
-  /* COLORES BASE DEL SISTEMA - PALETA PROFESIONAL */
+  /* Colores Principales */
+  --jordy-blue: #9BBFFF;           /* RGB: 155, 191, 255 - Fondos suaves */
+  --alice-blue: #E9F5FF;           /* RGB: 233, 245, 255 - Fondos muy suaves */
+  --tufts-blue: #4680EB;           /* RGB: 70, 128, 235 - Elementos principales */
+  --cobalt-blue: #1A5799;          /* RGB: 26, 87, 153 - Elementos importantes */
+  --cool-black: #092F64;           /* RGB: 9, 47, 100 - Texto principal */
+  --eerie-black: #1F1F1F;          /* RGB: 31, 31, 31 - Texto secundario */
   
-  /* Primario (azul marino profundo) */
-  --color-primario: #162840;
-  --color-primario-claro: #4E7DA6;
-  --color-primario-oscuro: #0d1a2b;
-  --color-primario-alpha: rgba(22, 40, 64, 0.1);
+  /* Transparencias para efectos */
+  --jordy-blue-30: rgba(155, 191, 255, 0.3);
+  --alice-blue-50: rgba(233, 245, 255, 0.5);
+  --tufts-blue-20: rgba(70, 128, 235, 0.2);
+  --cool-black-80: rgba(9, 47, 100, 0.8);
   
-  /* Secundario (dorado/bronce elegante) */
-  --color-secundario: #BF8C60;
-  --color-secundario-claro: #d4a574;
-  --color-secundario-oscuro: #a0734d;
-  --color-secundario-alpha: rgba(191, 140, 96, 0.1);
+  /* Tipografía mejorada */
+  --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Nunito', 'Inter', sans-serif;
   
-  /* Neutros (grises sofisticados) */
-  --color-fondo: #f8fafc;
-  --color-superficie: #ffffff;
-  --color-gris-claro: #D0D7D9;
-  --color-gris-verdoso: #B1C6B8;
-  --color-gris-medio: #8da2b5;
-  --color-gris-oscuro: #6b7c93;
+  /* Espaciado profesional */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
   
-  /* Textos profesionales */
-  --color-texto-primario: #162840;
-  --color-texto-secundario: #4E7DA6;
-  --color-texto-muted: #6b7c93;
-  --color-texto-light: #8da2b5;
+  /* Sombras elegantes */
+  --shadow-sm: 0 1px 3px rgba(9, 47, 100, 0.12), 0 1px 2px rgba(9, 47, 100, 0.06);
+  --shadow-md: 0 4px 6px rgba(9, 47, 100, 0.1), 0 2px 4px rgba(9, 47, 100, 0.06);
+  --shadow-lg: 0 10px 15px rgba(9, 47, 100, 0.1), 0 4px 6px rgba(9, 47, 100, 0.05);
+  --shadow-xl: 0 20px 25px rgba(9, 47, 100, 0.1), 0 10px 10px rgba(9, 47, 100, 0.04);
   
-  /* Bordes y separadores */
-  --color-borde: #D0D7D9;
-  --color-borde-light: rgba(208, 215, 217, 0.5);
-  
-  /* GRADIENTES PROFESIONALES */
-  --gradient-primario: linear-gradient(135deg, var(--color-primario) 0%, var(--color-primario-claro) 100%);
-  --gradient-secundario: linear-gradient(135deg, var(--color-secundario) 0%, var(--color-secundario-claro) 100%);
-  --gradient-neutral: linear-gradient(135deg, var(--color-gris-verdoso) 0%, var(--color-gris-claro) 100%);
-  --gradient-warm: linear-gradient(135deg, var(--color-secundario-oscuro) 0%, var(--color-secundario) 100%);
-  
-  /* SIDEBAR PROFESIONAL */
-  --sidebar-bg: var(--gradient-primario);
-  --sidebar-shadow: 0 10px 30px rgba(22, 40, 64, 0.3);
-  --sidebar-border: rgba(255, 255, 255, 0.1);
-  --sidebar-item-hover: rgba(255, 255, 255, 0.1);
-  --sidebar-item-active: var(--color-secundario);
-  
-  /* SISTEMA DE ALERTAS PROFESIONAL */
-  --alerta-critica-bg: #faf8f5;
-  --alerta-critica-border: var(--color-secundario-claro);
-  --alerta-critica-text: var(--color-primario);
-  
-  --alerta-importante-bg: #f1f5f9;
-  --alerta-importante-border: var(--color-primario-claro);
-  --alerta-importante-text: var(--color-primario);
-  
-  --alerta-positiva-bg: #f8f9fb;
-  --alerta-positiva-border: var(--color-gris-verdoso);
-  --alerta-positiva-text: var(--color-primario);
-  
-  --alerta-info-bg: #f1f5f9;
-  --alerta-info-border: var(--color-gris-medio);
-  --alerta-info-text: var(--color-primario-oscuro);
+  /* Border radius moderno */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
 }
 
-/* ==================== REEMPLAZOS DE COLORES SATURADOS ==================== */
+/* ========================================
+   RESET Y BASE MEJORADO
+   ======================================== */
 
-/* Reemplazar púrpuras saturados */
-.bg-purple-500, .bg-purple-600, .bg-purple-700,
-.text-purple-500, .text-purple-600, .text-purple-700,
-.border-purple-500, .border-purple-600, .border-purple-700 {
-  background-color: var(--color-primario) !important;
-  color: white !important;
-  border-color: var(--color-primario) !important;
+body {
+  font-family: var(--font-primary);
+  background: var(--alice-blue);
+  color: var(--cool-black);
+  line-height: 1.5;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Reemplazar verdes saturados */
-.bg-green-500, .bg-green-600, .bg-emerald-500,
-.text-green-500, .text-green-600, .text-emerald-500,
-.border-green-500, .border-green-600, .border-emerald-500 {
-  background-color: var(--color-gris-verdoso) !important;
-  color: var(--color-primario) !important;
-  border-color: var(--color-gris-verdoso) !important;
-}
+/* ========================================
+   DASHBOARD HEADER PROFESIONAL
+   ======================================== */
 
-/* Reemplazar naranjas/amarillos saturados */
-.bg-orange-500, .bg-yellow-500, .bg-amber-500,
-.text-orange-500, .text-yellow-500, .text-amber-500,
-.border-orange-500, .border-yellow-500, .border-amber-500 {
-  background-color: var(--color-secundario) !important;
-  color: var(--color-primario) !important;
-  border-color: var(--color-secundario) !important;
-}
-
-/* Reemplazar rojos agresivos */
-.bg-red-500, .bg-red-600, .text-red-500, .text-red-600,
-.border-red-500, .border-red-600 {
-  background-color: var(--color-secundario-oscuro) !important;
-  color: white !important;
-  border-color: var(--color-secundario-oscuro) !important;
-}
-
-/* ==================== COMPONENTES PROFESIONALES ==================== */
-
-/* Botones principales profesionales */
-.btn-primary-profesional {
-  background: var(--gradient-secundario);
-  color: var(--color-primario);
-  border: 1px solid var(--color-secundario);
-  border-radius: 0.5rem;
-  padding: 0.75rem 1.5rem;
-  font-weight: 600;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 4px rgba(191, 140, 96, 0.2);
-}
-
-.btn-primary-profesional:hover {
-  background: var(--color-secundario-oscuro);
+.dashboard-header {
+  background: linear-gradient(135deg, var(--tufts-blue), var(--cobalt-blue));
   color: white;
+  padding: var(--spacing-xl);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  margin-bottom: var(--spacing-xl);
+  border: none;
+}
+
+.dashboard-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: var(--spacing-sm);
+  font-family: var(--font-display);
+  letter-spacing: -0.025em;
+}
+
+.dashboard-subtitle {
+  color: var(--alice-blue);
+  font-size: 1rem;
+  margin-bottom: var(--spacing-xl);
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+/* ========================================
+   FILTROS SEGMENTADOS MODERNOS
+   ======================================== */
+
+.filtros-segmentados {
+  display: flex;
+  gap: 0;
+  background: var(--alice-blue);
+  padding: 4px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--jordy-blue-30);
+  margin-bottom: var(--spacing-xl);
+  width: fit-content;
+  box-shadow: var(--shadow-sm);
+}
+
+.filtro-btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  background: transparent;
+  color: var(--cool-black);
+  font-weight: 600;
+  font-size: 0.875rem;
+  letter-spacing: 0.025em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  text-transform: uppercase;
+  min-width: 120px;
+  justify-content: center;
+}
+
+.filtro-btn:hover {
+  color: var(--tufts-blue);
+  background: rgba(70, 128, 235, 0.1);
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(191, 140, 96, 0.3);
 }
 
-/* Botones secundarios profesionales */
-.btn-secondary-profesional {
-  background: var(--color-primario);
+.filtro-btn.activo {
+  background: var(--tufts-blue);
   color: white;
-  border: 1px solid var(--color-primario);
-  border-radius: 0.5rem;
-  padding: 0.75rem 1.5rem;
+  box-shadow: 0 4px 14px rgba(70, 128, 235, 0.4);
+  transform: translateY(-1px);
+}
+
+/* Indicador de período activo */
+.periodo-activo div {
+  background: var(--alice-blue) !important;
+  color: var(--cool-black) !important;
+  border: 1px solid var(--jordy-blue-30);
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radius-md);
   font-weight: 600;
+  font-size: 0.875rem;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ========================================
+   TARJETAS KPI TRANSFORMADAS
+   ======================================== */
+
+.tarjetas-kpi {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+}
+
+.tarjeta-kpi {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-xl);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--alice-blue);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.tarjeta-kpi::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--tufts-blue), var(--jordy-blue));
+}
+
+.tarjeta-kpi:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-xl);
+  border-color: var(--jordy-blue-30);
+}
+
+/* KPI Header mejorado */
+.kpi-header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+}
+
+.kpi-icono {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-xl);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: white;
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* NUEVOS GRADIENTES SEGÚN ESPECIFICACIONES */
+
+/* Ingresos Totales: Gradiente Tufts Blue a Cobalt Blue */
+.kpi-icono.verde {
+  background: linear-gradient(135deg, var(--tufts-blue), var(--cobalt-blue));
+}
+
+/* Documentos Procesados: Gradiente Jordy Blue a Tufts Blue */
+.kpi-icono.azul {
+  background: linear-gradient(135deg, var(--jordy-blue), var(--tufts-blue));
+}
+
+/* Pagos Pendientes: Gradiente suave manteniendo legibilidad */
+.kpi-icono.naranja {
+  background: linear-gradient(135deg, var(--cobalt-blue), var(--cool-black));
+}
+
+/* Eficiencia: Gradiente profesional */
+.kpi-icono.purpura {
+  background: linear-gradient(135deg, var(--tufts-blue), var(--jordy-blue));
+}
+
+.kpi-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.kpi-etiqueta {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--eerie-black);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: var(--spacing-sm);
+  opacity: 0.8;
+}
+
+.kpi-numero {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--cool-black);
+  line-height: 1;
+  margin-bottom: var(--spacing-sm);
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+.kpi-descripcion {
+  font-size: 0.875rem;
+  color: var(--eerie-black);
+  font-weight: 500;
+  opacity: 0.7;
+  line-height: 1.4;
+}
+
+/* Indicadores de tendencia mejorados */
+.kpi-cambio {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-lg);
+  padding: 0.5rem 1rem;
+  background: var(--alice-blue);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: 1px solid var(--jordy-blue-30);
+}
+
+.kpi-cambio.positivo {
+  background: var(--alice-blue);
+  color: var(--tufts-blue);
+  border-color: var(--tufts-blue-20);
+}
+
+.kpi-cambio.negativo {
+  background: rgba(233, 245, 255, 0.8);
+  color: var(--cobalt-blue);
+  border-color: var(--jordy-blue-30);
+}
+
+/* ========================================
+   CONTENIDO PRINCIPAL MEJORADO
+   ======================================== */
+
+.contenido-principal {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--spacing-xl);
+  margin-bottom: var(--spacing-xl);
+}
+
+.tarjeta-contenido {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-xl);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--alice-blue);
   transition: all 0.3s ease;
 }
 
-.btn-secondary-profesional:hover {
-  background: var(--color-primario-claro);
-  border-color: var(--color-primario-claro);
+.tarjeta-contenido:hover {
+  box-shadow: var(--shadow-xl);
+  border-color: var(--jordy-blue-30);
 }
 
-/* Cards profesionales con gradientes elegantes */
-.card-profesional-documentos {
-  background: var(--gradient-primario);
+.seccion-titulo {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--cool-black);
+  margin-bottom: var(--spacing-lg);
+  font-family: var(--font-display);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 2px solid var(--alice-blue);
+}
+
+/* ========================================
+   TABLA MODERNA MEJORADA
+   ======================================== */
+
+.tabla-moderna {
+  width: 100%;
+  border-collapse: collapse;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.tabla-moderna th {
+  background: var(--alice-blue);
+  padding: var(--spacing-lg);
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--cool-black);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--jordy-blue-30);
+}
+
+.tabla-moderna td {
+  padding: var(--spacing-lg);
+  border-bottom: 1px solid var(--alice-blue);
+  font-size: 0.875rem;
+  color: var(--cool-black);
+}
+
+.tabla-moderna tr:hover {
+  background: var(--alice-blue);
+}
+
+.tabla-moderna tr:last-child td {
+  border-bottom: none;
+}
+
+/* ========================================
+   BADGES PROFESIONALES
+   ======================================== */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.375rem 0.875rem;
+  border-radius: var(--radius-md);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid transparent;
+}
+
+.badge-success {
+  background: var(--alice-blue);
+  color: var(--tufts-blue);
+  border-color: var(--tufts-blue-20);
+}
+
+.badge-warning {
+  background: rgba(155, 191, 255, 0.2);
+  color: var(--cobalt-blue);
+  border-color: var(--jordy-blue-30);
+}
+
+.badge-danger {
+  background: rgba(9, 47, 100, 0.1);
+  color: var(--cool-black);
+  border-color: var(--cool-black-80);
+}
+
+.badge-info {
+  background: var(--alice-blue);
+  color: var(--cool-black);
+  border-color: var(--jordy-blue-30);
+}
+
+/* ========================================
+   BOTONES PROFESIONALES
+   ======================================== */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: 0.875rem 1.5rem;
+  border: none;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  min-height: 44px;
+  letter-spacing: 0.025em;
+}
+
+.btn-primary {
+  background: var(--tufts-blue);
   color: white;
-  border: none;
-  border-radius: 1rem;
-  box-shadow: 0 8px 25px rgba(22, 40, 64, 0.15);
+  box-shadow: var(--shadow-md);
 }
 
-.card-profesional-facturado {
-  background: var(--gradient-neutral);
-  color: var(--color-primario);
-  border: none;
-  border-radius: 1rem;
-  box-shadow: 0 8px 25px rgba(177, 198, 184, 0.15);
-}
-
-.card-profesional-pendientes {
-  background: var(--gradient-secundario);
-  color: var(--color-primario);
-  border: none;
-  border-radius: 1rem;
-  box-shadow: 0 8px 25px rgba(191, 140, 96, 0.15);
-}
-
-.card-profesional-retenciones {
-  background: var(--gradient-warm);
+.btn-primary:hover {
+  background: var(--cobalt-blue);
+  transform: translateY(-2px);
   color: white;
-  border: none;
-  border-radius: 1rem;
-  box-shadow: 0 8px 25px rgba(160, 115, 77, 0.15);
+  text-decoration: none;
+  box-shadow: var(--shadow-lg);
 }
 
-/* Sistema de alertas profesional */
-.alerta-critica-profesional {
-  background-color: var(--alerta-critica-bg);
-  border: 1px solid var(--alerta-critica-border);
-  color: var(--alerta-critica-text);
-  border-radius: 0.75rem;
-  padding: 1rem;
-  box-shadow: 0 2px 8px rgba(191, 140, 96, 0.1);
+.btn-secondary {
+  background: white;
+  color: var(--cool-black);
+  border: 1px solid var(--jordy-blue-30);
+  box-shadow: var(--shadow-sm);
 }
 
-.alerta-importante-profesional {
-  background-color: var(--alerta-importante-bg);
-  border: 1px solid var(--alerta-importante-border);
-  color: var(--alerta-importante-text);
-  border-radius: 0.75rem;
-  padding: 1rem;
-  box-shadow: 0 2px 8px rgba(78, 125, 166, 0.1);
+.btn-secondary:hover {
+  background: var(--alice-blue);
+  border-color: var(--jordy-blue);
+  color: var(--cool-black);
+  text-decoration: none;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
-.alerta-positiva-profesional {
-  background-color: var(--alerta-positiva-bg);
-  border: 1px solid var(--alerta-positiva-border);
-  color: var(--alerta-positiva-text);
-  border-radius: 0.75rem;
-  padding: 1rem;
-  box-shadow: 0 2px 8px rgba(177, 198, 184, 0.1);
+/* ========================================
+   FORMULARIOS MODERNOS
+   ======================================== */
+
+.form-grupo {
+  margin-bottom: var(--spacing-lg);
 }
 
-.alerta-info-profesional {
-  background-color: var(--alerta-info-bg);
-  border: 1px solid var(--alerta-info-border);
-  color: var(--alerta-info-text);
-  border-radius: 0.75rem;
-  padding: 1rem;
-  box-shadow: 0 2px 8px rgba(141, 162, 181, 0.1);
+.form-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--cool-black);
+  margin-bottom: var(--spacing-sm);
+  letter-spacing: 0.025em;
 }
 
-/* ==================== UTILIDADES PROFESIONALES ==================== */
+.form-input {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--jordy-blue-30);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  transition: all 0.3s ease;
+  background: white;
+  color: var(--cool-black);
+  box-shadow: var(--shadow-sm);
+}
 
-/* Texto profesional */
-.text-profesional-primario { color: var(--color-primario) !important; }
-.text-profesional-secundario { color: var(--color-secundario) !important; }
-.text-profesional-muted { color: var(--color-texto-muted) !important; }
+.form-input:focus {
+  outline: none;
+  border-color: var(--tufts-blue);
+  box-shadow: 0 0 0 3px rgba(70, 128, 235, 0.1);
+  background: var(--alice-blue);
+}
 
-/* Fondos profesionales */
-.bg-profesional-primario { background-color: var(--color-primario) !important; }
-.bg-profesional-secundario { background-color: var(--color-secundario) !important; }
-.bg-profesional-fondo { background-color: var(--color-fondo) !important; }
+/* ========================================
+   RESPONSIVE MEJORADO
+   ======================================== */
 
-/* Bordes profesionales */
-.border-profesional { border-color: var(--color-borde) !important; }
-.border-profesional-light { border-color: var(--color-borde-light) !important; }
-
-/* Gradientes como clases */
-.gradient-profesional-primario { background: var(--gradient-primario) !important; }
-.gradient-profesional-secundario { background: var(--gradient-secundario) !important; }
-.gradient-profesional-neutral { background: var(--gradient-neutral) !important; }
-.gradient-profesional-warm { background: var(--gradient-warm) !important; }
-
-/* ==================== RESPONSIVE PROFESIONAL ==================== */
 @media (max-width: 768px) {
-  .card-profesional-documentos,
-  .card-profesional-facturado,
-  .card-profesional-pendientes,
-  .card-profesional-retenciones {
-    margin-bottom: 1rem;
+  .dashboard-container {
+    padding: var(--spacing-md);
   }
   
-  .btn-primary-profesional,
-  .btn-secondary-profesional {
-    width: 100%;
-    margin-bottom: 0.5rem;
+  .tarjetas-kpi {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-md);
+  }
+  
+  .contenido-principal {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-md);
+  }
+  
+  .filtros-segmentados {
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+    background: transparent;
+    padding: 0;
+    border: none;
+  }
+  
+  .filtro-btn {
+    border: 1px solid var(--jordy-blue-30);
+    border-radius: var(--radius-md);
+    background: white;
+    min-width: auto;
+    flex: 1;
+  }
+  
+  .kpi-numero {
+    font-size: 2rem;
+  }
+  
+  .dashboard-title {
+    font-size: 1.75rem;
+  }
+  
+  .kpi-header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: var(--spacing-md);
+  }
+  
+  .kpi-icono {
+    width: 56px;
+    height: 56px;
   }
 }
 
-/* ==================== ANIMACIONES PROFESIONALES ==================== */
-@keyframes fadeInProfesional {
+/* ========================================
+   ANIMACIONES SUAVES
+   ======================================== */
+
+@keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(20px);
   }
   to {
     opacity: 1;
@@ -263,121 +564,90 @@
   }
 }
 
-.animate-fade-in-profesional {
-  animation: fadeInProfesional 0.6s ease-out;
+.tarjeta-kpi {
+  animation: fadeInUp 0.6s ease-out;
 }
 
-/* Hover effects profesionales */
-.hover-profesional:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 30px rgba(22, 40, 64, 0.15);
-  transition: all 0.3s ease;
-}
+.tarjeta-kpi:nth-child(1) { animation-delay: 0.1s; }
+.tarjeta-kpi:nth-child(2) { animation-delay: 0.2s; }
+.tarjeta-kpi:nth-child(3) { animation-delay: 0.3s; }
+.tarjeta-kpi:nth-child(4) { animation-delay: 0.4s; }
 
-/* ==================== FILTROS TEMPORALES DESTACADOS ==================== */
-.filtros-temporales-destacados {
-  margin-top: 1rem;
-}
+/* ========================================
+   UTILIDADES PROFESIONALES
+   ======================================== */
 
-.filtro-temporal-destacado {
-  background: rgba(255, 255, 255, 0.1);
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  color: rgba(255, 255, 255, 0.8);
-  padding: 1rem 0.5rem;
-  border-radius: 12px;
-  transition: all 0.3s ease;
-  text-align: center;
+.text-center { text-align: center; }
+.hidden { display: none; }
+.flex { display: flex; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-4 { gap: var(--spacing-lg); }
+.mt-4 { margin-top: var(--spacing-lg); }
+.mb-4 { margin-bottom: var(--spacing-lg); }
+.p-4 { padding: var(--spacing-lg); }
+.font-bold { font-weight: 700; }
+.text-sm { font-size: 0.875rem; }
+.text-lg { font-size: 1.125rem; }
+.text-xl { font-size: 1.25rem; }
+.text-2xl { font-size: 1.5rem; }
+.text-3xl { font-size: 1.875rem; }
+.text-4xl { font-size: 2.25rem; }
+.text-5xl { font-size: 3rem; }
+
+/* Estado de carga */
+.loading {
+  opacity: 0.7;
+  pointer-events: none;
   position: relative;
-  overflow: hidden;
 }
 
-.filtro-temporal-destacado:hover {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.4);
-  color: white;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid var(--alice-blue);
+  border-top: 2px solid var(--tufts-blue);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }
 
-.filtro-temporal-destacado.active {
-  background: linear-gradient(135deg, #BF8C60 0%, #d4a574 100%);
-  border-color: #BF8C60;
-  color: white;
-  box-shadow: 0 8px 25px rgba(191, 140, 96, 0.3);
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
-.filtro-temporal-destacado.active:hover {
-  background: linear-gradient(135deg, #d4a574 0%, #BF8C60 100%);
-  transform: translateY(-2px);
+/* ========================================
+   MEJORAS DE ACCESIBILIDAD
+   ======================================== */
+
+/* Focus states mejorados */
+.btn:focus,
+.form-input:focus,
+.filtro-btn:focus {
+  outline: 2px solid var(--tufts-blue);
+  outline-offset: 2px;
 }
 
-.filtro-temporal-destacado i {
-  font-size: 1.5rem;
-  margin-bottom: 0.5rem;
+/* Contraste mejorado para texto pequeño */
+.kpi-etiqueta,
+.kpi-descripcion {
+  font-weight: 500;
 }
 
-.filtro-temporal-destacado span {
-  display: block;
-  font-size: 0.9rem;
-  letter-spacing: 0.5px;
-}
-
-.filtro-temporal-destacado small {
-  font-size: 0.7rem;
-  opacity: 0.8;
-}
-
-.filtro-temporal-personalizado {
-  background: rgba(255, 255, 255, 0.05);
-  border: 2px dashed rgba(255, 255, 255, 0.3);
-  color: rgba(255, 255, 255, 0.7);
-  padding: 1rem 0.5rem;
-  border-radius: 12px;
-  transition: all 0.3s ease;
-  text-align: center;
-}
-
-.filtro-temporal-personalizado:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.5);
-  color: white;
-  transform: translateY(-2px);
-}
-
-.filtro-temporal-personalizado i {
-  font-size: 1.5rem;
-  margin-bottom: 0.5rem;
-}
-
-.filtro-temporal-personalizado span {
-  display: block;
-  font-size: 0.9rem;
-  letter-spacing: 0.5px;
-}
-
-.filtro-temporal-personalizado small {
-  font-size: 0.7rem;
-  opacity: 0.8;
-}
-
-/* ==================== RESPONSIVE PARA FILTROS ==================== */
+/* Espaciado mejorado para touch */
 @media (max-width: 768px) {
-  .filtros-temporales-destacados .col-6 {
-    margin-bottom: 0.5rem;
+  .btn {
+    min-height: 48px;
+    padding: 1rem 1.5rem;
   }
   
-  .filtro-temporal-destacado,
-  .filtro-temporal-personalizado {
-    padding: 0.75rem 0.25rem;
-  }
-  
-  .filtro-temporal-destacado i,
-  .filtro-temporal-personalizado i {
-    font-size: 1.2rem;
-  }
-  
-  .filtro-temporal-destacado span,
-  .filtro-temporal-personalizado span {
-    font-size: 0.8rem;
+  .filtro-btn {
+    min-height: 48px;
+    padding: 1rem 1.25rem;
   }
 }

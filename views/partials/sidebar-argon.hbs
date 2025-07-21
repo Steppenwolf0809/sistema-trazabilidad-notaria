@@ -1,11 +1,11 @@
 <!-- ==================== SIDEBAR LATERAL ARGON PRO ==================== -->
 <aside class="sidebar-argon">
-  <!-- Botón Toggle MÁS A LA IZQUIERDA -->
+  <!-- Botón Toggle - Nueva Paleta Azul -->
   <button class="sidebar-toggle" type="button" aria-label="Toggle Sidebar" 
           style="position: absolute; top: 24px; right: 16px; width: 32px; height: 32px; 
-                 background: linear-gradient(135deg, #162840, #4E7DA6); border: 2px solid rgba(255,255,255,0.2); 
+                 background: linear-gradient(135deg, #4680EB, #1A5799); border: 2px solid rgba(155,191,255,0.2); 
                  border-radius: 50%; color: white; cursor: pointer; display: flex; align-items: center; 
-                 justify-content: center; z-index: 1001; box-shadow: 0 4px 15px rgba(22,40,64,0.3);
+                 justify-content: center; z-index: 1001; box-shadow: 0 4px 15px rgba(70,128,235,0.3);
                  transition: all 0.3s ease; font-size: 12px; font-weight: bold;">
     <span class="toggle-icon">&laquo;</span>
   </button>
@@ -223,94 +223,115 @@
 <!-- Overlay para Mobile -->
 <div class="sidebar-overlay"></div>
 
-<!-- Estilos específicos para el sidebar - SIN AVISO DE AYUDA -->
-<style>
-  /* SIDEBAR - GRADIENTE PROFESIONAL AZUL MARINO */
-  .sidebar-argon {
-    background: linear-gradient(135deg, #162840 0%, #4E7DA6 100%) !important;
-    border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
-    box-shadow: 0 10px 30px rgba(22, 40, 64, 0.3) !important;
-  }
-  
-  /* BOTÓN TOGGLE - GRADIENTE PROFESIONAL */
-  .sidebar-toggle:hover {
-    background: linear-gradient(135deg, #4E7DA6, #BF8C60) !important;
-    transform: scale(1.05);
-    box-shadow: 0 6px 20px rgba(22, 40, 64, 0.4) !important;
-  }
-  
-  /* NAVEGACIÓN - COLORES ORIGINALES */
-  .nav-link {
-    color: rgba(255, 255, 255, 0.9) !important;
-    border-radius: 0 25px 25px 0 !important;
-    margin-right: 1rem !important;
-    transition: all 0.3s ease !important;
-  }
-  
-  .nav-link:hover {
-    background: rgba(255, 255, 255, 0.1) !important;
-    color: white !important;
-    transform: translateX(4px) !important;
-  }
-  
-  .nav-link.active {
-    background: linear-gradient(135deg, #BF8C60, #d4a574) !important;
-    color: white !important;
-    box-shadow: 0 4px 15px rgba(191, 140, 96, 0.4) !important;
-  }
-  
-  .nav-section-title {
-    color: rgba(255, 255, 255, 0.6) !important;
-  }
-  
-  /* NAVEGACIÓN - SIN SCROLL INNECESARIO */
-  .sidebar-nav {
-    position: relative !important;
-    z-index: 10 !important;
-    padding-bottom: 80px !important; /* MENOS espacio - solo para el botón de logout */
-    max-height: calc(100vh - 80px) !important; /* Altura máxima optimizada */
-    overflow-y: auto !important;
-  }
-  
-  /* FOOTER - SOLO BOTÓN DE LOGOUT */
-  .sidebar-footer {
-    position: fixed !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    width: var(--sidebar-width) !important;
-    padding: 1rem !important;
-    background: rgba(22, 40, 64, 0.2) !important;
-    backdrop-filter: blur(15px) !important;
-    border-top: 1px solid rgba(255, 255, 255, 0.15) !important;
-    z-index: 15 !important;
-  }
+  <!-- Estilos específicos para el sidebar - NUEVA PALETA AZUL PROFESIONAL -->
+  <style>
+    /* SIDEBAR - NUEVA PALETA AZUL PROFESIONAL */
+    .sidebar-argon {
+      background: linear-gradient(180deg, #092F64 0%, #1A5799 100%) !important;
+      border-right: 1px solid rgba(155, 191, 255, 0.2) !important;
+      box-shadow: 0 10px 30px rgba(9, 47, 100, 0.3) !important;
+    }
+    
+    /* BOTÓN TOGGLE - NUEVA PALETA */
+    .sidebar-toggle:hover {
+      background: linear-gradient(135deg, #9BBFFF, #4680EB) !important;
+      transform: scale(1.05);
+      box-shadow: 0 6px 20px rgba(70, 128, 235, 0.4) !important;
+    }
+    
+    /* NAVEGACIÓN - NUEVA PALETA AZUL */
+    .nav-link {
+      color: #9BBFFF !important; /* Jordy Blue para texto normal */
+      border-radius: 0 25px 25px 0 !important;
+      margin-right: 1rem !important;
+      transition: all 0.3s ease !important;
+    }
+    
+    .nav-link:hover {
+      background: rgba(70, 128, 235, 0.2) !important; /* Tufts Blue transparente */
+      color: #E9F5FF !important; /* Alice Blue para hover */
+      transform: translateX(4px) !important;
+      border-radius: 8px !important;
+    }
+    
+    .nav-link.active {
+      background: linear-gradient(90deg, #4680EB 0%, #1A5799 100%) !important; /* Tufts a Cobalt */
+      color: #FFFFFF !important;
+      box-shadow: 0 4px 20px rgba(70, 128, 235, 0.4) !important;
+      border-radius: 8px !important;
+    }
+    
+    .nav-section-title {
+      color: rgba(155, 191, 255, 0.6) !important; /* Jordy Blue transparente */
+    }
+      
+    /* NAVEGACIÓN - OPTIMIZADA */
+    .sidebar-nav {
+      position: relative !important;
+      z-index: 10 !important;
+      padding-bottom: 80px !important;
+      max-height: calc(100vh - 80px) !important;
+      overflow-y: auto !important;
+    }
+    
+    /* SCROLLBAR PERSONALIZADO */
+    .sidebar-nav::-webkit-scrollbar {
+      width: 4px !important;
+    }
+    
+    .sidebar-nav::-webkit-scrollbar-track {
+      background: rgba(155, 191, 255, 0.1) !important;
+    }
+    
+    .sidebar-nav::-webkit-scrollbar-thumb {
+      background: rgba(155, 191, 255, 0.3) !important;
+      border-radius: 2px !important;
+    }
+    
+    .sidebar-nav::-webkit-scrollbar-thumb:hover {
+      background: rgba(155, 191, 255, 0.5) !important;
+    }
+    
+    /* FOOTER - NUEVA PALETA AZUL */
+    .sidebar-footer {
+      position: fixed !important;
+      bottom: 0 !important;
+      left: 0 !important;
+      width: var(--sidebar-width) !important;
+      padding: 1rem !important;
+      background: rgba(9, 47, 100, 0.3) !important; /* Cool Black transparente */
+      backdrop-filter: blur(15px) !important;
+      border-top: 1px solid rgba(155, 191, 255, 0.2) !important;
+      z-index: 15 !important;
+    }
   
   /* FOOTER EN ESTADO COLAPSADO */
   .sidebar-argon.collapsed .sidebar-footer {
     width: var(--sidebar-collapsed-width) !important;
   }
   
-  .logout-btn {
-    width: 100% !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    padding: 0.75rem !important;
-    background: rgba(239, 68, 68, 0.8) !important;
-    color: white !important;
-    border: none !important;
-    border-radius: 8px !important;
-    cursor: pointer !important;
-    transition: all 0.3s ease !important;
-    font-size: 0.85rem !important;
-    font-weight: 500 !important;
-  }
-  
-  .logout-btn:hover {
-    background: rgba(239, 68, 68, 1) !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4) !important;
-  }
+      .logout-btn {
+      width: 100% !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      padding: 0.75rem !important;
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important; /* Mantener rojo para logout */
+      color: white !important;
+      border: none !important;
+      border-radius: 8px !important;
+      cursor: pointer !important;
+      transition: all 0.3s ease !important;
+      font-size: 0.85rem !important;
+      font-weight: 500 !important;
+      gap: 0.5rem !important;
+    }
+    
+    .logout-btn:hover {
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%) !important;
+      transform: translateY(-2px) !important;
+      box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4) !important;
+    }
   
   .logout-btn i {
     margin-right: 0.5rem !important;
@@ -359,18 +380,60 @@
     overflow: hidden !important;
   }
   
-  /* Responsive */
-  @media (max-width: 1279px) {
-    .sidebar-argon {
-      transform: translateX(-100%) !important;
+      /* MEJORAS VISUALES ADICIONALES */
+    
+    /* Efecto hover sutil en sidebar */
+    .sidebar-argon:hover {
+      box-shadow: 4px 0 12px rgba(9, 47, 100, 0.2) !important;
     }
     
-    .sidebar-argon.show {
-      transform: translateX(0) !important;
+    /* Indicador visual mejorado para página activa */
+    .nav-link.active::after {
+      content: '' !important;
+      position: absolute !important;
+      right: -1rem !important;
+      top: 50% !important;
+      transform: translateY(-50%) !important;
+      width: 0 !important;
+      height: 0 !important;
+      border-left: 8px solid #4680EB !important;
+      border-top: 8px solid transparent !important;
+      border-bottom: 8px solid transparent !important;
     }
     
-    .sidebar-footer {
-      position: absolute !important; /* En mobile usar absolute */
+    /* Header del sidebar mejorado */
+    .sidebar-header {
+      background: rgba(9, 47, 100, 0.3) !important;
+      border-bottom: 1px solid rgba(155, 191, 255, 0.2) !important;
     }
-  }
+    
+    .logo-icon {
+      background: rgba(233, 245, 255, 0.2) !important;
+      color: #E9F5FF !important;
+    }
+    
+    .logo-text {
+      color: #E9F5FF !important;
+    }
+    
+    /* Estados de focus mejorados */
+    .nav-link:focus {
+      outline: 2px solid rgba(155, 191, 255, 0.5) !important;
+      outline-offset: 2px !important;
+    }
+    
+    /* Responsive */
+    @media (max-width: 1279px) {
+      .sidebar-argon {
+        transform: translateX(-100%) !important;
+      }
+      
+      .sidebar-argon.show {
+        transform: translateX(0) !important;
+      }
+      
+      .sidebar-footer {
+        position: absolute !important; /* En mobile usar absolute */
+      }
+    }
 </style> 
