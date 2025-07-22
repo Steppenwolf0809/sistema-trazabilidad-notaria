@@ -26,7 +26,7 @@ const configRoles = {
     mostrarFinanciero: true,
     mostrarNotificaciones: true,
     mostrarNotas: true,
-    mostrarNotificacionesGrupales: true,
+    mostrarNotificacionesGrupales: false,  // ❌ Admin no gestiona grupos
     mostrarAcciones: true,
     mostrarHistorial: true,
     mostrarModalMarcarListo: true,
@@ -395,8 +395,17 @@ async function obtenerDetallePorRol(rol, documentoId, userId, options = {}) {
     
     // Obtener información de notificaciones grupales
     let informacionGrupal = null;
-    if (config.mostrarNotificacionesGrupales) {
-      informacionGrupal = await obtenerInformacionGrupal(documento);
+    if (config.mostrarNotificacionesGrupales && ['matrizador', 'archivo'].includes(rol)) {
+      // Para archivo, solo si es documento propio
+      if (rol === 'archivo') {
+        const esDocumentoPropio = parseInt(documento.idMatrizador) === parseInt(userId);
+        if (esDocumentoPropio) {
+          informacionGrupal = await obtenerInformacionGrupal(documento);
+        }
+      } else {
+        // Para matrizador, siempre obtener info grupal
+        informacionGrupal = await obtenerInformacionGrupal(documento);
+      }
     }
     
     console.log(`✅ Detalle obtenido exitosamente para rol ${rol}`);
