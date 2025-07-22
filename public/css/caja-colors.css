@@ -1,0 +1,139 @@
+/* ===================================================================
+   PALETA DE COLORES ELEGANTE PARA SECCIÓN CAJA (v2 - Legibilidad mejorada)
+   -------------------------------------------------------------------
+   Filosofía: Conservadora. Solo se modifican colores para mejorar la 
+   estética sin alterar la funcionalidad.
+   =================================================================== */
+
+/* === 🟡 AMARILLO -> AMBER ELEGANTE (Acciones Críticas) === */
+
+.alert-warning,
+.bg-warning {
+    background-color: #fef3c7 !important; /* Amber 100 */
+    color: #92400e !important;             /* Amber 800 */
+    border-color: #fde68a !important;      /* Amber 200 */
+}
+
+.text-warning {
+    color: #b45309 !important; /* Amber 700 */
+}
+
+.btn-warning {
+    background-color: #f59e0b !important;  /* Amber 500 */
+    border-color: #f59e0b !important;
+    color: #ffffff !important;
+}
+
+.btn-warning:hover {
+    background-color: #d97706 !important; /* Amber 600 */
+    border-color: #d97706 !important;
+}
+
+.border-warning {
+    border-color: #fde68a !important; /* Amber 200 */
+}
+
+
+/* === 🔴 ROJO/PELIGRO -> GRIS NEUTRO (Para Estado de Pago) === */
+
+.alert-danger,
+.bg-danger {
+    background-color: #f3f4f6 !important; /* Gray 100 */
+    color: #374151 !important;             /* Gray 700 */
+    border-color: #e5e7eb !important;      /* Gray 200 */
+}
+
+.text-danger {
+    color: #4b5563 !important; /* Gray 600 */
+}
+
+/* El botón de eliminar se mantiene en rojo para denotar una acción destructiva */
+.btn-danger {
+    background-color: #ef4444 !important; /* Red 500 */
+    border-color: #ef4444 !important;
+    color: #ffffff !important;
+}
+
+.btn-danger:hover {
+    background-color: #dc2626 !important; /* Red 600 */
+    border-color: #dc2626 !important;
+}
+
+.border-danger {
+    border-color: #e5e7eb !important; /* Gray 200 */
+}
+
+
+/* === 🔵 INFO -> AZUL SOFISTICADO (Para Correcciones Financieras) === */
+
+.alert-info,
+.bg-info {
+    background-color: #eff6ff !important;  /* Blue 50 */
+    color: #1e40af !important;             /* Blue 800 */
+    border-color: #dbeafe !important;      /* Blue 200 */
+}
+
+.text-info {
+    color: #1d4ed8 !important; /* Blue 700 */
+}
+
+.btn-info {
+    background-color: #3b82f6 !important; /* Blue 500 */
+    border-color: #3b82f6 !important;
+    color: #ffffff !important;
+}
+
+.btn-info:hover {
+    background-color: #2563eb !important; /* Blue 600 */
+    border-color: #2563eb !important;
+}
+
+.border-info {
+    border-color: #dbeafe !important; /* Blue 200 */
+}
+
+
+/* === FIX DE LEGIBILIDAD (CRÍTICO) === */
+
+/* Forzar color de texto oscuro sobre fondos claros, ignorando .text-white */
+.card-header.bg-danger,
+.card-header.bg-danger h5,
+.card-header.bg-danger h6 {
+    color: #374151 !important; /* Gray 700 */
+}
+
+.card-header.bg-info,
+.card-header.bg-info h5,
+.card-header.bg-info small {
+    color: #1e40af !important; /* Blue 800 */
+}
+
+.card-header.bg-warning.text-dark .mb-0,
+.card-header.bg-warning.text-dark h5,
+.card-header.bg-warning.text-dark {
+    color: #92400e !important; /* Amber 800 para texto */
+}
+
+/* Forzar color de texto en badges */
+.badge.bg-danger {
+    background-color: #e5e7eb !important; /* Gray 200 */
+    color: #374151 !important;             /* Gray 700 */
+}
+
+.badge.bg-warning.text-dark {
+    background-color: #fcd34d !important; /* Amber 300 */
+    color: #92400e !important; /* Amber 800 */
+}
+
+.badge.bg-info {
+    background-color: #dbeafe !important; /* Blue 200 */
+    color: #1e40af !important; /* Blue 800 */
+}
+
+.text-danger h6.mb-1, h6.mb-1.text-danger {
+    color: #4b5563 !important; /* Gray 600 */
+}
+
+.fa-2x.text-danger {
+    color: #4b5563 !important; /* Gray 600 */
+} 
