@@ -4126,62 +4126,102 @@ exports.listarDocumentosAdmin = async (req, res) => {
 exports.verDetalleDocumentoAdmin = async (req, res) => {
   try {
     const { id } = req.params;
-    console.log(`📄 Admin consultando detalle documento ${id} (solo lectura)`);
+    console.log(`👑 Admin consultando detalle documento ${id} con vista unificada`);
     
-    // Obtener documento con relaciones
-    const documento = await Documento.findByPk(id, {
-      include: [{
-        model: Matrizador,
-        as: 'matrizador',
-        attributes: ['id', 'nombre', 'email']
-      }]
+    // Usar el sistema universal de documentos
+    const documentoUniversalController = require('./documentoUniversalController');
+    const datosDocumento = await documentoUniversalController.obtenerDetallePorRol(
+      'admin', 
+      id, 
+      req.matrizador?.id,
+      { incluirAuditoria: true }
+    );
+    
+    // Obtener lista de matrizadores disponibles para reasignación
+    const matrizadoresDisponibles = await Matrizador.findAll({
+      where: { activo: true },
+      attributes: ['id', 'nombre'],
+      order: [['nombre', 'ASC']]
     });
     
-    if (!documento) {
-      req.flash('error', 'Documento no encontrado');
-      return res.redirect('/admin/documentos/listado');
-    }
+    // Configuración específica admin con permisos completos
+    const configuracionAdmin = {
+      // Secciones visibles (TODAS)
+      mostrarHeader: true,
+      mostrarInfoGeneral: true,           // ✅ COMPLETAMENTE editable
+      mostrarCliente: true,               // ✅ COMPLETAMENTE editable  
+      mostrarFinanciero: true,            // ✅ VISIBLE (solo lectura - caja edita)
+      mostrarNotificaciones: true,        // ✅ COMPLETAMENTE editable
+      mostrarNotas: true,                 // ✅ COMPLETAMENTE editable
+      mostrarNotificacionesGrupales: false, // ❌ Admin no necesita notificaciones grupales
+      mostrarHistorial: true,             // ✅ Completo + auditoría
+      mostrarModalMarcarListo: false,     // ❌ Admin no marca como listo
+      
+      // Configuraciones específicas admin
+      mostrarInfoMatrizador: true,
+      mostrarIndicadorContacto: true,
+      mostrarCamposExtendidos: true,
+      mostrarInfoEmail: true,
+      esAdmin: true,
+      
+      // Configuraciones adicionales admin
+      mostrarSeccionAdmin: true,          // ✅ SECCIÓN ÚNICA ADMIN
+      mostrarReversiones: true,           // ✅ PANEL DE REVERSIONES
+      mostrarAuditoria: true,             // ✅ AUDITORÍA DETALLADA
+      puedeEditar: true
+    };
     
-    // 🆕 NUEVO: Usar historial universal
-    const eventos = await obtenerHistorialUniversal(id, 'admin', {
-      incluirAuditoria: true,
-      mostrarInformacionTecnica: true
-    });
+    // Permisos completos admin
+    const permisosAdmin = {
+      // Edición de secciones (todas excepto financiero)
+      editarGeneral: true,              // ✅ Incluye tipo, fechas, matrizador
+      editarCliente: true,              // ✅ Información completa
+      editarFinanciero: false,          // ❌ Solo caja (pero puede ver)
+      editarNotificaciones: true,       // ✅ Control completo
+      editarNotas: true,                // ✅ Completo
+      
+      // Funciones administrativas especiales
+      reasignarMatrizador: true,        // ✅ Cambiar asignación
+      cambiarEstado: true,              // ✅ Cualquier estado
+      eliminarDocumento: true,          // ✅ Con confirmación
+      separarGrupos: true,              // ✅ Gestión de agrupaciones
+      autorizarUrgente: true,           // ✅ Autorizaciones especiales
+      revertirAcciones: true,           // ✅ Deshacer cambios
+      verAuditoria: true,               // ✅ Logs completos
+      gestionarPermisos: true           // ✅ Control de acceso
+    };
     
-    // Obtener registros de auditoría relacionados
-    const registrosAuditoria = await RegistroAuditoria.findAll({
-      where: {
-        [Op.or]: [
-          { idDocumento: id }, // CORREGIDO: Usar relación directa por ID de documento
-          { detalles: { [Op.iLike]: `%${documento.codigoBarras}%` } }
-        ]
-      },
-      order: [['created_at', 'DESC']], // CORREGIDO: Usar created_at en lugar de timestamp
-      limit: 10,
-      include: [{
-        model: Matrizador,
-        as: 'matrizador',
-        attributes: ['nombre', 'rol'],
-        required: false
-      }]
-    });
+    console.log(`✅ Vista admin unificada preparada para documento ${id}`);
     
     res.render('admin/documentos/detalle', {
       layout: 'admin', 
-      title: `Supervisión Documento: ${documento.codigoBarras}`,
-      documento,
-      eventos,
-      registrosAuditoria,
+      title: `Admin: ${datosDocumento.documento.tipoDocumento} - ${datosDocumento.documento.codigoBarras}`,
+      activeDocumentos: true,
       userRole: req.matrizador?.rol,
       userName: req.matrizador?.nombre,
-      soloLectura: true, // CRÍTICO: Indicar que es solo lectura
-      soloSupervision: true // Indicador adicional para la vista
+      
+      // Datos del documento (del sistema universal)
+      documento: datosDocumento.documento,
+      eventos: datosDocumento.eventos,
+      informacionGrupal: datosDocumento.informacionGrupal,
+      
+      // Configuración y permisos admin
+      configuracionAdmin,
+      permisosAdmin,
+      
+      // Datos adicionales admin
+      matrizadoresDisponibles,
+      urlRetorno: '/admin/documentos',
+      
+      // Indicadores de modo
+      esAdmin: true,
+      vistaUnificada: true
     });
     
   } catch (error) {
     console.error('❌ Error al ver detalle documento admin:', error);
     req.flash('error', 'Error al cargar el detalle del documento');
-    res.redirect('/admin/documentos/listado');
+    res.redirect('/admin/documentos');
   }
 };
 
@@ -5109,6 +5149,260 @@ exports.testDashboardEjecutivo = async (req, res) => {
   } catch (e) {
     console.error('Error al generar datos de prueba para el dashboard', e);
     res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// ============================================================================
+// FUNCIONES ADMINISTRATIVAS ESPECÍFICAS - PARA VISTA UNIFICADA
+// ============================================================================
+
+/**
+ * Reasignar matrizador a un documento
+ */
+exports.reasignarMatrizador = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { matrizador_id, motivo } = req.body;
+    
+    if (!matrizador_id || !motivo) {
+      return res.status(400).json({
+        success: false,
+        message: 'Matrizador y motivo son requeridos'
+      });
+    }
+    
+    // Obtener documento actual
+    const documento = await Documento.findByPk(id);
+    if (!documento) {
+      return res.status(404).json({
+        success: false,
+        message: 'Documento no encontrado'
+      });
+    }
+    
+    // Verificar que el matrizador existe
+    const nuevoMatrizador = await Matrizador.findByPk(matrizador_id);
+    if (!nuevoMatrizador) {
+      return res.status(404).json({
+        success: false,
+        message: 'Matrizador no encontrado'
+      });
+    }
+    
+    const matrizadorAnterior = documento.idMatrizador;
+    
+    // Actualizar asignación
+    await documento.update({
+      idMatrizador: matrizador_id
+    });
+    
+    // Registrar en auditoría
+    await EventoDocumento.create({
+      documentoId: id,
+      usuarioId: req.matrizador.id,
+      tipo: 'reasignacion_matrizador',
+      categoria: 'administracion',
+      titulo: 'Matrizador Reasignado',
+      descripcion: `Admin ${req.matrizador.nombre} reasignó documento de matrizador ${matrizadorAnterior} a ${nuevoMatrizador.nombre}`,
+      detalles: {
+        matrizadorAnterior,
+        matrizadorNuevo: matrizador_id,
+        nombreMatrizadorNuevo: nuevoMatrizador.nombre,
+        motivo: motivo,
+        timestamp: new Date().toISOString()
+      }
+    });
+    
+    console.log(`✅ Admin reasignó documento ${id} a matrizador ${nuevoMatrizador.nombre}`);
+    
+    res.json({
+      success: true,
+      message: 'Matrizador reasignado correctamente',
+      nuevoMatrizador: {
+        id: nuevoMatrizador.id,
+        nombre: nuevoMatrizador.nombre
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error reasignando matrizador:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor'
+    });
+  }
+};
+
+/**
+ * Cambiar estado de un documento
+ */
+exports.cambiarEstado = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { estado, motivo } = req.body;
+    
+    if (!estado || !motivo) {
+      return res.status(400).json({
+        success: false,
+        message: 'Estado y motivo son requeridos'
+      });
+    }
+    
+    // Validar estados permitidos
+    const estadosPermitidos = ['en_proceso', 'listo_para_entrega', 'entregado', 'nota_credito'];
+    if (!estadosPermitidos.includes(estado)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Estado no válido'
+      });
+    }
+    
+    // Obtener documento actual
+    const documento = await Documento.findByPk(id);
+    if (!documento) {
+      return res.status(404).json({
+        success: false,
+        message: 'Documento no encontrado'
+      });
+    }
+    
+    const estadoAnterior = documento.estado;
+    
+    // Actualizar estado
+    await documento.update({ estado });
+    
+    // Registrar en auditoría
+    await EventoDocumento.create({
+      documentoId: id,
+      usuarioId: req.matrizador.id,
+      tipo: 'cambio_estado_admin',
+      categoria: 'administracion',
+      titulo: 'Estado Cambiado por Admin',
+      descripcion: `Admin ${req.matrizador.nombre} cambió estado de ${estadoAnterior} a ${estado}`,
+      detalles: {
+        estadoAnterior,
+        estadoNuevo: estado,
+        motivo: motivo,
+        timestamp: new Date().toISOString()
+      }
+    });
+    
+    console.log(`✅ Admin cambió estado de documento ${id} de ${estadoAnterior} a ${estado}`);
+    
+    res.json({
+      success: true,
+      message: 'Estado actualizado correctamente',
+      estadoAnterior,
+      estadoNuevo: estado
+    });
+    
+  } catch (error) {
+    console.error('❌ Error cambiando estado:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor'
+    });
+  }
+};
+
+/**
+ * Eliminar documento (soft delete)
+ */
+exports.eliminarDocumento = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { motivo } = req.body;
+    
+    if (!motivo) {
+      return res.status(400).json({
+        success: false,
+        message: 'Motivo de eliminación es requerido'
+      });
+    }
+    
+    // Obtener documento actual
+    const documento = await Documento.findByPk(id);
+    if (!documento) {
+      return res.status(404).json({
+        success: false,
+        message: 'Documento no encontrado'
+      });
+    }
+    
+    // Marcar como eliminado (soft delete)
+    await documento.update({
+      eliminado: true,
+      fechaEliminacion: new Date(),
+      eliminadoPor: req.matrizador.id,
+      motivoEliminacion: motivo
+    });
+    
+    // Registrar en auditoría
+    await EventoDocumento.create({
+      documentoId: id,
+      usuarioId: req.matrizador.id,
+      tipo: 'documento_eliminado',
+      categoria: 'administracion',
+      titulo: 'Documento Eliminado',
+      descripcion: `Admin ${req.matrizador.nombre} eliminó el documento`,
+      detalles: {
+        motivo: motivo,
+        timestamp: new Date().toISOString(),
+        codigoBarras: documento.codigoBarras,
+        cliente: documento.nombreCliente
+      }
+    });
+    
+    console.log(`✅ Admin eliminó documento ${id}: ${motivo}`);
+    
+    res.json({
+      success: true,
+      message: 'Documento eliminado correctamente'
+    });
+    
+  } catch (error) {
+    console.error('❌ Error eliminando documento:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor'
+    });
+  }
+};
+
+/**
+ * Editar sección del documento usando el sistema universal
+ */
+exports.editarSeccionDocumento = async (req, res) => {
+  try {
+    const { id, seccion } = req.params;
+    const datos = req.body;
+    
+    console.log(`✏️ Admin editando sección ${seccion} del documento ${id}`);
+    
+    // Usar el sistema universal para editar
+    const documentoUniversalController = require('./documentoUniversalController');
+    const resultado = await documentoUniversalController.editarSeccionPorRol(
+      'admin',
+      id,
+      seccion,
+      datos,
+      req.matrizador.id
+    );
+    
+    if (resultado.success) {
+      console.log(`✅ Admin editó sección ${seccion} exitosamente`);
+      res.json(resultado);
+    } else {
+      console.error(`❌ Error editando sección ${seccion}:`, resultado.message);
+      res.status(400).json(resultado);
+    }
+    
+  } catch (error) {
+    console.error('❌ Error en edición de sección:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor'
+    });
   }
 };
 

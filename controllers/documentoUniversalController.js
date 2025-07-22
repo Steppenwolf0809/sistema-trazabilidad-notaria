@@ -387,7 +387,7 @@ async function obtenerDetallePorRol(rol, documentoId, userId, options = {}) {
     // Obtener historial si es necesario
     let eventos = [];
     if (config.mostrarHistorial) {
-      eventos = await obtenerHistorialUniversal(documentoId, {
+      eventos = await obtenerHistorialUniversal(documentoId, rol, {
         incluirDetalles: config.esAdmin,
         limitarEventos: config.esAdmin ? false : true
       });

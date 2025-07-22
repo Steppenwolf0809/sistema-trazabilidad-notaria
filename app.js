@@ -580,6 +580,81 @@ const hbs = engine({
       };
       return estados[estado] || { texto: estado, color: 'secondary' };
     },
+    // Helper para obtener solo el color del estado
+    getEstadoColor: (estado) => {
+      if (!estado) return 'secondary';
+      
+      const estadoLower = estado.toLowerCase();
+      
+      // Mapeo de estados a colores de Bootstrap
+      const mapaColores = {
+        'en_proceso': 'warning',
+        'listo_para_entrega': 'info', 
+        'entregado': 'success',
+        'nota_credito': 'secondary',
+        'eliminado': 'danger',
+        'pendiente': 'warning',
+        'completado': 'success',
+        'cancelado': 'danger',
+        'activo': 'success',
+        'inactivo': 'secondary'
+      };
+      
+      // Buscar coincidencia exacta primero
+      if (mapaColores[estadoLower]) {
+        return mapaColores[estadoLower];
+      }
+      
+      // Buscar por palabras clave
+      if (estadoLower.includes('entreg') || estadoLower.includes('complet') || estadoLower.includes('listo')) {
+        return 'success';
+      } else if (estadoLower.includes('proceso') || estadoLower.includes('pendiente')) {
+        return 'warning';
+      } else if (estadoLower.includes('error') || estadoLower.includes('fallido') || estadoLower.includes('cancel')) {
+        return 'danger';
+      } else if (estadoLower.includes('info') || estadoLower.includes('prepara')) {
+        return 'info';
+      }
+      
+      return 'secondary'; // Color por defecto
+    },
+    // Helper para cálculos matemáticos (usado en dashboard admin)
+    math: function(numerador, denominador) {
+      const num = parseFloat(numerador) || 0;
+      const den = parseFloat(denominador) || 0;
+      
+      if (den === 0) return 0;
+      
+      const porcentaje = (num / den) * 100;
+      return Math.round(porcentaje);
+    },
+    // Helper para verificar si una fecha es reciente (últimas 24 horas)
+    esReciente: function(fecha) {
+      if (!fecha) return false;
+      
+      const ahora = new Date();
+      const fechaObj = new Date(fecha);
+      const diferencia = ahora - fechaObj;
+      const horasEnMs = 24 * 60 * 60 * 1000; // 24 horas en milisegundos
+      
+      return diferencia <= horasEnMs;
+    },
+    // Helper para formatear fechas y horas
+    formatDateTime: function(fecha) {
+      if (!fecha) return '';
+      const fechaObj = new Date(fecha);
+      return fechaObj.toLocaleString('es-EC', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    },
+    // Helper para JSON stringify
+    json: function(context) {
+      return JSON.stringify(context);
+    },
     // Helper para operaciones lógicas AND
     and: function() {
       const args = Array.prototype.slice.call(arguments, 0, -1);

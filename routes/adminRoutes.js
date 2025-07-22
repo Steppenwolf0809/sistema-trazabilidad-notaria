@@ -138,10 +138,19 @@ router.post('/matrizadores/registro', matrizadorController.crear);
 router.post('/matrizadores/actualizar', matrizadorController.actualizar);
 router.post('/matrizadores/eliminar', matrizadorController.eliminar);
 
-// =============== CONSULTA DE DOCUMENTOS - SOLO LECTURA ===============
-// NOTA: Admin puede VER documentos para supervisión, pero NO crear, editar o entregar
+// =============== CONSULTA DE DOCUMENTOS - AHORA CON VISTA UNIFICADA ===============
+// MIGRADO: Admin ahora usa vista unificada con permisos completos
 router.get('/documentos/listado', adminController.listarDocumentosAdmin);
 router.get('/documentos/detalle/:id', adminController.verDetalleDocumentoAdmin);
+
+// =============== FUNCIONES ADMINISTRATIVAS ESPECIALES ===============
+// NUEVAS: Funciones especiales del admin usando sistema unificado
+router.post('/documentos/:id/reasignar-matrizador', adminController.reasignarMatrizador);
+router.post('/documentos/:id/cambiar-estado', adminController.cambiarEstado);
+router.post('/documentos/:id/eliminar', adminController.eliminarDocumento);
+
+// Edición de secciones usando sistema universal
+router.patch('/documentos/:id/seccion/:seccion', adminController.editarSeccionDocumento);
 
 // =============== NOTIFICACIONES - SUPERVISIÓN ===============
 router.get('/notificaciones/historial', adminController.historialNotificaciones);
