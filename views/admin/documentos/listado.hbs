@@ -418,9 +418,11 @@
             {{#each documentos}}
             <tr>
               <td>
-                <code style="background: #f3f4f6; padding: 0.25rem 0.5rem; border-radius: 4px; font-weight: 600;">
-                  {{this.codigoBarras}}
-                </code>
+                <a href="/admin/documentos/detalle/{{this.id}}" class="text-decoration-none">
+                  <code style="background: #f3f4f6; padding: 0.25rem 0.5rem; border-radius: 4px; font-weight: 600; cursor: pointer;">
+                    {{this.codigoBarras}}
+                  </code>
+                </a>
               </td>
               <td>
                 <div style="font-weight: 600;">{{this.nombreCliente}}</div>
@@ -491,7 +493,7 @@
               <td style="text-align: center;">
                 <div class="acciones-grupo">
                   <a href="/admin/documentos/detalle/{{this.id}}" class="btn-accion btn-ver" title="Ver detalles">
-                    <i class="fas fa-eye"></i>
+                    <i class="fas fa-file-alt"></i>
                   </a>
                 </div>
               </td>

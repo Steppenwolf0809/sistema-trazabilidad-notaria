@@ -176,3 +176,8 @@ html body .sidebar-argon.sidebar-argon::-webkit-scrollbar-thumb:hover {
     background: #092F64 !important;
   }
 } 
+
+.financial-section .row {
+  display: flex !important;
+  flex-wrap: wrap !important;
+} 

@@ -1055,3 +1055,19 @@
     flex-wrap: wrap;
   }
 } 
+
+/* FIX SECCIONES ADMIN: Estilo discreto para acciones */
+.admin-actions-card {
+  border-left: 3px solid #6c757d;
+  background-color: #f8f9fa;
+}
+
+.admin-actions-card .card-header {
+  background-color: transparent;
+  border-bottom: 1px solid #dee2e6;
+  padding: 0.5rem 1rem;
+}
+
+.admin-actions-card .btn {
+  font-size: 0.875rem;
+} 

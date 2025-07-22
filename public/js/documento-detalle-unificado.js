@@ -3,6 +3,9 @@
  * Sistema de edición in-place con validaciones y guardado por secciones
  */
 
+// Verificar si ya existe la clase para evitar redeclaración
+if (typeof DocumentoDetalleUnificado === 'undefined') {
+  
 class DocumentoDetalleUnificado {
   constructor() {
     this.editingMode = false;
@@ -882,4 +885,6 @@ document.addEventListener('DOMContentLoaded', function() {
   window.sistemaNotificaciones = new SistemaNotificacionesBidireccional();
   
   console.log('✅ Sistema de documento detalle unificado listo');
-}); 
+});
+
+} // Fin del bloque de verificación de clase 

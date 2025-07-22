@@ -1,5 +1,5 @@
-{{!-- DETALLE DE DOCUMENTO ADMIN - VISTA UNIFICADA CON FUNCIONALIDADES ESPECIALES --}}
-{{!-- Layout sobrio usando componente universal con permisos completos de admin --}}
+{{!-- DETALLE DE DOCUMENTO ADMIN - VISTA UNIFICADA LIMPIA SIN DUPLICACIONES --}}
+{{!-- Layout sobrio usando componente universal con header limpio --}}
 
 <!-- Include CSS y JS específicos para la vista unificada -->
 <link rel="stylesheet" href="/css/documento-detalle-unificado.css">
@@ -8,7 +8,7 @@
 {{#if documento}}
 <div class="document-unified-container">
   
-  <!-- Header del documento - ESPECÍFICO ADMIN CON ACCIONES ESPECIALES -->
+  <!-- Header del documento - LIMPIO COMO MATRIZADOR -->
   <div class="document-header">
     <div class="row align-items-center">
       <div class="col-lg-8">
@@ -28,28 +28,6 @@
       </div>
       <div class="col-lg-4">
         <div class="action-buttons justify-content-end">
-          {{!-- ACCIONES PRINCIPALES ADMIN --}}
-          <div class="dropdown">
-            <button class="btn btn-warning dropdown-toggle action-button-primary me-2" data-bs-toggle="dropdown">
-              <i class="fas fa-cog me-1"></i> Administrar
-            </button>
-            <ul class="dropdown-menu">
-              <li><a class="dropdown-item" onclick="reasignarMatrizador('{{documento.id}}')">
-                <i class="fas fa-user-exchange me-2"></i> Reasignar Matrizador
-              </a></li>
-              <li><a class="dropdown-item" onclick="cambiarEstado('{{documento.id}}')">
-                <i class="fas fa-edit me-2"></i> Cambiar Estado
-              </a></li>
-              <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item" onclick="autorizarUrgente('{{documento.id}}')">
-                <i class="fas fa-bolt me-2"></i> Autorización Urgente
-              </a></li>
-              <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item text-danger" onclick="eliminarDocumento('{{documento.id}}')">
-                <i class="fas fa-trash me-2"></i> Eliminar Documento
-              </a></li>
-            </ul>
-          </div>
           <a href="/admin/documentos" class="btn btn-secondary-soft">
             <i class="fas fa-arrow-left me-1"></i> Volver
           </a>
@@ -58,7 +36,7 @@
     </div>
   </div>
 
-  {{!-- USAR COMPONENTE UNIVERSAL CON CONFIGURACIÓN ADMIN COMPLETA --}}
+  {{!-- USAR COMPONENTE UNIVERSAL CON CONFIGURACIÓN ADMIN LIMPIA --}}
   {{> documento-detalle-universal 
       documento=documento 
       userRole="admin"
@@ -68,252 +46,125 @@
       eventos=eventos
   }}
 
-  {{!-- SECCIÓN ADMINISTRATIVA ESPECIAL - ÚNICA PARA ADMIN --}}
+  {{!-- ACCIONES ADMINISTRATIVAS (DISEÑO MEJORADO) --}}
   <div class="row mb-4">
     <div class="col-12">
-      <div class="info-card">
-        <h6 class="section-title">
-          <i class="fas fa-shield-alt"></i>
-          Panel Administrativo
-        </h6>
-        
-        <div class="row">
-          
-          {{!-- Gestión de Matrizador --}}
-          <div class="col-md-6">
-            <div class="admin-panel-section">
-              <h6 class="admin-section-title">
-                <i class="fas fa-user"></i> Gestión de Matrizador
-              </h6>
-              <div class="info-row">
-                <span class="info-label">Actual:</span>
-                <span class="info-value">{{#if documento.matrizador}}{{documento.matrizador.nombre}}{{else}}Sin asignar{{/if}}</span>
-              </div>
-              <button class="btn btn-outline-primary btn-sm mt-2" onclick="reasignarMatrizador('{{documento.id}}')">
-                <i class="fas fa-user-exchange me-1"></i> Reasignar
-              </button>
-            </div>
-          </div>
-          
-          {{!-- Control de Estado --}}
-          <div class="col-md-6">
-            <div class="admin-panel-section">
-              <h6 class="admin-section-title">
-                <i class="fas fa-list"></i> Control de Estado
-              </h6>
-              <div class="info-row">
-                <span class="info-label">Estado:</span>
-                <span class="info-value">
-                  <span class="badge bg-{{getEstadoColor documento.estado}}">{{documento.estado}}</span>
-                </span>
-              </div>
-              <button class="btn btn-outline-warning btn-sm mt-2" onclick="cambiarEstado('{{documento.id}}')">
-                <i class="fas fa-edit me-1"></i> Cambiar Estado
-              </button>
-            </div>
-          </div>
-          
+      <div class="card admin-actions-card">
+        <div class="card-header">
+          <h6 class="mb-0">⚙️ Acciones Administrativas</h6>
         </div>
-        
-        <hr class="my-3">
-        
-        <div class="row">
-          
-          {{!-- Autorizaciones --}}
-          <div class="col-md-6">
-            <div class="admin-panel-section">
-              <h6 class="admin-section-title">
-                <i class="fas fa-key"></i> Autorizaciones
-              </h6>
-              <button class="btn btn-outline-success btn-sm" onclick="autorizarUrgente('{{documento.id}}')">
-                <i class="fas fa-bolt me-1"></i> Autorización Urgente
+        <div class="card-body py-3">
+          <div class="row">
+            {{#if (eq documento.estado "listo_para_entrega")}}
+            <div class="col-md-4 mb-3 mb-md-0">
+              <button class="btn btn-outline-primary btn-sm w-100" onclick="abrirModalReversion('desmarcar_listo', '{{documento.id}}')">
+                <i class="fas fa-arrow-left me-1"></i> Desmarcar como Listo
               </button>
             </div>
-          </div>
-          
-          {{!-- Acciones Críticas --}}
-          <div class="col-md-6">
-            <div class="admin-panel-section">
-              <h6 class="admin-section-title">
-                <i class="fas fa-exclamation-triangle"></i> Acciones Críticas
-              </h6>
-              <button class="btn btn-outline-danger btn-sm" onclick="eliminarDocumento('{{documento.id}}')">
-                <i class="fas fa-trash me-1"></i> Eliminar Documento
+            {{/if}}
+            
+            {{#if (eq documento.estado "entregado")}}
+            <div class="col-md-4 mb-3 mb-md-0">
+              <button class="btn btn-outline-danger btn-sm w-100" onclick="abrirModalReversion('deshacer_entrega', '{{documento.id}}')">
+                🔄 Deshacer Entrega
               </button>
             </div>
+            {{/if}}
+            
+            {{#if documento.notificacionGrupalId}}
+            <div class="col-md-4 mb-3 mb-md-0">
+              <button class="btn btn-outline-info btn-sm w-100" onclick="abrirModalReversion('separar_grupo', '{{documento.id}}')">
+                <i class="fas fa-unlink me-1"></i> Separar de Grupo
+              </button>
+            </div>
+            {{/if}}
+            
+            {{#if (and documento.eliminado (esReciente documento.fechaEliminacion))}}
+            <div class="col-md-4 mb-3 mb-md-0">
+              <button class="btn btn-outline-success btn-sm w-100" onclick="abrirModalReversion('reactivar_documento', '{{documento.id}}')">
+                <i class="fas fa-recycle me-1"></i> Reactivar Documento
+              </button>
+            </div>
+            {{/if}}
+            
+            {{#unless (or (eq documento.estado "listo_para_entrega") (eq documento.estado "entregado") documento.notificacionGrupalId (and documento.eliminado (esReciente documento.fechaEliminacion)))}}
+            <div class="col-12">
+              <p class="text-muted mb-0">No hay acciones administrativas disponibles para el estado actual del documento.</p>
+            </div>
+            {{/unless}}
           </div>
-          
+          <small class="text-muted d-block mt-2">
+            Todas las acciones se registran en la auditoría del sistema.
+          </small>
         </div>
       </div>
     </div>
   </div>
 
-  {{!-- PANEL DE REVERSIONES - SOLO ADMIN --}}
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="info-card" style="border: 2px solid #f59e0b;">
-        <div class="card-header-admin" style="background: linear-gradient(135deg, #f59e0b, #f97316); margin: -2rem -2rem 1.5rem -2rem; padding: 1.5rem 2rem; border-radius: 14px 14px 0 0;">
-          <div class="d-flex align-items-center">
-            <div class="admin-icon-reversion">
-              <i class="fas fa-undo"></i>
-            </div>
-            <div>
-              <h6 class="section-title mb-1" style="color: white;">
-                REVERSIONES DE EMERGENCIA - ADMIN
-              </h6>
-              <small style="color: rgba(255,255,255,0.9);">Solo usar en casos confirmados de error - Se registra en auditoría</small>
-            </div>
-          </div>
-        </div>
-        
-        <div class="alert alert-warning">
-          <i class="fas fa-exclamation-triangle me-2"></i>
-          <strong>Importante:</strong> Las reversiones son operaciones críticas que modifican el estado del documento. 
-          Requieren justificación detallada y quedan registradas permanentemente en auditoría.
-        </div>
-        
-        <div class="row">
-          {{#if (eq documento.estado "listo_para_entrega")}}
-          <div class="col-md-6 mb-3">
-            <div class="info-card text-center reversion-card" style="border: 2px solid #3b82f6;">
-              <i class="fas fa-arrow-left fa-2x text-primary mb-3"></i>
-              <h6>Desmarcar como Listo</h6>
-              <p class="small text-muted">Devolver a estado "en proceso"</p>
-              <button class="btn btn-primary btn-sm" onclick="abrirModalReversion('desmarcar_listo', '{{documento.id}}')">
-                <i class="fas fa-undo me-1"></i> Ejecutar
-              </button>
-            </div>
-          </div>
-          {{/if}}
-          
-          {{#if (eq documento.estado "entregado")}}
-          <div class="col-md-6 mb-3">
-            <div class="info-card text-center reversion-card" style="border: 2px solid #ef4444;">
-              <i class="fas fa-hand-paper fa-2x text-danger mb-3"></i>
-              <h6>Deshacer Entrega</h6>
-              <p class="small text-muted">Marcar como "listo para entrega"</p>
-              <button class="btn btn-danger btn-sm" onclick="abrirModalReversion('deshacer_entrega', '{{documento.id}}')">
-                <i class="fas fa-undo me-1"></i> Ejecutar
-              </button>
-            </div>
-          </div>
-          {{/if}}
-          
-          {{#if documento.notificacionGrupalId}}
-          <div class="col-md-6 mb-3">
-            <div class="info-card text-center reversion-card" style="border: 2px solid #2563eb;">
-              <i class="fas fa-unlink fa-2x text-primary mb-3"></i>
-              <h6>Separar de Grupo</h6>
-              <p class="small text-muted">Remover de notificación grupal</p>
-              <button class="btn btn-primary btn-sm" onclick="abrirModalReversion('separar_grupo', '{{documento.id}}')">
-                <i class="fas fa-unlink me-1"></i> Ejecutar
-              </button>
-            </div>
-          </div>
-          {{/if}}
-          
-          {{#if (and documento.eliminado (esReciente documento.fechaEliminacion))}}
-          <div class="col-md-6 mb-3">
-            <div class="info-card text-center reversion-card" style="border: 2px solid #10b981;">
-              <i class="fas fa-recycle fa-2x text-success mb-3"></i>
-              <h6>Reactivar Documento</h6>
-              <p class="small text-muted">Restaurar documento eliminado</p>
-              <button class="btn btn-success btn-sm" onclick="abrirModalReversion('reactivar_documento', '{{documento.id}}')">
-                <i class="fas fa-recycle me-1"></i> Ejecutar
-              </button>
-            </div>
-          </div>
-          {{/if}}
-          
-          {{#unless (or (eq documento.estado "listo_para_entrega") (eq documento.estado "entregado") documento.notificacionGrupalId (and documento.eliminado (esReciente documento.fechaEliminacion)))}}
-          <div class="col-12">
-            <div class="alert alert-info text-center">
-              <i class="fas fa-info-circle me-2"></i>
-              No hay reversiones disponibles para el estado actual del documento.
-            </div>
-          </div>
-          {{/unless}}
-        </div>
-        
-        <div class="text-end mt-3">
-          <a href="/admin/reversiones/auditoria" class="btn btn-secondary-soft">
-            <i class="fas fa-history me-1"></i> Ver Auditoría de Reversiones
-          </a>
-        </div>
-      </div>
-    </div>
-  </div>
-  
+{{!-- HISTORIAL AL FINAL DE LA PÁGINA (DENTRO DEL BLOQUE #IF) --}}
+{{> historial-universal eventos=eventos esAdmin=true userRole="admin"}}
+
 </div>
 
 {{!-- MODALES ESPECÍFICOS ADMIN --}}
 
-{{!-- Modal de Reasignación de Matrizador --}}
-<div class="modal fade" id="modalReasignarMatrizador" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">
-          <i class="fas fa-user-exchange me-2"></i>
-          Reasignar Matrizador
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <div class="mb-3">
-          <label class="form-label">Seleccionar nuevo matrizador:</label>
-          <select id="nuevoMatrizador" class="form-select">
-            <option value="">Seleccione un matrizador...</option>
-            {{#each matrizadoresDisponibles}}
-            <option value="{{this.id}}">{{this.nombre}}</option>
-            {{/each}}
-          </select>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Motivo de la reasignación:</label>
-          <textarea id="motivoReasignacion" class="form-control" rows="3" placeholder="Explique por qué se reasigna el documento"></textarea>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button type="button" class="btn btn-primary" onclick="ejecutarReasignacion()">
-          <i class="fas fa-user-exchange me-1"></i> Reasignar
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
+{{!-- Modal de Reasignación ELIMINADO - Lo hace CAJA --}}
 
-{{!-- Modal de Cambio de Estado --}}
+{{!-- Modal de Cambio de Estado - SIMPLIFICADO PARA ADMIN --}}
 <div class="modal fade" id="modalCambiarEstado" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title">
           <i class="fas fa-edit me-2"></i>
-          Cambiar Estado del Documento
+          👑 Supervisión: Cambiar Estado
         </h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
+        <div class="alert alert-warning">
+          <i class="fas fa-info-circle me-2"></i>
+          <strong>Función de supervisión:</strong> Use solo cuando sea necesario corregir estados para mantener el flujo del sistema.
+        </div>
+        
+        <div class="mb-3">
+          <label class="form-label">Estado actual:</label>
+          <div class="current-state">
+            <span class="badge estado-{{documento.estado}} fs-6">
+              {{#if (eq documento.estado "en_proceso")}}En Proceso
+              {{else if (eq documento.estado "listo_para_entrega")}}Listo para Entrega
+              {{else if (eq documento.estado "entregado")}}Entregado
+              {{else if (eq documento.estado "nota_credito")}}Nota de Crédito
+              {{else}}{{documento.estado}}{{/if}}
+            </span>
+          </div>
+        </div>
+        
         <div class="mb-3">
           <label class="form-label">Nuevo estado:</label>
           <select id="nuevoEstado" class="form-select">
+            <option value="">Seleccione nuevo estado...</option>
             <option value="en_proceso">En Proceso</option>
             <option value="listo_para_entrega">Listo para Entrega</option>
             <option value="entregado">Entregado</option>
             <option value="nota_credito">Nota de Crédito</option>
           </select>
         </div>
+        
         <div class="mb-3">
-          <label class="form-label">Motivo del cambio:</label>
-          <textarea id="motivoCambioEstado" class="form-control" rows="3" placeholder="Explique por qué se cambia el estado"></textarea>
+          <label class="form-label">Justificación administrativa: <span class="text-danger">*</span></label>
+          <textarea id="motivoCambioEstado" class="form-control" rows="3" 
+                    placeholder="Explique por qué es necesario cambiar el estado desde supervisión administrativa"
+                    required></textarea>
+          <div class="form-text">
+            Especifique la razón administrativa que justifica este cambio de estado
+          </div>
         </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
         <button type="button" class="btn btn-warning" onclick="ejecutarCambioEstado()">
-          <i class="fas fa-edit me-1"></i> Cambiar Estado
+          <i class="fas fa-edit me-1"></i> Aplicar Cambio
         </button>
       </div>
     </div>
@@ -403,61 +254,42 @@ window.userRole = 'admin';
 
 // ============== FUNCIONES ADMINISTRATIVAS ESPECÍFICAS ==============
 
-// Función para reasignar matrizador
-function reasignarMatrizador(documentoId) {
-  console.log('👤 Abriendo modal reasignación matrizador para documento:', documentoId);
-  const modal = new bootstrap.Modal(document.getElementById('modalReasignarMatrizador'));
-  modal.show();
+// ============== FUNCIONES ADMINISTRATIVAS SIMPLIFICADAS ==============
+// NOTA: Reasignar matrizador lo hace CAJA, no admin
+
+// Función ejecutarReasignacion ELIMINADA - no es función de admin
+
+// Función para abrir modal de cambio de estado (SIN BLOQUEOS)
+function abrirModalCambiarEstado(documentoId) {
+  console.log('📝 Abriendo modal cambio estado para documento:', documentoId);
+  try {
+    const modal = new bootstrap.Modal(document.getElementById('modalCambiarEstado'));
+    modal.show();
+  } catch (error) {
+    console.error('❌ Error abriendo modal:', error);
+    alert('Error abriendo modal. Intente nuevamente.');
+  }
 }
 
-async function ejecutarReasignacion() {
-  const nuevoMatrizador = document.getElementById('nuevoMatrizador').value;
-  const motivo = document.getElementById('motivoReasignacion').value;
+// Función para cambiar estado (ÚNICA FUNCIÓN ADMIN)
+async function ejecutarCambioEstado() {
+  const nuevoEstado = document.getElementById('nuevoEstado').value;
+  const motivo = document.getElementById('motivoCambioEstado').value.trim();
   
-  if (!nuevoMatrizador || !motivo) {
-    alert('Por favor complete todos los campos');
+  // Validaciones mejoradas
+  if (!nuevoEstado) {
+    alert('❌ Debe seleccionar un nuevo estado');
     return;
   }
   
-  try {
-    const response = await fetch(`/admin/documentos/${window.documentoId}/reasignar-matrizador`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        matrizador_id: nuevoMatrizador,
-        motivo: motivo
-      })
-    });
-    
-    const data = await response.json();
-    
-    if (data.success) {
-      alert('✅ Matrizador reasignado correctamente');
-      const modal = bootstrap.Modal.getInstance(document.getElementById('modalReasignarMatrizador'));
-      modal.hide();
-      setTimeout(() => window.location.reload(), 1500);
-    } else {
-      throw new Error(data.message || 'Error desconocido');
-    }
-  } catch (error) {
-    console.error('❌ Error reasignando matrizador:', error);
-    alert(`❌ Error: ${error.message}`);
+  if (!motivo || motivo.length < 10) {
+    alert('❌ La justificación debe tener al menos 10 caracteres');
+    document.getElementById('motivoCambioEstado').focus();
+    return;
   }
-}
-
-// Función para cambiar estado
-function cambiarEstado(documentoId) {
-  console.log('📝 Abriendo modal cambio estado para documento:', documentoId);
-  const modal = new bootstrap.Modal(document.getElementById('modalCambiarEstado'));
-  modal.show();
-}
-
-async function ejecutarCambioEstado() {
-  const nuevoEstado = document.getElementById('nuevoEstado').value;
-  const motivo = document.getElementById('motivoCambioEstado').value;
   
-  if (!nuevoEstado || !motivo) {
-    alert('Por favor complete todos los campos');
+  // Confirmar cambio
+  if (!confirm(`⚠️ ¿Confirma cambiar el estado a "${nuevoEstado}"?\n\nEsta acción será registrada en auditoría.`)) {
     return;
   }
   
@@ -467,14 +299,15 @@ async function ejecutarCambioEstado() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         estado: nuevoEstado,
-        motivo: motivo
+        justificacion: motivo,
+        tipoAccion: 'supervision_administrativa'
       })
     });
     
     const data = await response.json();
     
     if (data.success) {
-      alert('✅ Estado actualizado correctamente');
+      alert('✅ Estado actualizado correctamente por supervisión administrativa');
       const modal = bootstrap.Modal.getInstance(document.getElementById('modalCambiarEstado'));
       modal.hide();
       setTimeout(() => window.location.reload(), 1500);
@@ -487,30 +320,9 @@ async function ejecutarCambioEstado() {
   }
 }
 
-// Función para autorización urgente
-function autorizarUrgente(documentoId) {
-  console.log('⚡ Autorizando urgente para documento:', documentoId);
-  if (confirm('¿Confirma autorizar este documento como urgente?\n\nEsto dará prioridad máxima en el procesamiento.')) {
-    // Implementar lógica de autorización urgente
-    alert('🚀 Autorización urgente aplicada (función en desarrollo)');
-  }
-}
+// Función procesarAutorizacionUrgente ELIMINADA - usar sistema de reversiones
 
-// Función para eliminar documento
-function eliminarDocumento(documentoId) {
-  console.log('🗑️ Iniciando eliminación para documento:', documentoId);
-  const motivo = prompt('¿Por qué desea eliminar este documento?\n\nEsta acción requiere justificación:');
-  
-  if (!motivo) {
-    alert('La eliminación requiere un motivo');
-    return;
-  }
-  
-  if (confirm('⚠️ ATENCIÓN: ¿Confirma la eliminación?\n\nEsta acción será registrada en auditoría y requiere autorización especial.')) {
-    // Implementar lógica de eliminación
-    alert('🗑️ Documento marcado para eliminación (función en desarrollo)');
-  }
-}
+// Función confirmarEliminacion ELIMINADA - usar sistema de reversiones
 
 // ============== SISTEMA DE REVERSIONES - ADMIN ==============
 let tipoReversionActual = '';
@@ -654,4 +466,7 @@ document.addEventListener('DOMContentLoaded', function() {
     </a>
   </div>
 </div>
+
+{{!-- HISTORIAL AL FINAL DE LA PÁGINA --}}
+{{> historial-universal eventos=eventos esAdmin=true userRole="admin"}}
 {{/if}} 

@@ -24,12 +24,16 @@ const configRoles = {
     mostrarInfoGeneral: true,
     mostrarCliente: true,
     mostrarFinanciero: true,
-    mostrarNotificaciones: true,
+    mostrarNotificaciones: false,          // ❌ Admin NO debe ver configuración de notificaciones
     mostrarNotas: true,
     mostrarNotificacionesGrupales: false,  // ❌ Admin no gestiona grupos
     mostrarAcciones: true,
     mostrarHistorial: true,
     mostrarModalMarcarListo: true,
+    
+    // Layout específico admin
+    layoutFinanciero: "dos_columnas",       // ✅ Layout 2 columnas
+    ordenSecciones: ["general", "cliente", "financiero", "notas", "administracion", "historial"],
     
     // Configuraciones específicas
     mostrarInfoMatrizador: true,
@@ -38,25 +42,29 @@ const configRoles = {
     mostrarInfoEmail: true,
     esAdmin: true,
     
-    // Permisos específicos
+    // Permisos específicos - SIMPLIFICADOS PARA SUPERVISIÓN
     permisos: {
-      // Edición de secciones
-      editarGeneral: true,
-      editarCliente: true,
-      editarFinanciero: false, // Solo caja puede editar datos financieros
-      editarNotificaciones: true,
-      editarNotas: true,
-      editarGlobal: true,
+      // Edición de secciones (LIMITADO - no duplicar funciones de otros roles)
+      editarGeneral: false,              // ❌ Solo lectura
+      editarCliente: true,               // ✅ Puede corregir datos cliente
+      editarFinanciero: false,           // ❌ Solo caja maneja finanzas
+      editarNotificaciones: false,       // ❌ Admin no configura notificaciones individuales
+      editarNotas: true,                 // ✅ Puede agregar notas administrativas
+      editarGlobal: false,
       
-      // Permisos de matrizador
-      cambiarMatrizador: true,
+      // Permisos de gestión (DELEGADOS A OTROS ROLES)
+      cambiarMatrizador: false,          // ❌ Lo hace CAJA al recibir documento
+      generarNotaCredito: false,         // ❌ Lo hace CAJA
+      separarGrupos: false,              // ❌ Lo hace MATRIZADOR
       
-      // Acciones principales
-      marcarListo: false, // Admin no marca documentos como listo
-      separarGrupos: true,
-      autorizarUrgente: true,
-      eliminarDocumento: true,
-      auditoria: true,
+      // Acciones principales ADMIN (SOLO SUPERVISIÓN)
+      cambiarEstado: true,               // ✅ ÚNICA función admin específica
+      marcarListo: false,                // ❌ Lo hace MATRIZADOR
+      eliminarDocumento: false,          // ❌ Usar sistema de reversiones
+      
+      // Supervisión y auditoría
+      verReversiones: true,              // ✅ Panel de reversiones
+      auditoria: true,                   // ✅ Ver auditoría completa
       
       // Acciones comunes
       imprimirDocumento: true,
@@ -297,8 +305,12 @@ function calcularPermisosDinamicos(rol, documento, userId, usuario = null) {
       break;
       
     case 'admin':
-      // Admin puede hacer todo excepto marcar como listo (eso es responsabilidad del matrizador)
+      // Admin: SOLO supervisión y cambio de estados
+      // Todas las demás funciones son responsabilidad de otros roles
+      config.permisos.cambiarEstado = true;
       config.permisos.marcarListo = false;
+      config.permisos.cambiarMatrizador = false;
+      config.permisos.eliminarDocumento = false;
       break;
       
     case 'caja':

@@ -36,14 +36,14 @@
 
   <!-- Sección de Notificaciones y Notas -->
   <div class="row mb-4">
-    {{#if config.mostrarNotificaciones}}
+    {{#if (and config.mostrarNotificaciones (not (eq userRole "admin"))) }}
     <div class="{{#if config.mostrarNotas}}col-md-6{{else}}col-12{{/if}}">
       {{> seccion-notificaciones documento=documento config=config userRole=userRole}}
     </div>
     {{/if}}
     
     {{#if config.mostrarNotas}}
-    <div class="{{#if config.mostrarNotificaciones}}col-md-6{{else}}col-12{{/if}}">
+    <div class="{{#if (and config.mostrarNotificaciones (not (eq userRole "admin"))) }}col-md-6{{else}}col-12{{/if}}">
       {{> seccion-notas documento=documento config=config userRole=userRole}}
     </div>
     {{/if}}
@@ -55,10 +55,6 @@
 
   {{#if config.mostrarAcciones}}
     {{> seccion-acciones-rol documento=documento config=config userRole=userRole}}
-  {{/if}}
-
-  {{#if config.mostrarHistorial}}
-    {{> historial-universal eventos=eventos esAdmin=config.esAdmin userRole=userRole}}
   {{/if}}
   
 </div>
