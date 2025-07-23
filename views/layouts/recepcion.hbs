@@ -33,6 +33,12 @@
   <!-- ProNotary Mobile Responsive System -->
   <link rel="stylesheet" href="/css/mobile-responsive.css">
   
+  <!-- ✨ Paleta de Colores Profesional (Variables CSS) -->
+  <link rel="stylesheet" href="/css/paleta-profesional.css">
+  
+  <!-- ✨ Estilos Profesionales para Recepción -->
+  <link rel="stylesheet" href="/css/recepcion-profesional.css?v=2024">
+
   <!-- Estilos personalizados -->
   <style>
     :root {
@@ -41,8 +47,13 @@
     
     body {
       font-family: var(--font-primary);
-      background-color: #f5f5f5;
       color: #333;
+    }
+    
+    /* Sobrescribir para recepción con paleta profesional */
+    body.recepcion-body {
+      background-color: var(--alice-blue) !important;
+      color: var(--cool-black) !important;
     }
     
     .topbar {
@@ -73,7 +84,7 @@
   <link rel="stylesheet" href="/css/tabla-documentos-mejorada.css">
   <link rel="stylesheet" href="/css/entrega-grupal-jerarquica.css">
 </head>
-<body>
+<body class="recepcion-body">
   <!-- Contenedor principal del layout -->
   <div class="app-container">
     <!-- Barra lateral -->

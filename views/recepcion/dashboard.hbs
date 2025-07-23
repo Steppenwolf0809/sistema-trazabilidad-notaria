@@ -1,251 +1,259 @@
 {{! Dashboard de Recepción - REDISEÑADO }}
 {{! layout: 'recepcion' }}
 
-<!-- HEADER MEJORADO -->
-<div class="dashboard-header bg-gradient-primary text-white py-4 mb-4 rounded">
-  <div class="container-fluid">
-    <div class="row align-items-center">
-      <div class="col-md-8">
-        <h2 class="mb-1"><i class="fas fa-handshake me-3"></i>Dashboard Recepción</h2>
-        <p class="mb-0 opacity-75">Gestión de entregas de documentos</p>
-      </div>
-      <div class="col-md-4 text-end">
-        <div class="badge bg-light text-dark p-2">
-          <i class="fas fa-calendar me-1"></i>
-          {{formatDate now 'dddd, DD MMMM YYYY'}}
+<div class="recepcion-dashboard">
+
+  <!-- HEADER MEJORADO -->
+  <div class="dashboard-header-recepcion text-white py-4 mb-4 rounded">
+    <div class="container-fluid">
+      <div class="row align-items-center">
+        <div class="col-md-8">
+          <h2 class="mb-1"><i class="fas fa-handshake me-3"></i>Dashboard Recepción</h2>
+          <p class="mb-0 opacity-75">Gestión de entregas de documentos</p>
+        </div>
+        <div class="col-md-4 text-end">
+          <div class="badge bg-light text-dark p-2">
+            <i class="fas fa-calendar me-1"></i>
+            {{formatDateTime 'now'}}
+          </div>
         </div>
       </div>
     </div>
   </div>
-</div>
 
-<!-- SECCIÓN 1: TRABAJO DEL DÍA (PRINCIPAL) -->
-<div class="row mb-4">
-  <!-- DOCUMENTOS LISTOS HOY -->
-  <div class="col-lg-6 mb-4">
-    <div class="card border-left-success shadow h-100 py-3">
-      <div class="card-body">
-        <div class="row no-gutters align-items-center">
-          <div class="col mr-2">
-            <div class="text-sm font-weight-bold text-success text-uppercase mb-1">
-              📋 Listos para Entrega Hoy
+  <!-- SECCIÓN 1: TRABAJO DEL DÍA (PRINCIPAL) -->
+  <div class="row mb-4">
+    <!-- DOCUMENTOS LISTOS HOY -->
+    <div class="col-lg-6 mb-4">
+      <div class="card metric-card h-100 py-3">
+        <div class="card-body">
+          <div class="row no-gutters align-items-center">
+            <div class="col mr-2">
+              <div class="text-sm font-weight-bold text-uppercase mb-1 metric-label">
+                📋 Listos para Entrega Hoy
+              </div>
+              <div class="h2 mb-0 font-weight-bold text-gray-800">
+                {{stats.documentos_listos_hoy}}
+              </div>
+              <div class="mt-2">
+                <span class="badge bg-success mr-1">{{stats.documentos_con_codigo}} con código</span>
+                <span class="badge bg-warning">{{stats.documentos_sin_codigo}} sin código</span>
+              </div>
+              <div class="mt-3">
+                <a href="/recepcion/documentos/listos" class="btn btn-success btn-sm">
+                  <i class="fas fa-list"></i> Ver Lista Completa
+                </a>
+              </div>
             </div>
-            <div class="h2 mb-0 font-weight-bold text-gray-800">
-              {{stats.documentos_listos_hoy}}
+            <div class="col-auto">
+                <div class="icon-circle">
+                    <i class="fas fa-clipboard-check fa-2x"></i>
+                </div>
             </div>
-            <div class="mt-2">
-              <span class="badge badge-success mr-1">{{stats.documentos_con_codigo}} con código</span>
-              <span class="badge badge-warning">{{stats.documentos_sin_codigo}} sin código</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ENTREGADOS HOY -->
+    <div class="col-lg-6 mb-4">
+      <div class="card metric-card h-100 py-3">
+        <div class="card-body">
+          <div class="row no-gutters align-items-center">
+            <div class="col mr-2">
+              <div class="text-sm font-weight-bold text-uppercase mb-1 metric-label">
+                ✅ Entregados Hoy
+              </div>
+              <div class="h2 mb-0 font-weight-bold text-gray-800">
+                {{stats.entregas_hoy}}
+              </div>
+              <div class="mt-2">
+                <span class="badge badge-info">Progreso del día</span>
+              </div>
+              <div class="mt-3">
+                <a href="/recepcion/entregas/hoy" class="btn btn-primary btn-sm">
+                  <i class="fas fa-history"></i> Ver Entregas
+                </a>
+              </div>
             </div>
-            <div class="mt-3">
-              <a href="/recepcion/documentos/listos" class="btn btn-success btn-sm">
-                <i class="fas fa-list"></i> Ver Lista Completa
+             <div class="col-auto">
+                <div class="icon-circle">
+                    <i class="fas fa-handshake fa-2x"></i>
+                </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECCIÓN 2: ALERTAS (SOLO SI HAY PROBLEMAS) -->
+  {{#if (or stats.autorizaciones_pendientes stats.documentos_sin_pago stats.documentos_pendientes_urgentes)}}
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card shadow">
+        <div class="card-header bg-warning text-white">
+          <h6 class="m-0 font-weight-bold">🚨 Requiere Atención Inmediata</h6>
+        </div>
+        <div class="card-body">
+          {{#if stats.autorizaciones_pendientes}}
+          <div class="alert alert-warning mb-2">
+            <i class="fas fa-user-check"></i>
+            <strong>{{stats.autorizaciones_pendientes}} autorizaciones urgentes</strong> esperando respuesta
+            <a href="/recepcion/autorizaciones" class="btn btn-warning btn-sm ml-2">Revisar</a>
+          </div>
+          {{/if}}
+          
+          {{#if stats.documentos_sin_pago}}
+          <div class="alert alert-info mb-2">
+            <i class="fas fa-dollar-sign"></i>
+            <strong>{{stats.documentos_sin_pago}} documentos listos</strong> sin pago confirmado
+            <a href="/recepcion/documentos/sin-pago" class="btn btn-info btn-sm ml-2">Revisar</a>
+          </div>
+          {{/if}}
+
+          {{#if stats.documentos_pendientes_urgentes}}
+          <div class="alert alert-danger mb-2">
+            <i class="fas fa-clock"></i>
+            <strong>{{stats.documentos_pendientes_urgentes}} documentos pendientes</strong> más de 7 días esperando entrega
+            <a href="#documentos-pendientes" class="btn btn-danger btn-sm ml-2">Ver Abajo</a>
+          </div>
+          {{/if}}
+        </div>
+      </div>
+    </div>
+  </div>
+  {{/if}}
+
+  <!-- SECCIÓN 3: ACCIONES RÁPIDAS -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card shadow">
+        <div class="card-header">
+          <h6 class="m-0 font-weight-bold text-primary">🚀 Acciones Rápidas</h6>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-3 mb-2">
+              <a href="http://localhost:3000/recepcion/documentos/entrega" class="btn btn-success btn-block">
+                <i class="fas fa-plus"></i> Nueva Entrega
               </a>
             </div>
-          </div>
-          <div class="col-auto">
-            <i class="fas fa-clipboard-check fa-3x text-gray-300"></i>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ENTREGADOS HOY -->
-  <div class="col-lg-6 mb-4">
-    <div class="card border-left-primary shadow h-100 py-3">
-      <div class="card-body">
-        <div class="row no-gutters align-items-center">
-          <div class="col mr-2">
-            <div class="text-sm font-weight-bold text-primary text-uppercase mb-1">
-              ✅ Entregados Hoy
-            </div>
-            <div class="h2 mb-0 font-weight-bold text-gray-800">
-              {{stats.entregas_hoy}}
-            </div>
-            <div class="mt-2">
-              <span class="badge badge-info">Progreso del día</span>
-            </div>
-            <div class="mt-3">
-              <a href="/recepcion/entregas/hoy" class="btn btn-primary btn-sm">
-                <i class="fas fa-history"></i> Ver Entregas
+            <div class="col-md-3 mb-2">
+              <a href="http://localhost:3000/recepcion/documentos" class="btn btn-primary btn-block">
+                <i class="fas fa-search"></i> Buscar Documento
               </a>
             </div>
-          </div>
-          <div class="col-auto">
-            <i class="fas fa-handshake fa-3x text-gray-300"></i>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- SECCIÓN 2: ALERTAS (SOLO SI HAY PROBLEMAS) -->
-{{#if (or stats.autorizaciones_pendientes stats.documentos_sin_pago stats.documentos_pendientes_urgentes)}}
-<div class="row mb-4">
-  <div class="col-12">
-    <div class="card border-left-warning shadow">
-      <div class="card-header bg-warning text-white">
-        <h6 class="m-0 font-weight-bold">🚨 Requiere Atención Inmediata</h6>
-      </div>
-      <div class="card-body">
-        {{#if stats.autorizaciones_pendientes}}
-        <div class="alert alert-warning mb-2">
-          <i class="fas fa-user-check"></i>
-          <strong>{{stats.autorizaciones_pendientes}} autorizaciones urgentes</strong> esperando respuesta
-          <a href="/recepcion/autorizaciones" class="btn btn-warning btn-sm ml-2">Revisar</a>
-        </div>
-        {{/if}}
-        
-        {{#if stats.documentos_sin_pago}}
-        <div class="alert alert-info mb-2">
-          <i class="fas fa-dollar-sign"></i>
-          <strong>{{stats.documentos_sin_pago}} documentos listos</strong> sin pago confirmado
-          <a href="/recepcion/documentos/sin-pago" class="btn btn-info btn-sm ml-2">Revisar</a>
-        </div>
-        {{/if}}
-
-        {{#if stats.documentos_pendientes_urgentes}}
-        <div class="alert alert-danger mb-2">
-          <i class="fas fa-clock"></i>
-          <strong>{{stats.documentos_pendientes_urgentes}} documentos pendientes</strong> más de 7 días esperando entrega
-          <a href="#documentos-pendientes" class="btn btn-danger btn-sm ml-2">Ver Abajo</a>
-        </div>
-        {{/if}}
-      </div>
-    </div>
-  </div>
-</div>
-{{/if}}
-
-<!-- SECCIÓN 3: ACCIONES RÁPIDAS -->
-<div class="row mb-4">
-  <div class="col-12">
-    <div class="card shadow">
-      <div class="card-header">
-        <h6 class="m-0 font-weight-bold text-primary">🚀 Acciones Rápidas</h6>
-      </div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-3 mb-2">
-            <a href="http://localhost:3000/recepcion/documentos/entrega" class="btn btn-success btn-block">
-              <i class="fas fa-plus"></i> Nueva Entrega
-            </a>
-          </div>
-          <div class="col-md-3 mb-2">
-            <a href="http://localhost:3000/recepcion/documentos" class="btn btn-primary btn-block">
-              <i class="fas fa-search"></i> Buscar Documento
-            </a>
-          </div>
-          <div class="col-md-3 mb-2">
-            <a href="/recepcion/documentos/listos" class="btn btn-warning btn-block">
-              <i class="fas fa-clock"></i> Control Documentos No Retirados
-            </a>
-          </div>
-          <div class="col-md-3 mb-2">
-            <button onclick="toggleEstadisticas()" class="btn btn-info btn-block">
-              <i class="fas fa-chart-bar"></i> Ver Estadísticas
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- SECCIÓN 4: DOCUMENTOS PENDIENTES (SI EXISTEN) -->
-{{#if stats.documentos_con_retraso.length}}
-<div class="row mb-4" id="documentos-pendientes">
-  <div class="col-12">
-    <div class="card border-left-danger shadow">
-      <div class="card-header bg-danger text-white">
-        <h6 class="m-0 font-weight-bold">
-          <i class="fas fa-exclamation-triangle me-2"></i>
-          Documentos Pendientes de Retiro (+7 días)
-        </h6>
-      </div>
-      <div class="card-body">
-        <div class="table-responsive">
-          <table class="table table-hover mb-0">
-            <thead>
-              <tr>
-                <th>Código</th>
-                <th>Cliente</th>
-                <th>Tipo</th>
-                <th>Matrizador</th>
-                <th>Días Pendiente</th>
-                <th>Prioridad</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {{#each stats.documentos_con_retraso}}
-              <tr>
-                <td>
-                  <a href="/recepcion/documentos/detalle/{{this.id}}">{{this.codigoBarras}}</a>
-                </td>
-                <td>{{this.nombreCliente}}</td>
-                <td>{{this.tipoDocumento}}</td>
-                <td>{{this.matrizador.nombre}}</td>
-                <td>
-                  <strong class="text-{{this.clasePrioridad}}">
-                    {{this.diasPendiente}} días
-                  </strong>
-                </td>
-                <td>
-                  <span class="badge bg-{{this.clasePrioridad}}">{{this.prioridad}}</span>
-                </td>
-                <td>
-                  <a href="/recepcion/documentos/entrega/{{this.id}}" class="btn btn-sm btn-success">
-                    <i class="fas fa-hand-holding"></i> Entregar
-                  </a>
-                </td>
-              </tr>
-              {{/each}}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-{{/if}}
-
-<!-- SECCIÓN 5: ESTADÍSTICAS RESUMIDAS (COLAPSIBLE) -->
-<div class="row">
-  <div class="col-12">
-    <div class="card shadow">
-      <div class="card-header" data-bs-toggle="collapse" data-bs-target="#estadisticas" aria-expanded="false" style="cursor: pointer;">
-        <h6 class="m-0 font-weight-bold text-gray-600">
-          📊 Estadísticas del Mes 
-          <i class="fas fa-chevron-down float-right" id="chevron-estadisticas"></i>
-        </h6>
-      </div>
-      <div class="collapse" id="estadisticas">
-        <div class="card-body bg-light">
-          <div class="row text-center">
-            <div class="col-md-3">
-              <div class="h4 text-primary">{{stats.entregas_mes}}</div>
-              <small class="text-muted">Entregas del Mes</small>
+            <div class="col-md-3 mb-2">
+              <a href="/recepcion/documentos/listos" class="btn btn-warning btn-block">
+                <i class="fas fa-clock"></i> Control Documentos No Retirados
+              </a>
             </div>
-            <div class="col-md-3">
-              <div class="h4 text-success">{{stats.promedio_diario}}</div>
-              <small class="text-muted">Promedio Diario</small>
-            </div>
-            <div class="col-md-3">
-              <div class="h4 text-warning">{{stats.entregas_sin_codigo_mes}}</div>
-              <small class="text-muted">Sin Código (Mes)</small>
-            </div>
-            <div class="col-md-3">
-              <div class="h4 text-info">{{stats.documentos_listos_hoy}}</div>
-              <small class="text-muted">Listos Hoy</small>
+            <div class="col-md-3 mb-2">
+              <button onclick="toggleEstadisticas()" class="btn btn-info btn-block">
+                <i class="fas fa-chart-bar"></i> Ver Estadísticas
+              </button>
             </div>
           </div>
         </div>
       </div>
     </div>
   </div>
+
+  <!-- SECCIÓN 4: DOCUMENTOS PENDIENTES (SI EXISTEN) -->
+  {{#if stats.documentos_con_retraso.length}}
+  <div class="row mb-4" id="documentos-pendientes">
+    <div class="col-12">
+      <div class="card border-left-danger shadow">
+        <div class="card-header bg-danger text-white">
+          <h6 class="m-0 font-weight-bold">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            Documentos Pendientes de Retiro (+7 días)
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Cliente</th>
+                  <th>Tipo</th>
+                  <th>Matrizador</th>
+                  <th>Días Pendiente</th>
+                  <th>Prioridad</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {{#each stats.documentos_con_retraso}}
+                <tr>
+                  <td>
+                    <a href="/recepcion/documentos/detalle/{{this.id}}">{{this.codigoBarras}}</a>
+                  </td>
+                  <td>{{this.nombreCliente}}</td>
+                  <td>{{this.tipoDocumento}}</td>
+                  <td>{{this.matrizador.nombre}}</td>
+                  <td>
+                    <strong class="text-{{this.clasePrioridad}}">
+                      {{this.diasPendiente}} días
+                    </strong>
+                  </td>
+                  <td>
+                    <span class="badge bg-{{this.clasePrioridad}}">{{this.prioridad}}</span>
+                  </td>
+                  <td>
+                    <a href="/recepcion/documentos/entrega/{{this.id}}" class="btn btn-sm btn-success">
+                      <i class="fas fa-hand-holding"></i> Entregar
+                    </a>
+                  </td>
+                </tr>
+                {{/each}}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {{/if}}
+
+  <!-- SECCIÓN 5: ESTADÍSTICAS RESUMIDAS (COLAPSIBLE) -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card shadow">
+        <div class="card-header" data-bs-toggle="collapse" data-bs-target="#estadisticas" aria-expanded="false" style="cursor: pointer;">
+          <h6 class="m-0 font-weight-bold text-gray-600">
+            📊 Estadísticas del Mes 
+            <i class="fas fa-chevron-down float-right" id="chevron-estadisticas"></i>
+          </h6>
+        </div>
+        <div class="collapse" id="estadisticas">
+          <div class="card-body bg-light">
+            <div class="row text-center">
+              <div class="col-md-3">
+                <div class="h4 text-primary">{{stats.entregas_mes}}</div>
+                <small class="text-muted">Entregas del Mes</small>
+              </div>
+              <div class="col-md-3">
+                <div class="h4 text-success">{{stats.promedio_diario}}</div>
+                <small class="text-muted">Promedio Diario</small>
+              </div>
+              <div class="col-md-3">
+                <div class="h4 text-warning">{{stats.entregas_sin_codigo_mes}}</div>
+                <small class="text-muted">Sin Código (Mes)</small>
+              </div>
+              <div class="col-md-3">
+                <div class="h4 text-info">{{stats.documentos_listos_hoy}}</div>
+                <small class="text-muted">Listos Hoy</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <!-- JavaScript para mejorar la interacción del colapsible -->
@@ -300,35 +308,21 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<!-- CSS adicional para mejorar el diseño -->
+<!-- CSS adicional usando paleta profesional -->
 <style>
-.dashboard-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-.card {
-  border-radius: 15px;
-}
-.btn-block {
+.recepcion-dashboard .btn-block {
   width: 100%;
   padding: 0.75rem;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
 }
-.h2 {
+.recepcion-dashboard .h2 {
   font-size: 3rem;
+  color: var(--cool-black);
 }
-.border-left-success {
-  border-left: 0.25rem solid #1cc88a !important;
-}
-.border-left-primary {
-  border-left: 0.25rem solid #4e73df !important;
-}
-.border-left-warning {
-  border-left: 0.25rem solid #f6c23e !important;
-}
-.border-left-danger {
-  border-left: 0.25rem solid #e74a3b !important;
-}
-.text-sm {
+.recepcion-dashboard .text-sm {
   font-size: 0.875rem;
+}
+.recepcion-dashboard .text-gray-800 {
+  color: var(--cool-black) !important;
 }
 </style> 
