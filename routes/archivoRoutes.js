@@ -73,10 +73,7 @@ router.post('/api/documentos/:id/marcar-listo-grupo', archivoController.marcarCo
 // ============== RUTAS DE GESTIÓN DE DOCUMENTOS PROPIOS ==============
 
 // REGISTRO ELIMINADO - Los documentos se crean desde caja
-
-// Formulario de edición (solo para documentos propios)
-router.get('/documentos/editar/:id', archivoController.mostrarFormularioEdicion);
-router.post('/documentos/editar/:id', archivoController.actualizarDocumento);
+// EDICIÓN ELIMINADA - Archivo supervisa, no edita documentos
 
 // Marcar documento como listo (solo documentos propios)
 router.post('/documentos/marcar-listo/:id', archivoController.marcarComoListo);

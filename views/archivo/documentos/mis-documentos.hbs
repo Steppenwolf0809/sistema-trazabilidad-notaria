@@ -65,39 +65,39 @@
       <table class="table table-hover tabla-ordenable table-documentos" id="tablaArchivoMisDocumentos">
         <thead>
           <tr>
-            <th class="col-codigo ordenable" data-columna="codigoBarras" data-tipo="texto">
+            <th class="col-codigo ordenable" data-columna="codigoBarras" data-tipo="texto" style="width: 28%;">
               <span>Código</span>
               <i class="fas fa-sort ms-1 sort-icon"></i>
             </th>
-            <th class="col-cliente ordenable" data-columna="nombreCliente" data-tipo="texto">
+            <th class="col-cliente ordenable" data-columna="nombreCliente" data-tipo="texto" style="width: 32%;">
               <span>Cliente</span>
               <i class="fas fa-sort ms-1 sort-icon"></i>
             </th>
-            <th class="col-fecha ordenable" data-columna="fechaFactura" data-tipo="fecha">
+            <th class="col-fecha ordenable" data-columna="fechaFactura" data-tipo="fecha" style="width: 8%;">
               <span>Fecha</span>
               <i class="fas fa-sort ms-1 sort-icon"></i>
             </th>
-            <th class="col-estado ordenable" data-columna="estado" data-tipo="texto">
-              <span>Estado Entrega</span>
+            <th class="col-estados ordenable" data-columna="estado" data-tipo="texto" style="width: 16%;">
+              <span>Estados</span>
               <i class="fas fa-sort ms-1 sort-icon"></i>
             </th>
-            <th class="col-pago ordenable" data-columna="estadoPago" data-tipo="texto">
-              <span>Estado Pago</span>
-              <i class="fas fa-sort ms-1 sort-icon"></i>
-            </th>
-            <th class="col-valor ordenable" data-columna="valorFactura" data-tipo="numero">
+            <th class="col-valor ordenable" data-columna="valorFactura" data-tipo="numero" style="width: 8%;">
               <span>Valor</span>
               <i class="fas fa-sort ms-1 sort-icon"></i>
             </th>
-            <th class="col-acciones">Acciones</th>
+            <th class="col-acciones" style="width: 8%;">
+              Acciones
+            </th>
           </tr>
         </thead>
         <tbody>
           {{#each documentos}}
           <tr data-documento-id="{{this.id}}">
-            <!-- Código con formato mejorado -->
+            <!-- Código CLICKEABLE con formato mejorado -->
             <td class="col-codigo">
-                <span class="codigo-documento">{{this.codigoBarras}}</span>
+                <a href="/archivo/documentos/detalle/{{this.id}}" class="codigo-link" title="{{this.codigoBarras}} - Click para ver detalles">
+                    <span class="codigo-display">{{this.codigoBarras}}</span>
+                </a>
                 <div class="tipo-documento">
                     <small class="text-muted">{{this.tipoDocumento}}</small>
                 </div>
@@ -105,9 +105,9 @@
                 <div class="badges-autorizacion mt-1"></div>
             </td>
             
-            <!-- Cliente con formato mejorado (sin truncar) -->
+            <!-- Cliente con formato mejorado -->
             <td class="col-cliente">
-              <div class="cliente-nombre">{{this.nombreCliente}}</div>
+              <div class="cliente-nombre" title="{{this.nombreCliente}}">{{this.nombreCliente}}</div>
               <div class="cliente-identificacion">{{this.identificacionCliente}}</div>
             </td>
             
@@ -120,20 +120,22 @@
               {{/if}}
             </td>
             
-            <!-- Estado de Entrega (NUEVO BADGE) -->
-            <td class="col-estado text-center">
-              {{{badgeEstadoEntrega this.estado}}}
-            </td>
-            
-            <!-- Estado de Pago (NUEVO BADGE) -->
-            <td class="col-pago text-center">
-              {{#if this.numeroFactura}}
-                {{{badgeEstadoPago this.estadoPago}}}
-              {{else}}
-                <span class="badge bg-secondary" title="Documento sin factura asociada">
-                    <i class="fas fa-file-invoice-dollar me-1"></i> S/F
-                </span>
-              {{/if}}
+            <!-- Estados Combinados (Entrega + Pago) -->
+            <td class="col-estados">
+              <div class="estados-container">
+                <div class="estado-entrega">
+                  {{{badgeEstadoEntrega this.estado}}}
+                </div>
+                <div class="estado-pago mt-1">
+                  {{#if this.numeroFactura}}
+                    {{{badgeEstadoPago this.estadoPago}}}
+                  {{else}}
+                    <span class="badge bg-secondary badge-sm" title="Sin factura">
+                        <i class="fas fa-file-invoice-dollar"></i> S/F
+                    </span>
+                  {{/if}}
+                </div>
+              </div>
             </td>
             
             <!-- Valor con formato mejorado -->
@@ -145,31 +147,15 @@
               {{/if}}
             </td>
             
-            <!-- Acciones específicas de ARCHIVO -->
+            <!-- Acciones LIMPIAS para ARCHIVO - Solo supervisión -->
             <td class="col-acciones text-center">
               <div class="btn-group btn-group-sm">
-                <!-- Ver Detalle - Siempre disponible -->
+                <!-- Ver Detalle - Acción principal -->
                 <a href="/archivo/documentos/detalle/{{this.id}}" class="btn btn-outline-primary btn-universal" title="Ver Detalle">
                   <i class="fas fa-eye"></i>
                 </a>
                 
-                <!-- Editar - Solo para documentos en proceso -->
-                {{#if (eq this.estado 'en_proceso')}}
-                <a href="/archivo/documentos/editar/{{this.id}}" class="btn btn-outline-warning btn-universal" title="Editar">
-                  <i class="fas fa-edit"></i>
-                </a>
-                {{/if}}
-                
-
-                
-                <!-- Ver Código - Solo para documentos listos -->
-                {{#if (eq this.estado 'listo_para_entrega')}}
-                <button class="btn btn-outline-info btn-universal" onclick="mostrarCodigo('{{this.codigoVerificacion}}')" title="Ver Código">
-                  <i class="fas fa-key"></i>
-                </button>
-                {{/if}}
-                
-                <!-- Entregar - Solo para documentos listos -->
+                <!-- Entregar - Solo para documentos listos para entrega -->
                 {{#if (eq this.estado 'listo_para_entrega')}}
                 <a href="/archivo/documentos/entrega/{{this.id}}" class="btn btn-outline-success btn-universal" title="Entregar">
                   <i class="fas fa-hand-holding"></i>
@@ -180,7 +166,7 @@
           </tr>
           {{else}}
           <tr>
-            <td colspan="7" class="text-center py-5">
+            <td colspan="6" class="text-center py-5">
               <div class="sin-resultados">
                 <i class="fas fa-folder-open fa-2x mb-3 text-muted"></i>
                 <h5 class="text-muted">No tienes documentos de archivo asignados</h5>
@@ -311,14 +297,7 @@
     console.log('✅ Ordenamiento manual configurado para ARCHIVO MIS DOCUMENTOS:', headersOrdenables.length, 'columnas');
   }
 
-  function mostrarCodigo(codigoVerificacion) {
-    if (!codigoVerificacion) {
-      alert('⚠️ No hay código de verificación disponible para este documento.');
-      return;
-    }
-    
-    alert(`🔑 Código de verificación: ${codigoVerificacion}\n\n📋 Este código debe proporcionarse al cliente para autorizar la entrega por terceros.\n\n💡 El cliente debe presentar este código junto con su identificación para retirar el documento.`);
-  }
+
 
   function limpiarFiltrosArchivoMis() {
     document.getElementById('buscar').value = '';
@@ -542,7 +521,85 @@
     vertical-align: middle;
   }
   
-  /* Mejorar enlaces de código de barras */
+  /* Estilos para código clickeable */
+  .codigo-link {
+    color: var(--tufts-blue);
+    text-decoration: none;
+    font-weight: 600;
+    font-family: 'Courier New', monospace;
+    padding: 4px 8px;
+    background: var(--alice-blue);
+    border-radius: 6px;
+    transition: all 0.3s ease;
+    display: inline-block;
+    font-size: 0.875rem;
+    border: 1px solid var(--jordy-blue-30);
+  }
+
+  .codigo-link:hover {
+    color: var(--cobalt-blue);
+    background: var(--jordy-blue-30);
+    text-decoration: none;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(70, 128, 235, 0.15);
+    border-color: var(--tufts-blue);
+  }
+
+  .codigo-link:focus {
+    outline: 2px solid var(--tufts-blue);
+    outline-offset: 2px;
+  }
+  
+  /* Estados combinados */
+  .estados-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    align-items: center;
+  }
+
+  .estado-entrega,
+  .estado-pago {
+    display: flex;
+    justify-content: center;
+  }
+
+  .badge-sm {
+    font-size: 0.65rem;
+    padding: 0.25rem 0.5rem;
+  }
+
+  /* Optimizar tipografía tabla */
+  .codigo-display {
+    max-width: 250px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+  }
+
+  .col-cliente .cliente-nombre {
+    font-weight: 600;
+    font-size: 0.9rem;
+    line-height: 1.2;
+    max-width: 280px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: help;
+  }
+
+  .col-cliente .cliente-identificacion {
+    font-size: 0.75rem;
+    color: #6c757d;
+    font-family: 'Courier New', monospace;
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  /* Mejorar enlaces de código de barras - LEGACY */
   .table td a {
     transition: color 0.2s ease;
   }
@@ -553,4 +610,5 @@
   }
 </style>
 
+ 
  

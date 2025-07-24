@@ -1,13 +1,13 @@
-{{! Dashboard de Archivo - SIMPLIFICADO }}
+{{! Dashboard de Archivo - MODERNIZADO CON PALETA PROFESIONAL }}
 {{! layout: 'archivo' }}
 
-<!-- HEADER LIMPIO Y ENFOCADO -->
-<div class="dashboard-header bg-gradient-info text-white py-4 mb-4 rounded">
+<!-- HEADER PROFESIONAL CON PALETA AZUL -->
+<div class="dashboard-header">
   <div class="container-fluid">
     <div class="row align-items-center">
       <div class="col-md-8">
-        <h2 class="mb-1"><i class="fas fa-eye me-3"></i>Dashboard Archivo</h2>
-        <p class="mb-0 opacity-75">Vista general del estado de documentos</p>
+        <h2 class="dashboard-title"><i class="fas fa-eye me-3"></i>Dashboard Archivo</h2>
+        <p class="dashboard-subtitle">Vista general del estado de documentos</p>
       </div>
       <div class="col-md-4 text-end">
         <div class="badge bg-light text-dark p-2">
@@ -19,357 +19,218 @@
   </div>
 </div>
 
-<!-- 4 TARJETAS PRINCIPALES - ESTADO DE DOCUMENTOS -->
+<!-- 4 TARJETAS PRINCIPALES EN UNA SOLA FILA -->
 <div class="row mb-4">
   <!-- DOCUMENTOS EN PROCESO -->
-  <div class="col-lg-3 mb-4">
-    <div class="card border-left-warning shadow h-100 py-3">
-      <div class="card-body">
-        <div class="row no-gutters align-items-center">
-          <div class="col mr-2">
-            <div class="text-sm font-weight-bold text-warning text-uppercase mb-1">
-              ⚠️ En Proceso
-            </div>
-            <div class="h3 mb-0 font-weight-bold text-gray-800">
-              {{documentos_en_proceso}}
-            </div>
-            <small class="text-muted">Documentos trabajándose</small>
-          </div>
-          <div class="col-auto">
-            <i class="fas fa-cog fa-2x text-gray-300"></i>
-          </div>
+  <div class="col-xl-3 col-lg-6 mb-3">
+    <div class="tarjeta-kpi">
+      <div class="kpi-header">
+        <div class="kpi-icono naranja">
+          <i class="fas fa-cog"></i>
+        </div>
+        <div class="kpi-info">
+          <div class="kpi-etiqueta">⚠️ En Proceso</div>
+          <div class="kpi-numero">{{documentos_en_proceso}}</div>
+          <div class="kpi-descripcion">Documentos trabajándose</div>
         </div>
       </div>
     </div>
   </div>
 
   <!-- DOCUMENTOS LISTOS -->
-  <div class="col-lg-3 mb-4">
-    <div class="card border-left-success shadow h-100 py-3">
-      <div class="card-body">
-        <div class="row no-gutters align-items-center">
-          <div class="col mr-2">
-            <div class="text-sm font-weight-bold text-success text-uppercase mb-1">
-              ✅ Listos
-            </div>
-            <div class="h3 mb-0 font-weight-bold text-gray-800">
-              {{documentos_listos}}
-            </div>
-            <small class="text-muted">Para entrega</small>
-          </div>
-          <div class="col-auto">
-            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
-          </div>
+  <div class="col-xl-3 col-lg-6 mb-3">
+    <div class="tarjeta-kpi">
+      <div class="kpi-header">
+        <div class="kpi-icono azul">
+          <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="kpi-info">
+          <div class="kpi-etiqueta">✅ Listos</div>
+          <div class="kpi-numero">{{documentos_listos}}</div>
+          <div class="kpi-descripcion">Para entrega</div>
         </div>
       </div>
     </div>
   </div>
 
   <!-- ENTREGADOS HOY -->
-  <div class="col-lg-3 mb-4">
-    <div class="card border-left-primary shadow h-100 py-3">
-      <div class="card-body">
-        <div class="row no-gutters align-items-center">
-          <div class="col mr-2">
-            <div class="text-sm font-weight-bold text-primary text-uppercase mb-1">
-              📤 Entregados Hoy
-            </div>
-            <div class="h3 mb-0 font-weight-bold text-gray-800">
-              {{documentos_entregados_hoy}}
-            </div>
-            <small class="text-muted">Productividad del día</small>
-          </div>
-          <div class="col-auto">
-            <i class="fas fa-handshake fa-2x text-gray-300"></i>
-          </div>
+  <div class="col-xl-3 col-lg-6 mb-3">
+    <div class="tarjeta-kpi">
+      <div class="kpi-header">
+        <div class="kpi-icono verde">
+          <i class="fas fa-handshake"></i>
+        </div>
+        <div class="kpi-info">
+          <div class="kpi-etiqueta">📤 Entregados Hoy</div>
+          <div class="kpi-numero">{{documentos_entregados_hoy}}</div>
+          <div class="kpi-descripcion">Productividad del día</div>
         </div>
       </div>
     </div>
   </div>
 
   <!-- TOTAL DEL MES -->
-  <div class="col-lg-3 mb-4">
-    <div class="card border-left-info shadow h-100 py-3">
-      <div class="card-body">
-        <div class="row no-gutters align-items-center">
-          <div class="col mr-2">
-            <div class="text-sm font-weight-bold text-info text-uppercase mb-1">
-              📊 Este Mes
-            </div>
-            <div class="h3 mb-0 font-weight-bold text-gray-800">
-              {{documentos_entregados_mes}}
-            </div>
-            <small class="text-muted">Total entregados</small>
-          </div>
-          <div class="col-auto">
-            <i class="fas fa-chart-bar fa-2x text-gray-300"></i>
-          </div>
+  <div class="col-xl-3 col-lg-6 mb-3">
+    <div class="tarjeta-kpi">
+      <div class="kpi-header">
+        <div class="kpi-icono purpura">
+          <i class="fas fa-chart-bar"></i>
+        </div>
+        <div class="kpi-info">
+          <div class="kpi-etiqueta">📊 Este Mes</div>
+          <div class="kpi-numero">{{documentos_entregados_mes}}</div>
+          <div class="kpi-descripcion">Total entregados</div>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-
-
-<!-- ACCESO RÁPIDO A FUNCIONES DEL ROL -->
-<div class="row mb-4">
-  <div class="col-12">
-    <div class="card shadow">
-      <div class="card-header">
-        <h6 class="m-0 font-weight-bold text-primary">🚀 Acceso Rápido</h6>
-      </div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-4 mb-2">
-            <a href="/archivo/documentos/todos" class="btn btn-primary btn-block">
-              <i class="fas fa-list"></i> Todos los Documentos
-            </a>
-          </div>
-          <div class="col-md-4 mb-2">
-            <a href="/archivo/documentos/mis-documentos" class="btn btn-success btn-block">
-              <i class="fas fa-user"></i> Mis Documentos
-            </a>
-          </div>
-          <div class="col-md-4 mb-2">
-            <a href="/archivo/notificaciones/historial" class="btn btn-info btn-block">
-              <i class="fas fa-bell"></i> Historial Notificaciones
-            </a>
-          </div>
-        </div>
-      </div>
+<!-- ACCESO RÁPIDO CON BOTONES PROFESIONALES -->
+<div class="tarjeta-contenido">
+  <div class="seccion-titulo">🚀 Acceso Rápido</div>
+  <div class="row">
+    <div class="col-md-4 mb-3">
+      <a href="/archivo/documentos/todos" class="btn btn-primary w-100">
+        <i class="fas fa-list me-2"></i> Todos los Documentos
+      </a>
+    </div>
+    <div class="col-md-4 mb-3">
+      <a href="/archivo/documentos/mis-documentos" class="btn btn-secondary w-100">
+        <i class="fas fa-user me-2"></i> Mis Documentos
+      </a>
+    </div>
+    <div class="col-md-4 mb-3">
+      <a href="/archivo/notificaciones/historial" class="btn btn-secondary w-100">
+        <i class="fas fa-bell me-2"></i> Historial Notificaciones
+      </a>
     </div>
   </div>
 </div>
 
-<!-- MANTENER SECCIÓN DOCUMENTOS ATRASADOS (FUNCIONA BIEN) -->
+<!-- DOCUMENTOS ATRASADOS CON DISEÑO PROFESIONAL -->
 {{#if documentosAtrasados.length}}
-<div class="row mb-4">
-  <div class="col-12">
-    <div class="card shadow border-left-danger">
-      <div class="card-header bg-danger text-white">
-        <h6 class="m-0 font-weight-bold">
-          <i class="fas fa-exclamation-triangle me-2"></i>
-          Documentos Atrasados (más de 15 días)
-          <span class="badge bg-light text-danger ms-2">{{totalAtrasados}}</span>
-        </h6>
-      </div>
-      <div class="card-body p-0">
-        <div class="table-responsive">
-          <table class="table table-hover table-sm mb-0">
-            <thead class="table-light">
-              <tr>
-                <th width="22%">Código Completo</th>
-                <th width="33%">Cliente</th>
-                <th width="10%">Tipo</th>
-                <th width="20%">Matrizador</th>
-                <th width="10%">Días</th>
-                <th width="5%">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {{#each documentosAtrasados}}
-              <tr class="{{#gt diasTranscurridos 30}}table-danger{{else}}{{#gt diasTranscurridos 20}}table-warning{{else}}table-info{{/gt}}{{/gt}}">
-                <td>
-                  <code class="codigo-completo text-dark bg-light px-1 rounded">{{codigoBarras}}</code>
-                </td>
-                <td>
-                  <strong>{{nombreCliente}}</strong>
-                </td>
-                <td>
-                  <span class="badge bg-info text-white">
-                    {{abreviarTipoDocumento tipoDocumento}}
-                  </span>
-                </td>
-                <td>
-                  {{#if matrizador.nombre}}
-                    <small>{{matrizador.nombre}}</small>
-                  {{else}}
-                    <span class="text-danger"><strong>Sin asignar</strong></span>
-                  {{/if}}
-                </td>
-                <td>
-                  <span class="badge bg-{{clasePrioridad}} text-white">{{diasTranscurridos}}d</span>
-                </td>
-                <td>
-                  <a href="/archivo/documentos/detalle/{{id}}" class="btn btn-outline-primary btn-sm" title="Ver detalles">
-                    <i class="fas fa-eye"></i>
-                  </a>
-                </td>
-              </tr>
-              {{/each}}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+<div class="tarjeta-contenido">
+  <div class="seccion-titulo text-danger">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    Documentos Atrasados (más de 15 días)
+    <span class="badge bg-danger ms-2">{{totalAtrasados}}</span>
+  </div>
+  <div class="table-responsive">
+    <table class="tabla-moderna">
+      <thead>
+        <tr>
+          <th width="22%">Código Completo</th>
+          <th width="33%">Cliente</th>
+          <th width="10%">Tipo</th>
+          <th width="20%">Matrizador</th>
+          <th width="10%">Días</th>
+          <th width="5%">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each documentosAtrasados}}
+        <tr class="{{#gt diasTranscurridos 30}}table-danger{{else}}{{#gt diasTranscurridos 20}}table-warning{{else}}table-info{{/gt}}{{/gt}}">
+          <td>
+            <a href="/archivo/documentos/detalle/{{id}}" class="codigo-link">
+              {{codigoBarras}}
+            </a>
+          </td>
+          <td>
+            <strong>{{nombreCliente}}</strong>
+          </td>
+          <td>
+            <span class="badge badge-info">
+              {{abreviarTipoDocumento tipoDocumento}}
+            </span>
+          </td>
+          <td>
+            {{#if matrizador.nombre}}
+              <small>{{matrizador.nombre}}</small>
+            {{else}}
+              <span class="text-danger"><strong>Sin asignar</strong></span>
+            {{/if}}
+          </td>
+          <td>
+            <span class="badge bg-{{clasePrioridad}}">{{diasTranscurridos}}d</span>
+          </td>
+          <td>
+            <a href="/archivo/documentos/detalle/{{id}}" class="btn btn-outline-primary btn-sm" title="Ver detalles">
+              <i class="fas fa-eye"></i>
+            </a>
+          </td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
   </div>
 </div>
 {{else}}
-<div class="row mb-4">
-  <div class="col-12">
-    <div class="alert alert-success" role="alert">
-      <i class="fas fa-check-circle me-2"></i>
-      <strong>¡Excelente!</strong> No hay documentos atrasados en este momento.
-    </div>
-  </div>
+<div class="alert alert-success" role="alert">
+  <i class="fas fa-check-circle me-2"></i>
+  <strong>¡Excelente!</strong> No hay documentos atrasados en este momento.
 </div>
 {{/if}}
 
-<!-- CSS ADICIONAL PARA MEJORAR DISEÑO -->
+<!-- ESTILOS ADICIONALES PARA CÓDIGO CLICKEABLE -->
 <style>
-.dashboard-header {
-  background: linear-gradient(135deg, #36d1dc 0%, #5b86e5 100%);
-  border-radius: 10px;
-}
-
-.border-left-warning {
-  border-left: 0.25rem solid #f6c23e !important;
-}
-
-.border-left-success {
-  border-left: 0.25rem solid #1cc88a !important;
-}
-
-.border-left-primary {
-  border-left: 0.25rem solid #4e73df !important;
-}
-
-.border-left-info {
-  border-left: 0.25rem solid #36b9cc !important;
-}
-
-.border-left-danger {
-  border-left: 0.25rem solid #e74a3b !important;
-}
-
-.btn-block {
-  width: 100%;
-  padding: 0.75rem;
-  border-radius: 8px;
-  display: block;
-  text-align: center;
+.codigo-link {
+  color: var(--tufts-blue);
   text-decoration: none;
+  font-weight: 500;
+  font-family: 'Courier New', monospace;
+  padding: 2px 6px;
+  background: var(--alice-blue);
+  border-radius: 4px;
+  transition: all 0.3s ease;
 }
 
-.btn-block:hover {
+.codigo-link:hover {
+  color: var(--cobalt-blue);
+  background: var(--jordy-blue-30);
   text-decoration: none;
+  transform: translateY(-1px);
 }
 
-.h3 {
-  font-size: 2.5rem;
+/* Optimizaciones para móvil */
+@media (max-width: 768px) {
+  .dashboard-header {
+    padding: var(--spacing-lg);
+  }
+  
+  .dashboard-title {
+    font-size: 1.5rem;
+  }
+  
+  .btn {
+    min-height: 48px;
+  }
 }
-
-.card {
-  border-radius: 10px;
-  transition: transform 0.2s;
-}
-
-.card:hover {
-  transform: translateY(-2px);
-}
-
-.badge {
-  font-size: 0.75rem;
-}
-
-.table th {
-  font-size: 0.8rem;
-  font-weight: 600;
-  border-top: none;
-}
-
- .table td {
-   vertical-align: middle;
-   font-size: 0.85rem;
- }
-
- /* Mejorar legibilidad de códigos de barras */
- code.small {
-   font-family: 'Courier New', monospace;
-   font-weight: 600;
-   letter-spacing: 0.5px;
- }
-
- /* Código completo sin truncar */
- code.codigo-completo {
-   font-family: 'Courier New', monospace;
-   font-weight: 600;
-   font-size: 0.75rem;
-   letter-spacing: 0.2px;
-   word-break: break-all;
-   white-space: normal;
-   display: block;
-   line-height: 1.2;
-   max-width: 100%;
-   overflow-wrap: break-word;
- }
-
- /* Asegurar contraste en badges */
- .badge.bg-warning {
-   color: #000 !important;
-   font-weight: 600;
- }
-
- .badge.bg-success {
-   color: #fff !important;
-   font-weight: 600;
- }
-
- .badge.bg-info {
-   color: #fff !important;
-   font-weight: 600;
- }
-
- .badge.bg-danger {
-   color: #fff !important;
-   font-weight: 600;
- }
-
- /* Mejorar espaciado en tabla */
- .table td {
-   padding: 0.5rem 0.25rem;
- }
-
- .table th {
-   padding: 0.5rem 0.25rem;
-   font-weight: 700;
- }
-
-.opacity-75 {
-  opacity: 0.75;
-}
-
-.me-1 { margin-right: 0.25rem; }
-.me-2 { margin-right: 0.5rem; }
-.me-3 { margin-right: 1rem; }
-.ms-2 { margin-left: 0.5rem; }
 </style>
 
-<!-- JavaScript para mejor UX -->
+<!-- JavaScript mejorado para UX -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   // Animación de aparición de tarjetas
-  const cards = document.querySelectorAll('.card');
-  cards.forEach((card, index) => {
-    card.style.opacity = '0';
-    card.style.transform = 'translateY(20px)';
+  const tarjetas = document.querySelectorAll('.tarjeta-kpi');
+  tarjetas.forEach((tarjeta, index) => {
+    tarjeta.style.opacity = '0';
+    tarjeta.style.transform = 'translateY(20px)';
     setTimeout(() => {
-      card.style.transition = 'all 0.3s ease';
-      card.style.opacity = '1';
-      card.style.transform = 'translateY(0)';
+      tarjeta.style.transition = 'all 0.3s ease';
+      tarjeta.style.opacity = '1';
+      tarjeta.style.transform = 'translateY(0)';
     }, index * 100);
   });
 
-  // Tooltip para códigos de barras largos
-  const codigoCells = document.querySelectorAll('code.small');
-  codigoCells.forEach(code => {
-    if (code.textContent.length > 15) {
-      code.title = code.textContent;
-      code.textContent = code.textContent.substring(0, 15) + '...';
+  // Mejorar accesibilidad de códigos
+  const codigoLinks = document.querySelectorAll('.codigo-link');
+  codigoLinks.forEach(link => {
+    if (link.textContent.length > 15) {
+      link.title = link.textContent;
     }
   });
 
-  console.log('📊 Dashboard de Archivo Simplificado - Cargado exitosamente');
+  console.log('📊 Dashboard de Archivo Modernizado - Paleta Profesional Aplicada');
 });
 </script> 

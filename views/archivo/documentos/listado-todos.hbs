@@ -111,43 +111,43 @@
   <table class="table table-hover tabla-ordenable table-documentos" id="tablaDocumentosArchivo">
     <thead>
       <tr>
-        <th class="col-codigo ordenable" data-columna="codigoBarras" data-tipo="texto">
+        <th class="col-codigo ordenable" data-columna="codigoBarras" data-tipo="texto" style="width: 26%;">
           <span>Código</span>
           <i class="fas fa-sort ms-1 sort-icon"></i>
         </th>
-        <th class="col-cliente ordenable" data-columna="nombreCliente" data-tipo="texto">
+        <th class="col-cliente ordenable" data-columna="nombreCliente" data-tipo="texto" style="width: 30%;">
           <span>Cliente</span>
           <i class="fas fa-sort ms-1 sort-icon"></i>
         </th>
-        <th class="col-matrizador ordenable" data-columna="matrizador" data-tipo="texto">
+        <th class="col-matrizador ordenable" data-columna="matrizador" data-tipo="texto" style="width: 8%;">
           <span>Matrizador</span>
           <i class="fas fa-sort ms-1 sort-icon"></i>
         </th>
-        <th class="col-fecha ordenable" data-columna="fechaFactura" data-tipo="fecha">
+        <th class="col-fecha ordenable" data-columna="fechaFactura" data-tipo="fecha" style="width: 7%;">
           <span>Fecha</span>
           <i class="fas fa-sort ms-1 sort-icon"></i>
         </th>
-        <th class="col-estado ordenable" data-columna="estado" data-tipo="texto">
-          <span>Estado Entrega</span>
+        <th class="col-estados ordenable" data-columna="estado" data-tipo="texto" style="width: 15%;">
+          <span>Estados</span>
           <i class="fas fa-sort ms-1 sort-icon"></i>
         </th>
-        <th class="col-pago ordenable" data-columna="estadoPago" data-tipo="texto">
-          <span>Estado Pago</span>
-          <i class="fas fa-sort ms-1 sort-icon"></i>
-        </th>
-        <th class="col-valor ordenable" data-columna="valorFactura" data-tipo="numero">
+        <th class="col-valor ordenable" data-columna="valorFactura" data-tipo="numero" style="width: 8%;">
           <span>Valor</span>
           <i class="fas fa-sort ms-1 sort-icon"></i>
         </th>
-        <th class="col-acciones">Acciones</th>
+        <th class="col-acciones" style="width: 6%;">
+          Ver
+        </th>
       </tr>
     </thead>
     <tbody>
       {{#each documentos}}
       <tr data-documento-id="{{this.id}}" {{#if (esDocumentoAjeno ../usuario this)}}class="documento-ajeno"{{/if}}>
-        <!-- Código DESTACADO con fondo -->
+        <!-- Código DESTACADO con fondo Y CLICKEABLE -->
         <td class="col-codigo">
-            {{{highlightCode this.codigoBarras}}}
+            <a href="/archivo/documentos/detalle/{{this.id}}" class="codigo-link" title="{{this.codigoBarras}} - Click para ver detalles">
+                <span class="codigo-display">{{this.codigoBarras}}</span>
+            </a>
             <div class="tipo-documento">
                 <small class="text-muted">{{this.tipoDocumento}}</small>
             </div>
@@ -160,7 +160,7 @@
         
         <!-- Cliente OPTIMIZADO con truncado y tooltip -->
         <td class="col-cliente">
-          <div class="cliente-nombre">{{{truncateWithTooltip this.nombreCliente 25}}}</div>
+          <div class="cliente-nombre" title="{{this.nombreCliente}}">{{this.nombreCliente}}</div>
           <div class="cliente-identificacion">{{this.identificacionCliente}}</div>
         </td>
         
@@ -186,20 +186,22 @@
           {{/if}}
         </td>
         
-        <!-- Estado de Entrega (NUEVO BADGE) -->
-        <td class="col-estado text-center">
-          {{{badgeEstadoEntrega this.estado}}}
-        </td>
-        
-        <!-- Estado de Pago (NUEVO BADGE) -->
-        <td class="col-pago text-center">
-          {{#if this.numeroFactura}}
-            {{{badgeEstadoPago this.estadoPago}}}
-          {{else}}
-            <span class="badge bg-secondary" title="Documento sin factura asociada">
-                <i class="fas fa-file-invoice-dollar me-1"></i> S/F
-            </span>
-          {{/if}}
+        <!-- Estados Combinados (Entrega + Pago) -->
+        <td class="col-estados">
+          <div class="estados-container">
+            <div class="estado-entrega">
+              {{{badgeEstadoEntrega this.estado}}}
+            </div>
+            <div class="estado-pago mt-1">
+              {{#if this.numeroFactura}}
+                {{{badgeEstadoPago this.estadoPago}}}
+              {{else}}
+                <span class="badge bg-secondary badge-sm" title="Sin factura">
+                    <i class="fas fa-file-invoice-dollar"></i> S/F
+                </span>
+              {{/if}}
+            </div>
+          </div>
         </td>
         
         <!-- Valor con formato mejorado -->
@@ -211,23 +213,16 @@
           {{/if}}
         </td>
         
-        <!-- Acciones (sin cambios) -->
+        <!-- Acciones - BOTÓN CLARO SIN TOOLTIP PROBLEMÁTICO -->
         <td class="col-acciones text-center">
-          <div class="btn-group btn-group-sm">
-            <a href="/archivo/documentos/detalle/{{this.id}}" class="btn btn-outline-primary btn-universal" title="Ver Detalle">
-              <i class="fas fa-eye"></i>
-            </a>
-            {{#unless (esDocumentoAjeno ../usuario this)}}
-            <a href="/archivo/documentos/editar/{{this.id}}" class="btn btn-outline-warning btn-universal" title="Editar">
-              <i class="fas fa-edit"></i>
-            </a>
-            {{/unless}}
-          </div>
+          <a href="/archivo/documentos/detalle/{{this.id}}" class="btn btn-sm btn-outline-primary action-btn">
+            <i class="fas fa-eye me-1"></i><span class="d-none d-lg-inline">Ver</span>
+          </a>
         </td>
       </tr>
       {{else}}
       <tr>
-        <td colspan="8" class="text-center py-5">
+        <td colspan="7" class="text-center py-5">
           <div class="sin-resultados">
             <i class="fas fa-search fa-2x mb-3 text-muted"></i>
             <h5 class="text-muted">No se encontraron documentos</h5>
@@ -294,10 +289,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Inicializar ordenamiento manual corregido
     inicializarOrdenamientoManual();
     
-    // ✨ INICIALIZAR TOOLTIPS PARA NOMBRES TRUNCADOS
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    // ✨ INICIALIZAR TOOLTIPS PARA TEXTOS TRUNCADOS
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
     const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-      return new bootstrap.Tooltip(tooltipTriggerEl);
+      return new bootstrap.Tooltip(tooltipTriggerEl, {
+        placement: 'top',
+        trigger: 'hover'
+      });
     });
     
     console.log('✅ Vista ARCHIVO migrada al sistema universal - Funcionalidad completa + Tooltips activos');
@@ -366,4 +364,36 @@ function limpiarFiltrosArchivo() {
 }
 </script>
 
-<!-- Estilos específicos eliminados - Ahora usa el sistema universal --> 
+<!-- Estilos específicos para archivo optimizados -->
+<style>
+/* BOTÓN DE ACCIÓN MEJORADO */
+.action-btn {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem !important;
+  border-width: 1px;
+  transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(70, 128, 235, 0.2);
+}
+
+/* AJUSTES ESPECÍFICOS PARA VISTA ARCHIVO */
+.tabla-ordenable .col-acciones {
+  text-align: center;
+  vertical-align: middle;
+}
+
+/* OPTIMIZACIÓN ADICIONAL PARA MÓVIL */
+@media (max-width: 768px) {
+  .action-btn span {
+    display: none !important;
+  }
+  
+  .action-btn {
+    padding: 0.2rem 0.4rem !important;
+    font-size: 0.7rem;
+  }
+}
+</style> 
