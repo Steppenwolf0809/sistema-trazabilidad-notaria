@@ -198,8 +198,14 @@ const seleccionarPlantillaPorPago = (infoPago) => {
  * @returns {string} Mensaje formateado
  */
 const generarMensajeDocumentoListo = (documento) => {
-  // Generar código de verificación si no existe
-  const codigoVerificacion = documento.codigoVerificacion || generarCodigoVerificacion();
+  // ✅ FIX CRÍTICO: Usar SIEMPRE el código del documento, no generar uno nuevo
+  const codigoVerificacion = documento.codigoVerificacion;
+  
+  // Si no hay código, algo está mal - log de error pero no generar uno nuevo
+  if (!codigoVerificacion) {
+    console.error(`❌ [WHATSAPP] Documento ${documento.codigoBarras} sin código de verificación!`);
+    console.error(`   Este es un error grave - el documento debería tener código antes de notificar`);
+  }
   
   // Contexto del trámite si existe
   let contextoTramite = '';
@@ -213,13 +219,14 @@ const generarMensajeDocumentoListo = (documento) => {
   
   if (plantilla) {
     console.log(`📱 [WHATSAPP] Usando plantilla para estado: ${infoPago.estado} (pagado: ${infoPago.estaPagado})`);
+    console.log(`🔑 [WHATSAPP] Código de verificación a enviar: ${codigoVerificacion || 'ERROR-SIN-CODIGO'}`);
     
     // Reemplazar variables en la plantilla seleccionada
     return plantilla
       .replace('{{tipoDocumento}}', documento.tipoDocumento || 'Documento')
       .replace('{{contextoTramite}}', contextoTramite)
       .replace('{{codigoBarras}}', documento.codigoBarras || 'N/A')
-      .replace('{{codigoVerificacion}}', codigoVerificacion)
+      .replace('{{codigoVerificacion}}', codigoVerificacion || 'ERROR-SIN-CODIGO')
       .replace('{{nombreCliente}}', documento.nombreCliente || 'Cliente')
       .replace('{{valorFactura}}', infoPago.valorFactura.toFixed(2))
       .replace('{{valorPendiente}}', infoPago.valorPendiente.toFixed(2));

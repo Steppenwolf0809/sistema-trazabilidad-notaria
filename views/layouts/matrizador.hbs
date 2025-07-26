@@ -16,6 +16,9 @@
   <!-- Sistema Tipográfico Unificado ProNotary -->
   <link rel="stylesheet" href="/css/typography.css">
   
+  <!-- PALETA PROFESIONAL AZUL - CRÍTICO PARA DASHBOARD -->
+  <link rel="stylesheet" href="/css/paleta-profesional.css">
+  
   <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   
@@ -31,16 +34,16 @@
   <!-- ProNotary Mobile Responsive System -->
   <link rel="stylesheet" href="/css/mobile-responsive.css">
   
-  <!-- Estilos personalizados -->
+  <!-- Estilos personalizados - COMPATIBLES CON PALETA AZUL -->
   <style>
     :root {
       --sidebar-width: 250px;
     }
     
+    /* Permitir que la paleta azul tome precedencia para body */
     body {
       font-family: var(--font-primary);
-      background-color: #f5f5f5;
-      color: #333;
+      /* background-color y color definidos en paleta-profesional.css */
     }
     
     .topbar {
@@ -54,7 +57,8 @@
       align-items: center;
     }
     
-    .card {
+    /* Permitir que tarjetas-kpi y tarjeta-contenido tomen precedencia */
+    .card:not(.tarjeta-kpi):not(.tarjeta-contenido) {
       border: none;
       border-radius: 10px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.05);

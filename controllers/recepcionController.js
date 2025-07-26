@@ -2973,6 +2973,121 @@ const recepcionController = {
     }
   },
 
+  /**
+   * Función para marcar documento como listo (cualquier matrizador)
+   * NUEVA FUNCIONALIDAD para que recepción pueda marcar documentos listos
+   */
+  marcarComoListo: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const usuarioId = req.user?.id || req.matrizador?.id;
+      
+      // Verificar que documento existe y está en proceso
+      const documento = await Documento.findOne({
+        where: { 
+          id: id,
+          estado: 'en_proceso'
+        },
+        include: [
+          { model: Matrizador, as: 'matrizador' }
+        ]
+      });
+      
+      if (!documento) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'Documento no encontrado o no está en proceso' 
+        });
+      }
+      
+      // ✅ GENERAR CÓDIGO DE VERIFICACIÓN de 4 dígitos
+      const codigoVerificacion = Math.floor(1000 + Math.random() * 9000).toString();
+      
+      // Actualizar estado documento con código de verificación
+      await documento.update({
+        estado: 'listo_para_entrega',
+        fechaCompletado: new Date(),
+        codigoVerificacion: codigoVerificacion
+      });
+      
+      console.log(`🔑 Código de verificación generado: ${codigoVerificacion} para documento ${documento.codigoBarras}`);
+      
+      // Registrar evento en auditoría con tipo correcto para historial universal
+      await EventoDocumento.create({
+        documentoId: id,
+        tipo: 'documento_listo',  // ✅ CAMBIO: Usar tipo específico para historial universal
+        categoria: 'estado',
+        titulo: 'Documento marcado como listo por Recepción',
+        descripcion: `Documento marcado como listo para entrega por personal de Recepción`,
+        detalles: {
+          estado_anterior: 'en_proceso',
+          estado_nuevo: 'listo_para_entrega',
+          marcado_por_recepcion: true,
+          matrizador_original: documento.matrizador?.nombre || 'Sin asignar',
+          fecha_completado: new Date().toISOString(),
+          usuario_recepcion: req.matrizador?.nombre || 'Sistema',
+          codigo_verificacion_generado: codigoVerificacion
+        },
+        usuario: req.matrizador?.nombre || 'Sistema',
+        metadatos: {
+          categoria: 'estado',
+          usuario_id: usuarioId,
+          usuario_rol: req.matrizador?.rol || 'recepcion',
+          timestamp: new Date().toISOString(),
+          // ✅ NUEVO: Campos específicos para historial universal
+          canal: 'recepcion',
+          estado: 'procesada',
+          tipo: 'documento_listo'
+        }
+      });
+      
+      // Enviar notificación WhatsApp al cliente
+      try {
+        await NotificationService.enviarNotificacionDocumentoListo(documento.id);
+        console.log(`📱 Notificación enviada para documento ${documento.codigoBarras}`);
+      } catch (notifError) {
+        console.warn('Error enviando notificación:', notifError);
+        // No fallar la operación por error de notificación
+      }
+      
+      res.json({ 
+        success: true, 
+        message: 'Documento marcado como listo exitosamente. Código de verificación generado.',
+        documento_codigo: documento.codigoBarras,
+        codigo_verificacion: codigoVerificacion
+      });
+      
+    } catch (error) {
+      console.error('Error marcar como listo:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Error interno del servidor',
+        error: error.message 
+      });
+    }
+  },
+
+  /**
+   * Función para listar documentos en proceso (todos los matrizadores)
+   * NUEVA FUNCIONALIDAD para que recepción vea todos los documentos en proceso
+   */
+  listarDocumentosEnProceso: async (req, res) => {
+    try {
+      const documentos = await Documento.findAll({
+        where: { estado: 'en_proceso' },
+        include: [
+          { model: Matrizador, as: 'matrizador', attributes: ['nombre'] }
+        ],
+        order: [['fechaFactura', 'DESC']]
+      });
+      
+      res.json({ success: true, documentos });
+    } catch (error) {
+      console.error('Error listar documentos en proceso:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  },
+
 
 };
 

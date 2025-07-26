@@ -407,7 +407,20 @@ function construirDescripcionEspecifica(tipoEvento, eventoDB, documento, detalle
       return `Notificación enviada vía ${canal}`;
     
     case 'marcado_listo':
-      return `Documento marcado como listo para entrega por el matrizador`;
+      // ✅ DETECTAR SI FUE MARCADO POR RECEPCIÓN
+      const marcadoPorRecepcion = detalles.marcado_por_recepcion || detalles.usuario_recepcion;
+      const usuarioMarco = detalles.usuario_recepcion || eventoDB.usuario || 'Usuario';
+      
+      if (marcadoPorRecepcion) {
+        const codigoGenerado = detalles.codigo_verificacion_generado;
+        let descripcion = `Documento marcado como listo para entrega por Recepción (${usuarioMarco})`;
+        if (codigoGenerado) {
+          descripcion += `. Código de verificación generado: ${codigoGenerado}`;
+        }
+        return descripcion;
+      } else {
+        return `Documento marcado como listo para entrega por el matrizador`;
+      }
     
     case 'autorizacion_credito':
       const justificacion = detalles.justificacion_entrega_sin_pago || 

@@ -1,192 +1,183 @@
-<!-- Encabezado -->
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">
-        <i class="bi bi-collection text-primary me-2"></i>
-        Todos los Documentos del Sistema
-    </h1>
-    <div class="btn-toolbar mb-2 mb-md-0">
-        <div class="btn-group me-2">
-            <a href="/archivo" class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-arrow-left"></i>
-                Volver al Dashboard
-            </a>
-        </div>
+<!-- HEADER PROFESIONAL CON PALETA AZUL -->
+<div class="dashboard-header">
+  <div class="container-fluid">
+    <div class="row align-items-center">
+      <div class="col-md-8">
+        <h2 class="dashboard-title">
+          <i class="fas fa-list me-3"></i>Todos los Documentos del Sistema
+        </h2>
+        <p class="dashboard-subtitle">Vista completa de documentos en el sistema</p>
+      </div>
+      <div class="col-md-4 text-end">
+        <a href="/archivo" class="btn btn-secondary">
+          <i class="fas fa-arrow-left me-1"></i> Volver al Dashboard
+        </a>
+      </div>
     </div>
+  </div>
 </div>
 
-<!-- Filtros -->
-<div class="card mb-4">
-    <div class="card-header">
-        <h6 class="mb-0">
-            <i class="bi bi-funnel me-2"></i>
-            Filtros de Búsqueda
-        </h6>
+<!-- FILTROS PROFESIONALES -->
+<div class="tarjeta-contenido">
+  <div class="seccion-titulo">🔍 Filtros de Búsqueda</div>
+  <form method="GET" action="/archivo/documentos/todos" id="filtrosFormArchivo">
+    <div class="row">
+      <div class="col-md-3 mb-3">
+        <label for="buscar" class="form-label">Buscar</label>
+        <input type="text" 
+               class="form-input" 
+               id="buscar" 
+               name="buscar" 
+               placeholder="Protocolo, cliente, identificación..."
+               value="{{filtros.buscar}}">
+      </div>
+      <div class="col-md-2 mb-3">
+        <label for="estado" class="form-label">Estado</label>
+        <select class="form-input" id="estado" name="estado">
+          <option value="">Todos</option>
+          <option value="proceso" {{#if (eq filtros.estado 'proceso')}}selected{{/if}}>En Proceso</option>
+          <option value="listo" {{#if (eq filtros.estado 'listo')}}selected{{/if}}>Listo</option>
+          <option value="entregado" {{#if (eq filtros.estado 'entregado')}}selected{{/if}}>Entregado</option>
+          <option value="cancelado" {{#if (eq filtros.estado 'cancelado')}}selected{{/if}}>Cancelado</option>
+        </select>
+      </div>
+      <div class="col-md-2 mb-3">
+        <label for="estadoPago" class="form-label">Estado Pago</label>
+        <select class="form-input" id="estadoPago" name="estadoPago">
+          <option value="">Todos</option>
+          <option value="pendiente" {{#if (eq filtros.estadoPago 'pendiente')}}selected{{/if}}>Pendiente</option>
+          <option value="pago_parcial" {{#if (eq filtros.estadoPago 'pago_parcial')}}selected{{/if}}>Pago Parcial</option>
+          <option value="pagado_completo" {{#if (eq filtros.estadoPago 'pagado_completo')}}selected{{/if}}>Pagado Completo</option>
+          <option value="pagado_con_retencion" {{#if (eq filtros.estadoPago 'pagado_con_retencion')}}selected{{/if}}>Con Retención</option>
+        </select>
+      </div>
+      <div class="col-md-2 mb-3">
+        <label for="tipoDocumento" class="form-label">Tipo</label>
+        <select class="form-input" id="tipoDocumento" name="tipoDocumento">
+          <option value="">Todos</option>
+          <option value="Protocolo" {{#if (eq filtros.tipoDocumento 'Protocolo')}}selected{{/if}}>Protocolo</option>
+          <option value="Diligencias" {{#if (eq filtros.tipoDocumento 'Diligencias')}}selected{{/if}}>Diligencias</option>
+          <option value="Certificaciones" {{#if (eq filtros.tipoDocumento 'Certificaciones')}}selected{{/if}}>Certificaciones</option>
+          <option value="Arrendamientos" {{#if (eq filtros.tipoDocumento 'Arrendamientos')}}selected{{/if}}>Arrendamientos</option>
+          <option value="Otros" {{#if (eq filtros.tipoDocumento 'Otros')}}selected{{/if}}>Otros</option>
+        </select>
+      </div>
+      <div class="col-md-2 mb-3">
+        <label for="matrizador" class="form-label">Matrizador</label>
+        <select class="form-input" id="matrizador" name="matrizador">
+          <option value="">Todos</option>
+          {{#each matrizadores}}
+          <option value="{{this.id}}" {{#if (eq ../filtros.matrizador this.id)}}selected{{/if}}>
+            {{this.nombre}}
+          </option>
+          {{/each}}
+        </select>
+      </div>
+      <div class="col-md-1 d-flex align-items-end mb-3">
+        <button type="submit" class="btn btn-primary w-100">
+          <i class="fas fa-search"></i>
+        </button>
+      </div>
     </div>
-    <div class="card-body">
-        <form method="GET" action="/archivo/documentos/todos" id="filtrosFormArchivo">
-            <div class="row">
-                <div class="col-md-3">
-                    <label for="buscar" class="form-label">Buscar</label>
-                    <input type="text" 
-                           class="form-control" 
-                           id="buscar" 
-                           name="buscar" 
-                           placeholder="Protocolo, cliente, identificación..."
-                           value="{{filtros.buscar}}">
-                </div>
-                <div class="col-md-2">
-                    <label for="estado" class="form-label">Estado</label>
-                    <select class="form-select" id="estado" name="estado">
-                        <option value="">Todos</option>
-                        <option value="proceso" {{#if (eq filtros.estado 'proceso')}}selected{{/if}}>En Proceso</option>
-                        <option value="listo" {{#if (eq filtros.estado 'listo')}}selected{{/if}}>Listo</option>
-                        <option value="entregado" {{#if (eq filtros.estado 'entregado')}}selected{{/if}}>Entregado</option>
-                        <option value="cancelado" {{#if (eq filtros.estado 'cancelado')}}selected{{/if}}>Cancelado</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label for="estadoPago" class="form-label">Estado Pago</label>
-                    <select class="form-select" id="estadoPago" name="estadoPago">
-                        <option value="">Todos</option>
-                        <option value="pendiente" {{#if (eq filtros.estadoPago 'pendiente')}}selected{{/if}}>Pendiente</option>
-                        <option value="pago_parcial" {{#if (eq filtros.estadoPago 'pago_parcial')}}selected{{/if}}>Pago Parcial</option>
-                        <option value="pagado_completo" {{#if (eq filtros.estadoPago 'pagado_completo')}}selected{{/if}}>Pagado Completo</option>
-                        <option value="pagado_con_retencion" {{#if (eq filtros.estadoPago 'pagado_con_retencion')}}selected{{/if}}>Con Retención</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label for="tipoDocumento" class="form-label">Tipo</label>
-                    <select class="form-select" id="tipoDocumento" name="tipoDocumento">
-                        <option value="">Todos</option>
-                        <option value="Protocolo" {{#if (eq filtros.tipoDocumento 'Protocolo')}}selected{{/if}}>Protocolo</option>
-                        <option value="Diligencias" {{#if (eq filtros.tipoDocumento 'Diligencias')}}selected{{/if}}>Diligencias</option>
-                        <option value="Certificaciones" {{#if (eq filtros.tipoDocumento 'Certificaciones')}}selected{{/if}}>Certificaciones</option>
-                        <option value="Arrendamientos" {{#if (eq filtros.tipoDocumento 'Arrendamientos')}}selected{{/if}}>Arrendamientos</option>
-                        <option value="Otros" {{#if (eq filtros.tipoDocumento 'Otros')}}selected{{/if}}>Otros</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label for="matrizador" class="form-label">Matrizador</label>
-                    <select class="form-select" id="matrizador" name="matrizador">
-                        <option value="">Todos</option>
-                        {{#each matrizadores}}
-                        <option value="{{this.id}}" {{#if (eq ../filtros.matrizador this.id)}}selected{{/if}}>
-                            {{this.nombre}}
-                        </option>
-                        {{/each}}
-                    </select>
-                </div>
-                <div class="col-md-1 d-flex align-items-end">
-                    <button type="submit" class="btn btn-archivo w-100">
-                        <i class="bi bi-search"></i>
-                    </button>
-                </div>
-            </div>
-            <div class="row mt-2">
-                <div class="col-md-12">
-                    <a href="/archivo/documentos/todos" class="btn btn-outline-secondary btn-sm">
-                        <i class="bi bi-x-circle"></i>
-                        Limpiar Filtros
-                    </a>
-                </div>
-            </div>
-        </form>
+    <div class="row">
+      <div class="col-md-12">
+        <a href="/archivo/documentos/todos" class="btn btn-secondary btn-sm">
+          <i class="fas fa-times me-1"></i>
+          Limpiar Filtros
+        </a>
+      </div>
     </div>
+  </form>
 </div>
 
-<!-- Información de Resultados -->
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <div>
-        <span class="text-muted">
-            Mostrando {{paginacion.totalDocuments}} documento(s) encontrado(s)
-        </span>
+<!-- TABLA PROFESIONAL CON PALETA AZUL -->
+<div class="tarjeta-contenido">
+  <div class="seccion-titulo">
+    📋 Resultados de la Búsqueda
+    <div class="float-end">
+      <span class="badge bg-light text-dark">{{paginacion.totalDocuments}} documento(s)</span>
+      <span class="badge badge-info ms-2">Solo lectura para documentos ajenos</span>
     </div>
-    <div>
-        <span class="badge bg-info">Solo lectura para documentos ajenos</span>
-    </div>
-</div>
-
-<!-- 🎯 TABLA UNIVERSAL ARCHIVO - MIGRACIÓN COMPLETA -->
-<div class="table-responsive">
-  <table class="table table-hover tabla-ordenable table-documentos" id="tablaDocumentosArchivo">
-    <thead>
-      <tr>
-        <th class="col-codigo ordenable" data-columna="codigoBarras" data-tipo="texto" style="width: 26%;">
-          <span>Código</span>
-          <i class="fas fa-sort ms-1 sort-icon"></i>
-        </th>
-        <th class="col-cliente ordenable" data-columna="nombreCliente" data-tipo="texto" style="width: 30%;">
-          <span>Cliente</span>
-          <i class="fas fa-sort ms-1 sort-icon"></i>
-        </th>
-        <th class="col-matrizador ordenable" data-columna="matrizador" data-tipo="texto" style="width: 8%;">
-          <span>Matrizador</span>
-          <i class="fas fa-sort ms-1 sort-icon"></i>
-        </th>
-        <th class="col-fecha ordenable" data-columna="fechaFactura" data-tipo="fecha" style="width: 7%;">
-          <span>Fecha</span>
-          <i class="fas fa-sort ms-1 sort-icon"></i>
-        </th>
-        <th class="col-estados ordenable" data-columna="estado" data-tipo="texto" style="width: 15%;">
-          <span>Estados</span>
-          <i class="fas fa-sort ms-1 sort-icon"></i>
-        </th>
-        <th class="col-valor ordenable" data-columna="valorFactura" data-tipo="numero" style="width: 8%;">
-          <span>Valor</span>
-          <i class="fas fa-sort ms-1 sort-icon"></i>
-        </th>
-        <th class="col-acciones" style="width: 6%;">
-          Ver
-        </th>
-      </tr>
-    </thead>
+  </div>
+  
+  <div class="table-responsive">
+    <table class="tabla-moderna tabla-ordenable" id="tablaDocumentosArchivo">
+      <thead>
+        <tr>
+          <th class="col-codigo ordenable" data-columna="codigoBarras" data-tipo="texto" style="width: 26%;">
+            <span>Código</span>
+            <i class="fas fa-sort ms-1 sort-icon"></i>
+          </th>
+          <th class="col-cliente ordenable" data-columna="nombreCliente" data-tipo="texto" style="width: 30%;">
+            <span>Cliente</span>
+            <i class="fas fa-sort ms-1 sort-icon"></i>
+          </th>
+          <th class="col-matrizador ordenable" data-columna="matrizador" data-tipo="texto" style="width: 8%;">
+            <span>Matrizador</span>
+            <i class="fas fa-sort ms-1 sort-icon"></i>
+          </th>
+          <th class="col-fecha ordenable" data-columna="fechaFactura" data-tipo="fecha" style="width: 7%;">
+            <span>Fecha</span>
+            <i class="fas fa-sort ms-1 sort-icon"></i>
+          </th>
+          <th class="col-estados ordenable" data-columna="estado" data-tipo="texto" style="width: 15%;">
+            <span>Estados</span>
+            <i class="fas fa-sort ms-1 sort-icon"></i>
+          </th>
+          <th class="col-valor ordenable" data-columna="valorFactura" data-tipo="numero" style="width: 8%;">
+            <span>Valor</span>
+            <i class="fas fa-sort ms-1 sort-icon"></i>
+          </th>
+          <th class="col-acciones" style="width: 6%;">
+            Ver
+          </th>
+        </tr>
+      </thead>
     <tbody>
       {{#each documentos}}
       <tr data-documento-id="{{this.id}}" {{#if (esDocumentoAjeno ../usuario this)}}class="documento-ajeno"{{/if}}>
-        <!-- Código DESTACADO con fondo Y CLICKEABLE -->
+        <!-- Código con paleta profesional -->
         <td class="col-codigo">
             <a href="/archivo/documentos/detalle/{{this.id}}" class="codigo-link" title="{{this.codigoBarras}} - Click para ver detalles">
-                <span class="codigo-display">{{this.codigoBarras}}</span>
+                {{this.codigoBarras}}
             </a>
             <div class="tipo-documento">
-                <small class="text-muted">{{this.tipoDocumento}}</small>
+                <span class="badge badge-info">{{this.tipoDocumento}}</span>
             </div>
             {{#if (esDocumentoAjeno ../usuario this)}}
-            <small class="badge bg-warning text-dark ms-1">AJENO</small>
+            <span class="badge bg-warning text-dark ms-1">AJENO</span>
             {{/if}}
-            <!-- Contenedor para badges de autorización -->
-            <div class="badges-autorizacion mt-1"></div>
         </td>
         
-        <!-- Cliente OPTIMIZADO con truncado y tooltip -->
+        <!-- Cliente optimizado -->
         <td class="col-cliente">
-          <div class="cliente-nombre" title="{{this.nombreCliente}}">{{this.nombreCliente}}</div>
-          <div class="cliente-identificacion">{{this.identificacionCliente}}</div>
+          <div class="cliente-nombre"><strong>{{this.nombreCliente}}</strong></div>
+          <div class="cliente-identificacion text-muted">{{this.identificacionCliente}}</div>
         </td>
         
-        <!-- Matrizador (sin cambios) -->
-        <td class="col-matrizador">
+        <!-- Matrizador -->
+        <td class="col-matrizador text-center">
           {{#if this.matrizador}}
-          <span class="matrizador-universal" title="{{this.matrizador.nombre}}">
+          <span class="badge badge-info" title="{{this.matrizador.nombre}}">
             {{getIniciales this.matrizador.nombre}}
           </span>
           {{else}}
-          <span class="matrizador-universal sin-asignar" title="Sin asignar">
-            ??
+          <span class="badge bg-secondary" title="Sin asignar">
+            --
           </span>
           {{/if}}
         </td>
         
-        <!-- Fecha (sin cambios) -->
+        <!-- Fecha -->
         <td class="col-fecha">
           {{#if this.fechaFactura}}
           <span class="fecha-universal">{{formatFechaCorta this.fechaFactura}}</span>
           {{else}}
-          <span class="fecha-universal sin-fecha">--/--/--</span>
+          <span class="fecha-universal sin-fecha text-muted">--/--/--</span>
           {{/if}}
         </td>
         
-        <!-- Estados Combinados (Entrega + Pago) -->
+        <!-- Estados con paleta -->
         <td class="col-estados">
           <div class="estados-container">
             <div class="estado-entrega">
@@ -204,8 +195,8 @@
           </div>
         </td>
         
-        <!-- Valor con formato mejorado -->
-        <td class="col-valor text-right">
+        <!-- Valor -->
+        <td class="col-valor text-end">
           {{#if this.valorFactura}}
           <span class="valor-monetario">{{formatDineroCompleto this.valorFactura}}</span>
           {{else}}
@@ -213,9 +204,9 @@
           {{/if}}
         </td>
         
-        <!-- Acciones - BOTÓN CLARO SIN TOOLTIP PROBLEMÁTICO -->
+        <!-- Acciones con paleta -->
         <td class="col-acciones text-center">
-          <a href="/archivo/documentos/detalle/{{this.id}}" class="btn btn-sm btn-outline-primary action-btn">
+          <a href="/archivo/documentos/detalle/{{this.id}}" class="btn btn-primary btn-sm">
             <i class="fas fa-eye me-1"></i><span class="d-none d-lg-inline">Ver</span>
           </a>
         </td>
@@ -233,16 +224,17 @@
       {{/each}}
     </tbody>
   </table>
+  </div>
 </div>
 
-<!-- Paginación -->
+<!-- PAGINACIÓN PROFESIONAL -->
 {{#if (gt paginacion.totalPages 1)}}
 <nav aria-label="Paginación de documentos" class="mt-4">
     <ul class="pagination justify-content-center">
         {{#if paginacion.hasPrevPage}}
             <li class="page-item">
-                <a class="page-link" href="?page={{paginacion.prevPage}}&{{#each filtros}}{{@key}}={{this}}&{{/each}}">
-                    <i class="bi bi-chevron-left"></i>
+                <a class="page-link" href="?page={{paginacion.prevPage}}&{{#each filtros}}{{@key}}={{this}}&{{/each}}" style="color: var(--tufts-blue); border-color: var(--jordy-blue-30);">
+                    <i class="fas fa-chevron-left"></i>
                 </a>
             </li>
         {{/if}}
@@ -394,6 +386,132 @@ function limpiarFiltrosArchivo() {
   .action-btn {
     padding: 0.2rem 0.4rem !important;
     font-size: 0.7rem;
+  }
+}
+</style>
+
+<!-- ESTILOS ESPECÍFICOS PARA LISTADO ARCHIVO CON PALETA AZUL -->
+<style>
+/* Optimizaciones para listado de documentos de archivo */
+.codigo-link {
+  color: var(--tufts-blue);
+  text-decoration: none;
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
+  padding: 2px 6px;
+  background: var(--alice-blue);
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  display: inline-block;
+}
+
+.codigo-link:hover {
+  color: var(--cobalt-blue);
+  background: var(--jordy-blue-30);
+  text-decoration: none;
+  transform: translateY(-1px);
+}
+
+/* Badges con paleta profesional */
+.badge-info {
+  background-color: var(--alice-blue) !important;
+  color: var(--cool-black) !important;
+  border: 1px solid var(--tufts-blue-20);
+}
+
+/* Estados de las filas */
+.tabla-moderna tbody tr:hover {
+  background-color: rgba(70, 128, 235, 0.05) !important;
+  transition: background-color 0.3s ease;
+}
+
+.documento-ajeno {
+  background-color: rgba(255, 193, 7, 0.1) !important;
+}
+
+/* Optimización para iconos de ordenamiento */
+.sort-icon {
+  color: var(--tufts-blue);
+  transition: all 0.3s ease;
+}
+
+.ordenable:hover .sort-icon {
+  color: var(--cobalt-blue);
+}
+
+.ordenable.active .sort-icon {
+  color: var(--cobalt-blue);
+}
+
+/* Formato de valores monetarios */
+.valor-monetario {
+  font-weight: 600;
+  color: var(--cool-black);
+  font-family: 'Courier New', monospace;
+}
+
+/* Paginación con paleta */
+.page-link {
+  color: var(--tufts-blue) !important;
+  border-color: var(--jordy-blue-30) !important;
+}
+
+.page-link:hover {
+  background-color: var(--alice-blue) !important;
+  border-color: var(--jordy-blue) !important;
+  color: var(--cobalt-blue) !important;
+}
+
+.page-item.active .page-link {
+  background-color: var(--tufts-blue) !important;
+  border-color: var(--tufts-blue) !important;
+  color: white !important;
+}
+
+/* Responsive específico para móvil */
+@media (max-width: 768px) {
+  .dashboard-header {
+    padding: var(--spacing-lg);
+  }
+  
+  .dashboard-title {
+    font-size: 1.5rem;
+  }
+  
+  .btn.float-end {
+    float: none !important;
+    margin-top: var(--spacing-sm);
+    width: 100%;
+  }
+  
+  .col-codigo, .col-cliente {
+    min-width: 150px;
+  }
+  
+  .col-acciones {
+    min-width: 80px;
+  }
+  
+  .badge.float-end {
+    float: none !important;
+    display: block;
+    margin-top: var(--spacing-sm);
+  }
+}
+
+/* Animaciones sutiles */
+.tarjeta-contenido {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 </style> 

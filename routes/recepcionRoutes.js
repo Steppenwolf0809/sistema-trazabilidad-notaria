@@ -55,4 +55,10 @@ router.get('/api/documentos/grupales/:identificacion/:documentoId', validarAcces
 // Endpoint para procesar entrega grupal - ESTRICTO: solo recepción
 router.post('/documentos/entrega-grupal/:id', validarAccesoConAuditoria(['recepcion']), recepcionController.procesarEntregaGrupal);
 
+// ============== NUEVAS RUTAS: CAPACIDAD MARCAR COMO LISTO ==============
+
+// Agregar estas rutas para nueva funcionalidad
+router.post('/documentos/marcar-listo/:id', validarAccesoConAuditoria(['recepcion']), recepcionController.marcarComoListo);
+router.get('/documentos/en-proceso', validarAccesoConAuditoria(['recepcion']), recepcionController.listarDocumentosEnProceso);
+
 module.exports = router; 

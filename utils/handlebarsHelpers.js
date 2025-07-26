@@ -489,27 +489,43 @@ const helpers = {
     return tipoEvento === 'entrega_grupal';
   },
   
-  // CRÍTICO: Helper obtenerCodigoVerificacion que estaba faltando
+  // CRÍTICO: Helper obtenerCodigoVerificacion CORREGIDO
   obtenerCodigoVerificacion: (notificacion) => {
-    // Intentar obtener desde metadatos
+    // ✅ PRIORIDAD 1: Obtener desde el documento asociado (más confiable)
+    if (notificacion && notificacion.documento && notificacion.documento.codigoVerificacion) {
+      return notificacion.documento.codigoVerificacion;
+    }
+    
+    // ✅ PRIORIDAD 2: Obtener desde metadatos de la notificación
     if (notificacion && notificacion.metadatos && notificacion.metadatos.codigoVerificacion) {
       return notificacion.metadatos.codigoVerificacion;
     }
     
-    // Intentar extraer del mensaje enviado
+    // ✅ PRIORIDAD 3: Extraer del mensaje enviado usando múltiples patrones
     if (notificacion && notificacion.mensajeEnviado) {
-      const match = notificacion.mensajeEnviado.match(/código[:\s]*(\d{4})/i);
+      // Patrón más específico para "Código de retiro:"
+      let match = notificacion.mensajeEnviado.match(/Código de retiro[:\s]*(\d{4})/i);
+      if (match) {
+        return match[1];
+      }
+      
+      // Patrón genérico para "código"
+      match = notificacion.mensajeEnviado.match(/código[:\s]*(\d{4})/i);
+      if (match) {
+        return match[1];
+      }
+      
+      // Patrón para números de 4 dígitos aislados
+      match = notificacion.mensajeEnviado.match(/\b(\d{4})\b/);
       if (match) {
         return match[1];
       }
     }
     
-    // Generar código visual basado en ID (para compatibilidad)
-    if (notificacion && notificacion.id) {
-      return String(notificacion.id).padStart(4, '0');
-    }
+    // ❌ ELIMINADO: Ya no generar código basado en ID de notificación
+    // Esto causaba confusión mostrando códigos incorrectos
     
-    return '****';
+    return 'N/A';
   },
 
   // ============== HELPERS DE CÁLCULO MATEMÁTICO ==============

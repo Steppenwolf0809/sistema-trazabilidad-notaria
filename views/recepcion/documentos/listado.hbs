@@ -167,16 +167,30 @@
                 {{/if}}
               </td>
               
-              <!-- Acciones (sin cambios) -->
+              <!-- Acciones ACTUALIZADAS con botón "Marcar como listo" -->
               <td class="col-acciones text-center">
                 <div class="btn-group btn-group-sm">
+                  <!-- Botón ver detalle (siempre presente) -->
                   <a href="/recepcion/documentos/detalle/{{this.id}}" class="btn btn-outline-primary btn-universal" title="Ver Detalle">
                     <i class="fas fa-eye"></i>
                   </a>
-                  {{#if (eq this.estado 'listo_para_entrega')}}
-                  <button class="btn btn-outline-success btn-universal" onclick="marcarComoEntregado({{this.id}})" title="Marcar como Entregado">
-                    <i class="fas fa-check-circle"></i>
+                  
+                  <!-- NUEVO: Botón marcar como listo (solo si está en proceso) -->
+                  {{#if (eq this.estado 'en_proceso')}}
+                  <button onclick="marcarComoListo({{this.id}}, '{{this.codigoBarras}}')" 
+                          class="btn btn-success btn-universal"
+                          title="Marcar como listo para entrega">
+                    <i class="fas fa-check"></i>
                   </button>
+                  {{/if}}
+                  
+                  <!-- Botón entregar (solo si está listo) -->
+                  {{#if (eq this.estado 'listo_para_entrega')}}
+                  <a href="/recepcion/documentos/entrega/{{this.id}}" 
+                     class="btn btn-outline-success btn-universal" 
+                     title="Proceder con entrega">
+                    <i class="fas fa-hand-holding"></i>
+                  </a>
                   {{/if}}
                 </div>
               </td>
@@ -300,7 +314,57 @@
     console.log('✅ Ordenamiento manual configurado para RECEPCIÓN:', headersOrdenables.length, 'columnas');
   }
 
-  // Función para marcar documento como entregado
+  // NUEVA FUNCIÓN: Marcar documento como listo para entrega
+  function marcarComoListo(documentoId, codigo) {
+    if (confirm(`¿Marcar documento ${codigo} como listo para entrega?\n\nEsto enviará notificación al cliente automáticamente.`)) {
+      
+      // Mostrar loading en botón
+      const boton = event.target.closest('button');
+      const textoOriginal = boton.innerHTML;
+      boton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+      boton.disabled = true;
+      
+      fetch(`/recepcion/documentos/marcar-listo/${documentoId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Mostrar mensaje de éxito con código de verificación
+          let mensaje = `✅ Documento ${data.documento_codigo} marcado como listo.\n\n`;
+          if (data.codigo_verificacion) {
+            mensaje += `🔑 Código de verificación: ${data.codigo_verificacion}\n\n`;
+          }
+          mensaje += `📱 Notificación enviada al cliente.`;
+          
+          alert(mensaje);
+          
+          // Recargar página para actualizar estado
+          location.reload();
+        } else {
+          alert(`❌ Error: ${data.message}`);
+          
+          // Restaurar botón
+          boton.innerHTML = textoOriginal;
+          boton.disabled = false;
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('❌ Error de conexión. Inténtalo nuevamente.');
+        
+        // Restaurar botón
+        boton.innerHTML = textoOriginal;
+        boton.disabled = false;
+      });
+    }
+  }
+
+  // Función para marcar documento como entregado (LEGACY - mantener por compatibilidad)
   function marcarComoEntregado(documentoId) {
     if (confirm('¿Está seguro de marcar este documento como entregado?')) {
       fetch(`/recepcion/documentos/${documentoId}/entregar`, {

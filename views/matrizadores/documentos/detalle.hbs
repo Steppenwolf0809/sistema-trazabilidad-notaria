@@ -1,5 +1,5 @@
-{{! DETALLE DE DOCUMENTO UNIFICADO - VISTA PROFESIONAL CON EDICIÓN IN-PLACE }}
-{{! Layout sobrio inspirado en vista de archivo, colores equilibrados }}
+{{! DETALLE DE DOCUMENTO MATRIZADOR - MODERNIZADO CON PALETA AZUL PROFESIONAL }}
+{{! Layout profesional con paleta azul unificada }}
 
 <!-- Include CSS y JS específicos para la vista unificada -->
 <link rel="stylesheet" href="/css/documento-detalle-unificado.css">
@@ -8,45 +8,51 @@
 {{#if documento}}
 <div class="document-unified-container">
   
-  <!-- Header del documento -->
-  <div class="document-header">
-    <div class="row align-items-center">
-      <div class="col-lg-8">
-        <h1 class="document-title">
-          {{documento.tipoDocumento}}
-          <span class="badge badge-estado {{#if (eq documento.estado "en_proceso")}}estado-en-proceso{{else if (eq documento.estado "listo_para_entrega")}}estado-listo{{else if (eq documento.estado "entregado")}}estado-entregado{{else}}estado-pendiente{{/if}} ms-3">
-            {{#if (eq documento.estado "en_proceso")}}En Proceso
-            {{else if (eq documento.estado "listo_para_entrega")}}Listo
-            {{else if (eq documento.estado "entregado")}}Entregado
-            {{else}}{{translateEstado documento.estado}}{{/if}}
-          </span>
-        </h1>
-        <p class="document-subtitle">Documento: {{documento.codigoBarras}} | Cliente: {{documento.nombreCliente}}</p>
-      </div>
-      <div class="col-lg-4">
-        <div class="action-buttons justify-content-end">
-          {{#if (eq documento.estado "en_proceso")}}
-          <button class="btn btn-success action-button-primary" onclick="marcarListo({{documento.id}})">
-            <i class="fas fa-check me-1"></i> Marcar como Listo
-          </button>
-          {{/if}}
-          <a href="/matrizador/documentos" class="btn btn-secondary-soft">
-            <i class="fas fa-arrow-left me-1"></i> Volver
-          </a>
+  <!-- HEADER PROFESIONAL CON PALETA AZUL -->
+  <div class="dashboard-header">
+    <div class="container-fluid">
+      <div class="row align-items-center">
+        <div class="col-lg-8">
+          <h2 class="dashboard-title">
+            <i class="fas fa-file-alt me-3"></i>
+            {{documento.tipoDocumento}}
+            <span class="badge {{#if (eq documento.estado "en_proceso")}}badge-warning{{else if (eq documento.estado "listo_para_entrega")}}badge-info{{else if (eq documento.estado "entregado")}}badge-success{{else}}badge-secondary{{/if}} ms-3">
+              {{#if (eq documento.estado "en_proceso")}}En Proceso
+              {{else if (eq documento.estado "listo_para_entrega")}}Listo
+              {{else if (eq documento.estado "entregado")}}Entregado
+              {{else}}{{translateEstado documento.estado}}{{/if}}
+            </span>
+          </h2>
+          <p class="dashboard-subtitle">
+            <strong>Documento:</strong> {{documento.codigoBarras}} | 
+            <strong>Cliente:</strong> {{documento.nombreCliente}}
+          </p>
+        </div>
+        <div class="col-lg-4 text-end">
+          <div class="action-buttons">
+            {{#if (eq documento.estado "en_proceso")}}
+            <button class="btn btn-primary" onclick="marcarListo({{documento.id}})">
+              <i class="fas fa-check me-1"></i> Marcar como Listo
+            </button>
+            {{/if}}
+            <a href="/matrizador/documentos" class="btn btn-secondary ms-2">
+              <i class="fas fa-arrow-left me-1"></i> Volver
+            </a>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  {{!-- 🚨 AVISOS IMPORTANTES PARA NOTIFICACIONES GRUPALES --}}
+  {{!-- AVISOS PROFESIONALES CON PALETA AZUL --}}
   {{#if (and (eq documento.estado "en_proceso") informacionGrupal.puedeCrearGrupo)}}
-  <div class="alert alert-warning-professional">
+  <div class="alert alert-warning" role="alert" style="background-color: rgba(155, 191, 255, 0.2); border-color: var(--jordy-blue-30); color: var(--cool-black);">
     <div class="d-flex align-items-start">
-      <i class="fas fa-exclamation-triangle me-3 mt-1"></i>
+      <i class="fas fa-exclamation-triangle me-3 mt-1" style="color: var(--cobalt-blue);"></i>
       <div>
         <h6 class="fw-bold mb-2">⚠️ Documentos agrupables detectados</h6>
         <p class="mb-2">Se encontraron <strong>{{informacionGrupal.totalAgrupables}} documentos adicionales</strong> del mismo cliente que pueden agruparse para enviar una sola notificación.</p>
-        <a href="#seccion-notificaciones-grupales" class="btn btn-sm btn-warning-soft">
+        <a href="#seccion-notificaciones-grupales" class="btn btn-sm btn-secondary">
           <i class="fas fa-arrow-down me-1"></i> Ver documentos disponibles
         </a>
       </div>
@@ -55,13 +61,13 @@
   {{/if}}
 
   {{#if (and (eq documento.estado "en_proceso") informacionGrupal.grupo)}}
-  <div class="alert alert-info-professional">
+  <div class="alert alert-info" role="alert" style="background-color: var(--alice-blue); border-color: var(--tufts-blue-20); color: var(--cool-black);">
     <div class="d-flex align-items-start">
-      <i class="fas fa-layer-group me-3 mt-1"></i>
+      <i class="fas fa-layer-group me-3 mt-1" style="color: var(--tufts-blue);"></i>
       <div>
         <h6 class="fw-bold mb-2">📱 Documento agrupado para notificación</h6>
         <p class="mb-2">Este documento está agrupado con <strong>{{informacionGrupal.totalDocumentosGrupo}} documentos</strong> del mismo cliente para notificación consolidada.</p>
-        <a href="#seccion-notificaciones-grupales" class="btn btn-sm btn-outline-primary">
+        <a href="#seccion-notificaciones-grupales" class="btn btn-sm btn-primary">
           <i class="fas fa-arrow-down me-1"></i> Ver grupo completo
         </a>
       </div>
@@ -69,15 +75,15 @@
   </div>
   {{/if}}
 
-  <!-- Grid principal de información -->
-  <div class="info-grid mb-4">
+  <!-- GRID PRINCIPAL CON PALETA PROFESIONAL -->
+  <div class="contenido-principal">
     
-    <!-- Información General (Solo Lectura) -->
-    <div class="info-card" id="seccion-general">
-      <h6 class="section-title">
-        <i class="fas fa-info-circle"></i>
-        Información General
-      </h6>
+    <!-- INFORMACIÓN GENERAL -->
+    <div class="tarjeta-contenido" id="seccion-general">
+      <div class="seccion-titulo">
+        <i class="fas fa-info-circle me-2"></i>
+        📋 Información General
+      </div>
       
       <div class="info-row">
         <span class="info-label">Tipo:</span>
@@ -85,7 +91,7 @@
       </div>
       <div class="info-row">
         <span class="info-label">Código:</span>
-        <span class="info-value" style="font-family: 'JetBrains Mono', 'Fira Code', monospace; background: #f8fafc; padding: 4px 8px; border-radius: 4px; border: 1px solid #D0D7D9;">{{documento.codigoBarras}}</span>
+        <span class="info-value codigo-link" style="font-family: 'Courier New', monospace; background: var(--alice-blue); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--jordy-blue-30);">{{documento.codigoBarras}}</span>
       </div>
       <div class="info-row">
         <span class="info-label">Fecha Registro:</span>
@@ -99,20 +105,20 @@
       {{/if}}
       <div class="info-row">
         <span class="info-label">Matrizador:</span>
-        <span class="info-value">{{#if documento.matrizador}}{{documento.matrizador.nombre}}{{else}}Sin asignar{{/if}}</span>
+        <span class="info-value">{{#if documento.matrizador}}{{documento.matrizador.nombre}}{{else}}<em>Sin asignar</em>{{/if}}</span>
       </div>
     </div>
 
-    <!-- Información del Cliente -->
-    <div class="info-card" id="seccion-cliente">
-      <button class="edit-toggle" onclick="toggleSectionEdit('cliente')" data-section="cliente">
-        <i class="fas fa-edit"></i> Editar
+    <!-- INFORMACIÓN DEL CLIENTE -->
+    <div class="tarjeta-contenido" id="seccion-cliente">
+      <button class="btn btn-secondary btn-sm float-end" onclick="toggleSectionEdit('cliente')" data-section="cliente">
+        <i class="fas fa-edit me-1"></i> Editar
       </button>
       
-      <h6 class="section-title">
-        <i class="fas fa-user"></i>
-        Información del Cliente
-      </h6>
+      <div class="seccion-titulo">
+        <i class="fas fa-user me-2"></i>
+        👤 Información del Cliente
+      </div>
       
       <!-- Modo Vista -->
       <div class="view-mode" id="cliente-view">
@@ -1682,13 +1688,118 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 {{else}}
 <div class="document-unified-container">
-  <div class="alert alert-warning-professional">
-    <i class="fas fa-exclamation-triangle me-2"></i> 
+  <div class="alert alert-warning" role="alert" style="background-color: rgba(155, 191, 255, 0.2); border-color: var(--jordy-blue-30); color: var(--cool-black);">
+    <i class="fas fa-exclamation-triangle me-2" style="color: var(--cobalt-blue);"></i> 
     El documento solicitado no existe o no tienes permisos para verlo.
     <br>
-    <a href="/matrizador/documentos" class="btn btn-outline-primary mt-2">
+    <a href="/matrizador/documentos" class="btn btn-primary mt-2">
       <i class="fas fa-arrow-left me-1"></i> Volver a documentos
     </a>
   </div>
 </div>
-{{/if}} 
+{{/if}}
+
+<!-- ESTILOS ESPECÍFICOS PARA DETALLE MATRIZADOR CON PALETA AZUL -->
+<style>
+/* Override de estilos existentes con paleta profesional */
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--alice-blue);
+}
+
+.info-label {
+  font-weight: 600;
+  color: var(--cool-black);
+  min-width: 120px;
+}
+
+.info-value {
+  color: var(--eerie-black);
+  font-weight: 500;
+}
+
+/* Botones con paleta profesional */
+.btn-primary {
+  background-color: var(--tufts-blue) !important;
+  border-color: var(--cobalt-blue) !important;
+  color: white !important;
+}
+
+.btn-primary:hover {
+  background-color: var(--cobalt-blue) !important;
+  border-color: var(--cool-black) !important;
+  color: white !important;
+}
+
+.btn-secondary {
+  background-color: white !important;
+  border-color: var(--jordy-blue-30) !important;
+  color: var(--cool-black) !important;
+}
+
+.btn-secondary:hover {
+  background-color: var(--alice-blue) !important;
+  border-color: var(--jordy-blue) !important;
+  color: var(--cool-black) !important;
+}
+
+/* Badges con paleta */
+.badge-warning {
+  background-color: rgba(155, 191, 255, 0.2) !important;
+  color: var(--cobalt-blue) !important;
+  border: 1px solid var(--jordy-blue-30);
+}
+
+.badge-info {
+  background-color: var(--alice-blue) !important;
+  color: var(--cool-black) !important;
+  border: 1px solid var(--tufts-blue-20);
+}
+
+.badge-success {
+  background-color: var(--alice-blue) !important;
+  color: var(--tufts-blue) !important;
+  border: 1px solid var(--tufts-blue-20);
+}
+
+/* Formularios con paleta */
+.form-control:focus,
+.form-input:focus {
+  border-color: var(--tufts-blue) !important;
+  box-shadow: 0 0 0 0.2rem rgba(70, 136, 230, 0.25) !important;
+}
+
+/* Responsive para móvil */
+@media (max-width: 768px) {
+  .dashboard-header {
+    padding: var(--spacing-lg);
+  }
+  
+  .dashboard-title {
+    font-size: 1.5rem;
+  }
+  
+  .contenido-principal {
+    grid-template-columns: 1fr;
+  }
+  
+  .btn.float-end {
+    float: none !important;
+    margin-bottom: var(--spacing-sm);
+    width: 100%;
+  }
+  
+  .info-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .info-label {
+    min-width: auto;
+    margin-bottom: 0.25rem;
+  }
+}
+</style> 
